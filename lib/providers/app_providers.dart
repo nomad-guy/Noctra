@@ -5,6 +5,7 @@ import '../data/models/song_model.dart';
 import '../data/repositories/music_repository.dart';
 import '../data/sources/noctra_local_database.dart';
 import '../services/audio/audio_player_service.dart';
+import '../services/audio/audio_router_service.dart';
 import '../services/p2p/p2p_sync_service.dart';
 import '../services/ytdlp/music_service.dart';
 
@@ -31,8 +32,19 @@ final audioFadeTransitionProvider = StateProvider<bool>((ref) => true);
 // Repository
 final musicRepositoryProvider = ChangeNotifierProvider<MusicRepository>((ref) => MusicRepository());
 
-// Audio Player Service
+// Audio Player Service & Router
 final audioPlayerServiceProvider = Provider<AudioPlayerService>((ref) => AudioPlayerService());
+final audioRouterServiceProvider = Provider<AudioRouterService>((ref) => AudioRouterService());
+
+// Audio Output Devices Stream
+final connectedAudioDevicesProvider = StreamProvider<List<AudioDeviceEndpoint>>((ref) {
+  final router = ref.watch(audioRouterServiceProvider);
+  return router.devicesStream;
+});
+final initialAudioDevicesProvider = FutureProvider<List<AudioDeviceEndpoint>>((ref) async {
+  final router = ref.watch(audioRouterServiceProvider);
+  return router.getConnectedDevices();
+});
 
 // Current Playing Song Stream Provider
 final currentSongStreamProvider = StreamProvider<Song?>((ref) {

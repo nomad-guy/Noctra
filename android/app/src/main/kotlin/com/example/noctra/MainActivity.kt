@@ -13,10 +13,14 @@ class MainActivity : AudioServiceActivity() {
     private val RESOLVER_CHANNEL = "com.noctra.app/native_resolver"
     private val ICON_CHANNEL = "com.noctra.app/launcher_icon"
     private val VISUALIZER_CHANNEL = "com.noctra.app/audio_visualizer"
+    private val ROUTER_CHANNEL = "com.noctra.app/audio_router"
+    private val DEVICES_EVENT_CHANNEL = "com.noctra.app/audio_devices"
     private var visualizer: Visualizer? = null
+    private var audioRouter: NoctraAudioRouter? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        audioRouter = NoctraAudioRouter(applicationContext)
 
         // Native Hardware Audio Visualizer Event Stream
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, VISUALIZER_CHANNEL).setStreamHandler(object : EventChannel.StreamHandler {
@@ -36,9 +40,7 @@ class MainActivity : AudioServiceActivity() {
                                         val sample = (waveform[idx].toInt() and 0xFF) - 128
                                         magnitudes[i] = (Math.abs(sample) / 128.0).coerceIn(0.0, 1.0)
                                     }
-                                    runOnUiThread {
-                                        try { events.success(magnitudes.toList()) } catch (_: Exception) {}
-                                    }
+                                    runOnUiThread { try { events.success(magnitudes.toList()) } catch (_: Exception) {} }
                                 }
                             }
                             override fun onFftDataCapture(vis: Visualizer?, fft: ByteArray?, samplingRate: Int) {
@@ -49,20 +51,15 @@ class MainActivity : AudioServiceActivity() {
                                         val idx = (i * n) / 32
                                         val rk = fft[2 * idx].toDouble()
                                         val ik = fft[2 * idx + 1].toDouble()
-                                        val mag = Math.hypot(rk, ik) / 128.0
-                                        magnitudes[i] = mag.coerceIn(0.0, 1.0)
+                                        magnitudes[i] = (Math.hypot(rk, ik) / 128.0).coerceIn(0.0, 1.0)
                                     }
-                                    runOnUiThread {
-                                        try { events.success(magnitudes.toList()) } catch (_: Exception) {}
-                                    }
+                                    runOnUiThread { try { events.success(magnitudes.toList()) } catch (_: Exception) {} }
                                 }
                             }
                         }, Visualizer.getMaxCaptureRate() / 2, true, true)
                         enabled = true
                     }
-                } catch (e: Exception) {
-                    // Fallback gracefully
-                }
+                } catch (e: Exception) {}
             }
 
             override fun onCancel(arguments: Any?) {
@@ -74,6 +71,39 @@ class MainActivity : AudioServiceActivity() {
             }
         })
 
+        // Audio Device Event Channel (Real-time connection listener)
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, DEVICES_EVENT_CHANNEL).setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                audioRouter?.startListening(events)
+            }
+            override fun onCancel(arguments: Any?) {
+                audioRouter?.stopListening()
+            }
+        })
+
+        // Audio Router Method Channel
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ROUTER_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getConnectedDevices" -> {
+                    val list = audioRouter?.getConnectedAudioDevices() ?: emptyList<Map<String, Any>>()
+                    result.success(list)
+                }
+                "setOutputDevice" -> {
+                    val deviceId = call.argument<Int>("deviceId") ?: 0
+                    val ok = audioRouter?.setPreferredOutputDevice(deviceId) ?: false
+                    result.success(ok)
+                }
+                "setMultiOutput" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: false
+                    val ids = call.argument<List<Int>>("deviceIds") ?: emptyList()
+                    val ok = audioRouter?.setMultiOutputMode(enabled, ids) ?: false
+                    result.success(ok)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        // Native 320k Stream Resolver
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, RESOLVER_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "resolve320k" -> {
@@ -101,6 +131,7 @@ class MainActivity : AudioServiceActivity() {
             }
         }
 
+        // Dynamic App Icon Switcher
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ICON_CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "setLauncherIcon") {
                 val isDark = call.argument<Boolean>("isDark") ?: (call.argument<String>("icon") != "NoirLight")

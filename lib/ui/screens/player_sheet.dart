@@ -13,6 +13,7 @@ import '../widgets/spectrum_bars_visualizer.dart';
 import '../widgets/radial_circle_visualizer.dart';
 import '../widgets/proper_synthwave_visualizer.dart';
 import '../widgets/add_to_folder_sheet.dart';
+import '../widgets/audio_output_cast_sheet.dart';
 import '../widgets/player_controls_section.dart';
 import '../widgets/player_visualizer_selector.dart';
 import 'jam_studio_sheet.dart';
@@ -81,13 +82,23 @@ class PlayerSheet extends ConsumerWidget {
                   Row(
                     children: [
                       IconButton(
+                        tooltip: 'Audio Output Router',
+                        icon: Icon(Icons.speaker_group_rounded, size: 21, color: isDark ? Colors.white : Colors.black),
+                        onPressed: () => showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (c) => AudioOutputCastSheet(isDark: isDark),
+                        ),
+                      ),
+                      IconButton(
                         tooltip: 'Noctra Jam Room',
-                        icon: Icon(Icons.podcasts_rounded, size: 22, color: isDark ? Colors.white : Colors.black),
+                        icon: Icon(Icons.podcasts_rounded, size: 21, color: isDark ? Colors.white : Colors.black),
                         onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const JamStudioSheet()),
                       ),
                       IconButton(
                         tooltip: 'Equalizer',
-                        icon: Icon(Icons.equalizer_rounded, size: 22, color: isDark ? Colors.white : Colors.black),
+                        icon: Icon(Icons.equalizer_rounded, size: 21, color: isDark ? Colors.white : Colors.black),
                         onPressed: () => showModalBottomSheet(
                           context: context,
                           isScrollControlled: true,
@@ -235,26 +246,11 @@ class PlayerSheet extends ConsumerWidget {
 
   Widget _buildVisualizerContent(PlayerDisplayMode mode, Song song, bool isPlaying, bool isDark) {
     switch (mode) {
-      case PlayerDisplayMode.lyrics:
-        return LyricsView(song: song);
+      case PlayerDisplayMode.lyrics: return LyricsView(song: song);
       case PlayerDisplayMode.spectrumBars:
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: SpectrumBarsVisualizer(
-            isPlaying: isPlaying,
-            color: isDark ? Colors.white : Colors.black,
-            height: 136,
-          ),
-        );
+        return Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), child: SpectrumBarsVisualizer(isPlaying: isPlaying, color: isDark ? Colors.white : Colors.black, height: 136));
       case PlayerDisplayMode.radialCircle:
-        return Center(
-          child: RadialCircleVisualizer(
-            isPlaying: isPlaying,
-            color: isDark ? Colors.white : Colors.black,
-            imageUrl: song.artworkUrl,
-            size: 130,
-          ),
-        );
+        return Center(child: RadialCircleVisualizer(isPlaying: isPlaying, color: isDark ? Colors.white : Colors.black, imageUrl: song.artworkUrl, size: 130));
       case PlayerDisplayMode.synthwaveGrid:
         return ProperSynthwaveVisualizer(isPlaying: isPlaying, isDark: isDark, height: 160);
       case PlayerDisplayMode.artwork:

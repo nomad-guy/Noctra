@@ -1,0 +1,98 @@
+import 'dart:async';
+import 'package:flutter/services.dart';
+
+class AudioDeviceEndpoint {
+  final int id;
+  final String name;
+  final String type;
+  final int typeCode;
+  final bool isSink;
+  final bool isActive;
+
+  const AudioDeviceEndpoint({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.typeCode,
+    required this.isSink,
+    required this.isActive,
+  });
+
+  factory AudioDeviceEndpoint.fromMap(Map<dynamic, dynamic> map) {
+    return AudioDeviceEndpoint(
+      id: (map['id'] as num?)?.toInt() ?? 0,
+      name: (map['name'] ?? 'Audio Device').toString(),
+      type: (map['type'] ?? 'speaker').toString(),
+      typeCode: (map['typeCode'] as num?)?.toInt() ?? 0,
+      isSink: map['isSink'] == true,
+      isActive: map['isActive'] == true,
+    );
+  }
+}
+
+class AudioRouterService {
+  static final AudioRouterService _instance = AudioRouterService._internal();
+  factory AudioRouterService() => _instance;
+
+  static const _methodChannel = MethodChannel('com.noctra.app/audio_router');
+  static const _eventChannel = EventChannel('com.noctra.app/audio_devices');
+
+  final _deviceController = StreamController<List<AudioDeviceEndpoint>>.broadcast();
+  Stream<List<AudioDeviceEndpoint>> get devicesStream => _deviceController.stream;
+
+  AudioRouterService._internal() {
+    _initListener();
+  }
+
+  void _initListener() {
+    try {
+      _eventChannel.receiveBroadcastStream().listen((dynamic event) {
+        if (event is List) {
+          final list = event.map((e) => AudioDeviceEndpoint.fromMap(e as Map)).toList();
+          _deviceController.add(list);
+        }
+      }, onError: (_) {});
+    } catch (_) {}
+  }
+
+  Future<List<AudioDeviceEndpoint>> getConnectedDevices() async {
+    try {
+      final List<dynamic>? raw = await _methodChannel.invokeListMethod('getConnectedDevices');
+      if (raw != null) {
+        return raw.map((e) => AudioDeviceEndpoint.fromMap(e as Map)).toList();
+      }
+    } catch (_) {}
+    return [
+      const AudioDeviceEndpoint(
+        id: 1,
+        name: 'Built-in Phone Speaker',
+        type: 'Phone Speaker',
+        typeCode: 2,
+        isSink: true,
+        isActive: true,
+      ),
+    ];
+  }
+
+  Future<bool> setOutputDevice(int deviceId) async {
+    try {
+      final bool? ok = await _methodChannel.invokeMethod('setOutputDevice', {'deviceId': deviceId});
+      return ok ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> setMultiOutputMode(bool enabled, List<int> deviceIds) async {
+    try {
+      final bool? ok = await _methodChannel.invokeMethod('setMultiOutput', {'enabled': enabled, 'deviceIds': deviceIds});
+      return ok ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void dispose() {
+    _deviceController.close();
+  }
+}
