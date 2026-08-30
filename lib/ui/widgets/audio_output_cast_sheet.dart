@@ -140,7 +140,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                   ),
                   Switch.adaptive(
                     value: _isMultiCastEnabled,
-                    activeColor: isDark ? Colors.white : Colors.black,
+                    activeTrackColor: isDark ? Colors.white : Colors.black,
                     onChanged: (val) {
                       setState(() => _isMultiCastEnabled = val);
                       router.setMultiOutputMode(val, _selectedMultiIds.toList());
