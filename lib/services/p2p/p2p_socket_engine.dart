@@ -32,7 +32,9 @@ class P2PSocketEngine {
   static Future<dynamic> connectClient(String host, int port) async {
     if (kIsWeb) return null;
     try {
-      final url = 'ws://$host:$port/ws';
+      final clean = host.trim().replaceAll(RegExp(r'[^\w\.-]'), '');
+      if (clean.isEmpty) return null;
+      final url = 'ws://$clean:$port/ws';
       return await WebSocket.connect(url).timeout(const Duration(seconds: 4));
     } catch (_) {
       return null;

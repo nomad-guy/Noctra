@@ -144,7 +144,9 @@ class AudioPlayerService {
       _resolutionController.add(_lastResolution);
 
       if (url != null && url.isNotEmpty) {
-        if (url.startsWith('http://')) url = 'https://${url.substring(7)}';
+        if (url.startsWith('http://') && !url.contains('127.0.0.1') && !url.contains('localhost')) {
+          url = 'https://${url.substring(7)}';
+        }
         final startPos = initialPosition ?? _lastSavedPosition;
         final mediaItem = MediaItem(id: song.id, album: song.album, title: song.title, artist: song.artist, artUri: (song.artworkUrl != null && song.artworkUrl!.startsWith('http')) ? Uri.parse(song.artworkUrl!) : null, duration: song.duration);
         final headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', 'Accept': '*/*'};
@@ -266,7 +268,8 @@ class AudioPlayerService {
   void _onSongCompleted() async {
     if (_currentSong != null) MusicRepository().updateTasteVector(_currentSong!, 'complete_listen');
     if (_loopMode == LoopMode.one && _currentSong != null) {
-      playSong(_currentSong!);
+      await _player.seek(Duration.zero);
+      await _player.play();
     } else {
       if (_isAutoplayEnabled && _autoplayDelaySeconds > 0) {
         await Future.delayed(Duration(seconds: _autoplayDelaySeconds));

@@ -39,18 +39,22 @@ class _AIStudioScreenState extends ConsumerState<AIStudioScreen> {
   }
 
   void _submitPrompt(String prompt) async {
-    final clean = prompt.trim();
+    String clean = prompt.trim();
     if (clean.isEmpty) return;
+    if (clean.length > 500) clean = clean.substring(0, 500);
 
     setState(() => _isLoading = true);
-    final repo = ref.read(musicRepositoryProvider);
-    final results = await repo.curateWithAIAgent(prompt: clean);
-
-    if (mounted) {
-      setState(() {
-        _curatedResults = results;
-        _isLoading = false;
-      });
+    try {
+      final repo = ref.read(musicRepositoryProvider);
+      final results = await repo.curateWithAIAgent(prompt: clean).timeout(const Duration(seconds: 8));
+      if (mounted) {
+        setState(() {
+          _curatedResults = results;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

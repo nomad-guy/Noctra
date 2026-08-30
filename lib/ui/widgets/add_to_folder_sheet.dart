@@ -76,8 +76,10 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
                     widget.song.artworkUrl ?? '',
                     width: 48,
                     height: 48,
+                    cacheWidth: 140,
+                    cacheHeight: 140,
                     fit: BoxFit.cover,
-                    errorBuilder: (c, e, st) => Container(width: 48, height: 48, color: Colors.grey),
+                    errorBuilder: (c, e, st) => Container(width: 48, height: 48, color: isDark ? Colors.white12 : Colors.black12),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -108,15 +110,13 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
                 borderRadius: BorderRadius.circular(14),
                 onTap: () => setState(() => _isCreatingNew = true),
                 child: GlassCard(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   radius: 14,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   child: Row(
                     children: [
-                      Icon(Icons.create_new_folder_rounded, size: 22, color: isDark ? Colors.white : Colors.black),
-                      const SizedBox(width: 12),
+                      Icon(Icons.add_circle_outline_rounded, size: 20, color: isDark ? Colors.white70 : Colors.black87),
+                      const SizedBox(width: 10),
                       Text('New Folder...', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
-                      const Spacer(),
-                      Icon(Icons.add_rounded, size: 20, color: isDark ? Colors.white70 : Colors.black87),
                     ],
                   ),
                 ),
@@ -148,55 +148,60 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
             Flexible(
               child: folders.isEmpty
                   ? Center(child: Text('No custom folders yet. Tap "New Folder..." above.', style: TextStyle(fontSize: 12.5, color: isDark ? Colors.white38 : Colors.black38)))
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: folders.keys.length,
-                      itemBuilder: (context, i) {
-                        final folderName = folders.keys.elementAt(i);
-                        final songsInFolder = folders[folderName] ?? [];
-                        final containsSong = songsInFolder.any((s) => s.id == widget.song.id);
+                  : Builder(
+                      builder: (context) {
+                        final folderNames = folders.keys.toList();
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: folderNames.length,
+                          itemBuilder: (context, i) {
+                            final folderName = folderNames[i];
+                            final songsInFolder = folders[folderName] ?? [];
+                            final containsSong = songsInFolder.any((s) => s.id == widget.song.id);
 
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: GlassCard(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                            radius: 14,
-                            isHighlighted: containsSong,
-                            onTap: () {
-                              if (containsSong) {
-                                repo.removeSongFromFolder(folderName, widget.song.id);
-                              } else {
-                                repo.addSongToFolder(folderName, widget.song);
-                              }
-                              setState(() {});
-                            },
-                            child: Row(
-                              children: [
-                                Icon(Icons.folder_rounded, size: 22, color: isDark ? Colors.white : Colors.black),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(folderName, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
-                                      Text('${songsInFolder.length} tracks', style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54)),
-                                    ],
-                                  ),
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: GlassCard(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                radius: 14,
+                                isHighlighted: containsSong,
+                                onTap: () {
+                                  if (containsSong) {
+                                    repo.removeSongFromFolder(folderName, widget.song.id);
+                                  } else {
+                                    repo.addSongToFolder(folderName, widget.song);
+                                  }
+                                  setState(() {});
+                                },
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.folder_rounded, size: 22, color: isDark ? Colors.white : Colors.black),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(folderName, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
+                                          Text('${songsInFolder.length} tracks', style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54)),
+                                        ],
+                                      ),
+                                    ),
+                                    Container(
+                                      width: 24,
+                                      height: 24,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: containsSong ? (isDark ? Colors.white : Colors.black) : Colors.transparent,
+                                        border: Border.all(color: containsSong ? Colors.transparent : (isDark ? Colors.white30 : Colors.black26), width: 1.5),
+                                      ),
+                                      child: containsSong ? Icon(Icons.check_rounded, size: 16, color: isDark ? Colors.black : Colors.white) : null,
+                                    ),
+                                  ],
                                 ),
-                                Container(
-                                  width: 24,
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: containsSong ? (isDark ? Colors.white : Colors.black) : Colors.transparent,
-                                    border: Border.all(color: containsSong ? Colors.transparent : (isDark ? Colors.white30 : Colors.black26), width: 1.5),
-                                  ),
-                                  child: containsSong ? Icon(Icons.check_rounded, size: 16, color: isDark ? Colors.black : Colors.white) : null,
-                                ),
-                              ],
-                            ),
-                          ),
+                              ),
+                            );
+                          },
                         );
                       },
                     ),

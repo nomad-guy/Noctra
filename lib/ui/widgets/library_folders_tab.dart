@@ -33,6 +33,7 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
       return _buildFolderDetailView(_openedFolder!, folderSongs);
     }
 
+    final folderNames = widget.customFolders.keys.toList();
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
@@ -80,7 +81,7 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
           sliver: SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, i) {
-                final folderName = widget.customFolders.keys.elementAt(i);
+                final folderName = folderNames[i];
                 final folderSongs = widget.customFolders[folderName] ?? [];
 
                 return Padding(
@@ -116,7 +117,7 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
                   ),
                 );
               },
-              childCount: widget.customFolders.keys.length,
+              childCount: folderNames.length,
             ),
           ),
         ),
@@ -153,7 +154,7 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
                     return ListTile(
                       leading: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.network(s.artworkUrl ?? '', width: 44, height: 44, fit: BoxFit.cover, errorBuilder: (c, e, st) => Container(width: 44, height: 44, color: Colors.grey)),
+                        child: Image.network(s.artworkUrl ?? '', width: 44, height: 44, cacheWidth: 130, cacheHeight: 130, fit: BoxFit.cover, errorBuilder: (c, e, st) => Container(width: 44, height: 44, color: widget.isDark ? Colors.white12 : Colors.black12)),
                       ),
                       title: Text(s.title, maxLines: 1, style: TextStyle(fontWeight: FontWeight.w600, color: widget.isDark ? Colors.white : Colors.black)),
                       subtitle: Text(s.artist, maxLines: 1, style: TextStyle(fontSize: 11, color: widget.isDark ? Colors.white54 : Colors.black54)),
