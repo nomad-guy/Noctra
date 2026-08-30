@@ -1,0 +1,40 @@
+PROPRIETARY - PERSONAL USE & RESTRICTED INSPECTION LICENSE
+
+Copyright (c) 2026 Nomad Guy. All rights reserved.
+
+Copyright Owner:
+- Nomad Guy (https://github.com/nomad-guy)
+- Repository: https://github.com/nomad-guy/Noctra
+
+---
+
+### 1. Grant of Permission
+Permission is hereby granted to download, install, run, and use the compiled Noctra application for personal, non-commercial music listening. Permission is also granted to inspect the raw source code, architecture diagrams, and documentation of this repository for private educational study, personal learning, and peer inspection. 
+
+You are permitted to use the app for its intended personal listening purpose as-is, subject to the strict restrictions outlined below.
+
+---
+
+### 2. Strict Restrictions & Prohibitions
+By downloading, installing, running, viewing, cloning, or using the Noctra software or this repository, you enter into a legally binding agreement adhering to the following strict prohibitions without prior, express, and written authorization from the copyright owner:
+
+1. **No Modification or Tampering**: You may use the app, but you may not modify, alter, patch, edit, or tamper with the application, its source code, binaries, configuration files, or runtime behavior.
+2. **No Unpacking or Reverse Engineering**: You are strictly prohibited from unpacking, decompiling, disassembling, cracking, reverse-engineering, or extracting source code, native libraries, API keys, decrypter routines, or algorithms from the compiled application package (APK, bundle, or binary).
+3. **No Code Copying or Plagiarism**: You may not copy, duplicate, clone, replicate, hotlink, republish, or paste any portion of this codebase, algorithms, API endpoints, stream decrypters, schema definitions, on-device vector ranking graphs, or database structures into any other project.
+4. **No Derivative Works or Repackaging**: You may not create, compile, repackage, distribute, publish, or sublicense any derivative works, modified builds, forks, plugins, or complementary extensions derived from this application or codebase.
+5. **No Pipeline or Engine Extraction**: You may not extract or integrate any subcomponents of Noctra—including the 16-axis music intelligence vector ranker, JioSaavn 320kbps stream decrypter, YouTube Music InnerTube extractor, P2P SyncCast clock synchronizer, custom shader visualizers, or stream resolution pipelines—into third-party applications, commercial bots, audio players, or API gateways.
+6. **No Commercial Exploitation**: You may not sell, lease, rent, license, sub-license, commercialize, or use this software, models, or documentation to generate direct or indirect revenue.
+7. **No Asset or UI Theft**: You may not reuse any visual assets, logos, liquid glass UI components, design tokens, animations, color palettes, or branding elements created for Noctra.
+8. **No Penetration Attacks or Security Bypass**: You are strictly forbidden from performing penetration testing, vulnerability scanning, fuzzing, token spoofing, or DDoS/DoS simulations against active Noctra infrastructure or backend endpoints.
+9. **No AI / LLM Model Training**: This codebase, including all source files, documentation, model architectures, datasets, and comments, must not be used as training inputs, fine-tuning corpora, or scraped to train Large Language Models (LLMs), code synthesis agents, developer assistants, or generative AI models without written consent.
+10. **No Unauthorized Academic Submission**: Under no circumstances may this project, in whole or in part, be submitted as original work for academic credit, thesis evaluation, hackathons, grading, or certification at any university, college, school, or educational boot camp without explicit prior written authorization from the copyright owner.
+
+---
+
+### 3. Intellectual Property & Ownership
+All rights, titles, interests, patents, copyrights, and intellectual property rights in and to this project (including the Noctra name, branding, 16-Axis Taste Graph Engine, Dual Noir Theme, JioSaavn 320kbps stream decrypter, YouTube Music InnerTube extractor, P2P SyncCast service, database schemas, and client UI) remain exclusively owned by Nomad Guy.
+
+---
+
+### 4. No Warranty
+THIS SOFTWARE, CODEBASE, MODELS, AND DOCUMENTATION ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
