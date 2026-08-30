@@ -14,6 +14,7 @@ import '../widgets/radial_circle_visualizer.dart';
 import '../widgets/proper_synthwave_visualizer.dart';
 import '../widgets/add_to_folder_sheet.dart';
 import '../widgets/audio_output_cast_sheet.dart';
+import '../widgets/sleep_timer_sheet.dart';
 import '../widgets/player_controls_section.dart';
 import '../widgets/player_visualizer_selector.dart';
 import 'jam_studio_sheet.dart';
@@ -38,9 +39,6 @@ class PlayerSheet extends ConsumerWidget {
     final isPlaying = ref.watch(isPlayingStreamProvider).value ?? false;
     final position = ref.watch(positionStreamProvider).value ?? Duration.zero;
     final duration = audioPlayerService.player.duration ?? Duration.zero;
-    final isShuffle = audioPlayerService.player.shuffleModeEnabled;
-    final loopMode = audioPlayerService.player.loopMode;
-    final volume = ref.watch(volumeStreamProvider).value ?? 1.0;
     final masterMode = ref.watch(studioMasterModeProvider);
     final displayMode = ref.watch(playerDisplayModeProvider);
 
@@ -82,6 +80,15 @@ class PlayerSheet extends ConsumerWidget {
                   Text('NOW PLAYING', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, letterSpacing: 2.2, color: isDark ? Colors.white60 : Colors.black54)),
                   Row(
                     children: [
+                      IconButton(
+                        tooltip: 'Sleep Timer',
+                        icon: Icon(
+                          audioPlayerService.sleepTimerRemainingMinutes != null ? Icons.bedtime_rounded : Icons.bedtime_outlined,
+                          size: 21,
+                          color: audioPlayerService.sleepTimerRemainingMinutes != null ? Colors.cyanAccent : (isDark ? Colors.white : Colors.black),
+                        ),
+                        onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const SleepTimerSheet()),
+                      ),
                       IconButton(
                         tooltip: 'Audio Output Router',
                         icon: Icon(Icons.speaker_group_rounded, size: 21, color: isDark ? Colors.white : Colors.black),
@@ -201,15 +208,11 @@ class PlayerSheet extends ConsumerWidget {
 
               // Scrubber and Playback Controls
               PlayerControlsSection(
-                isDark: isDark,
-                isPlaying: isPlaying,
-                position: position,
-                duration: duration,
-                volume: volume,
-                isShuffle: isShuffle,
-                loopMode: loopMode,
-                audioPlayerService: audioPlayerService,
-                masterMode: masterMode,
+                isDark: isDark, isPlaying: isPlaying, position: position, duration: duration,
+                volume: ref.watch(volumeStreamProvider).value ?? 1.0,
+                isShuffle: audioPlayerService.player.shuffleModeEnabled,
+                loopMode: audioPlayerService.player.loopMode,
+                audioPlayerService: audioPlayerService, masterMode: masterMode,
               ),
 
               const SizedBox(height: 10),
@@ -285,14 +288,9 @@ class PlayerSheet extends ConsumerWidget {
 
   void _handleDownload(BuildContext context, Song song, bool isDownloaded) async {
     final sm = ScaffoldMessenger.of(context);
-    if (isDownloaded) {
-      sm.showSnackBar(const SnackBar(content: Text('Song already downloaded for offline playback.'), duration: Duration(seconds: 2)));
-      return;
-    }
+    if (isDownloaded) { sm.showSnackBar(const SnackBar(content: Text('Song already downloaded for offline playback.'), duration: Duration(seconds: 2))); return; }
     sm.showSnackBar(SnackBar(content: Text('Downloading "${song.title}" in 320kbps CD lossless...'), duration: const Duration(seconds: 2)));
     final res = await MusicService.downloadTrack(song);
-    if (context.mounted) {
-      sm.showSnackBar(SnackBar(content: Text(res != null ? 'Downloaded "${song.title}" for offline playback' : 'Download failed. Check connection.'), duration: const Duration(seconds: 3)));
-    }
+    if (context.mounted) sm.showSnackBar(SnackBar(content: Text(res != null ? 'Downloaded "${song.title}" for offline playback' : 'Download failed. Check connection.'), duration: const Duration(seconds: 3)));
   }
 }

@@ -11,6 +11,7 @@ import '../widgets/ai_generated_playlists_section.dart';
 import '../widgets/trending_carousel_section.dart';
 import '../widgets/spotify_charts_section.dart';
 import '../widgets/dynamic_vibe_stream_section.dart';
+import '../widgets/top_artists_carousel.dart';
 import '../widgets/noctra_app_logo.dart';
 import 'settings_sheet.dart';
 
@@ -170,6 +171,13 @@ class HomeScreen extends ConsumerWidget {
             // Top Trending Hits Carousel
             SliverToBoxAdapter(
               child: TrendingCarouselSection(isDark: isDark, currentSong: currentSong, isPlaying: isPlaying),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 8)),
+
+            // Explore Top & Featured Artists
+            SliverToBoxAdapter(
+              child: TopArtistsCarousel(isDark: isDark),
             ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 8)),

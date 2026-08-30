@@ -7,6 +7,7 @@ import '../../data/models/song_model.dart';
 import '../../data/repositories/music_repository.dart';
 import '../../data/sources/noctra_local_database.dart';
 import '../ytdlp/music_service.dart';
+import '../resolvers/stream_resolver.dart';
 import '../../ui/screens/player_sheet.dart';
 
 class StreamResolutionMetadata {
@@ -23,27 +24,16 @@ class AudioPlayerService {
 
   final AudioPlayer _player = AudioPlayer();
   AudioPlayer get player => _player;
-  Song? _currentSong;
-  Song? get currentSong => _currentSong;
-  final List<Song> _queue = [];
-  List<Song> get queue => List.unmodifiable(_queue);
-  int _currentIndex = -1;
-  int get currentIndex => _currentIndex;
+  Song? _currentSong; Song? get currentSong => _currentSong;
+  final List<Song> _queue = []; List<Song> get queue => List.unmodifiable(_queue);
+  int _currentIndex = -1; int get currentIndex => _currentIndex;
   bool _isShuffleEnabled = false, _isAutoplayEnabled = true, _isFadeEnabled = true;
-  bool get isShuffleEnabled => _isShuffleEnabled;
-  bool get isAutoplayEnabled => _isAutoplayEnabled;
-  bool get isFadeEnabled => _isFadeEnabled;
+  bool get isShuffleEnabled => _isShuffleEnabled; bool get isAutoplayEnabled => _isAutoplayEnabled; bool get isFadeEnabled => _isFadeEnabled;
   int _autoplayDelaySeconds = 3, _crossfadeSeconds = 4;
-  int get autoplayDelaySeconds => _autoplayDelaySeconds;
-  int get crossfadeSeconds => _crossfadeSeconds;
-  int? _sleepTimerRemainingMinutes;
-  int? get sleepTimerRemainingMinutes => _sleepTimerRemainingMinutes;
-  Timer? _sleepTimer;
-  LoopMode _loopMode = LoopMode.off;
-  LoopMode get loopMode => _loopMode;
-  DateTime? _songStartTime;
-  StreamResolutionMetadata? _lastResolution;
-  StreamResolutionMetadata? get lastResolution => _lastResolution;
+  int get autoplayDelaySeconds => _autoplayDelaySeconds; int get crossfadeSeconds => _crossfadeSeconds;
+  int? _sleepTimerRemainingMinutes; int? get sleepTimerRemainingMinutes => _sleepTimerRemainingMinutes;
+  Timer? _sleepTimer; LoopMode _loopMode = LoopMode.off; LoopMode get loopMode => _loopMode;
+  DateTime? _songStartTime; StreamResolutionMetadata? _lastResolution; StreamResolutionMetadata? get lastResolution => _lastResolution;
   Duration? _lastSavedPosition;
 
   final _currentSongController = StreamController<Song?>.broadcast();
@@ -143,37 +133,52 @@ class AudioPlayerService {
       _lastResolution = StreamResolutionMetadata(songId: song.id, songTitle: song.title, resolvedUrl: url, resolverUsed: resolverName, resolutionMs: sw.elapsedMilliseconds, timestamp: DateTime.now());
       _resolutionController.add(_lastResolution);
 
-      if (url != null && url.isNotEmpty) {
-        if (url.startsWith('http://') && !url.contains('127.0.0.1') && !url.contains('localhost')) {
-          url = 'https://${url.substring(7)}';
-        }
-        final startPos = initialPosition ?? _lastSavedPosition;
-        final mediaItem = MediaItem(id: song.id, album: song.album, title: song.title, artist: song.artist, artUri: (song.artworkUrl != null && song.artworkUrl!.startsWith('http')) ? Uri.parse(song.artworkUrl!) : null, duration: song.duration);
-        final headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', 'Accept': '*/*'};
+      if (url == null || url.isEmpty) {
+        url = await MusicService.resolveStreamUrl(song);
+      }
 
+      if (url != null && url.isNotEmpty) {
+        final startPos = initialPosition ?? _lastSavedPosition;
+        final mediaItem = MediaItem(
+          id: song.id,
+          album: song.album,
+          title: song.title,
+          artist: song.artist,
+          artUri: (song.artworkUrl != null && song.artworkUrl!.startsWith('http')) ? Uri.parse(song.artworkUrl!) : null,
+          duration: song.duration,
+        );
+
+        bool loaded = false;
         try {
           if (url.startsWith('http')) {
-            await _player.setAudioSource(AudioSource.uri(Uri.parse(url), tag: mediaItem, headers: headers), initialPosition: startPos);
+            await _player.setAudioSource(AudioSource.uri(Uri.parse(url), tag: mediaItem), initialPosition: startPos);
           } else {
             await _player.setAudioSource(AudioSource.file(url, tag: mediaItem), initialPosition: startPos);
           }
+          loaded = true;
         } catch (_) {
-          if (url.startsWith('http')) {
-            await _player.setUrl(url, headers: headers, initialPosition: startPos);
-          } else {
-            await _player.setFilePath(url, initialPosition: startPos);
-          }
-        }
-        await _player.setVolume(1.0);
-        await _player.play();
-        _lastSavedPosition = null;
-
-        if (song.id.length == 11) {
-          MusicService.fetchSponsorBlockIntroSkip(song.id).then((skip) {
-            if (skip != null && skip > 3.0 && _currentSong?.id == song.id) {
-              _player.seek(Duration(milliseconds: (skip * 1000).toInt()));
+          // Automatic fallback to YouTube Music / InnerTube if initial CDN stream failed
+          try {
+            final fallbackUrl = await CompositeStreamResolver.resolve(song);
+            if (fallbackUrl != null && fallbackUrl.isNotEmpty && fallbackUrl != url) {
+              await _player.setAudioSource(AudioSource.uri(Uri.parse(fallbackUrl), tag: mediaItem), initialPosition: startPos);
+              loaded = true;
             }
-          });
+          } catch (_) {}
+        }
+
+        if (loaded) {
+          await _player.setVolume(1.0);
+          await _player.play();
+          _lastSavedPosition = null;
+
+          if (song.id.length == 11) {
+            MusicService.fetchSponsorBlockIntroSkip(song.id).then((skip) {
+              if (skip != null && skip > 3.0 && _currentSong?.id == song.id) {
+                _player.seek(Duration(milliseconds: (skip * 1000).toInt()));
+              }
+            });
+          }
         }
       }
     } catch (e) {
@@ -271,9 +276,7 @@ class AudioPlayerService {
       await _player.seek(Duration.zero);
       await _player.play();
     } else {
-      if (_isAutoplayEnabled && _autoplayDelaySeconds > 0) {
-        await Future.delayed(Duration(seconds: _autoplayDelaySeconds));
-      }
+      if (_isAutoplayEnabled && _autoplayDelaySeconds > 0) await Future.delayed(Duration(seconds: _autoplayDelaySeconds));
       skipNext();
     }
   }

@@ -31,15 +31,38 @@ class LocalFileResolver implements StreamResolver {
 }
 
 class JioSaavnDirectResolver implements StreamResolver {
+  static const _channel = MethodChannel('com.noctra.app/native_resolver');
   @override
   String get sourceId => 'jiosaavn_320kbps';
   @override
   Future<bool> canResolve(Song song) async {
     final u = song.streamUrl;
-    return u != null && u.isNotEmpty && (u.contains('saavncdn.com') || u.contains('jiosaavn.com'));
+    if (u != null && u.isNotEmpty && (u.contains('saavncdn.com') || u.contains('jiosaavn.com'))) return true;
+    return song.id.startsWith('saavn_');
   }
   @override
-  Future<String?> resolveStreamUrl(Song song) async => song.streamUrl;
+  Future<String?> resolveStreamUrl(Song song) async {
+    if (song.streamUrl != null && song.streamUrl!.isNotEmpty && song.streamUrl!.contains('saavncdn.com')) {
+      return song.streamUrl;
+    }
+    if (song.id.startsWith('saavn_')) {
+      try {
+        final pid = song.id.substring(6);
+        final uri = Uri.parse('https://www.jiosaavn.com/api.php?__call=song.getDetails&pids=$pid&_format=json&_marker=0&ctx=android');
+        final res = await http.get(uri, headers: {'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 4));
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          final songData = (data is Map ? (data[pid] ?? data.values.firstOrNull) : null) as Map<String, dynamic>?;
+          final encUrl = songData?['encrypted_media_url'] as String? ?? songData?['more_info']?['encrypted_media_url'] as String?;
+          if (encUrl != null && encUrl.isNotEmpty) {
+            final decUrl = await _channel.invokeMethod<String>('decryptUrl', {'encryptedUrl': encUrl});
+            if (decUrl != null && decUrl.isNotEmpty) return decUrl;
+          }
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
 }
 
 class NativeKotlinResolver implements StreamResolver {
