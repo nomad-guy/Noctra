@@ -75,5 +75,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Noctra requires local network access for P2P SyncCast party synchronization over Wi-Fi.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Noctra uses microphone audio capture solely for hardware-accelerated real-time visualizers.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Noctra accesses your media library to index and play locally stored audio tracks.</string>
 </dict>
 </plist>

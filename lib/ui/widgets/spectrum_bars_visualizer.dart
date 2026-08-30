@@ -181,5 +181,9 @@ class _SpectrumBarsPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SpectrumBarsPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _SpectrumBarsPainter oldDelegate) {
+    return oldDelegate.currentHeights != currentHeights ||
+        oldDelegate.peakHeights != peakHeights ||
+        oldDelegate.color != color;
+  }
 }

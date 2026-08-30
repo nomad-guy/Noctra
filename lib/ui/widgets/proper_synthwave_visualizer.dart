@@ -214,5 +214,10 @@ class _ProperSynthwavePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ProperSynthwavePainter oldDelegate) => true;
+  bool shouldRepaint(covariant _ProperSynthwavePainter oldDelegate) {
+    return oldDelegate.progress != progress ||
+        oldDelegate.bassEnergy != bassEnergy ||
+        oldDelegate.isPlaying != isPlaying ||
+        oldDelegate.isDark != isDark;
+  }
 }

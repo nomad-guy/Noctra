@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 import 'core/theme/noir_theme.dart';
 import 'core/utils/dynamic_icon_service.dart';
 import 'core/utils/permission_helper.dart';
@@ -28,6 +29,12 @@ void main() async {
       systemNavigationBarColor: Colors.transparent,
       systemNavigationBarIconBrightness: Brightness.light,
     ),
+  );
+
+  await JustAudioBackground.init(
+    androidNotificationChannelId: 'com.nomadguy.noctra.channel.audio',
+    androidNotificationChannelName: 'Noctra Playback',
+    androidNotificationOngoing: true,
   );
 
   await NoctraLocalDatabase().init();

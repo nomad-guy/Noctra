@@ -88,8 +88,8 @@ class NoirSidebar extends ConsumerWidget {
               },
             ),
             _sidebarItem(
-              icon: Icons.auto_awesome_rounded,
-              label: 'AI Music Agent',
+              icon: Icons.my_library_music_rounded,
+              label: 'Your Library',
               isSelected: currentIndex == 2,
               isDark: isDark,
               onTap: () {
@@ -98,8 +98,8 @@ class NoirSidebar extends ConsumerWidget {
               },
             ),
             _sidebarItem(
-              icon: Icons.my_library_music_rounded,
-              label: 'Your Library',
+              icon: Icons.auto_awesome_rounded,
+              label: 'AI Music Agent',
               isSelected: currentIndex == 3,
               isDark: isDark,
               onTap: () {

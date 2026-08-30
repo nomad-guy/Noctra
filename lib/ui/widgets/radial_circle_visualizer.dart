@@ -152,5 +152,9 @@ class _RadialCirclePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _RadialCirclePainter oldDelegate) => true;
+  bool shouldRepaint(covariant _RadialCirclePainter oldDelegate) {
+    return oldDelegate.spikes != spikes ||
+        oldDelegate.color != color ||
+        oldDelegate.isPlaying != isPlaying;
+  }
 }
