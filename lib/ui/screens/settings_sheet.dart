@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
-import '../../core/utils/dynamic_icon_service.dart';
 import '../../data/sources/noctra_local_database.dart';
 import '../../providers/app_providers.dart';
 import '../widgets/developer_panel_sheet.dart';
@@ -222,8 +221,7 @@ class SettingsSheet extends ConsumerWidget {
       child: GestureDetector(
         onTap: () {
           ref.read(themeModeProvider.notifier).state = mode;
-          NoctraLocalDatabase().saveThemeMode(mode.toString());
-          DynamicIconService.updateAppIcon(isDark: mode != NoirThemeMode.noirWhite);
+          NoctraLocalDatabase().saveThemeMode(mode == NoirThemeMode.noirWhite ? 'noirWhite' : (mode == NoirThemeMode.noirAmoled ? 'noirAmoled' : 'noirBlack'));
         },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
