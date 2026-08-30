@@ -32,7 +32,7 @@ class _DeveloperPanelSheetState extends ConsumerState<DeveloperPanelSheet> with 
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
     final tasteVector = ref.watch(tasteVectorStateProvider);
     final currentSong = ref.watch(currentSongStreamProvider).value;
     final telemetry = ref.watch(streamResolutionStreamProvider).value;

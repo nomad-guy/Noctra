@@ -11,9 +11,8 @@ class VibeChipSelector extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedVibe = ref.watch(selectedVibeKeyProvider);
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
     final repo = ref.watch(musicRepositoryProvider);
-    ref.watch(tasteVectorStateProvider); // Rebuild dynamically as taste vector evolves
 
     final vibes = repo.getDynamicVibeChips();
 

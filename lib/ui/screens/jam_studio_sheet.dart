@@ -36,7 +36,7 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet> with SingleTick
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
     final syncService = ref.watch(p2pSyncServiceProvider);
     final isConnected = syncService.isHost || syncService.isClient;
 

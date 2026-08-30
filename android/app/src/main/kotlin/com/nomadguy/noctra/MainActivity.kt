@@ -1,7 +1,5 @@
-package com.example.noctra
+package com.nomadguy.noctra
 
-import android.content.ComponentName
-import android.content.pm.PackageManager
 import android.media.audiofx.Visualizer
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -20,9 +18,11 @@ class MainActivity : AudioServiceActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        audioRouter = NoctraAudioRouter(applicationContext)
+        try {
+            audioRouter = NoctraAudioRouter(applicationContext)
+        } catch (_: Throwable) {}
 
-        // Native Hardware Audio Visualizer Event Stream
+        // Native Hardware Audio Visualizer Event Stream (Safeguarded for Android 15/16)
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, VISUALIZER_CHANNEL).setStreamHandler(object : EventChannel.StreamHandler {
             override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
                 try {
@@ -40,7 +40,7 @@ class MainActivity : AudioServiceActivity() {
                                         val sample = (waveform[idx].toInt() and 0xFF) - 128
                                         magnitudes[i] = (Math.abs(sample) / 128.0).coerceIn(0.0, 1.0)
                                     }
-                                    runOnUiThread { try { events.success(magnitudes.toList()) } catch (_: Exception) {} }
+                                    runOnUiThread { try { events.success(magnitudes.toList()) } catch (_: Throwable) {} }
                                 }
                             }
                             override fun onFftDataCapture(vis: Visualizer?, fft: ByteArray?, samplingRate: Int) {
@@ -53,13 +53,15 @@ class MainActivity : AudioServiceActivity() {
                                         val ik = fft[2 * idx + 1].toDouble()
                                         magnitudes[i] = (Math.hypot(rk, ik) / 128.0).coerceIn(0.0, 1.0)
                                     }
-                                    runOnUiThread { try { events.success(magnitudes.toList()) } catch (_: Exception) {} }
+                                    runOnUiThread { try { events.success(magnitudes.toList()) } catch (_: Throwable) {} }
                                 }
                             }
                         }, Visualizer.getMaxCaptureRate() / 2, true, true)
                         enabled = true
                     }
-                } catch (e: Exception) {}
+                } catch (_: Throwable) {
+                    // Safe fallback on Android 15/16 if permission or audio session is restricted
+                }
             }
 
             override fun onCancel(arguments: Any?) {
@@ -67,39 +69,43 @@ class MainActivity : AudioServiceActivity() {
                     visualizer?.enabled = false
                     visualizer?.release()
                     visualizer = null
-                } catch (_: Exception) {}
+                } catch (_: Throwable) {}
             }
         })
 
         // Audio Device Event Channel (Real-time connection listener)
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, DEVICES_EVENT_CHANNEL).setStreamHandler(object : EventChannel.StreamHandler {
             override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-                audioRouter?.startListening(events)
+                try { audioRouter?.startListening(events) } catch (_: Throwable) {}
             }
             override fun onCancel(arguments: Any?) {
-                audioRouter?.stopListening()
+                try { audioRouter?.stopListening() } catch (_: Throwable) {}
             }
         })
 
         // Audio Router Method Channel
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ROUTER_CHANNEL).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "getConnectedDevices" -> {
-                    val list = audioRouter?.getConnectedAudioDevices() ?: emptyList<Map<String, Any>>()
-                    result.success(list)
+            try {
+                when (call.method) {
+                    "getConnectedDevices" -> {
+                        val list = audioRouter?.getConnectedAudioDevices() ?: emptyList<Map<String, Any>>()
+                        result.success(list)
+                    }
+                    "setOutputDevice" -> {
+                        val deviceId = call.argument<Int>("deviceId") ?: 0
+                        val ok = audioRouter?.setPreferredOutputDevice(deviceId) ?: false
+                        result.success(ok)
+                    }
+                    "setMultiOutput" -> {
+                        val enabled = call.argument<Boolean>("enabled") ?: false
+                        val ids = call.argument<List<Int>>("deviceIds") ?: emptyList()
+                        val ok = audioRouter?.setMultiOutputMode(enabled, ids) ?: false
+                        result.success(ok)
+                    }
+                    else -> result.notImplemented()
                 }
-                "setOutputDevice" -> {
-                    val deviceId = call.argument<Int>("deviceId") ?: 0
-                    val ok = audioRouter?.setPreferredOutputDevice(deviceId) ?: false
-                    result.success(ok)
-                }
-                "setMultiOutput" -> {
-                    val enabled = call.argument<Boolean>("enabled") ?: false
-                    val ids = call.argument<List<Int>>("deviceIds") ?: emptyList()
-                    val ok = audioRouter?.setMultiOutputMode(enabled, ids) ?: false
-                    result.success(ok)
-                }
-                else -> result.notImplemented()
+            } catch (t: Throwable) {
+                result.success(false)
             }
         }
 
@@ -110,50 +116,43 @@ class MainActivity : AudioServiceActivity() {
                     val title = call.argument<String>("title") ?: ""
                     val artist = call.argument<String>("artist") ?: ""
                     thread {
-                        val streamUrl = JioSaavnNativeEngine.resolveTrackStream(title, artist)
-                        runOnUiThread { result.success(streamUrl) }
+                        try {
+                            val streamUrl = JioSaavnNativeEngine.resolveTrackStream(title, artist)
+                            runOnUiThread { result.success(streamUrl) }
+                        } catch (_: Throwable) {
+                            runOnUiThread { result.success(null) }
+                        }
                     }
                 }
                 "searchJioSaavn" -> {
                     val query = call.argument<String>("query") ?: ""
                     val limit = call.argument<Int>("limit") ?: 20
                     thread {
-                        val list = JioSaavnNativeEngine.searchSongs(query, limit)
-                        runOnUiThread { result.success(list) }
+                        try {
+                            val list = JioSaavnNativeEngine.searchSongs(query, limit)
+                            runOnUiThread { result.success(list) }
+                        } catch (_: Throwable) {
+                            runOnUiThread { result.success(emptyList<Map<String, Any>>()) }
+                        }
                     }
                 }
                 "decryptUrl" -> {
                     val encUrl = call.argument<String>("encryptedUrl") ?: ""
-                    val dec = JioSaavnNativeEngine.decryptMediaUrl(encUrl)
-                    result.success(dec)
+                    try {
+                        val dec = JioSaavnNativeEngine.decryptMediaUrl(encUrl)
+                        result.success(dec)
+                    } catch (_: Throwable) {
+                        result.success(null)
+                    }
                 }
                 else -> result.notImplemented()
             }
         }
 
-        // Dynamic App Icon Switcher
+        // Non-destructive Launcher Icon Handler
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ICON_CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "setLauncherIcon") {
-                val isDark = call.argument<Boolean>("isDark") ?: (call.argument<String>("icon") != "NoirLight")
-                thread {
-                    try {
-                        val pm = applicationContext.packageManager
-                        val pkg = applicationContext.packageName
-                        val darkAlias = ComponentName(pkg, "$pkg.MainActivityDark")
-                        val lightAlias = ComponentName(pkg, "$pkg.MainActivityLight")
-
-                        if (isDark) {
-                            pm.setComponentEnabledSetting(darkAlias, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
-                            pm.setComponentEnabledSetting(lightAlias, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
-                        } else {
-                            pm.setComponentEnabledSetting(lightAlias, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
-                            pm.setComponentEnabledSetting(darkAlias, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
-                        }
-                        runOnUiThread { result.success(true) }
-                    } catch (e: Exception) {
-                        runOnUiThread { result.success(false) }
-                    }
-                }
+                result.success(true)
             } else {
                 result.notImplemented()
             }

@@ -90,7 +90,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
 
     final primaryColor = isDark ? Colors.white : const Color(0xFF0A0A0A);
     final secondaryColor = isDark ? Colors.white54 : const Color(0x8A0A0A0A);

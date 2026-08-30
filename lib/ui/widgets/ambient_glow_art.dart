@@ -115,6 +115,8 @@ class _AmbientGlowArtState extends State<AmbientGlowArt> with SingleTickerProvid
                       child: Image.network(
                         widget.imageUrl!,
                         fit: BoxFit.cover,
+                        cacheWidth: 300,
+                        cacheHeight: 300,
                         errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
                       ),
                     ),
@@ -139,6 +141,8 @@ class _AmbientGlowArtState extends State<AmbientGlowArt> with SingleTickerProvid
                     ? Image.network(
                         widget.imageUrl!,
                         fit: BoxFit.cover,
+                        cacheWidth: 500,
+                        cacheHeight: 500,
                         errorBuilder: (context, error, stackTrace) => Center(
                           child: Icon(
                             Icons.music_note_rounded,

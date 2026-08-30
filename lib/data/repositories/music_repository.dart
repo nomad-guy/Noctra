@@ -123,7 +123,8 @@ class MusicRepository extends ChangeNotifier {
 
   int computeMatchScore(Song song) {
     final sim = TasteVectorEngine.cosineSimilarity(song.featureVector, _userTasteVector);
-    return (78 + sim * 21).round().clamp(75, 99);
+    final historyAffinity = NoctraLocalDatabase().getArtistAffinity(song.artist);
+    return (76 + (sim * 18) + (historyAffinity * 5)).round().clamp(75, 99);
   }
 
   List<AIPlaylist> getSmartAIPlaylists() {
@@ -175,19 +176,22 @@ class MusicRepository extends ChangeNotifier {
   }
 
   Future<List<Map<String, dynamic>>> curateWithAIAgent({required String prompt, String? vibeKey}) async {
-    // Knowledge Graph Context Injection
-    final topArtists = NoctraLocalDatabase().getTopArtists(limit: 2);
-    final searchTerms = [prompt, if (topArtists.isNotEmpty) topArtists.first].join(' ');
-    
-    final searched = await MusicService.search(searchTerms.trim());
-    final fallbackSearch = searched.isEmpty ? await MusicService.search(prompt) : searched;
-    final candidates = {...fallbackSearch, ..._localLibrary, ..._downloads, ..._recentlyPlayed}.toList();
-    final target = TasteVectorEngine.getTargetVector(vibeKey: vibeKey, prompt: prompt, defaultTaste: _userTasteVector);
+    final cleanPrompt = prompt.trim();
+    var searched = await MusicService.search(cleanPrompt);
+    if (searched.length < 5) {
+      final expanded = await MusicService.search('$cleanPrompt chill acoustic vibes');
+      searched = {...searched, ...expanded}.toList();
+    }
+    final target = TasteVectorEngine.getTargetVector(vibeKey: vibeKey, prompt: cleanPrompt, defaultTaste: _userTasteVector);
+    final candidates = searched.isNotEmpty ? searched : {..._localLibrary, ..._downloads, ..._recentlyPlayed}.toList();
 
     final scored = candidates.map((s) {
-      final sim = TasteVectorEngine.cosineSimilarity(s.featureVector, target);
+      final songEmbedding = s.featureVector.every((x) => x == 0.5)
+          ? TasteVectorEngine.extractSongEmbedding(s)
+          : s.featureVector;
+      final sim = TasteVectorEngine.cosineSimilarity(songEmbedding, target);
       final score = (80 + sim * 19).round().clamp(75, 99);
-      final exp = TasteVectorEngine.generateExplanation(s, score, vibeKey, prompt);
+      final exp = TasteVectorEngine.generateExplanation(s, score, vibeKey, cleanPrompt);
       return {'song': s, 'score': score, 'explanation': exp};
     }).toList();
 

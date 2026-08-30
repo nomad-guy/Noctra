@@ -26,7 +26,7 @@ class _AIRadioSheetState extends ConsumerState<AIRadioSheet> {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
     final repo = ref.watch(musicRepositoryProvider);
 
     return Container(

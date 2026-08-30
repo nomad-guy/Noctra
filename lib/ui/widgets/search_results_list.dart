@@ -63,7 +63,7 @@ class SearchResultsList extends ConsumerWidget {
 
     return ListView.builder(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 160),
       itemCount: searchResults.length,
       itemBuilder: (context, i) {
         final song = searchResults[i];
@@ -89,6 +89,8 @@ class SearchResultsList extends ConsumerWidget {
                     width: 46,
                     height: 46,
                     fit: BoxFit.cover,
+                    cacheWidth: 150,
+                    cacheHeight: 150,
                     errorBuilder: (c, e, st) => Container(
                       width: 46,
                       height: 46,

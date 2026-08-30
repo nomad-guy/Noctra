@@ -1,5 +1,5 @@
-import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -14,9 +14,18 @@ abstract class StreamResolver {
 
 class LocalFileResolver implements StreamResolver {
   @override
-  String get sourceId => 'local';
+  String get sourceId => 'local_offline';
   @override
-  Future<bool> canResolve(Song song) async => !kIsWeb && song.localFilePath != null && song.localFilePath!.isNotEmpty;
+  Future<bool> canResolve(Song song) async {
+    if (kIsWeb) return false;
+    final path = song.localFilePath;
+    if (path != null && path.isNotEmpty) {
+      try {
+        return File(path).existsSync();
+      } catch (_) {}
+    }
+    return false;
+  }
   @override
   Future<String?> resolveStreamUrl(Song song) async => song.localFilePath;
 }

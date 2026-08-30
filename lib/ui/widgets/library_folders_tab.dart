@@ -146,6 +146,7 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
               ? Center(child: Text('No tracks in this folder yet.', style: TextStyle(fontSize: 12.5, color: widget.isDark ? Colors.white38 : Colors.black38)))
               : ListView.builder(
                   physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 160),
                   itemCount: folderSongs.length,
                   itemBuilder: (context, i) {
                     final s = folderSongs[i];
@@ -172,9 +173,9 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
     );
   }
 
-  void _showCreateFolderDialog() {
+  void _showCreateFolderDialog() async {
     final ctrl = TextEditingController();
-    showDialog(
+    await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: widget.isDark ? const Color(0xFF141414) : Colors.white,
@@ -196,5 +197,6 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
         ],
       ),
     );
+    ctrl.dispose();
   }
 }

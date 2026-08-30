@@ -20,12 +20,11 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
     final repo = ref.watch(musicRepositoryProvider);
     final syncService = ref.watch(p2pSyncServiceProvider);
     final currentSong = ref.watch(currentSongStreamProvider).value;
     final isPlaying = ref.watch(isPlayingStreamProvider).value ?? false;
-    ref.watch(tasteVectorStateProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -197,7 +196,7 @@ class HomeScreen extends ConsumerWidget {
               child: DynamicVibeStreamSection(isDark: isDark, currentSong: currentSong, isPlaying: isPlaying),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 120)),
+            const SliverToBoxAdapter(child: SizedBox(height: 160)),
           ],
         ),
       ),

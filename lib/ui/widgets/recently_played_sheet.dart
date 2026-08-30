@@ -11,7 +11,7 @@ class RecentlyPlayedSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
     final repo = ref.watch(musicRepositoryProvider);
     final recentlyPlayed = repo.recentlyPlayed;
     final currentSong = ref.watch(currentSongStreamProvider).value;

@@ -11,7 +11,9 @@ class P2PSocketEngine {
       );
       for (final interface in interfaces) {
         for (final addr in interface.addresses) {
-          if (!addr.isLoopback) return addr.address;
+          if (!addr.isLoopback && !addr.isLinkLocal && addr.address != '0.0.0.0') {
+            return addr.address;
+          }
         }
       }
     } catch (_) {}

@@ -32,7 +32,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
     final repo = ref.watch(musicRepositoryProvider);
     final downloads = repo.downloads;
     final allSongs = repo.localLibrary;

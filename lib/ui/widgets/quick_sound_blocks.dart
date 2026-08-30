@@ -61,6 +61,8 @@ class QuickSoundBlocks extends ConsumerWidget {
                         width: 54,
                         height: double.infinity,
                         fit: BoxFit.cover,
+                        cacheWidth: 160,
+                        cacheHeight: 160,
                         errorBuilder: (context, error, stackTrace) => Container(
                           width: 54,
                           color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFE5E5EA),

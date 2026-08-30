@@ -236,7 +236,7 @@ class LibraryAIMixesTab extends ConsumerWidget {
           );
         }),
 
-        const SizedBox(height: 80),
+        const SizedBox(height: 160),
       ],
     );
   }

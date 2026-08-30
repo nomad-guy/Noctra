@@ -122,8 +122,8 @@ def get_spotify_charts():
 def spotify_oembed():
     """Zero-key Spotify oEmbed metadata proxy."""
     url = request.args.get('url', '').strip()
-    if not url:
-        return jsonify({"error": "Missing url parameter"}), 400
+    if not url or not (url.startswith('https://open.spotify.com/') or url.startswith('https://spotify.link/')):
+        return jsonify({"error": "Invalid Spotify URL"}), 400
     try:
         res = requests.get(f"https://open.spotify.com/oembed?url={requests.utils.quote(url)}", timeout=5)
         if res.status_code == 200:
@@ -131,7 +131,7 @@ def spotify_oembed():
         return jsonify({"error": "Spotify oEmbed lookup failed"}), res.status_code
     except Exception as e:
         logger.error(f"Spotify oEmbed error: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Spotify lookup error"}), 500
 
 @api_bp.route('/metadata/enrich', methods=['GET'])
 def enrich_metadata():

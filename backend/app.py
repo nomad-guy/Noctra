@@ -15,7 +15,6 @@ app = Flask(__name__)
 CORS(app)
 
 app.register_blueprint(api_bp, url_prefix='/api')
-app.register_blueprint(api_bp, name='api_root')
 
 @app.route('/', methods=['GET'])
 @app.route('/health', methods=['GET'])

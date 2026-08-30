@@ -29,7 +29,14 @@ class LibraryAllSongsTab extends ConsumerWidget {
     final currentSong = ref.watch(currentSongStreamProvider).value;
     final isPlaying = ref.watch(isPlayingStreamProvider).value ?? false;
 
-    final displaySongs = allSongs.toSet().toList();
+    final Map<String, Song> uniqueSongs = {};
+    for (final d in downloads) {
+      uniqueSongs[d.id] = d;
+    }
+    for (final s in allSongs) {
+      if (!uniqueSongs.containsKey(s.id)) uniqueSongs[s.id] = s;
+    }
+    final displaySongs = uniqueSongs.values.toList();
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -50,7 +57,7 @@ class LibraryAllSongsTab extends ConsumerWidget {
                       shape: BoxShape.circle,
                       color: isDark ? Colors.white12 : Colors.black12,
                     ),
-                    child: Icon(Icons.library_music_rounded, size: 20, color: isDark ? Colors.white : Colors.black),
+                    child: Icon(Icons.download_done_rounded, size: 20, color: isDark ? Colors.white : Colors.black),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -62,7 +69,7 @@ class LibraryAllSongsTab extends ConsumerWidget {
                           style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black),
                         ),
                         Text(
-                          '${downloads.length} Downloaded • Lossless 320k Ready',
+                          '${downloads.length} Downloaded Offline • Lossless 320k Ready',
                           style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54),
                         ),
                       ],
@@ -103,6 +110,8 @@ class LibraryAllSongsTab extends ConsumerWidget {
                             width: 44,
                             height: 44,
                             fit: BoxFit.cover,
+                            cacheWidth: 150,
+                            cacheHeight: 150,
                             errorBuilder: (c, e, st) => Container(
                               width: 44,
                               height: 44,
@@ -181,6 +190,7 @@ class LibraryAllSongsTab extends ConsumerWidget {
             ),
           ),
         ),
+        const SliverToBoxAdapter(child: SizedBox(height: 160)),
       ],
     );
   }

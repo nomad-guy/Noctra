@@ -57,7 +57,7 @@ class _AIStudioScreenState extends ConsumerState<AIStudioScreen> {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
     final repo = ref.watch(musicRepositoryProvider);
     final archetype = repo.getUserMusicalArchetype();
     final dominantAxes = repo.getDominantAxes();
@@ -191,6 +191,8 @@ class _AIStudioScreenState extends ConsumerState<AIStudioScreen> {
                                 song.artworkUrl ?? '',
                                 width: 48,
                                 height: 48,
+                                cacheWidth: 150,
+                                cacheHeight: 150,
                                 fit: BoxFit.cover,
                                 errorBuilder: (c, e, st) => Container(width: 48, height: 48, color: Colors.grey),
                               ),
@@ -236,7 +238,7 @@ class _AIStudioScreenState extends ConsumerState<AIStudioScreen> {
                 ),
               ),
             ),
-            const SliverToBoxAdapter(child: SizedBox(height: 32)),
+            const SliverToBoxAdapter(child: SizedBox(height: 160)),
           ],
         ),
       ),

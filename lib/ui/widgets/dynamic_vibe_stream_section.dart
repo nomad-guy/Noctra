@@ -103,6 +103,7 @@ class _DynamicVibeStreamSectionState extends ConsumerState<DynamicVibeStreamSect
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
                     song.artworkUrl ?? '', width: 48, height: 48, fit: BoxFit.cover,
+                    cacheWidth: 150, cacheHeight: 150,
                     errorBuilder: (context, error, stackTrace) => Container(
                       width: 48, height: 48,
                       color: widget.isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE5E5E5),

@@ -29,7 +29,8 @@ class _GlassCardState extends ConsumerState<GlassCard> {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
+    final isAmoled = themeMode.isAmoled;
     final activeHighlight = widget.isHighlighted || _isHovered;
 
     Widget content = MouseRegion(
@@ -40,12 +41,14 @@ class _GlassCardState extends ConsumerState<GlassCard> {
         curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
           color: isDark
-              ? (activeHighlight ? const Color(0xFF1C1C1E) : const Color(0xFF141416))
+              ? (isAmoled
+                  ? (activeHighlight ? const Color(0xFF141414) : const Color(0xFF080808))
+                  : (activeHighlight ? const Color(0xFF1C1C1E) : const Color(0xFF141416)))
               : (activeHighlight ? const Color(0xFFEBEBEF) : const Color(0xFFF4F4F6)),
           borderRadius: BorderRadius.circular(widget.radius),
           border: Border.all(
             color: isDark
-                ? (activeHighlight ? Colors.white38 : Colors.white10)
+                ? (activeHighlight ? Colors.white38 : (isAmoled ? Colors.white12 : Colors.white10))
                 : (activeHighlight ? Colors.black38 : Colors.black12),
             width: activeHighlight ? 1.2 : 1.0,
           ),

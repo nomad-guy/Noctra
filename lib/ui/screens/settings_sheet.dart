@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
 import '../../data/sources/noctra_local_database.dart';
 import '../../providers/app_providers.dart';
+import '../../services/updater/app_update_service.dart';
 import '../widgets/developer_panel_sheet.dart';
 import '../widgets/glass_card.dart';
 
@@ -15,7 +16,7 @@ class SettingsSheet extends ConsumerWidget {
     final lyricsPref = ref.watch(lyricsPreferenceProvider);
     final autoplayDelay = ref.watch(autoplayDelayProvider);
     final audioFade = ref.watch(audioFadeTransitionProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack || themeMode == NoirThemeMode.noirAmoled;
+    final isDark = themeMode.isDark;
     final audioPlayer = ref.read(audioPlayerServiceProvider);
     final sleepRemaining = audioPlayer.sleepTimerRemainingMinutes;
 
@@ -182,6 +183,35 @@ class SettingsSheet extends ConsumerWidget {
               ),
 
               const SizedBox(height: 18),
+
+              // In-App Updates Tile
+              GlassCard(
+                radius: 16,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: InkWell(
+                  onTap: () async {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Checking for new releases...'), duration: Duration(seconds: 1)));
+                    final info = await AppUpdateService.checkForUpdate();
+                    if (context.mounted) {
+                      AppUpdateService.showUpdateModal(context, info, isDark);
+                    }
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.system_update_rounded, size: 18, color: isDark ? Colors.white70 : Colors.black87),
+                          const SizedBox(width: 10),
+                          Text('Check for Updates (${AppUpdateService.currentVersion})', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
+                        ],
+                      ),
+                      Icon(Icons.chevron_right_rounded, color: isDark ? Colors.white38 : Colors.black38),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
 
               // Developer Panel Link
               GlassCard(

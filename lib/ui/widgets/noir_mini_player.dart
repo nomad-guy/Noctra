@@ -22,7 +22,7 @@ class NoirMiniPlayer extends ConsumerWidget {
     final isPlayingAsync = ref.watch(isPlayingStreamProvider);
     final positionAsync = ref.watch(positionStreamProvider);
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
 
     final song = currentSongAsync.value;
     if (song == null) return const SizedBox.shrink();
@@ -131,6 +131,8 @@ class NoirMiniPlayer extends ConsumerWidget {
                               ? Image.network(
                                   song.artworkUrl!,
                                   fit: BoxFit.cover,
+                                  cacheWidth: 150,
+                                  cacheHeight: 150,
                                   errorBuilder: (context, error, stackTrace) => Icon(
                                     Icons.music_note_outlined,
                                     color: isDark ? Colors.white54 : Colors.black54,

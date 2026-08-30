@@ -40,7 +40,7 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
     final repo = ref.watch(musicRepositoryProvider);
     final folders = repo.customFolders;
 

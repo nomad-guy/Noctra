@@ -195,6 +195,12 @@ class NoctraLocalDatabase {
     return sorted.take(limit).map((e) => e.key).where((a) => a.isNotEmpty).toList();
   }
 
+  double getArtistAffinity(String artist) {
+    if (artist.isEmpty || _artistWeights.isEmpty) return 0.0;
+    final w = _artistWeights[artist] ?? 0;
+    return (w / 10.0).clamp(0.0, 1.0);
+  }
+
   List<String> getTopGenres({int limit = 4}) {
     final sorted = _genreWeights.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
     return sorted.take(limit).map((e) => e.key).where((g) => g.isNotEmpty).toList();

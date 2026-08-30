@@ -4,9 +4,7 @@
 -dontwarn com.google.android.play.core.**
 -dontwarn io.flutter.embedding.engine.deferredcomponents.**
 
-# 2. Advanced Anti-Decompilation & Namespace Flattening
--repackageclasses ""
--allowaccessmodification
+# 2. Source Attribute Preservation
 -renamesourcefileattribute "SourceFile"
 -keepattributes SourceFile,LineNumberTable
 
@@ -38,8 +36,8 @@
 -keep class com.google.android.gms.** { *; }
 
 # 7. Keep Native JNI Methods & Noctra Classes
--keep class com.example.noctra.** { *; }
--keepclassmembers class com.example.noctra.** { *; }
+-keep class com.nomadguy.noctra.** { *; }
+-keepclassmembers class com.nomadguy.noctra.** { *; }
 -keepclasseswithmembernames class * {
     native <methods>;
 }

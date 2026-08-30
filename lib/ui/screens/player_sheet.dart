@@ -17,6 +17,7 @@ import '../widgets/audio_output_cast_sheet.dart';
 import '../widgets/player_controls_section.dart';
 import '../widgets/player_visualizer_selector.dart';
 import 'jam_studio_sheet.dart';
+import 'artist_screen.dart';
 
 enum StudioMasterMode { lossless320, spatial3d, concertReverb }
 enum PlayerDisplayMode { artwork, spectrumBars, radialCircle, synthwaveGrid, lyrics }
@@ -30,7 +31,7 @@ class PlayerSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
     final audioPlayerService = ref.watch(audioPlayerServiceProvider);
     final repo = ref.watch(musicRepositoryProvider);
     final song = ref.watch(currentSongStreamProvider).value;
@@ -84,12 +85,7 @@ class PlayerSheet extends ConsumerWidget {
                       IconButton(
                         tooltip: 'Audio Output Router',
                         icon: Icon(Icons.speaker_group_rounded, size: 21, color: isDark ? Colors.white : Colors.black),
-                        onPressed: () => showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (c) => AudioOutputCastSheet(isDark: isDark),
-                        ),
+                        onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => AudioOutputCastSheet(isDark: isDark)),
                       ),
                       IconButton(
                         tooltip: 'Noctra Jam Room',
@@ -99,12 +95,7 @@ class PlayerSheet extends ConsumerWidget {
                       IconButton(
                         tooltip: 'Equalizer',
                         icon: Icon(Icons.equalizer_rounded, size: 21, color: isDark ? Colors.white : Colors.black),
-                        onPressed: () => showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (c) => const EqualizerSheet(),
-                        ),
+                        onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const EqualizerSheet()),
                       ),
                     ],
                   ),
@@ -145,6 +136,8 @@ class PlayerSheet extends ConsumerWidget {
                       width: 52,
                       height: 52,
                       fit: BoxFit.cover,
+                      cacheWidth: 160,
+                      cacheHeight: 160,
                       errorBuilder: (c, e, st) => Container(width: 52, height: 52, color: isDark ? const Color(0xFF222222) : const Color(0xFFE5E5E5), child: Icon(Icons.music_note_rounded, color: isDark ? Colors.white54 : Colors.black54)),
                     ),
                   ),
@@ -160,11 +153,17 @@ class PlayerSheet extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 3),
-                        Text(
-                          song.artist,
-                          style: TextStyle(fontSize: 13, color: isDark ? Colors.white60 : Colors.black54),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        InkWell(
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            Navigator.of(context).push(MaterialPageRoute(builder: (c) => ArtistScreen(artistName: song.artist, artistImageUrl: song.artworkUrl)));
+                          },
+                          child: Text(
+                            song.artist,
+                            style: TextStyle(fontSize: 13, decoration: TextDecoration.underline, decorationColor: isDark ? Colors.white24 : Colors.black26, color: isDark ? Colors.white60 : Colors.black54),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
@@ -179,7 +178,7 @@ class PlayerSheet extends ConsumerWidget {
                   ),
                   IconButton(
                     icon: Icon(isDownloaded ? Icons.download_done_rounded : Icons.download_rounded, color: isDownloaded ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white38 : Colors.black38)),
-                    onPressed: isDownloaded ? null : () async => await MusicService.downloadTrack(song),
+                    onPressed: () => _handleDownload(context, song, isDownloaded),
                   ),
                 ],
               ),
@@ -282,5 +281,18 @@ class PlayerSheet extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  void _handleDownload(BuildContext context, Song song, bool isDownloaded) async {
+    final sm = ScaffoldMessenger.of(context);
+    if (isDownloaded) {
+      sm.showSnackBar(const SnackBar(content: Text('Song already downloaded for offline playback.'), duration: Duration(seconds: 2)));
+      return;
+    }
+    sm.showSnackBar(SnackBar(content: Text('Downloading "${song.title}" in 320kbps CD lossless...'), duration: const Duration(seconds: 2)));
+    final res = await MusicService.downloadTrack(song);
+    if (context.mounted) {
+      sm.showSnackBar(SnackBar(content: Text(res != null ? 'Downloaded "${song.title}" for offline playback' : 'Download failed. Check connection.'), duration: const Duration(seconds: 3)));
+    }
   }
 }

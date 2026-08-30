@@ -42,6 +42,7 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
   @override
   void dispose() {
     _resumeAutoScrollTimer?.cancel();
+    _lineKeys.clear();
     _scrollController.dispose();
     super.dispose();
   }
@@ -75,7 +76,7 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
     final currentPos = ref.watch(positionStreamProvider).value ?? Duration.zero;
 
     return FutureBuilder<LyricsData>(

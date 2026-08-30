@@ -28,7 +28,7 @@ class EqualizerSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
     final currentBands = ref.watch(eqBandsProvider);
     final currentPreset = ref.watch(eqPresetProvider);
     final bassBoost = ref.watch(bassBoostProvider);

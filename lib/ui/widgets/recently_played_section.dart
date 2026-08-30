@@ -138,6 +138,8 @@ class RecentlyPlayedSection extends ConsumerWidget {
                               width: 44,
                               height: 44,
                               fit: BoxFit.cover,
+                              cacheWidth: 150,
+                              cacheHeight: 150,
                               errorBuilder: (context, error, stackTrace) => Container(
                                 width: 44,
                                 height: 44,

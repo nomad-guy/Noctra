@@ -6,6 +6,12 @@ enum NoirThemeMode {
   noirAmoled,
 }
 
+extension NoirThemeModeX on NoirThemeMode {
+  bool get isDark => this != NoirThemeMode.noirWhite;
+  bool get isAmoled => this == NoirThemeMode.noirAmoled;
+  bool get isWhite => this == NoirThemeMode.noirWhite;
+}
+
 class NoirColors {
   // Pure Monochromatic Noir Black Palette
   static const Color blackCanvas = Color(0xFF070709);

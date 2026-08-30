@@ -1,4 +1,4 @@
-package com.example.noctra
+package com.nomadguy.noctra
 
 import android.content.Context
 import android.media.AudioDeviceCallback

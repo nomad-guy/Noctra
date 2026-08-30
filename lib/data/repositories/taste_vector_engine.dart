@@ -140,8 +140,11 @@ class TasteVectorEngine {
       if (p.contains('fast') || p.contains('energy') || p.contains('workout') || p.contains('hype') || p.contains('run')) {
         vec[2] = 0.95; vec[14] = 0.92; vec[12] = 0.85;
       }
-      if (p.contains('chill') || p.contains('study') || p.contains('sleep') || p.contains('calm') || p.contains('focus')) {
-        vec[3] = 0.95; vec[11] = 0.95; vec[1] = 0.90; vec[2] = 0.15;
+      if (p.contains('chill') || p.contains('study') || p.contains('sleep') || p.contains('calm') || p.contains('focus') || p.contains('comfort') || p.contains('peace') || p.contains('heal') || p.contains('soft') || p.contains('gentle')) {
+        vec[3] = 0.98; vec[11] = 0.95; vec[1] = 0.95; vec[5] = 0.90; vec[7] = 0.85; vec[2] = 0.10; vec[0] = 0.15;
+      }
+      if (p.contains('sad') || p.contains('alone') || p.contains('heartbreak') || p.contains('melancholy')) {
+        vec[4] = 0.98; vec[1] = 0.85; vec[5] = 0.85; vec[7] = 0.90; vec[2] = 0.15;
       }
       if (p.contains('synth') || p.contains('cyber') || p.contains('retro') || p.contains('drive')) {
         vec[6] = 0.95; vec[9] = 0.98; vec[10] = 0.95; vec[13] = 0.88;

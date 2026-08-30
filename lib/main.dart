@@ -86,29 +86,32 @@ class MainNavigationShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(bottomNavIndexProvider);
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
     final scaffoldKey = ref.watch(rootScaffoldKeyProvider);
 
     return Scaffold(
       key: scaffoldKey,
       drawer: const NoirSidebar(),
-      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFFFFFFF),
+      backgroundColor: isDark ? (themeMode.isAmoled ? const Color(0xFF000000) : const Color(0xFF070709)) : const Color(0xFFFFFFFF),
       body: Stack(
         children: [
           IndexedStack(
             index: currentIndex,
             children: _screens,
           ),
-          const Positioned(
+          Positioned(
             left: 0,
             right: 0,
             bottom: 0,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                NoirMiniPlayer(),
-                _CustomBottomNavBar(),
-              ],
+            child: SafeArea(
+              top: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  NoirMiniPlayer(),
+                  _CustomBottomNavBar(),
+                ],
+              ),
             ),
           ),
         ],
@@ -124,12 +127,12 @@ class _CustomBottomNavBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(bottomNavIndexProvider);
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
 
     return Container(
-      height: 64,
+      height: 58,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xE6080808) : const Color(0xE6FFFFFF),
+        color: isDark ? (themeMode.isAmoled ? const Color(0xFF000000) : const Color(0xF2080808)) : const Color(0xF2FFFFFF),
         border: Border(
           top: BorderSide(
             color: isDark ? Colors.white12 : Colors.black12,

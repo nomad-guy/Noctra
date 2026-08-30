@@ -59,7 +59,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
     final isSearching = ref.watch(isSearchingProvider);
     final searchResults = ref.watch(searchResultsProvider);
     final syncService = ref.watch(p2pSyncServiceProvider);

@@ -12,7 +12,7 @@ class JamFloatingPill extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final syncService = ref.watch(p2pSyncServiceProvider);
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode == NoirThemeMode.noirBlack;
+    final isDark = themeMode.isDark;
 
     if (!syncService.isJamActive) return const SizedBox.shrink();
 
