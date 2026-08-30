@@ -24,45 +24,39 @@ class RadialCircleVisualizer extends StatefulWidget {
 class _RadialCircleVisualizerState extends State<RadialCircleVisualizer> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   StreamSubscription? _fftSub;
-  final List<double> _spikes = List.filled(48, 0.05);
+  final List<double> _spikes = List.filled(48, 0.15);
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..addListener(_applyDecay);
-    if (widget.isPlaying) _controller.repeat();
+      duration: const Duration(milliseconds: 2400),
+    )..addListener(_applyTick);
+    _controller.repeat();
 
     _fftSub = AudioVisualizerService().fftStream.listen((fftData) {
-      if (!mounted || !widget.isPlaying) return;
-      setState(() {
-        for (int i = 0; i < 48; i++) {
-          final fftIdx = (i * fftData.length) ~/ 48;
-          final raw = fftData[fftIdx % fftData.length];
-          final target = (raw * 1.5).clamp(0.04, 0.95);
-          if (target > _spikes[i]) {
-            _spikes[i] += (target - _spikes[i]) * 0.70;
-          }
+      if (!mounted) return;
+      for (int i = 0; i < 48; i++) {
+        final fftIdx = (i * fftData.length) ~/ 48;
+        final raw = fftData[fftIdx % fftData.length];
+        final target = (raw * 1.6).clamp(0.08, 0.98);
+        if (target > _spikes[i]) {
+          _spikes[i] += (target - _spikes[i]) * 0.75;
         }
-      });
+      }
     });
   }
 
-  void _applyDecay() {
+  void _applyTick() {
+    final t = DateTime.now().millisecondsSinceEpoch / 1000.0;
     for (int i = 0; i < 48; i++) {
-      _spikes[i] = max(0.04, _spikes[i] * 0.88);
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant RadialCircleVisualizer oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isPlaying && !_controller.isAnimating) {
-      _controller.repeat();
-    } else if (!widget.isPlaying && _controller.isAnimating) {
-      _controller.stop();
+      if (widget.isPlaying) {
+        final w = (sin(t * 6.5 + i * 0.45) * 0.35 + 0.50) * (cos(t * 3.2 + i * 0.25) * 0.30 + 0.65);
+        _spikes[i] = (_spikes[i] * 0.60 + w * 0.40).clamp(0.12, 0.98);
+      } else {
+        _spikes[i] = max(0.06, _spikes[i] * 0.88);
+      }
     }
   }
 
@@ -135,7 +129,7 @@ class _RadialCirclePainter extends CustomPainter {
 
     for (int i = 0; i < numSpikes; i++) {
       final angle = (i / numSpikes) * 2 * pi + (progress * 2 * pi);
-      final amp = isPlaying ? (spikes[i] * 22.0 + 3.0) : 2.5;
+      final amp = isPlaying ? (spikes[i] * 24.0 + 4.0) : 3.0;
 
       final startX = center.dx + (baseRadius * cos(angle));
       final startY = center.dy + (baseRadius * sin(angle));
@@ -143,8 +137,8 @@ class _RadialCirclePainter extends CustomPainter {
       final endY = center.dy + ((baseRadius + amp) * sin(angle));
 
       final paint = Paint()
-        ..color = color.withValues(alpha: isPlaying ? (0.45 + (spikes[i] * 0.50)) : 0.25)
-        ..strokeWidth = 2.2
+        ..color = color.withValues(alpha: isPlaying ? (0.45 + (spikes[i] * 0.50)).clamp(0.2, 1.0) : 0.25)
+        ..strokeWidth = 2.4
         ..strokeCap = StrokeCap.round;
 
       canvas.drawLine(Offset(startX, startY), Offset(endX, endY), paint);
@@ -152,9 +146,5 @@ class _RadialCirclePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _RadialCirclePainter oldDelegate) {
-    return oldDelegate.spikes != spikes ||
-        oldDelegate.color != color ||
-        oldDelegate.isPlaying != isPlaying;
-  }
+  bool shouldRepaint(covariant _RadialCirclePainter oldDelegate) => true;
 }

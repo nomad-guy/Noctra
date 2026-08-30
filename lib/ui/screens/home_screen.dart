@@ -54,23 +54,24 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
               title: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: Icon(Icons.menu_rounded, color: isDark ? Colors.white : Colors.black, size: 24),
+                          icon: Icon(Icons.menu_rounded, color: isDark ? Colors.white : Colors.black, size: 22),
                           tooltip: 'Open Sidebar',
                           onPressed: () => ref.read(rootScaffoldKeyProvider).currentState?.openDrawer(),
                         ),
-                        NoctraAppLogo(size: 26, radius: 7, isDark: isDark),
+                        NoctraAppLogo(size: 24, radius: 6, isDark: isDark),
                         const SizedBox(width: 6),
                         Text(
                           'NOCTRA',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 2.0,
                             color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,

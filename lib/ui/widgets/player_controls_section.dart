@@ -74,12 +74,12 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${_formatDuration(currentPos)} elapsed',
+                _formatDuration(currentPos),
                 style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white70 : Colors.black87),
               ),
               Text(
-                '-${_formatDuration(remaining.isNegative ? Duration.zero : remaining)} left (${_formatDuration(widget.duration)} total)',
-                style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white54 : Colors.black54),
+                '-${_formatDuration(remaining.isNegative ? Duration.zero : remaining)}',
+                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white54 : Colors.black54),
               ),
             ],
           ),
@@ -162,7 +162,7 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
                   thumbColor: isDark ? Colors.white : Colors.black,
                 ),
                 child: Slider(
-                  value: widget.volume.clamp(0.0, 1.0),
+                  value: (widget.volume.isNaN || widget.volume.isInfinite) ? 1.0 : widget.volume.clamp(0.0, 1.0),
                   min: 0.0,
                   max: 1.0,
                   onChanged: (val) => widget.audioPlayerService.setVolume(val),
@@ -170,7 +170,7 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
               ),
             ),
             Text(
-              '${(widget.volume * 100).toInt()}%',
+              '${(((widget.volume.isNaN || widget.volume.isInfinite) ? 1.0 : widget.volume.clamp(0.0, 1.0)) * 100).toInt()}%',
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isDark ? Colors.white60 : Colors.black54),
             ),
           ],

@@ -47,33 +47,25 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
           children: [
             // Top App Bar
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          Icons.menu_rounded,
-                          color: isDark ? Colors.white : Colors.black,
-                          size: 26,
-                        ),
-                        tooltip: 'Open Sidebar',
-                        onPressed: () {
-                          ref.read(rootScaffoldKeyProvider).currentState?.openDrawer();
-                        },
+                  IconButton(
+                    icon: Icon(Icons.menu_rounded, color: isDark ? Colors.white : Colors.black, size: 24),
+                    tooltip: 'Open Sidebar',
+                    onPressed: () => ref.read(rootScaffoldKeyProvider).currentState?.openDrawer(),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      'Your Library',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Your Library',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                   IconButton(
                     tooltip: 'SyncCast Party Mode',

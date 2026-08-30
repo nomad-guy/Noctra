@@ -4,9 +4,9 @@ import '../../core/theme/noir_theme.dart';
 import '../../data/models/song_model.dart';
 import '../../data/repositories/music_repository.dart';
 import '../../providers/app_providers.dart';
+import '../../services/ytdlp/music_service.dart';
 import 'glass_card.dart';
 import 'add_to_folder_sheet.dart';
-import 'ai_radio_sheet.dart';
 
 class LibraryAllSongsTab extends ConsumerWidget {
   final bool isDark;
@@ -148,39 +148,36 @@ class LibraryAllSongsTab extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        IconButton(
-                          icon: Icon(Icons.playlist_add_rounded, size: 21, color: isDark ? Colors.white70 : Colors.black87),
-                          tooltip: 'Add to Folder',
-                          onPressed: () {
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.transparent,
-                              builder: (context) => AddToFolderSheet(song: s),
+                        StreamBuilder<Map<String, double>>(
+                          stream: MusicService.downloadProgressStream,
+                          builder: (context, snap) {
+                            final p = snap.data?[s.id];
+                            if (p != null && p < 1.0) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                                child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(value: p, strokeWidth: 2, color: isDark ? Colors.white70 : Colors.black87)),
+                              );
+                            }
+                            if (s.isDownloaded || s.localFilePath != null) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                                child: Icon(Icons.download_done_rounded, size: 18, color: isDark ? Colors.greenAccent.shade200 : Colors.green.shade700),
+                              );
+                            }
+                            return IconButton(
+                              icon: Icon(Icons.download_rounded, size: 19, color: isDark ? Colors.white60 : Colors.black54),
+                              tooltip: 'Download Offline',
+                              onPressed: () => MusicService.downloadTrack(s),
                             );
                           },
                         ),
                         IconButton(
-                          icon: Icon(Icons.radar_rounded, size: 20, color: isDark ? Colors.white70 : Colors.black87),
-                          tooltip: 'AI Similarity Radio',
-                          onPressed: () {
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.transparent,
-                              builder: (context) => AIRadioSheet(seedSong: s),
-                            );
-                          },
+                          icon: Icon(Icons.playlist_add_rounded, size: 20, color: isDark ? Colors.white70 : Colors.black87),
+                          tooltip: 'Add to Folder',
+                          onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (context) => AddToFolderSheet(song: s)),
                         ),
                         if (isCurrent && isPlaying)
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isDark ? Colors.white : Colors.black,
-                            ),
-                          ),
+                          Container(width: 8, height: 8, margin: const EdgeInsets.only(left: 4), decoration: BoxDecoration(shape: BoxShape.circle, color: isDark ? Colors.white : Colors.black)),
                       ],
                     ),
                   ),

@@ -17,7 +17,7 @@ class AudioVisualizerService {
   final _fftController = StreamController<List<double>>.broadcast();
   Stream<List<double>> get fftStream => _fftController.stream;
 
-  List<double> _latestFft = List.filled(32, 0.0);
+  List<double> _latestFft = List.filled(32, 0.2);
   List<double> get latestFft => List.unmodifiable(_latestFft);
 
   AudioVisualizerService._internal() {
@@ -25,22 +25,20 @@ class AudioVisualizerService {
   }
 
   void _init() {
-    if (kIsWeb) return;
-    try {
-      final playerService = AudioPlayerService();
-      final initialSessionId = playerService.player.androidAudioSessionId;
-      if (initialSessionId != null && initialSessionId > 0) {
-        _startListening(initialSessionId);
-      }
-      playerService.player.androidAudioSessionIdStream.listen((sessionId) {
-        if (sessionId != null && sessionId > 0 && sessionId != _currentSessionId) {
-          _startListening(sessionId);
+    if (!kIsWeb) {
+      try {
+        final playerService = AudioPlayerService();
+        final initialSessionId = playerService.player.androidAudioSessionId;
+        if (initialSessionId != null && initialSessionId > 0) {
+          _startListening(initialSessionId);
         }
-      });
-    } catch (e) {
-      if (kDebugMode) print('Noctra AudioVisualizer initialization error: $e');
+        playerService.player.androidAudioSessionIdStream.listen((sessionId) {
+          if (sessionId != null && sessionId > 0 && sessionId != _currentSessionId) {
+            _startListening(sessionId);
+          }
+        });
+      } catch (_) {}
     }
-
     _startFallbackLoop();
   }
 
@@ -62,33 +60,33 @@ class AudioVisualizerService {
             _fftController.add(_latestFft);
           }
         },
-        onError: (e) {
-          if (kDebugMode) print('Noctra Visualizer FFT stream error: $e');
-        },
+        onError: (_) {},
       );
-    } catch (e) {
-      if (kDebugMode) print('Noctra Visualizer startListening error: $e');
-    }
+    } catch (_) {}
   }
 
   void _startFallbackLoop() {
     _fallbackTicker?.cancel();
     _fallbackTicker = Timer.periodic(const Duration(milliseconds: 33), (_) {
       final now = DateTime.now().millisecondsSinceEpoch;
-      // If hardware capture is idle for > 200ms while audio is playing
-      if (now - _lastHardwarePacketMs > 200) {
-        final player = AudioPlayerService().player;
-        if (player.playing) {
-          final posSec = player.position.inMilliseconds / 1000.0;
-          final List<double> bins = List.filled(32, 0.0);
-          for (int i = 0; i < 32; i++) {
-            final freq = (i + 1) * 1.8;
-            final wave = (sin(posSec * freq + (i * 0.4)) * 0.4 + 0.5) * (cos(posSec * 3.2) * 0.3 + 0.7);
-            bins[i] = wave.clamp(0.05, 0.95);
+      if (now - _lastHardwarePacketMs > 150) {
+        final t = now / 1000.0;
+        final isPlaying = AudioPlayerService().player.playing;
+        final List<double> bins = List.filled(32, 0.0);
+        for (int i = 0; i < 32; i++) {
+          if (isPlaying) {
+            final freq1 = (i + 1) * 1.85;
+            final freq2 = (i + 1) * 0.95;
+            final w1 = sin(t * freq1 + (i * 0.45)) * 0.40 + 0.50;
+            final w2 = cos(t * freq2 + (i * 0.25)) * 0.30 + 0.50;
+            final sub = (sin(t * 8.0) * 0.25 + 0.75);
+            bins[i] = ((w1 * 0.6 + w2 * 0.4) * sub).clamp(0.10, 0.98);
+          } else {
+            bins[i] = max(0.04, _latestFft[i] * 0.90);
           }
-          _latestFft = bins;
-          _fftController.add(_latestFft);
         }
+        _latestFft = bins;
+        _fftController.add(_latestFft);
       }
     });
   }

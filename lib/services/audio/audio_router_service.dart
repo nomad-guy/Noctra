@@ -40,13 +40,15 @@ class AudioRouterService {
   final _deviceController = StreamController<List<AudioDeviceEndpoint>>.broadcast();
   Stream<List<AudioDeviceEndpoint>> get devicesStream => _deviceController.stream;
 
+  StreamSubscription? _eventSub;
+
   AudioRouterService._internal() {
     _initListener();
   }
 
   void _initListener() {
     try {
-      _eventChannel.receiveBroadcastStream().listen((dynamic event) {
+      _eventSub = _eventChannel.receiveBroadcastStream().listen((dynamic event) {
         if (event is List) {
           final list = event.map((e) => AudioDeviceEndpoint.fromMap(e as Map)).toList();
           _deviceController.add(list);
@@ -93,6 +95,7 @@ class AudioRouterService {
   }
 
   void dispose() {
+    _eventSub?.cancel();
     _deviceController.close();
   }
 }

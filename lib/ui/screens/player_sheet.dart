@@ -74,34 +74,45 @@ class PlayerSheet extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
                     icon: Icon(Icons.keyboard_arrow_down_rounded, size: 28, color: isDark ? Colors.white : Colors.black),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
-                  Text('NOW PLAYING', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, letterSpacing: 2.2, color: isDark ? Colors.white60 : Colors.black54)),
+                  Text('NOW PLAYING', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.8, color: isDark ? Colors.white60 : Colors.black54)),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
                         tooltip: 'Sleep Timer',
                         icon: Icon(
                           audioPlayerService.sleepTimerRemainingMinutes != null ? Icons.bedtime_rounded : Icons.bedtime_outlined,
-                          size: 21,
+                          size: 19,
                           color: audioPlayerService.sleepTimerRemainingMinutes != null ? Colors.cyanAccent : (isDark ? Colors.white : Colors.black),
                         ),
                         onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const SleepTimerSheet()),
                       ),
                       IconButton(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
                         tooltip: 'Audio Output Router',
-                        icon: Icon(Icons.speaker_group_rounded, size: 21, color: isDark ? Colors.white : Colors.black),
+                        icon: Icon(Icons.speaker_group_rounded, size: 19, color: isDark ? Colors.white : Colors.black),
                         onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => AudioOutputCastSheet(isDark: isDark)),
                       ),
                       IconButton(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
                         tooltip: 'Noctra Jam Room',
-                        icon: Icon(Icons.podcasts_rounded, size: 21, color: isDark ? Colors.white : Colors.black),
+                        icon: Icon(Icons.podcasts_rounded, size: 19, color: isDark ? Colors.white : Colors.black),
                         onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const JamStudioSheet()),
                       ),
                       IconButton(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
                         tooltip: 'Equalizer',
-                        icon: Icon(Icons.equalizer_rounded, size: 21, color: isDark ? Colors.white : Colors.black),
+                        icon: Icon(Icons.equalizer_rounded, size: 19, color: isDark ? Colors.white : Colors.black),
                         onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const EqualizerSheet()),
                       ),
                     ],
@@ -193,15 +204,19 @@ class PlayerSheet extends ConsumerWidget {
               const SizedBox(height: 12),
 
               // Studio Master Chips
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _masterChip(ref, 'Lossless 320k', StudioMasterMode.lossless320, Icons.album_rounded, masterMode, isDark),
-                  const SizedBox(width: 8),
-                  _masterChip(ref, 'Spatial 3D', StudioMasterMode.spatial3d, Icons.surround_sound_rounded, masterMode, isDark),
-                  const SizedBox(width: 8),
-                  _masterChip(ref, 'Concert Reverb', StudioMasterMode.concertReverb, Icons.stadium_rounded, masterMode, isDark),
-                ],
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _masterChip(ref, 'Lossless 320k', StudioMasterMode.lossless320, Icons.album_rounded, masterMode, isDark),
+                    const SizedBox(width: 8),
+                    _masterChip(ref, 'Spatial 3D', StudioMasterMode.spatial3d, Icons.surround_sound_rounded, masterMode, isDark),
+                    const SizedBox(width: 8),
+                    _masterChip(ref, 'Concert Reverb', StudioMasterMode.concertReverb, Icons.stadium_rounded, masterMode, isDark),
+                  ],
+                ),
               ),
 
               const SizedBox(height: 14),
@@ -261,27 +276,13 @@ class PlayerSheet extends ConsumerWidget {
   }
 
   Widget _masterChip(WidgetRef ref, String label, StudioMasterMode mode, IconData icon, StudioMasterMode current, bool isDark) {
-    final isSelected = current == mode;
+    final isSel = current == mode;
     return InkWell(
-      onTap: () {
-        ref.read(studioMasterModeProvider.notifier).state = mode;
-        ref.read(audioPlayerServiceProvider).applyStudioMasterMode(mode);
-      },
+      onTap: () { ref.read(studioMasterModeProvider.notifier).state = mode; ref.read(audioPlayerServiceProvider).applyStudioMasterMode(mode); },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? (isDark ? Colors.white : Colors.black) : (isDark ? const Color(0xFF141414) : const Color(0xFFEBEBEB)),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isSelected ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white12 : Colors.black12)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 13, color: isSelected ? (isDark ? Colors.black : Colors.white) : (isDark ? Colors.white70 : Colors.black87)),
-            const SizedBox(width: 5),
-            Text(label, style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500, color: isSelected ? (isDark ? Colors.black : Colors.white) : (isDark ? Colors.white70 : Colors.black87))),
-          ],
-        ),
+        decoration: BoxDecoration(color: isSel ? (isDark ? Colors.white : Colors.black) : (isDark ? const Color(0xFF141414) : const Color(0xFFEBEBEB)), borderRadius: BorderRadius.circular(12), border: Border.all(color: isSel ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white12 : Colors.black12))),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 13, color: isSel ? (isDark ? Colors.black : Colors.white) : (isDark ? Colors.white70 : Colors.black87)), const SizedBox(width: 5), Text(label, style: TextStyle(fontSize: 11, fontWeight: isSel ? FontWeight.w700 : FontWeight.w500, color: isSel ? (isDark ? Colors.black : Colors.white) : (isDark ? Colors.white70 : Colors.black87)))]),
       ),
     );
   }

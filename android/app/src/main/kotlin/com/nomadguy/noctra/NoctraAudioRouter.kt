@@ -32,6 +32,10 @@ class NoctraAudioRouter(private val context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             audioManager.unregisterAudioDeviceCallback(deviceCallback)
         }
+        try {
+            audioManager.stopBluetoothSco()
+            audioManager.isBluetoothScoOn = false
+        } catch (_: Throwable) {}
         this.eventSink = null
     }
 

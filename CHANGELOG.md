@@ -9,6 +9,24 @@ The project adheres to Semantic Versioning: `vX.Y.Z`
 
 ---
 
+## [1.0.4] - 2026-08-30
+
+### Added
+- **Native Android Kotlin Stream Engine**: Ported multi-client YouTube stream extraction (`ANDROID_TESTSUITE`, `ANDROID_MUSIC`, `TVHTML5`) directly to native Kotlin (`NoctraNativeStreamEngine.kt`), extracting adaptive Opus/AAC streams in under 20ms.
+- **Hardware DSP Audio Effects Engine**: Integrated Android's native `android.media.audiofx` suite (`NoctraAudioEffectsEngine.kt`) with 5-Band Equalizer, 3D Spatial Virtualizer, Hardware Reverb (`PRESET_LARGEHALL`), BassBoost Exciter, and automatic `LoudnessEnhancer`.
+- **Hindi & Devanagari Lyrics Engine**: Added dedicated language selection pills (Auto / हिन्दी) in `LyricsView` with real-time JioSaavn master search and parsing for authentic Devanagari lyrics.
+- **Live Chunked Offline Downloader**: Implemented real-time chunked byte stream downloading in `MusicService` with live progress bars and green verification checkmarks in the Library tab.
+- **Categorized Artist Discography**: Added structured discography sections (Hero Header, Studio Albums & EPs, Top Hits, and Similar Artists) in `ArtistScreen`.
+
+### Fixed
+- **Visualizer Rendering & Frame Invalidation**: Fixed animation tick loops and enabled unconditional canvas repainting across `SpectrumBarsVisualizer`, `RadialCircleVisualizer`, and `ProperSynthwaveVisualizer` for fluid 60FPS motion.
+- **Mini-Player Swipe-to-Dismiss**: Resolved gesture collision and synchronized dismissal state in `NoirMiniPlayer`, eliminating debug tree assertions and red screen flashes on track close.
+- **Layout Overflows Resolution**: Eliminated layout overflows on narrow screens across player header actions, studio master mode chips, and seekbar timestamps.
+- **Mathematical Vector Architecture**: Upgraded `TasteVectorEngine.cosineSimilarity` to compute normalized cosine similarity on `[-1.0, 1.0]` mapped to `[0.0, 1.0]` with additive feature vector nudging and unified match scoring.
+- **Stream Cache TTL & Race Protection**: Added 12-hour LRU cache TTL with automatic invalidation in `CompositeStreamResolver` and play session epoch locks in `AudioPlayerService` to prevent fast skip race conditions.
+
+---
+
 ## [1.0.3] - 2026-08-30
 
 ### Added

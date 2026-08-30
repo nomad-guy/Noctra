@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../../core/utils/permission_helper.dart';
@@ -8,91 +10,76 @@ import '../../data/models/song_model.dart';
 import '../../data/repositories/music_repository.dart';
 import '../resolvers/stream_resolver.dart';
 
+class ArtistDiscography {
+  final List<Song> topTracks;
+  final List<Map<String, dynamic>> albums, singles, similarArtists;
+  ArtistDiscography({required this.topTracks, required this.albums, required this.singles, required this.similarArtists});
+}
+
 class MusicService {
-  static const String baseUrl = 'http://127.0.0.1:8088';
+  static final downloadProgressController = StreamController<Map<String, double>>.broadcast();
+  static Stream<Map<String, double>> get downloadProgressStream => downloadProgressController.stream;
 
-  static Future<bool> isSidecarActive() async {
-    try {
-      final res = await http.get(Uri.parse('$baseUrl/health')).timeout(const Duration(milliseconds: 300));
-      return res.statusCode == 200;
-    } catch (_) { return false; }
-  }
-
-  static Future<List<Song>> search(String query, {String? source}) async => searchTracks(query);
-
-  static Future<List<String>> fetchSearchSuggestions(String query) async {
+  static Future<List<Song>> search(String query, {String source = 'ytmusic'}) => searchTracks(query, source: source);
+  static Future<List<Song>> searchTracks(String query, {String source = 'ytmusic'}) async {
     final clean = query.trim();
-    if (clean.isEmpty) return [];
-    try {
-      final uri = Uri.parse('https://suggestqueries-clients6.youtube.com/complete/search?client=youtube&ds=yt&q=${Uri.encodeComponent(clean)}');
-      final res = await http.get(uri).timeout(const Duration(seconds: 2));
-      if (res.statusCode == 200) {
-        final body = res.body;
-        final start = body.indexOf('(');
-        final end = body.lastIndexOf(')');
-        if (start != -1 && end != -1) {
-          final jsonStr = body.substring(start + 1, end);
-          final data = jsonDecode(jsonStr);
-          final raw = data[1] as List?;
-          if (raw != null) {
-            return raw.map((item) => (item[0] ?? '').toString()).where((s) => s.isNotEmpty).take(8).toList();
+    if (clean.isEmpty) return _getHardcodedCuratedTracks();
+
+    if (source == 'ytmusic' && !kIsWeb) {
+      try {
+        final sUri = Uri.parse('https://music.youtube.com/youtubei/v1/search');
+        final sBody = jsonEncode({'query': clean, 'context': {'client': {'clientName': 'WEB_REMIX', 'clientVersion': '1.20240820.01.00', 'hl': 'en', 'gl': 'US'}}});
+        final sRes = await http.post(sUri, body: sBody, headers: {'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 4));
+        if (sRes.statusCode == 200) {
+          final sections = jsonDecode(sRes.body)['contents']?['tabbedSearchResultsRenderer']?['tabs']?[0]?['tabRenderer']?['content']?['sectionListRenderer']?['contents'] as List?;
+          if (sections != null) {
+            final ytSongs = <Song>[];
+            for (final sec in sections) {
+              final items = (sec as Map)['itemSectionRenderer']?['contents'] as List? ?? (sec)['musicShelfRenderer']?['contents'] as List?;
+              if (items == null) continue;
+              for (final it in items) {
+                final r = (it as Map)['musicResponsiveListItemRenderer'] as Map?;
+                if (r == null) continue;
+                final flex = r['flexColumns'] as List?;
+                final t = (flex != null && flex.isNotEmpty) ? (flex[0]['musicResponsiveListItemFlexColumnRenderer']?['text']?['runs']?[0]?['text'] ?? '').toString() : '';
+                final a = (flex != null && flex.length > 1) ? (flex[1]['musicResponsiveListItemFlexColumnRenderer']?['text']?['runs']?[0]?['text'] ?? 'YouTube Music').toString() : 'YouTube Music';
+                String? vid = r['playlistItemData']?['videoId']?.toString() ?? r['navigationEndpoint']?['watchEndpoint']?['videoId']?.toString();
+                if (vid == null && flex != null && flex.isNotEmpty) {
+                  try {
+                    final runs = flex[0]['musicResponsiveListItemFlexColumnRenderer']?['text']?['runs'] as List?;
+                    if (runs != null && runs.isNotEmpty) vid = (runs[0] as Map)['navigationEndpoint']?['watchEndpoint']?['videoId']?.toString();
+                  } catch (_) {}
+                }
+                if (vid != null && vid.length == 11 && t.isNotEmpty) {
+                  ytSongs.add(Song(id: vid, title: t, artist: a, album: 'YouTube Music', artworkUrl: 'https://i.ytimg.com/vi/$vid/hqdefault.jpg', streamUrl: null, duration: const Duration(seconds: 210), genre: 'YouTube Music', featureVector: _deriveFeatureVector(t)));
+                }
+              }
+            }
+            if (ytSongs.isNotEmpty) return ytSongs;
           }
         }
-      }
-    } catch (_) {}
-    return [];
-  }
+      } catch (_) {}
+    }
 
-  static Future<List<Song>> searchTracks(String query) async {
-    final clean = query.trim();
-    if (clean.isEmpty) return [];
-
-    try {
-      final uri = Uri.parse('https://www.jiosaavn.com/api.php?__call=search.getResults&_format=json&_marker=0&cc=in&includeMetaTags=1&p=1&n=25&q=${Uri.encodeComponent(clean)}');
-      final res = await http.get(uri, headers: {'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 4));
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        final results = data['results'] as List?;
-        if (results != null && results.isNotEmpty) {
-          return results.map((item) {
-            final title = (item['title'] ?? item['song'] ?? 'Unknown').toString().replaceAll('&quot;', '"').replaceAll('&amp;', '&').replaceAll('&#039;', "'");
-            final artist = (item['more_info']?['artistMap']?['primary_artists']?[0]?['name'] ?? item['more_info']?['music'] ?? item['primary_artists'] ?? 'Unknown').toString().replaceAll('&quot;', '"').replaceAll('&amp;', '&');
-            final img = (item['image'] ?? '').toString().replaceAll('150x150', '500x500');
-            final dur = int.tryParse(item['more_info']?['duration']?.toString() ?? '210') ?? 210;
-            return Song(
-              id: 'saavn_${item['id']}',
-              title: title,
-              artist: artist,
-              album: (item['album'] ?? '').toString().replaceAll('&quot;', '"').replaceAll('&amp;', '&'),
-              artworkUrl: img,
-              streamUrl: null,
-              duration: Duration(seconds: dur),
-              genre: (item['language'] ?? 'Music').toString(),
-              featureVector: _deriveFeatureVector(title),
-            );
+    if (!kIsWeb) {
+      try {
+        const channel = MethodChannel('com.noctra.app/native_resolver');
+        final List<dynamic>? nativeSongs = await channel.invokeListMethod('searchJioSaavn', {'query': clean, 'limit': 20}).timeout(const Duration(seconds: 3));
+        if (nativeSongs != null && nativeSongs.isNotEmpty) {
+          return nativeSongs.map((m) {
+            final map = m as Map;
+            return Song(id: (map['id'] ?? 'jio_${clean.hashCode}').toString(), title: (map['title'] ?? 'Unknown Track').toString(), artist: (map['artist'] ?? 'Unknown Artist').toString(), album: (map['album'] ?? 'CD Master').toString(), artworkUrl: map['thumbnail'] as String?, streamUrl: (map['stream_url'] as String?)?.isNotEmpty == true ? map['stream_url'] as String? : null, duration: Duration(seconds: (map['duration'] as num?)?.toInt() ?? 210), genre: (map['source'] ?? 'JioSaavn 320k').toString(), featureVector: _deriveFeatureVector(map['title']?.toString() ?? ''));
           }).toList();
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
     try {
-      final uri = Uri.parse('https://itunes.apple.com/search?term=${Uri.encodeComponent(clean)}&entity=song&limit=25');
-      final res = await http.get(uri).timeout(const Duration(seconds: 4));
+      final res = await http.get(Uri.parse('https://itunes.apple.com/search?term=${Uri.encodeComponent(clean)}&entity=song&limit=25')).timeout(const Duration(seconds: 4));
       if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        final results = data['results'] as List?;
+        final results = jsonDecode(res.body)['results'] as List?;
         if (results != null && results.isNotEmpty) {
-          return results.map((item) => Song(
-            id: 'itunes_${item['trackId']}',
-            title: item['trackName'] ?? 'Unknown Track',
-            artist: item['artistName'] ?? 'Unknown Artist',
-            album: item['collectionName'] ?? '',
-            artworkUrl: (item['artworkUrl100'] as String?)?.replaceAll('100x100bb', '600x600bb'),
-            streamUrl: null,
-            duration: Duration(milliseconds: item['trackTimeMillis'] ?? 210000),
-            genre: item['primaryGenreName'] ?? 'Music',
-            featureVector: _deriveFeatureVector(item['trackName'] ?? ''),
-          )).toList();
+          return results.map((item) => Song(id: 'itunes_${item['trackId']}', title: item['trackName'] ?? 'Unknown Track', artist: item['artistName'] ?? 'Unknown Artist', album: item['collectionName'] ?? '', artworkUrl: (item['artworkUrl100'] as String?)?.replaceAll('100x100bb', '600x600bb'), streamUrl: null, duration: Duration(milliseconds: item['trackTimeMillis'] ?? 210000), genre: item['primaryGenreName'] ?? 'Music', featureVector: _deriveFeatureVector(item['trackName'] ?? ''))).toList();
         }
       }
     } catch (_) {}
@@ -101,63 +88,51 @@ class MusicService {
   }
 
   static Future<List<Song>> fetchSimilarRadioQueue(Song currentSong) async {
-    try {
-      final query = '${currentSong.title} ${currentSong.artist}';
-      final sUri = Uri.parse('https://music.youtube.com/youtubei/v1/search');
-      final sBody = jsonEncode({
-        'query': query,
-        'context': {'client': {'clientName': 'WEB_REMIX', 'clientVersion': '1.20240820.01.00', 'hl': 'en', 'gl': 'US'}}
-      });
-      final sRes = await http.post(sUri, body: sBody, headers: {'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 3));
-      if (sRes.statusCode == 200) {
-        final sData = jsonDecode(sRes.body);
-        final contents = sData['contents']?['tabbedSearchResultsRenderer']?['tabs']?[0]?['tabRenderer']?['content']?['sectionListRenderer']?['contents'];
-        if (contents != null && contents is List) {
-          final songs = <Song>[];
-          for (final section in contents) {
-            final items = section['musicShelfRenderer']?['contents'] ?? section['musicCardShelfRenderer']?['contents'];
-            if (items is List) {
-              for (final item in items.take(12)) {
-                final vid = item['musicResponsiveListItemRenderer']?['playlistItemData']?['videoId'];
-                final title = item['musicResponsiveListItemRenderer']?['flexColumns']?[0]?['musicResponsiveListItemFlexColumnRenderer']?['text']?['runs']?[0]?['text'] ?? 'Similar Track';
-                final artist = item['musicResponsiveListItemRenderer']?['flexColumns']?[1]?['musicResponsiveListItemFlexColumnRenderer']?['text']?['runs']?[0]?['text'] ?? currentSong.artist;
-                if (vid != null) {
-                  songs.add(Song(
-                    id: vid.toString(),
-                    title: title.toString(),
-                    artist: artist.toString(),
-                    album: 'YouTube Music Radio',
-                    artworkUrl: 'https://i.ytimg.com/vi/$vid/hqdefault.jpg',
-                    streamUrl: null,
-                    duration: const Duration(seconds: 210),
-                    genre: currentSong.genre,
-                    featureVector: _deriveFeatureVector(title.toString()),
-                  ));
-                }
-              }
-            }
-          }
-          if (songs.isNotEmpty) return songs;
+    if (!kIsWeb && currentSong.id.length == 11) {
+      try {
+        final List<dynamic>? list = await const MethodChannel('com.noctra.app/native_resolver').invokeListMethod('fetchRadio', {'videoId': currentSong.id});
+        if (list != null && list.isNotEmpty) {
+          return list.map((m) {
+            final map = m as Map;
+            final vid = map['id'].toString();
+            final title = (map['title'] ?? 'Similar Track').toString();
+            final artist = (map['artist'] ?? currentSong.artist).toString();
+            return Song(id: vid, title: title, artist: artist, album: 'YouTube Music Radio', artworkUrl: 'https://i.ytimg.com/vi/$vid/hqdefault.jpg', streamUrl: null, duration: const Duration(seconds: 210), genre: currentSong.genre, featureVector: _deriveFeatureVector(title));
+          }).toList();
         }
-      }
-    } catch (_) {}
-    return _getHardcodedCuratedTracks();
+      } catch (_) {}
+    }
+    return searchTracks('${currentSong.title} ${currentSong.artist}');
+  }
+
+  static Future<ArtistDiscography> fetchArtistCatalog(String artistName) async {
+    final clean = artistName.split(RegExp(r'[,&/]')).first.trim();
+    final top = await searchTracks(clean);
+    final albums = [
+      {'title': '$clean: Master Essentials', 'year': '2024', 'art': top.isNotEmpty ? top.first.artworkUrl : 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500', 'tracks': top.take(8).toList()},
+      {'title': 'Complete Discography Deluxe', 'year': '2023', 'art': top.length > 1 ? top[1].artworkUrl : 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500', 'tracks': top.skip(4).take(8).toList()},
+    ];
+    final singles = [
+      {'title': top.isNotEmpty ? top.first.title : 'Greatest Hit', 'year': '2024', 'art': top.isNotEmpty ? top.first.artworkUrl : null},
+      {'title': top.length > 2 ? top[2].title : 'Radio Single', 'year': '2023', 'art': top.length > 2 ? top[2].artworkUrl : null},
+    ];
+    final similar = [
+      {'name': 'The Weeknd', 'art': 'https://c.saavncdn.com/712/Starboy-English-2016-500x500.jpg'},
+      {'name': 'Daft Punk', 'art': 'https://c.saavncdn.com/264/Hurry-Up-We-re-Dreaming-English-2011-500x500.jpg'},
+      {'name': 'Kavinsky', 'art': 'https://c.saavncdn.com/580/Outrun-English-2013-500x500.jpg'},
+    ];
+    return ArtistDiscography(topTracks: top, albums: albums, singles: singles, similarArtists: similar);
   }
 
   static Future<double?> fetchSponsorBlockIntroSkip(String videoId) async {
     try {
       if (videoId.length != 11) return null;
-      final uri = Uri.parse('https://sponsor.ajay.app/api/skipSegments?videoID=$videoId&categories=["music_offtopic"]');
-      final res = await http.get(uri).timeout(const Duration(seconds: 2));
+      final res = await http.get(Uri.parse('https://sponsor.ajay.app/api/skipSegments?videoID=$videoId&categories=["music_offtopic"]')).timeout(const Duration(seconds: 2));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as List?;
         if (data != null && data.isNotEmpty) {
           final seg = data[0]['segment'] as List?;
-          if (seg != null && seg.length >= 2) {
-            final start = (seg[0] as num).toDouble();
-            final end = (seg[1] as num).toDouble();
-            if (start <= 3.0 && end > 3.0) return end;
-          }
+          if (seg != null && seg.length >= 2 && (seg[0] as num).toDouble() <= 3.0 && (seg[1] as num).toDouble() > 3.0) return (seg[1] as num).toDouble();
         }
       }
     } catch (_) {}
@@ -169,27 +144,14 @@ class MusicService {
 
   static Future<List<Song>> fetchTrendingTracks() async {
     try {
-      final uri = Uri.parse('https://itunes.apple.com/us/rss/topsongs/limit=25/json');
-      final res = await http.get(uri).timeout(const Duration(seconds: 4));
+      final res = await http.get(Uri.parse('https://itunes.apple.com/us/rss/topsongs/limit=25/json')).timeout(const Duration(seconds: 4));
       if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        final entries = data['feed']?['entry'] as List?;
+        final entries = jsonDecode(res.body)['feed']?['entry'] as List?;
         if (entries != null) {
-          return entries.map((e) => Song(
-            id: 'itunes_${e['id']?['attributes']?['im:id'] ?? e['title']?['label']}',
-            title: e['im:name']?['label'] ?? 'Top Song',
-            artist: e['im:artist']?['label'] ?? 'Top Artist',
-            album: e['im:collection']?['im:name']?['label'] ?? '',
-            artworkUrl: (e['im:image'] as List?)?.last?['label']?.replaceAll('170x170', '600x600'),
-            streamUrl: null,
-            duration: const Duration(seconds: 210),
-            genre: e['category']?['attributes']?['label'] ?? 'Top Chart',
-            featureVector: _deriveFeatureVector(e['im:name']?['label'] ?? ''),
-          )).toList();
+          return entries.map((e) => Song(id: 'itunes_${e['id']?['attributes']?['im:id'] ?? e['title']?['label']}', title: e['im:name']?['label'] ?? 'Top Song', artist: e['im:artist']?['label'] ?? 'Top Artist', album: e['im:collection']?['im:name']?['label'] ?? '', artworkUrl: (e['im:image'] as List?)?.last?['label']?.replaceAll('170x170', '600x600'), streamUrl: null, duration: const Duration(seconds: 210), genre: e['category']?['attributes']?['label'] ?? 'Top Chart', featureVector: _deriveFeatureVector(e['im:name']?['label'] ?? ''))).toList();
         }
       }
     } catch (_) {}
-
     return _getHardcodedCuratedTracks();
   }
 
@@ -203,14 +165,7 @@ class MusicService {
   }
 
   static Future<List<Song>> fetchVibeFeed(String vibeKey) async {
-    final Map<String, String> vibeSearches = {
-      'noir_night': 'The Weeknd Dark Synthwave',
-      'deep_focus': 'Lofi Chill Beats Study',
-      'high_energy': 'Electronic Workout Cyberpunk',
-      'ambient_chill': 'Ambient Chillout Atmospheric',
-      'retro_synth': 'Outrun Synthwave Retrowave 80s',
-      'late_night': 'Night Drive Phonk Synthwave',
-    };
+    final Map<String, String> vibeSearches = {'noir_night': 'The Weeknd Dark Synthwave', 'deep_focus': 'Lofi Chill Beats Study', 'high_energy': 'Electronic Workout Cyberpunk', 'ambient_chill': 'Ambient Chillout Atmospheric', 'retro_synth': 'Outrun Synthwave Retrowave 80s', 'late_night': 'Night Drive Phonk Synthwave'};
     final q = vibeSearches[vibeKey] ?? 'Synthwave Noir';
     final results = await searchTracks(q);
     return results.isNotEmpty ? results : _getHardcodedCuratedTracks();
@@ -223,27 +178,45 @@ class MusicService {
     try {
       await PermissionHelper.requestStoragePermissions();
       Directory? baseDir;
-      try {
-        baseDir = await getExternalStorageDirectory();
-      } catch (_) {}
+      try { baseDir = await getExternalStorageDirectory(); } catch (_) {}
       baseDir ??= await getApplicationDocumentsDirectory();
 
       final dir = Directory('${baseDir.path}/Noctra_Music');
       if (!await dir.exists()) await dir.create(recursive: true);
 
-      final streamUrl = await resolveStreamUrl(song);
+      final streamUrl = (song.streamUrl != null && song.streamUrl!.isNotEmpty) ? song.streamUrl : await resolveStreamUrl(song);
       if (streamUrl == null || streamUrl.isEmpty) return null;
 
-      final safeName = '${song.artist} - ${song.title}'.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
-      final filePath = '${dir.path}/$safeName.mp3';
-      final file = File(filePath);
+      final ext = (streamUrl.contains('.mp4') || streamUrl.contains('.m4a')) ? 'm4a' : 'mp3';
+      final cleanId = song.id.replaceAll(RegExp(r'[^\w\.-]'), '_');
+      final cleanName = '${song.artist}_${song.title}'.replaceAll(RegExp(r'[^\w\.-]'), '_');
+      final safeName = '${cleanId}_${cleanName.substring(0, cleanName.length.clamp(0, 40))}';
+      final filePath = '${dir.path}/$safeName.$ext';
 
-      final res = await http.get(Uri.parse(streamUrl)).timeout(const Duration(seconds: 30));
-      if (res.statusCode == 200) {
-        await file.writeAsBytes(res.bodyBytes);
-        final downloadedSong = song.copyWith(localFilePath: filePath, isDownloaded: true);
-        MusicRepository().addDownloadedSong(downloadedSong);
-        return downloadedSong;
+      final client = http.Client();
+      final request = http.Request('GET', Uri.parse(streamUrl));
+      final response = await client.send(request).timeout(const Duration(seconds: 40));
+
+      if (response.statusCode == 200) {
+        final total = response.contentLength ?? 0;
+        int received = 0;
+        final file = File(filePath);
+        final sink = file.openWrite();
+
+        await response.stream.listen((chunk) {
+          sink.add(chunk);
+          received += chunk.length;
+          if (total > 0) downloadProgressController.add({song.id: (received / total).clamp(0.0, 1.0)});
+        }).asFuture();
+
+        await sink.close();
+        downloadProgressController.add({song.id: 1.0});
+
+        if (await file.exists() && await file.length() > 10240) {
+          final downloadedSong = song.copyWith(localFilePath: filePath, isDownloaded: true, streamUrl: filePath);
+          MusicRepository().addDownloadedSong(downloadedSong);
+          return downloadedSong;
+        }
       }
     } catch (_) {}
     return null;

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -21,13 +22,28 @@ class LocalFileResolver implements StreamResolver {
     final path = song.localFilePath;
     if (path != null && path.isNotEmpty) {
       try {
-        return File(path).existsSync();
+        final f = File(path);
+        return f.existsSync() && f.lengthSync() > 1024;
       } catch (_) {}
     }
     return false;
   }
   @override
   Future<String?> resolveStreamUrl(Song song) async => song.localFilePath;
+}
+
+class DirectOpenStreamResolver implements StreamResolver {
+  @override
+  String get sourceId => 'direct_open';
+  @override
+  Future<bool> canResolve(Song song) async {
+    final url = song.streamUrl;
+    if (url == null || url.isEmpty) return false;
+    if (url.contains('scdn.co') || url.contains('spotify.com') || url.contains('preview') || url.contains('apple.com')) return false;
+    return !url.contains('youtube.com') && !url.contains('youtu.be');
+  }
+  @override
+  Future<String?> resolveStreamUrl(Song song) async => song.streamUrl;
 }
 
 class JioSaavnDirectResolver implements StreamResolver {
@@ -88,10 +104,9 @@ class NativeKotlinResolver implements StreamResolver {
   }
 }
 
-/// Echo Music Style InnerTube YouTube Music Direct REST Extractor
 class InnerTubeMusicResolver implements StreamResolver {
   @override
-  String get sourceId => 'innertube_echo';
+  String get sourceId => 'innertube_stream';
   @override
   Future<bool> canResolve(Song song) async => !song.id.startsWith('jam_');
 
@@ -104,19 +119,20 @@ class InnerTubeMusicResolver implements StreamResolver {
         final cleanArtist = song.artist.split(RegExp(r'[,&/]')).first.trim();
         final sUri = Uri.parse('https://music.youtube.com/youtubei/v1/search');
         final sBody = jsonEncode({
-          'query': '$cleanTitle $cleanArtist',
+          'query': '$cleanTitle $cleanArtist audio',
           'context': {'client': {'clientName': 'WEB_REMIX', 'clientVersion': '1.20240820.01.00', 'hl': 'en', 'gl': 'US'}}
         });
         final sRes = await http.post(sUri, body: sBody, headers: {'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 4));
         if (sRes.statusCode == 200) {
           final sData = jsonDecode(sRes.body);
-          final contents = sData['contents']?['tabbedSearchResultsRenderer']?['tabs']?[0]?['tabRenderer']?['content']?['sectionListRenderer']?['contents'];
-          if (contents != null && contents is List) {
-            for (final section in contents) {
-              final items = section['musicShelfRenderer']?['contents'] ?? section['musicCardShelfRenderer']?['contents'];
-              if (items is List && items.isNotEmpty) {
-                final top = items[0]['musicResponsiveListItemRenderer']?['playlistItemData']?['videoId'] ?? items[0]['musicResponsiveListItemRenderer']?['flexColumns']?[0]?['musicResponsiveListItemFlexColumnRenderer']?['text']?['runs']?[0]?['navigationEndpoint']?['watchEndpoint']?['videoId'];
-                if (top != null) { videoId = top.toString(); break; }
+          final contents = sData['contents']?['tabbedSearchResultsRenderer']?['tabs']?[0]?['tabRenderer']?['content']?['sectionListRenderer']?['contents'] as List?;
+          if (contents != null) {
+            for (final sec in contents) {
+              final items = (sec as Map)['itemSectionRenderer']?['contents'] as List? ?? (sec)['musicShelfRenderer']?['contents'] as List?;
+              if (items != null && items.isNotEmpty) {
+                final r = (items[0] as Map)['musicResponsiveListItemRenderer'] as Map?;
+                final vid = r?['playlistItemData']?['videoId']?.toString() ?? r?['navigationEndpoint']?['watchEndpoint']?['videoId']?.toString();
+                if (vid != null && vid.length == 11) { videoId = vid; break; }
               }
             }
           }
@@ -124,24 +140,37 @@ class InnerTubeMusicResolver implements StreamResolver {
       }
 
       if (videoId.length == 11) {
-        final pUri = Uri.parse('https://music.youtube.com/youtubei/v1/player');
-        final pBody = jsonEncode({
-          'videoId': videoId,
-          'context': {'client': {'clientName': 'ANDROID_MUSIC', 'clientVersion': '6.42.52', 'androidSdkVersion': 34, 'hl': 'en', 'gl': 'US'}}
-        });
-        final pRes = await http.post(pUri, body: pBody, headers: {'Content-Type': 'application/json', 'User-Agent': 'com.google.android.apps.youtube.music/6.42.52'}).timeout(const Duration(seconds: 4));
-        if (pRes.statusCode == 200) {
-          final pData = jsonDecode(pRes.body);
-          final formats = pData['streamingData']?['adaptiveFormats'] as List?;
-          if (formats != null && formats.isNotEmpty) {
-            // Find highest bitrate audio stream (e.g. 251 Opus 160kbps or 140 m4a 128kbps)
-            final audioStreams = formats.where((f) => (f['mimeType'] as String?)?.contains('audio') == true).toList();
-            if (audioStreams.isNotEmpty) {
-              audioStreams.sort((a, b) => ((b['bitrate'] as num?) ?? 0).compareTo((a['bitrate'] as num?) ?? 0));
-              final url = audioStreams[0]['url'] as String?;
-              if (url != null && url.isNotEmpty) return url;
+        if (!kIsWeb) {
+          try {
+            final nativeUrl = await const MethodChannel('com.noctra.app/native_resolver').invokeMethod<String>('extractInnerTube', {'videoId': videoId}).timeout(const Duration(seconds: 3));
+            if (nativeUrl != null && nativeUrl.isNotEmpty) return nativeUrl;
+          } catch (_) {}
+        }
+
+        final clients = [
+          {'clientName': 'ANDROID_TESTSUITE', 'clientVersion': '1.9', 'androidSdkVersion': 30},
+          {'clientName': 'ANDROID_MUSIC', 'clientVersion': '6.42.52', 'androidSdkVersion': 34},
+          {'clientName': 'TVHTML5', 'clientVersion': '7.20240801.12.00', 'theme': 'TVHTML5'}
+        ];
+
+        for (final client in clients) {
+          try {
+            final pUri = Uri.parse('https://music.youtube.com/youtubei/v1/player');
+            final pBody = jsonEncode({'videoId': videoId, 'context': {'client': client}});
+            final pRes = await http.post(pUri, body: pBody, headers: {'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 3));
+            if (pRes.statusCode == 200) {
+              final pData = jsonDecode(pRes.body);
+              final formats = pData['streamingData']?['adaptiveFormats'] as List?;
+              if (formats != null && formats.isNotEmpty) {
+                final audioStreams = formats.where((f) => (f['mimeType'] as String?)?.contains('audio') == true).toList();
+                if (audioStreams.isNotEmpty) {
+                  audioStreams.sort((a, b) => ((b['bitrate'] as num?) ?? 0).compareTo((a['bitrate'] as num?) ?? 0));
+                  final url = audioStreams[0]['url'] as String?;
+                  if (url != null && url.isNotEmpty) return url;
+                }
+              }
             }
-          }
+          } catch (_) {}
         }
       }
     } catch (_) {}
@@ -176,36 +205,53 @@ class YoutubeExplodeResolver implements StreamResolver {
   }
 }
 
-class DirectOpenStreamResolver implements StreamResolver {
-  @override
-  String get sourceId => 'direct_open';
-  @override
-  Future<bool> canResolve(Song song) async {
-    final url = song.streamUrl;
-    if (url == null || url.isEmpty) return false;
-    if (url.contains('scdn.co') || url.contains('spotify.com') || url.contains('preview') || url.contains('apple.com')) return false;
-    return !url.contains('youtube.com') && !url.contains('youtu.be');
-  }
-  @override
-  Future<String?> resolveStreamUrl(Song song) async => song.streamUrl;
+class _CacheEntry {
+  final String url;
+  final int timestamp;
+  _CacheEntry(this.url, this.timestamp);
 }
 
 class CompositeStreamResolver {
+  static final Map<String, _CacheEntry> _cache = {};
+  static const int _ttlMs = 12 * 3600 * 1000; // 12-hour TTL
+
   static final List<StreamResolver> _resolvers = [
     LocalFileResolver(),
-    JioSaavnDirectResolver(),
     DirectOpenStreamResolver(),
+    JioSaavnDirectResolver(),
     NativeKotlinResolver(),
     InnerTubeMusicResolver(),
     YoutubeExplodeResolver(),
   ];
 
-  static Future<String?> resolve(Song song) async {
-    for (final resolver in _resolvers) {
+  static void invalidateCache(String songId) {
+    _cache.remove(songId);
+  }
+
+  static Future<String?> resolve(Song song, {int startTier = 0}) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (startTier == 0 && _cache.containsKey(song.id)) {
+      final entry = _cache[song.id]!;
+      if (now - entry.timestamp < _ttlMs) {
+        // Move to most recent for true LRU
+        _cache.remove(song.id);
+        _cache[song.id] = entry;
+        return entry.url;
+      } else {
+        _cache.remove(song.id);
+      }
+    }
+
+    for (int i = startTier; i < _resolvers.length; i++) {
+      final resolver = _resolvers[i];
       try {
         if (await resolver.canResolve(song)) {
           final url = await resolver.resolveStreamUrl(song);
           if (url != null && url.isNotEmpty && !url.contains('preview') && !url.contains('scdn.co')) {
+            if (_cache.length > 200) {
+              _cache.remove(_cache.keys.first);
+            }
+            _cache[song.id] = _CacheEntry(url, now);
             return url;
           }
         }

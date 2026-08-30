@@ -78,30 +78,29 @@ class _AIStudioScreenState extends ConsumerState<AIStudioScreen> {
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.menu_rounded, color: isDark ? Colors.white : Colors.black, size: 26),
-                          tooltip: 'Open Sidebar',
-                          onPressed: () => ref.read(rootScaffoldKeyProvider).currentState?.openDrawer(),
-                        ),
-                        const SizedBox(width: 6),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'AI Music Agent',
-                              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary),
-                            ),
-                            Text(
-                              'On-Device RAG & Graph Ranking',
-                              style: TextStyle(fontSize: 12, color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary),
-                            ),
-                          ],
-                        ),
-                      ],
+                    IconButton(
+                      icon: Icon(Icons.menu_rounded, color: isDark ? Colors.white : Colors.black, size: 24),
+                      tooltip: 'Open Sidebar',
+                      onPressed: () => ref.read(rootScaffoldKeyProvider).currentState?.openDrawer(),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'AI Music Agent',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary),
+                          ),
+                          Text(
+                            'On-Device RAG & Graph Ranking',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 11, color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary),
+                          ),
+                        ],
+                      ),
                     ),
                     IconButton(
                       tooltip: 'Developer Panel',

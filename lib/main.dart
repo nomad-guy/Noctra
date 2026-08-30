@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,15 +31,19 @@ void main() async {
     ),
   );
 
-  await JustAudioBackground.init(
-    androidNotificationChannelId: 'com.nomadguy.noctra.channel.audio',
-    androidNotificationChannelName: 'Noctra Playback',
-    androidNotificationOngoing: true,
-  );
+  if (!kIsWeb) {
+    try {
+      await JustAudioBackground.init(
+        androidNotificationChannelId: 'com.nomadguy.noctra.channel.audio',
+        androidNotificationChannelName: 'Noctra Playback',
+        androidNotificationOngoing: true,
+      );
+    } catch (_) {}
+  }
 
-  await NoctraLocalDatabase().init();
-  await MusicRepository().init();
-  await AudioPlayerService().restoreLastPlaybackSession();
+  try { await NoctraLocalDatabase().init(); } catch (_) {}
+  try { await MusicRepository().init(); } catch (_) {}
+  try { await AudioPlayerService().restoreLastPlaybackSession(); } catch (_) {}
 
   runApp(const ProviderScope(child: NoctraApp()));
 }

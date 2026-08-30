@@ -11,58 +11,69 @@ class TasteVectorEngine {
 
   static List<double> getDefaultVector() => [0.65, 0.50, 0.60, 0.50, 0.45, 0.35, 0.70, 0.60, 0.55, 0.75, 0.80, 0.55, 0.50, 0.70, 0.65, 0.40];
 
-  /// Computes cosine similarity with dot product and magnitude normalization
+  /// Computes cosine similarity with full mathematical span [-1.0, 1.0] normalized to [0.0, 1.0]
   static double cosineSimilarity(List<double> v1, List<double> v2) {
-    double dot = 0.0;
-    double mag1 = 0.0;
-    double mag2 = 0.0;
-    final len = min(v1.length, v2.length);
-    for (int i = 0; i < len; i++) {
-      dot += v1[i] * v2[i];
-      mag1 += v1[i] * v1[i];
-      mag2 += v2[i] * v2[i];
+    if (v1.isEmpty || v2.isEmpty) return 0.5;
+    final maxLen = max(v1.length, v2.length);
+    double dot = 0.0, mag1 = 0.0, mag2 = 0.0;
+    int validDimensions = 0;
+
+    for (int i = 0; i < maxLen; i++) {
+      final val1 = i < v1.length ? v1[i] : 0.5;
+      final val2 = i < v2.length ? v2[i] : 0.5;
+      if (val1.isNaN || val1.isInfinite || val2.isNaN || val2.isInfinite) continue;
+
+      dot += val1 * val2;
+      mag1 += val1 * val1;
+      mag2 += val2 * val2;
+      validDimensions++;
     }
+
+    if (validDimensions == 0 || mag1 == 0 || mag2 == 0) return 0.5;
     final denom = sqrt(mag1) * sqrt(mag2);
-    if (denom == 0) return 0.5;
-    return (dot / denom).clamp(0.0, 1.0);
+    if (denom == 0 || denom.isNaN) return 0.5;
+
+    final rawCosine = (dot / denom).clamp(-1.0, 1.0);
+    // Maps raw cosine similarity from [-1.0, 1.0] to normalized [0.0, 1.0]
+    return ((rawCosine + 1.0) / 2.0).clamp(0.0, 1.0);
   }
 
-  /// Extracts deterministic 16-dimensional acoustic feature embedding from track metadata
+  /// Extracts 16-dimensional acoustic feature embedding using additive multi-axis weighting
   static List<double> extractSongEmbedding(Song song) {
     final text = '${song.title} ${song.artist} ${song.album} ${song.genre}'.toLowerCase();
-    final vec = List<double>.filled(16, 0.45);
+    final vec = List<double>.from(getDefaultVector());
 
-    // Dark Tone & Sub-Bass
-    if (text.contains('dark') || text.contains('night') || text.contains('black') || text.contains('shadow') || text.contains('demon')) {
-      vec[0] = 0.90; vec[13] = 0.85;
+    void nudge(int axis, double target, double weight) {
+      if (axis >= 0 && axis < 16) {
+        vec[axis] = (vec[axis] * (1.0 - weight) + target * weight).clamp(0.05, 0.98);
+      }
     }
-    // Energy & Tempo
-    if (text.contains('hyper') || text.contains('fast') || text.contains('energy') || text.contains('drop') || text.contains('bass') || text.contains('rock')) {
-      vec[2] = 0.92; vec[14] = 0.88; vec[12] = 0.75;
+
+    if (text.contains('dark') || text.contains('night') || text.contains('black') || text.contains('shadow')) {
+      nudge(0, 0.92, 0.6); nudge(10, 0.95, 0.7); nudge(13, 0.85, 0.5);
     }
-    // Chill & Ambient
-    if (text.contains('chill') || text.contains('relax') || text.contains('ambient') || text.contains('sleep') || text.contains('lofi') || text.contains('rain')) {
-      vec[1] = 0.92; vec[3] = 0.95; vec[11] = 0.88; vec[2] = 0.20;
+    if (text.contains('hyper') || text.contains('energy') || text.contains('fast') || text.contains('rock') || text.contains('drop')) {
+      nudge(2, 0.95, 0.7); nudge(14, 0.90, 0.6); nudge(12, 0.80, 0.5);
     }
-    // Acoustic Warmth
-    if (text.contains('acoustic') || text.contains('guitar') || text.contains('piano') || text.contains('unplugged') || text.contains('folk') || text.contains('organic')) {
-      vec[5] = 0.95; vec[6] = 0.10; vec[7] = 0.85;
+    if (text.contains('chill') || text.contains('relax') || text.contains('ambient') || text.contains('lofi') || text.contains('sleep')) {
+      nudge(1, 0.92, 0.6); nudge(3, 0.95, 0.7); nudge(11, 0.88, 0.6); nudge(2, 0.20, 0.5);
     }
-    // Electronic & Synthwave
-    if (text.contains('synth') || text.contains('retro') || text.contains('cyber') || text.contains('electro') || text.contains('wave') || text.contains('outrun')) {
-      vec[6] = 0.95; vec[9] = 0.98; vec[10] = 0.92; vec[13] = 0.80;
+    if (text.contains('acoustic') || text.contains('guitar') || text.contains('piano') || text.contains('unplugged') || text.contains('folk')) {
+      nudge(5, 0.95, 0.8); nudge(6, 0.15, 0.7); nudge(7, 0.88, 0.5);
     }
-    // Vocal Presence
-    if (text.contains('feat') || text.contains('voice') || text.contains('acoustic') || text.contains('arijit') || text.contains('weeknd')) {
-      vec[7] = 0.92; vec[15] = 0.15;
-    } else if (text.contains('instrumental') || text.contains('soundtrack') || text.contains('remix') || text.contains('dub')) {
-      vec[15] = 0.92; vec[7] = 0.18;
+    if (text.contains('synth') || text.contains('retro') || text.contains('cyber') || text.contains('electro') || text.contains('outrun')) {
+      nudge(6, 0.95, 0.7); nudge(9, 0.98, 0.8); nudge(10, 0.92, 0.6); nudge(13, 0.85, 0.5);
+    }
+    if (text.contains('instrumental') || text.contains('soundtrack') || text.contains('orchestra') || text.contains('remix')) {
+      nudge(15, 0.95, 0.8); nudge(7, 0.15, 0.7);
+    } else if (text.contains('feat') || text.contains('vocal') || text.contains('voice') || text.contains('acoustic')) {
+      nudge(7, 0.92, 0.6); nudge(15, 0.20, 0.6);
     }
 
     return vec;
   }
 
-  /// Reinforcement Learning vector update with adaptive reward shaping and anti-saturation regularization
+  /// Reinforcement learning vector update with adaptive reward shaping
   static List<double> selfHealAndRecalibrate(List<double> currentVector, {Song? lastSong, String eventType = 'listen'}) {
     final List<double> targetVector = lastSong != null && lastSong.featureVector.isNotEmpty
         ? (lastSong.featureVector.every((x) => x == 0.5) ? extractSongEmbedding(lastSong) : lastSong.featureVector)
@@ -73,25 +84,25 @@ class TasteVectorEngine {
       updated.add(0.5);
     }
 
-    double alpha = 0.06; // Default learning rate
+    double alpha = 0.06;
     if (eventType == 'fast_skip') {
-      alpha = -0.06; // Negative gradient step
+      alpha = -0.08;
     } else if (eventType == 'complete_listen') {
-      alpha = 0.10; // High reinforcement
+      alpha = 0.12;
     } else if (eventType == 'favorite') {
-      alpha = 0.16; // Strongest reinforcement anchor
+      alpha = 0.18;
     }
 
     for (int i = 0; i < 16 && i < targetVector.length; i++) {
       final target = targetVector[i];
       final delta = (target - updated[i]) * alpha;
-      updated[i] = (updated[i] + delta).clamp(0.04, 0.96);
+      updated[i] = (updated[i] + delta).clamp(0.05, 0.95);
     }
 
-    // Regularization decay toward baseline to maintain curiosity and prevent dimension saturation
+    // Regularization decay to prevent dimensional saturation
     for (int i = 0; i < updated.length; i++) {
-      if (updated[i] > 0.90) updated[i] -= 0.015;
-      if (updated[i] < 0.10) updated[i] += 0.015;
+      if (updated[i] > 0.90) updated[i] -= 0.012;
+      if (updated[i] < 0.10) updated[i] += 0.012;
     }
 
     return updated;
@@ -115,7 +126,7 @@ class TasteVectorEngine {
     );
   }
 
-  /// Context-aware target vector with prompt parsing and temporal time-of-day bias
+  /// Context-aware target vector with prompt parsing
   static List<double> getTargetVector({String? vibeKey, String? prompt, required List<double> defaultTaste}) {
     if (vibeKey == 'noir_night' || vibeKey == 'late_night') {
       return [0.92, 0.75, 0.30, 0.85, 0.70, 0.20, 0.65, 0.50, 0.60, 0.85, 0.98, 0.75, 0.20, 0.80, 0.40, 0.50];
@@ -133,24 +144,27 @@ class TasteVectorEngine {
 
     if (prompt != null && prompt.isNotEmpty) {
       final p = prompt.toLowerCase();
-      final vec = List<double>.filled(16, 0.45);
-      if (p.contains('dark') || p.contains('night') || p.contains('moody') || p.contains('noir')) {
-        vec[0] = 0.95; vec[4] = 0.80; vec[10] = 0.95; vec[13] = 0.85;
+      final vec = List<double>.from(defaultTaste.isNotEmpty ? defaultTaste : getDefaultVector());
+      void nudge(int axis, double target, double weight) {
+        if (axis >= 0 && axis < 16) {
+          vec[axis] = (vec[axis] * (1.0 - weight) + target * weight).clamp(0.05, 0.98);
+        }
       }
-      if (p.contains('fast') || p.contains('energy') || p.contains('workout') || p.contains('hype') || p.contains('run')) {
-        vec[2] = 0.95; vec[14] = 0.92; vec[12] = 0.85;
+
+      if (p.contains('dark') || p.contains('night') || p.contains('noir')) {
+        nudge(0, 0.95, 0.6); nudge(4, 0.80, 0.5); nudge(10, 0.95, 0.6); nudge(13, 0.85, 0.5);
       }
-      if (p.contains('chill') || p.contains('study') || p.contains('sleep') || p.contains('calm') || p.contains('focus') || p.contains('comfort') || p.contains('peace') || p.contains('heal') || p.contains('soft') || p.contains('gentle')) {
-        vec[3] = 0.98; vec[11] = 0.95; vec[1] = 0.95; vec[5] = 0.90; vec[7] = 0.85; vec[2] = 0.10; vec[0] = 0.15;
+      if (p.contains('fast') || p.contains('energy') || p.contains('workout') || p.contains('hype')) {
+        nudge(2, 0.95, 0.7); nudge(14, 0.92, 0.6); nudge(12, 0.85, 0.5);
       }
-      if (p.contains('sad') || p.contains('alone') || p.contains('heartbreak') || p.contains('melancholy')) {
-        vec[4] = 0.98; vec[1] = 0.85; vec[5] = 0.85; vec[7] = 0.90; vec[2] = 0.15;
+      if (p.contains('chill') || p.contains('study') || p.contains('sleep') || p.contains('calm') || p.contains('focus')) {
+        nudge(3, 0.98, 0.7); nudge(11, 0.95, 0.7); nudge(1, 0.95, 0.6); nudge(5, 0.90, 0.5); nudge(2, 0.10, 0.5);
       }
-      if (p.contains('synth') || p.contains('cyber') || p.contains('retro') || p.contains('drive')) {
-        vec[6] = 0.95; vec[9] = 0.98; vec[10] = 0.95; vec[13] = 0.88;
+      if (p.contains('synth') || p.contains('cyber') || p.contains('retro')) {
+        nudge(6, 0.95, 0.6); nudge(9, 0.98, 0.7); nudge(10, 0.95, 0.6); nudge(13, 0.88, 0.5);
       }
-      if (p.contains('acoustic') || p.contains('guitar') || p.contains('organic') || p.contains('soul')) {
-        vec[5] = 0.98; vec[7] = 0.90; vec[15] = 0.20;
+      if (p.contains('acoustic') || p.contains('guitar') || p.contains('organic')) {
+        nudge(5, 0.98, 0.7); nudge(7, 0.90, 0.6); nudge(15, 0.20, 0.5);
       }
       return vec;
     }

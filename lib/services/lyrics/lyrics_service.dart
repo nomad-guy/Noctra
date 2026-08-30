@@ -37,6 +37,37 @@ class LyricsService {
     final cleanTitle = _sanitizeTitle(song.title);
     final primaryArtist = _extractPrimaryArtist(song.artist);
 
+    // If Hindi preference selected, prioritize JioSaavn official Hindi lyrics
+    if (preference.toLowerCase().contains('hindi')) {
+      try {
+        final searchUri = Uri.parse(
+          'https://www.jiosaavn.com/api.php?__call=search.getResults&_format=json&_marker=0&cc=in&p=1&n=5&q=${Uri.encodeComponent('$cleanTitle $primaryArtist')}',
+        );
+        final sRes = await http.get(searchUri, headers: {'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 4));
+        if (sRes.statusCode == 200) {
+          final sData = jsonDecode(sRes.body);
+          final songsList = (sData['results'] as List?) ?? [];
+          for (final songObj in songsList) {
+            final songId = songObj['id']?.toString() ?? '';
+            if (songId.isNotEmpty) {
+              final lyrUri = Uri.parse('https://www.jiosaavn.com/api.php?__call=lyrics.getLyrics&_format=json&_marker=0&cc=in&lyrics_id=$songId');
+              final lRes = await http.get(lyrUri, headers: {'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 4));
+              if (lRes.statusCode == 200) {
+                final lData = jsonDecode(lRes.body);
+                final rawLyr = lData['lyrics'] as String?;
+                if (rawLyr != null && rawLyr.isNotEmpty) {
+                  final clean = rawLyr.replaceAll('<br>', '\n').replaceAll('&quot;', '"').replaceAll('&amp;', '&').trim();
+                  final result = LyricsData(isSynced: false, lines: const [], plainText: clean);
+                  _cache[cacheKey] = result;
+                  return result;
+                }
+              }
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
     // Tier 1: Lrclib (True Millisecond-Synced LRC Lyrics)
     try {
       final uri = Uri.parse('https://lrclib.net/api/get?artist_name=${Uri.encodeComponent(primaryArtist)}&track_name=${Uri.encodeComponent(cleanTitle)}');

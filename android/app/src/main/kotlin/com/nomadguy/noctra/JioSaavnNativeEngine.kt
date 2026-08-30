@@ -29,7 +29,7 @@ object JioSaavnNativeEngine {
             val decBytes = cipher.doFinal(encBytes)
             var rawUrl = String(decBytes, Charsets.UTF_8).trim()
 
-            if (rawUrl.startsWith("http://")) {
+            if (rawUrl.startsWith("http://") && !rawUrl.contains("127.0.0.1") && !rawUrl.contains("localhost")) {
                 rawUrl = "https://" + rawUrl.substring(7)
             }
 
@@ -43,40 +43,82 @@ object JioSaavnNativeEngine {
         }
     }
 
+    private fun sanitizeText(input: String): String {
+        val normalized = java.text.Normalizer.normalize(input, java.text.Normalizer.Form.NFD)
+        val withoutAccents = normalized.replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "")
+        return withoutAccents
+            .replace(Regex("(?i)\\s*-\\s*topic"), "")
+            .replace(Regex("(?i)\\(official.*?\\)"), "")
+            .replace(Regex("(?i)\\[official.*?\\]"), "")
+            .replace(Regex("(?i)\\(audio\\)"), "")
+            .replace(Regex("(?i)\\(lyrics\\)"), "")
+            .replace(Regex("(?i)\\(video\\)"), "")
+            .replace(Regex("(?i)\\(slowed.*?\\)"), "")
+            .replace(Regex("(?i)\\(speed.*?\\)"), "")
+            .replace(Regex("[^a-zA-Z0-9\\s]"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+    }
+
     fun searchSongs(query: String, limit: Int = 20): List<Map<String, Any?>> {
         val results = mutableListOf<Map<String, Any?>>()
-        try {
-            val encodedQuery = URLEncoder.encode(query, "UTF-8")
-            val urlString = "https://www.jiosaavn.com/api.php?__call=search.getResults&q=$encodedQuery&_format=json&_marker=0&api_version=4&ctx=android&n=$limit"
-            val jsonStr = httpGet(urlString) ?: return results
+        val cleanQ = sanitizeText(query)
+        val queriesToTry = if (cleanQ.isNotEmpty() && cleanQ != query) listOf(cleanQ, query) else listOf(query)
 
-            val jsonObj = JSONObject(jsonStr)
-            val items = jsonObj.optJSONArray("results") ?: return results
+        for (q in queriesToTry) {
+            try {
+                val encodedQuery = URLEncoder.encode(q, "UTF-8")
+                val urlString = "https://www.jiosaavn.com/api.php?__call=search.getResults&q=$encodedQuery&_format=json&_marker=0&api_version=4&ctx=android&n=$limit"
+                val jsonStr = httpGet(urlString) ?: continue
 
-            for (i in 0 until items.length()) {
-                val item = items.optJSONObject(i) ?: continue
-                val parsed = parseSongItem(item)
-                if (parsed != null) results.add(parsed)
+                val jsonObj = JSONObject(jsonStr)
+                val items = jsonObj.optJSONArray("results") ?: continue
+
+                for (i in 0 until items.length()) {
+                    val item = items.optJSONObject(i) ?: continue
+                    val parsed = parseSongItem(item)
+                    if (parsed != null && !results.any { it["id"] == parsed["id"] }) {
+                        results.add(parsed)
+                    }
+                }
+                if (results.isNotEmpty()) break
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
         return results
     }
 
-    fun resolveTrackStream(title: String, artist: String): String? {
-        val q1 = "$title $artist".trim()
-        val songs1 = searchSongs(q1, 5)
-        if (songs1.isNotEmpty()) {
-            val sUrl = songs1[0]["stream_url"] as? String
-            if (!sUrl.isNullOrEmpty()) return sUrl
-        }
+    private fun isMatch(targetTitle: String, candidateTitle: String): Boolean {
+        val tTokens = sanitizeText(targetTitle).lowercase().split(" ").filter { it.length > 1 }
+        val cTokens = sanitizeText(candidateTitle).lowercase().split(" ").filter { it.length > 1 }
+        if (tTokens.isEmpty() || cTokens.isEmpty()) return false
+        val tFull = tTokens.joinToString(" ")
+        val cFull = cTokens.joinToString(" ")
+        if (tFull == cFull || cFull.contains(tFull) || tFull.contains(cFull)) return true
+        val matchCount = tTokens.count { token -> cTokens.any { it.contains(token) || token.contains(it) } }
+        return (matchCount.toDouble() / tTokens.size.toDouble()) >= 0.5
+    }
 
-        val q2 = title.trim()
-        val songs2 = searchSongs(q2, 5)
-        if (songs2.isNotEmpty()) {
-            val sUrl = songs2[0]["stream_url"] as? String
-            if (!sUrl.isNullOrEmpty()) return sUrl
+    fun resolveTrackStream(title: String, artist: String): String? {
+        val cleanT = sanitizeText(title)
+        val cleanA = sanitizeText(artist.split(Regex("[,&/]")).firstOrNull() ?: "")
+
+        val permutations = mutableListOf<String>()
+        if (cleanT.isNotEmpty() && cleanA.isNotEmpty()) permutations.add("$cleanT $cleanA")
+        if (cleanT.isNotEmpty()) permutations.add(cleanT)
+        if (title.isNotEmpty() && artist.isNotEmpty()) permutations.add("$title $artist")
+        if (title.isNotEmpty()) permutations.add(title)
+
+        for (p in permutations) {
+            val songs = searchSongs(p, 6)
+            for (s in songs) {
+                val sTitle = s["title"] as? String ?: ""
+                val sUrl = s["stream_url"] as? String
+                if (!sUrl.isNullOrEmpty() && isMatch(title, sTitle)) {
+                    return sUrl
+                }
+            }
         }
 
         return null

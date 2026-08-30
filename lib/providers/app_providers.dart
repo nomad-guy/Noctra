@@ -101,10 +101,9 @@ final selectedVibeKeyProvider = StateProvider<String?>((ref) => 'late_night');
 final aiPromptProvider = StateProvider<String>((ref) => '');
 final isAICuratingProvider = StateProvider<bool>((ref) => false);
 
-// Taste Vector State (for developer live updates)
-final tasteVectorStateProvider = StateProvider<List<double>>((ref) {
+final tasteVectorStateProvider = Provider<List<double>>((ref) {
   final repo = ref.watch(musicRepositoryProvider);
-  return List.from(repo.userTasteVector);
+  return repo.userTasteVector;
 });
 
 // P2P Sync Service Provider

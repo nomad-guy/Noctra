@@ -7,8 +7,15 @@ import 'equalizer_sheet.dart';
 import 'glass_card.dart';
 import 'live_audio_wave.dart';
 
-class NoirMiniPlayer extends ConsumerWidget {
+class NoirMiniPlayer extends ConsumerStatefulWidget {
   const NoirMiniPlayer({super.key});
+
+  @override
+  ConsumerState<NoirMiniPlayer> createState() => _NoirMiniPlayerState();
+}
+
+class _NoirMiniPlayerState extends ConsumerState<NoirMiniPlayer> {
+  String? _dismissedSongId;
 
   String _formatDuration(Duration d) {
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -17,7 +24,7 @@ class NoirMiniPlayer extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final currentSongAsync = ref.watch(currentSongStreamProvider);
     final isPlayingAsync = ref.watch(isPlayingStreamProvider);
     final positionAsync = ref.watch(positionStreamProvider);
@@ -25,7 +32,7 @@ class NoirMiniPlayer extends ConsumerWidget {
     final isDark = themeMode.isDark;
 
     final song = currentSongAsync.value;
-    if (song == null) return const SizedBox.shrink();
+    if (song == null || _dismissedSongId == song.id) return const SizedBox.shrink();
 
     final isPlaying = isPlayingAsync.value ?? false;
     final position = positionAsync.value ?? Duration.zero;
@@ -36,6 +43,7 @@ class NoirMiniPlayer extends ConsumerWidget {
       key: ValueKey('mini_player_${song.id}'),
       direction: DismissDirection.horizontal,
       onDismissed: (direction) {
+        setState(() => _dismissedSongId = song.id);
         ref.read(audioPlayerServiceProvider).stopAndDismiss();
       },
       background: Container(
@@ -43,7 +51,7 @@ class NoirMiniPlayer extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 24),
         alignment: Alignment.centerLeft,
         decoration: BoxDecoration(
-          color: isDark ? const Color(0x33FF453A) : const Color(0x22FF3B30),
+          color: isDark ? const Color(0xFF222222) : const Color(0xFFDDDDDD),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
         ),
@@ -63,7 +71,7 @@ class NoirMiniPlayer extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 24),
         alignment: Alignment.centerRight,
         decoration: BoxDecoration(
-          color: isDark ? const Color(0x33FF453A) : const Color(0x22FF3B30),
+          color: isDark ? const Color(0xFF222222) : const Color(0xFFDDDDDD),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
         ),
@@ -97,14 +105,6 @@ class NoirMiniPlayer extends ConsumerWidget {
                     backgroundColor: Colors.transparent,
                     builder: (context) => const PlayerSheet(),
                   );
-                },
-                onHorizontalDragEnd: (details) {
-                  final vx = details.primaryVelocity ?? 0;
-                  if (vx < -200) {
-                    ref.read(audioPlayerServiceProvider).skipNext();
-                  } else if (vx > 200) {
-                    ref.read(audioPlayerServiceProvider).skipPrevious();
-                  }
                 },
                 onVerticalDragEnd: (details) {
                   if ((details.primaryVelocity ?? 0) < -200) {
@@ -162,40 +162,27 @@ class NoirMiniPlayer extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(height: 2),
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    song.artist,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 11.5,
-                                      color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  '• ${_formatDuration(position)} / ${_formatDuration(duration)}',
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: isDark ? Colors.white70 : Colors.black87,
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              song.artist,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary,
+                              ),
                             ),
                           ],
                         ),
                       ),
                       // Equalizer Quick Button with Live Dynamic Audio Wave
                       IconButton(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
                         tooltip: 'Equalizer FX',
                         icon: LiveAudioWave(
                           isPlaying: isPlaying,
                           color: isDark ? Colors.white : Colors.black,
-                          height: 18,
+                          height: 16,
                           barCount: 4,
                         ),
                         onPressed: () {
@@ -209,81 +196,93 @@ class NoirMiniPlayer extends ConsumerWidget {
                       ),
                       // Previous Button
                       IconButton(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
                         icon: Icon(
                           Icons.skip_previous_rounded,
-                          size: 24,
+                          size: 22,
                           color: isDark ? Colors.white70 : Colors.black87,
                         ),
-                        onPressed: () {
-                          ref.read(audioPlayerServiceProvider).skipPrevious();
-                        },
+                        onPressed: () => ref.read(audioPlayerServiceProvider).skipPrevious(),
                       ),
                       // Play/Pause Main Button
                       GestureDetector(
-                        onTap: () {
-                          ref.read(audioPlayerServiceProvider).togglePlayPause();
-                        },
+                        onTap: () => ref.read(audioPlayerServiceProvider).togglePlayPause(),
                         child: Container(
-                          width: 38,
-                          height: 38,
+                          width: 36,
+                          height: 36,
+                          margin: const EdgeInsets.symmetric(horizontal: 2),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: isDark ? Colors.white : Colors.black,
                           ),
                           child: Icon(
                             isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                            size: 24,
+                            size: 22,
                             color: isDark ? Colors.black : Colors.white,
                           ),
                         ),
                       ),
                       // Next Button
                       IconButton(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
                         icon: Icon(
                           Icons.skip_next_rounded,
-                          size: 24,
+                          size: 22,
                           color: isDark ? Colors.white70 : Colors.black87,
                         ),
-                        onPressed: () {
-                          ref.read(audioPlayerServiceProvider).skipNext();
-                        },
+                        onPressed: () => ref.read(audioPlayerServiceProvider).skipNext(),
                       ),
                     ],
                   ),
                 ),
               ),
-
-              // Time & Seek Bar (Isolated from Sheet Opening Gesture)
+              // Dynamic Time-Coded Micro Progress Bar & Timers
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Row(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                child: Column(
                   children: [
-                    Text(
-                      _formatDuration(position),
-                      style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.black38),
-                    ),
-                    Expanded(
-                      child: SliderTheme(
-                        data: SliderTheme.of(context).copyWith(
-                          trackHeight: 2.5,
-                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
-                          overlayShape: const RoundSliderOverlayShape(overlayRadius: 10),
-                          activeTrackColor: isDark ? Colors.white : Colors.black,
-                          inactiveTrackColor: isDark ? Colors.white12 : Colors.black12,
-                          thumbColor: isDark ? Colors.white : Colors.black,
-                        ),
-                        child: Slider(
-                          value: position.inMilliseconds.toDouble().clamp(0.0, duration.inMilliseconds.toDouble()),
-                          max: duration.inMilliseconds.toDouble(),
-                          onChanged: (val) {
-                            ref.read(audioPlayerServiceProvider).seek(Duration(milliseconds: val.toInt()));
-                          },
-                        ),
+                    SliderTheme(
+                      data: SliderThemeData(
+                        trackHeight: 2.0,
+                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4.0),
+                        overlayShape: const RoundSliderOverlayShape(overlayRadius: 8.0),
+                        activeTrackColor: isDark ? Colors.white : Colors.black,
+                        inactiveTrackColor: isDark ? Colors.white24 : Colors.black12,
+                        thumbColor: isDark ? Colors.white : Colors.black,
+                      ),
+                      child: Slider(
+                        value: position.inMilliseconds.toDouble().clamp(0.0, duration.inMilliseconds.toDouble()),
+                        max: duration.inMilliseconds.toDouble() > 0 ? duration.inMilliseconds.toDouble() : 1.0,
+                        onChanged: (value) {
+                          ref.read(audioPlayerServiceProvider).seek(Duration(milliseconds: value.toInt()));
+                        },
                       ),
                     ),
-                    Text(
-                      '-${_formatDuration(remaining.isNegative ? Duration.zero : remaining)}',
-                      style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.black38),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            _formatDuration(position),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white54 : Colors.black54,
+                            ),
+                          ),
+                          Text(
+                            '-${_formatDuration(remaining)}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white54 : Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

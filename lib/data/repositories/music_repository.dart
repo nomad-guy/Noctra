@@ -89,7 +89,8 @@ class MusicRepository extends ChangeNotifier {
 
   void toggleFavorite(Song song) {
     if (isFavorite(song.id)) { _favorites.removeWhere((s) => s.id == song.id); } else { _favorites.insert(0, song); }
-    _persistState(); notifyListeners();
+    NoctraLocalDatabase().saveFavorites(_favorites);
+    notifyListeners();
   }
 
   void recordSongPlayed(Song song, {String action = 'play', int listenedSeconds = 0}) {
@@ -97,19 +98,20 @@ class MusicRepository extends ChangeNotifier {
     _recentlyPlayed.insert(0, song);
     if (_recentlyPlayed.length > 50) _recentlyPlayed.removeLast();
     
-    // Record into Knowledge Graph Manifest for AI Agent learning
     NoctraLocalDatabase().recordManifest(song, action: action, listenedSeconds: listenedSeconds);
+    NoctraLocalDatabase().saveRecent(_recentlyPlayed);
     updateTasteVector(song, action);
-    _persistState(); notifyListeners();
+    notifyListeners();
   }
 
-  void clearRecentlyPlayed() { _recentlyPlayed.clear(); _persistState(); notifyListeners(); }
-  void removeRecentlyPlayed(String songId) { _recentlyPlayed.removeWhere((s) => s.id == songId); _persistState(); notifyListeners(); }
+  void clearRecentlyPlayed() { _recentlyPlayed.clear(); NoctraLocalDatabase().saveRecent(_recentlyPlayed); notifyListeners(); }
+  void removeRecentlyPlayed(String songId) { _recentlyPlayed.removeWhere((s) => s.id == songId); NoctraLocalDatabase().saveRecent(_recentlyPlayed); notifyListeners(); }
 
   void addDownloadedSong(Song song) {
     _downloads.removeWhere((s) => s.id == song.id);
     _downloads.insert(0, song);
-    _persistState(); notifyListeners();
+    NoctraLocalDatabase().saveDownloads(_downloads);
+    notifyListeners();
   }
 
   void updateTasteVector(Song song, String action) {
@@ -118,13 +120,17 @@ class MusicRepository extends ChangeNotifier {
       songVector: song.featureVector,
       action: action,
     );
-    _persistState(); notifyListeners();
+    NoctraLocalDatabase().saveTasteVector(_userTasteVector);
+    notifyListeners();
   }
 
   int computeMatchScore(Song song) {
-    final sim = TasteVectorEngine.cosineSimilarity(song.featureVector, _userTasteVector);
+    final songEmbedding = song.featureVector.every((x) => x == 0.5)
+        ? TasteVectorEngine.extractSongEmbedding(song)
+        : song.featureVector;
+    final sim = TasteVectorEngine.cosineSimilarity(songEmbedding, _userTasteVector);
     final historyAffinity = NoctraLocalDatabase().getArtistAffinity(song.artist);
-    return (76 + (sim * 18) + (historyAffinity * 5)).round().clamp(75, 99);
+    return ((sim * 80) + (historyAffinity * 19)).round().clamp(60, 99);
   }
 
   List<AIPlaylist> getSmartAIPlaylists() {
@@ -165,8 +171,9 @@ class MusicRepository extends ChangeNotifier {
     if (candidates.isEmpty) candidates.addAll(_localLibrary);
 
     final scored = candidates.map((s) {
-      final sim = TasteVectorEngine.cosineSimilarity(s.featureVector, target);
-      final score = (78 + sim * 21).round().clamp(75, 99);
+      final songEmbedding = s.featureVector.every((x) => x == 0.5) ? TasteVectorEngine.extractSongEmbedding(s) : s.featureVector;
+      final sim = TasteVectorEngine.cosineSimilarity(songEmbedding, target);
+      final score = ((sim * 80) + 19).round().clamp(60, 99);
       final exp = TasteVectorEngine.generateExplanation(s, score, vibeKey, naturalPrompt);
       return {'song': s, 'score': score, 'explanation': exp};
     }).toList();
@@ -180,7 +187,7 @@ class MusicRepository extends ChangeNotifier {
     var searched = await MusicService.search(cleanPrompt);
     if (searched.length < 5) {
       final expanded = await MusicService.search('$cleanPrompt chill acoustic vibes');
-      searched = {...searched, ...expanded}.toList();
+      searched = <Song>{...searched, ...expanded}.toList();
     }
     final target = TasteVectorEngine.getTargetVector(vibeKey: vibeKey, prompt: cleanPrompt, defaultTaste: _userTasteVector);
     final candidates = searched.isNotEmpty ? searched : {..._localLibrary, ..._downloads, ..._recentlyPlayed}.toList();
@@ -190,7 +197,7 @@ class MusicRepository extends ChangeNotifier {
           ? TasteVectorEngine.extractSongEmbedding(s)
           : s.featureVector;
       final sim = TasteVectorEngine.cosineSimilarity(songEmbedding, target);
-      final score = (80 + sim * 19).round().clamp(75, 99);
+      final score = ((sim * 80) + 19).round().clamp(60, 99);
       final exp = TasteVectorEngine.generateExplanation(s, score, vibeKey, cleanPrompt);
       return {'song': s, 'score': score, 'explanation': exp};
     }).toList();

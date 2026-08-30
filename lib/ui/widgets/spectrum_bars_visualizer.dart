@@ -24,9 +24,9 @@ class SpectrumBarsVisualizer extends StatefulWidget {
 class _SpectrumBarsVisualizerState extends State<SpectrumBarsVisualizer> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   StreamSubscription? _fftSub;
-  final List<double> _currentHeights = List.filled(32, 0.15);
-  final List<double> _peakHeights = List.filled(32, 0.15);
-  List<double> _latestFft = List.filled(32, 0.2);
+  final List<double> _currentHeights = List.filled(32, 0.20);
+  final List<double> _peakHeights = List.filled(32, 0.25);
+  List<double> _latestFft = List.filled(32, 0.3);
 
   @override
   void initState() {
@@ -35,8 +35,7 @@ class _SpectrumBarsVisualizerState extends State<SpectrumBarsVisualizer> with Si
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..addListener(_tickVisualizer);
-
-    if (widget.isPlaying) _controller.repeat();
+    _controller.repeat();
 
     _fftSub = AudioVisualizerService().fftStream.listen((fftData) {
       if (fftData.isNotEmpty) {
@@ -46,43 +45,29 @@ class _SpectrumBarsVisualizerState extends State<SpectrumBarsVisualizer> with Si
   }
 
   void _tickVisualizer() {
-    if (!widget.isPlaying) {
-      for (int i = 0; i < widget.barCount; i++) {
-        _currentHeights[i] = max(0.08, _currentHeights[i] * 0.90);
-        _peakHeights[i] = max(0.08, _peakHeights[i] * 0.90);
-      }
-      return;
-    }
-
     final double t = DateTime.now().millisecondsSinceEpoch / 1000.0;
     for (int i = 0; i < widget.barCount; i++) {
-      final double fftVal = i < _latestFft.length ? _latestFft[i] : 0.2;
+      if (!widget.isPlaying) {
+        _currentHeights[i] = max(0.06, _currentHeights[i] * 0.90);
+        _peakHeights[i] = max(0.06, _peakHeights[i] * 0.90);
+        continue;
+      }
+
+      final double fftVal = i < _latestFft.length ? _latestFft[i] : 0.3;
       final double wave1 = sin(t * 7.5 + (i * 0.42)) * 0.35 + 0.5;
       final double wave2 = cos(t * 3.8 + (i * 0.25)) * 0.25 + 0.5;
       final double subBass = (sin(t * 9.0) * 0.3 + 0.7);
 
-      // Organic blend of live hardware FFT + acoustic harmonics
-      double target = (fftVal * 0.70 + wave1 * 0.35 + wave2 * 0.25) * subBass;
+      double target = (fftVal * 0.65 + wave1 * 0.35 + wave2 * 0.25) * subBass;
       target = target.clamp(0.12, 0.96);
 
-      // Smooth attack and realistic acoustic decay
-      _currentHeights[i] += (target - _currentHeights[i]) * 0.38;
+      _currentHeights[i] += (target - _currentHeights[i]) * 0.42;
 
       if (_currentHeights[i] > _peakHeights[i]) {
         _peakHeights[i] = _currentHeights[i];
       } else {
-        _peakHeights[i] = max(_currentHeights[i], _peakHeights[i] - 0.012);
+        _peakHeights[i] = max(_currentHeights[i], _peakHeights[i] - 0.014);
       }
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant SpectrumBarsVisualizer oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isPlaying && !_controller.isAnimating) {
-      _controller.repeat();
-    } else if (!widget.isPlaying && _controller.isAnimating) {
-      _controller.stop();
     }
   }
 
@@ -181,9 +166,5 @@ class _SpectrumBarsPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _SpectrumBarsPainter oldDelegate) {
-    return oldDelegate.currentHeights != currentHeights ||
-        oldDelegate.peakHeights != peakHeights ||
-        oldDelegate.color != color;
-  }
+  bool shouldRepaint(covariant _SpectrumBarsPainter oldDelegate) => true;
 }

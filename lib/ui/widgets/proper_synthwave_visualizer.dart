@@ -22,48 +22,46 @@ class ProperSynthwaveVisualizer extends StatefulWidget {
 class _ProperSynthwaveVisualizerState extends State<ProperSynthwaveVisualizer> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   StreamSubscription? _fftSub;
-  final List<double> _mountainPeakHeights = List.filled(16, 0.0);
-  double _bassEnergy = 0.0;
+  final List<double> _mountainPeakHeights = List.filled(16, 4.0);
+  double _bassEnergy = 0.4;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    )..addListener(_applyDecay);
-    if (widget.isPlaying) _controller.repeat();
+      duration: const Duration(milliseconds: 1400),
+    )..addListener(_applyTick);
+    _controller.repeat();
 
     _fftSub = AudioVisualizerService().fftStream.listen((fftData) {
-      if (!mounted || !widget.isPlaying) return;
-      setState(() {
-        if (fftData.isNotEmpty) {
-          _bassEnergy = ((fftData[0] + fftData[1] + fftData[2]) / 3.0) * 1.5;
+      if (!mounted) return;
+      if (fftData.isNotEmpty) {
+        _bassEnergy = ((fftData[0] + fftData[1] + fftData[2]) / 3.0) * 1.8;
+      }
+      for (int i = 0; i < 16 && (i * 2) < fftData.length; i++) {
+        final mag = (fftData[i * 2] * 28.0).clamp(2.0, 32.0);
+        if (mag > _mountainPeakHeights[i]) {
+          _mountainPeakHeights[i] += (mag - _mountainPeakHeights[i]) * 0.75;
         }
-        for (int i = 0; i < 16 && (i * 2) < fftData.length; i++) {
-          final mag = (fftData[i * 2] * 28.0).clamp(0.0, 32.0);
-          if (mag > _mountainPeakHeights[i]) {
-            _mountainPeakHeights[i] += (mag - _mountainPeakHeights[i]) * 0.75;
-          }
-        }
-      });
+      }
     });
   }
 
-  void _applyDecay() {
-    _bassEnergy = max(0.0, _bassEnergy * 0.88);
-    for (int i = 0; i < 16; i++) {
-      _mountainPeakHeights[i] = max(0.0, _mountainPeakHeights[i] * 0.85);
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant ProperSynthwaveVisualizer oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isPlaying && !_controller.isAnimating) {
-      _controller.repeat();
-    } else if (!widget.isPlaying && _controller.isAnimating) {
-      _controller.stop();
+  void _applyTick() {
+    final t = DateTime.now().millisecondsSinceEpoch / 1000.0;
+    if (widget.isPlaying) {
+      final pulse = (sin(t * 8.5) * 0.35 + 0.65).clamp(0.2, 1.2);
+      _bassEnergy = (_bassEnergy * 0.60 + pulse * 0.40).clamp(0.1, 1.4);
+      for (int i = 0; i < 16; i++) {
+        final w = (sin(t * 6.0 + i * 0.45) * 0.45 + 0.55) * 20.0;
+        _mountainPeakHeights[i] = (_mountainPeakHeights[i] * 0.60 + w * 0.40).clamp(2.0, 32.0);
+      }
+    } else {
+      _bassEnergy = max(0.0, _bassEnergy * 0.88);
+      for (int i = 0; i < 16; i++) {
+        _mountainPeakHeights[i] = max(0.0, _mountainPeakHeights[i] * 0.85);
+      }
     }
   }
 
@@ -129,9 +127,7 @@ class _ProperSynthwavePainter extends CustomPainter {
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: isDark
-            ? [const Color(0xFF050010), const Color(0xFF260447)]
-            : [const Color(0xFFEDE8F8), const Color(0xFFD0C3E6)],
+        colors: isDark ? [const Color(0xFF050010), const Color(0xFF260447)] : [const Color(0xFFEDE8F8), const Color(0xFFD0C3E6)],
       ).createShader(skyRect);
     canvas.drawRect(skyRect, skyPaint);
 
@@ -140,9 +136,7 @@ class _ProperSynthwavePainter extends CustomPainter {
     final Rect sunRect = Rect.fromCircle(center: sunCenter, radius: sunRadius);
 
     final Paint sunPaint = Paint()
-      ..shader = const RadialGradient(
-        colors: [Color(0xFFFF007F), Color(0xFFFF8C00)],
-      ).createShader(sunRect);
+      ..shader = const RadialGradient(colors: [Color(0xFFFF007F), Color(0xFFFF8C00)]).createShader(sunRect);
 
     canvas.save();
     canvas.clipRect(skyRect);
@@ -176,16 +170,12 @@ class _ProperSynthwavePainter extends CustomPainter {
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: isDark
-            ? [const Color(0xFF0F001F), const Color(0xFF000000)]
-            : [const Color(0xFFCFBFE3), const Color(0xFFF7F7F9)],
+        colors: isDark ? [const Color(0xFF0F001F), const Color(0xFF000000)] : [const Color(0xFFCFBFE3), const Color(0xFFF7F7F9)],
       ).createShader(groundRect);
     canvas.drawRect(groundRect, groundPaint);
 
     final gridColor = isDark ? const Color(0xFF00F0FF) : const Color(0xFF7000FF);
-    final Paint linePaint = Paint()
-      ..color = gridColor.withValues(alpha: isPlaying ? 0.75 : 0.40)
-      ..strokeWidth = 1.4;
+    final Paint linePaint = Paint()..color = gridColor.withValues(alpha: isPlaying ? 0.75 : 0.40)..strokeWidth = 1.4;
 
     const int numVLines = 18;
     for (int i = 0; i <= numVLines; i++) {
@@ -199,25 +189,14 @@ class _ProperSynthwavePainter extends CustomPainter {
       final double eased = pow(norm, 2.5).toDouble();
       final double lineY = horizonY + (eased * (h - horizonY));
       final double alpha = (norm * 0.90).clamp(0.0, 0.95);
-
-      final hPaint = Paint()
-        ..color = gridColor.withValues(alpha: alpha)
-        ..strokeWidth = 1.0 + (norm * 2.0);
-
+      final hPaint = Paint()..color = gridColor.withValues(alpha: alpha)..strokeWidth = 1.0 + (norm * 2.0);
       canvas.drawLine(Offset(0, lineY), Offset(w, lineY), hPaint);
     }
 
-    final horizonPaint = Paint()
-      ..color = const Color(0xFFFF007F).withValues(alpha: 0.95)
-      ..strokeWidth = 2.4;
+    final horizonPaint = Paint()..color = const Color(0xFFFF007F).withValues(alpha: 0.95)..strokeWidth = 2.4;
     canvas.drawLine(Offset(0, horizonY), Offset(w, horizonY), horizonPaint);
   }
 
   @override
-  bool shouldRepaint(covariant _ProperSynthwavePainter oldDelegate) {
-    return oldDelegate.progress != progress ||
-        oldDelegate.bassEnergy != bassEnergy ||
-        oldDelegate.isPlaying != isPlaying ||
-        oldDelegate.isDark != isDark;
-  }
+  bool shouldRepaint(covariant _ProperSynthwavePainter oldDelegate) => true;
 }
