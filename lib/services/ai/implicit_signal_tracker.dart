@@ -2,7 +2,9 @@ import 'dart:math';
 import '../../core/utils/noctra_logger.dart';
 import '../../data/models/song_model.dart';
 import '../../data/repositories/music_repository.dart';
+import '../../data/repositories/neural_recommender_engine.dart';
 import '../../data/sources/noctra_sqlite_database.dart';
+import 'knowledge_graph.dart';
 import 'session_context_tracker.dart';
 
 class ImplicitSignalTracker {
@@ -71,6 +73,38 @@ class ImplicitSignalTracker {
 
       // Online gradient descent update on long-term User Taste Vector
       MusicRepository().updateTasteVector(song, eventType);
+
+      // Train the neural MLP on this interaction
+      try {
+        final userVec = MusicRepository().userTasteVector;
+        final session = SessionContextTracker();
+        final blended = session.sessionSongCount > 3
+            ? session.blendedVector(userVec)
+            : userVec;
+        final ctx = NeuralRecommenderEngine.buildContext(
+          sessionSongCount: session.sessionSongCount,
+          momentumFeatures: session.momentumFeatures,
+          affinityFeatures: session.topArtistAffinityFeatures(),
+        );
+        NeuralRecommenderEngine.trainFromSignal(
+          userVector: blended, song: song, eventType: eventType, contextFeatures: ctx,
+        );
+      } catch (_) {}
+
+      // Update knowledge graph edges
+      try {
+        final kg = MusicKnowledgeGraph.instance;
+        final weight = signal.abs().clamp(0.1, 3.0);
+        kg.recordSongPlay(song.artist, song.genre, weight: weight);
+        // Also reinforce recent artist-genre connections
+        final session = SessionContextTracker();
+        for (final entry in session.artistAffinity.entries) {
+          if (entry.value > 0.6) {
+            kg.recordSongPlay(entry.key, song.genre, weight: entry.value * 0.3);
+          }
+        }
+      } catch (_) {}
+
       NoctraLogger.d('ImplicitSignalTracker: $eventType ($signal) -> ${song.title}');
     } catch (e) {
       NoctraLogger.w('ImplicitSignalTracker error', e);
