@@ -171,7 +171,7 @@ class MusicKnowledgeGraph {
       for (final recent in recentGenres) {
         final recentKey = 'genre:${recent.toLowerCase().replaceAll(' ', '-')}';
         final weight = _adjacency[genreKey]?[recentKey] ?? 0.0;
-        if (weight > 0.5) return 'Shares ${genre} energy with your recent $recent listening';
+        if (weight > 0.5) return 'Shares $genre energy with your recent $recent listening';
       }
     }
 

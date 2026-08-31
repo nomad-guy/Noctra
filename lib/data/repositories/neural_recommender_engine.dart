@@ -115,28 +115,40 @@ class NeuralRecommenderEngine {
 
     // Build input
     final List<double> input = List<double>.filled(inputDimension, 0.5);
-    for (int i = 0; i < 32 && i < userVector.length; i++) input[i] = userVector[i];
-    for (int i = 0; i < 32 && i < songVec.length; i++) input[32 + i] = songVec[i];
+    for (int i = 0; i < 32 && i < userVector.length; i++) {
+      input[i] = userVector[i];
+    }
+    for (int i = 0; i < 32 && i < songVec.length; i++) {
+      input[32 + i] = songVec[i];
+    }
     final ctx = contextFeatures ?? _buildDefaultContext();
-    for (int i = 0; i < 24 && i < ctx.length; i++) input[64 + i] = ctx[i];
+    for (int i = 0; i < 24 && i < ctx.length; i++) {
+      input[64 + i] = ctx[i];
+    }
 
     // Forward pass with cached activations
     final List<double> h1 = List<double>.filled(hidden1Dimension, 0.0);
     for (int i = 0; i < hidden1Dimension; i++) {
       double sum = _b1[i];
-      for (int j = 0; j < inputDimension; j++) sum += _w1[i][j] * input[j];
+      for (int j = 0; j < inputDimension; j++) {
+        sum += _w1[i][j] * input[j];
+      }
       h1[i] = sum > 0 ? sum : sum * 0.1; // LeakyReLU
     }
 
     final List<double> h2 = List<double>.filled(hidden2Dimension, 0.0);
     for (int i = 0; i < hidden2Dimension; i++) {
       double sum = _b2[i];
-      for (int j = 0; j < hidden1Dimension; j++) sum += _w2[i][j] * h1[j];
+      for (int j = 0; j < hidden1Dimension; j++) {
+        sum += _w2[i][j] * h1[j];
+      }
       h2[i] = sum > 0 ? sum : sum * 0.1; // LeakyReLU
     }
 
     double out = _b3;
-    for (int i = 0; i < hidden2Dimension; i++) out += _w3[i] * h2[i];
+    for (int i = 0; i < hidden2Dimension; i++) {
+      out += _w3[i] * h2[i];
+    }
     final double pred = 1.0 / (1.0 + exp(-out.clamp(-10.0, 10.0)));
 
     // Binary cross-entropy loss
