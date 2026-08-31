@@ -9,6 +9,20 @@ The project adheres to Semantic Versioning: `vX.Y.Z`
 
 ---
 
+## [1.1.1] - 2026-08-31
+
+### Fixed
+- **Mini-Player Dismiss Reopen Bug**: Resolved issue where swiping down / dismissing the mini-player prevented the same song from re-appearing when tapped again.
+- **Dynamic Similar Artist Expansion**: Implemented Spotify-style progressive discovery during onboarding where selecting an artist automatically loads and displays similar/related artists with Wikipedia portraits.
+- **Artist Photo Fallback & 7-Day TTL Cache**: Added Wikipedia Search API cascade to guarantee 100% photo resolution for artists with parenthetical disambiguations.
+- **Song Vector Dimension Consistency**: Fixed `Song.featureVector` default to 32 dimensions matching the neural taste vector engine.
+- **P2P Jam Studio Bounds & IPv4 Validation**: Added max 8 peers connection cap, 64KB payload limits, and strict 0-255 octet validation.
+- **Hardware Equalizer Normalization**: Corrected 5-band Equalizer and Bass Boost normalization in native Android Kotlin engine.
+- **Search Race Conditions**: Guaranteed cancellation of in-flight searches and debounce timers on text clearing.
+- **Multi-Language i18n Integration**: Wired localized strings across headers, greetings, and added an in-app language selector in Preferences.
+
+---
+
 ## [1.1.0] - 2026-08-31
 
 ### Added
