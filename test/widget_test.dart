@@ -1,10 +1,15 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:noctra/core/utils/noctra_localization.dart';
 import 'package:noctra/main.dart';
 import 'package:noctra/providers/app_providers.dart';
+import 'package:noctra/ui/screens/onboarding/onboarding_screen.dart';
+import 'package:noctra/ui/screens/settings_sheet.dart';
+import 'package:noctra/ui/widgets/noir_sidebar.dart';
 
 void main() {
-  testWidgets('Noctra app loads smoke test', (WidgetTester tester) async {
+  testWidgets('Noctra App Onboarding Initial Render Test', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -14,6 +19,70 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('NOCTRA'), findsWidgets);
+    expect(find.byType(MaterialApp), findsOneWidget);
+  });
+
+  testWidgets('Onboarding Screen Step Progression Test', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: OnboardingScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('NOCTRA'), findsOneWidget);
+    expect(find.text('Step 1 of 3'), findsOneWidget);
+    expect(find.text('Hindi'), findsOneWidget);
+
+    final nextButton = find.text('Next');
+    expect(nextButton, findsOneWidget);
+    await tester.tap(nextButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Step 2 of 3'), findsOneWidget);
+    expect(find.text('Bollywood'), findsOneWidget);
+  });
+
+  testWidgets('NoirSidebar Navigation and Localization Test', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            drawer: NoirSidebar(),
+            body: Center(child: Text('Main Body')),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
+    scaffoldState.openDrawer();
+    await tester.pumpAndSettle();
+
+    expect(find.text(NoctraLocalization.tr('app_name')), findsWidgets);
+    expect(find.text(NoctraLocalization.tr('search_explore')), findsOneWidget);
+    expect(find.text(NoctraLocalization.tr('library_title')), findsOneWidget);
+  });
+
+  testWidgets('SettingsSheet Theme and Language Selection Test', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: SettingsSheet(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(NoctraLocalization.tr('settings')), findsOneWidget);
+    expect(find.text('Noir Black'), findsOneWidget);
+    expect(find.text('AMOLED'), findsOneWidget);
+    expect(find.text('Noir White'), findsOneWidget);
+    expect(find.text('Language / भाषा'), findsOneWidget);
   });
 }

@@ -67,120 +67,128 @@ class NoirSidebar extends ConsumerWidget {
             ),
 
             Divider(color: isDark ? Colors.white10 : Colors.black12, height: 1),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
 
-            // Navigation
-            _sidebarItem(
-              icon: Icons.home_filled,
-              label: 'Home',
-              isSelected: currentIndex == 0,
-              isDark: isDark,
-              onTap: () {
-                ref.read(currentNavigationIndexProvider.notifier).state = 0;
-                onClose?.call();
-              },
-            ),
-            _sidebarItem(
-              icon: Icons.search_rounded,
-              label: NoctraLocalization.tr('search_explore'),
-              isSelected: currentIndex == 1,
-              isDark: isDark,
-              onTap: () {
-                ref.read(currentNavigationIndexProvider.notifier).state = 1;
-                onClose?.call();
-              },
-            ),
-            _sidebarItem(
-              icon: Icons.my_library_music_rounded,
-              label: NoctraLocalization.tr('library_title'),
-              isSelected: currentIndex == 2,
-              isDark: isDark,
-              onTap: () {
-                ref.read(currentNavigationIndexProvider.notifier).state = 2;
-                onClose?.call();
-              },
-            ),
-            _sidebarItem(
-              icon: Icons.auto_awesome_rounded,
-              label: NoctraLocalization.tr('ai_studio_title'),
-              isSelected: currentIndex == 3,
-              isDark: isDark,
-              onTap: () {
-                ref.read(currentNavigationIndexProvider.notifier).state = 3;
-                onClose?.call();
-              },
+            // Scrollable Navigation & Actions
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _sidebarItem(
+                      icon: Icons.home_filled,
+                      label: 'Home',
+                      isSelected: currentIndex == 0,
+                      isDark: isDark,
+                      onTap: () {
+                        ref.read(currentNavigationIndexProvider.notifier).state = 0;
+                        onClose?.call();
+                      },
+                    ),
+                    _sidebarItem(
+                      icon: Icons.search_rounded,
+                      label: NoctraLocalization.tr('search_explore'),
+                      isSelected: currentIndex == 1,
+                      isDark: isDark,
+                      onTap: () {
+                        ref.read(currentNavigationIndexProvider.notifier).state = 1;
+                        onClose?.call();
+                      },
+                    ),
+                    _sidebarItem(
+                      icon: Icons.my_library_music_rounded,
+                      label: NoctraLocalization.tr('library_title'),
+                      isSelected: currentIndex == 2,
+                      isDark: isDark,
+                      onTap: () {
+                        ref.read(currentNavigationIndexProvider.notifier).state = 2;
+                        onClose?.call();
+                      },
+                    ),
+                    _sidebarItem(
+                      icon: Icons.auto_awesome_rounded,
+                      label: NoctraLocalization.tr('ai_studio_title'),
+                      isSelected: currentIndex == 3,
+                      isDark: isDark,
+                      onTap: () {
+                        ref.read(currentNavigationIndexProvider.notifier).state = 3;
+                        onClose?.call();
+                      },
+                    ),
+
+                    const SizedBox(height: 8),
+                    Divider(color: isDark ? Colors.white10 : Colors.black12, height: 1),
+                    const SizedBox(height: 8),
+
+                    _sidebarItem(
+                      icon: Icons.history_rounded,
+                      label: 'Recently Played',
+                      isSelected: false,
+                      isDark: isDark,
+                      onTap: () {
+                        onClose?.call();
+                        showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const RecentlyPlayedSheet());
+                      },
+                    ),
+                    _sidebarItem(
+                      icon: Icons.podcasts_rounded,
+                      label: NoctraLocalization.tr('party_mode'),
+                      isSelected: false,
+                      isDark: isDark,
+                      onTap: () {
+                        onClose?.call();
+                        showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const SyncCastSheet());
+                      },
+                    ),
+                    _sidebarItem(
+                      icon: Icons.equalizer_rounded,
+                      label: 'Equalizer FX',
+                      isSelected: false,
+                      isDark: isDark,
+                      onTap: () {
+                        onClose?.call();
+                        showModalBottomSheet(context: context, backgroundColor: Colors.transparent, builder: (c) => const EqualizerSheet());
+                      },
+                    ),
+                    _sidebarItem(
+                      icon: Icons.terminal_rounded,
+                      label: 'Developer Suite',
+                      isSelected: false,
+                      isDark: isDark,
+                      onTap: () {
+                        onClose?.call();
+                        showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const DeveloperPanelSheet());
+                      },
+                    ),
+                    _sidebarItem(
+                      icon: Icons.tune_rounded,
+                      label: NoctraLocalization.tr('settings'),
+                      isSelected: false,
+                      isDark: isDark,
+                      onTap: () {
+                        onClose?.call();
+                        showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const SettingsSheet());
+                      },
+                    ),
+                    _sidebarItem(
+                      icon: Icons.system_update_rounded,
+                      label: 'Check for Updates',
+                      isSelected: false,
+                      isDark: isDark,
+                      onTap: () {
+                        onClose?.call();
+                        AppUpdateService.checkForUpdateManually(context);
+                      },
+                    ),
+                  ],
+                ),
+              ),
             ),
 
-            const SizedBox(height: 12),
-            Divider(color: isDark ? Colors.white10 : Colors.black12, height: 1),
-            const SizedBox(height: 12),
-
-            _sidebarItem(
-              icon: Icons.history_rounded,
-              label: 'Recently Played',
-              isSelected: false,
-              isDark: isDark,
-              onTap: () {
-                onClose?.call();
-                showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const RecentlyPlayedSheet());
-              },
-            ),
-            _sidebarItem(
-              icon: Icons.podcasts_rounded,
-              label: NoctraLocalization.tr('party_mode'),
-              isSelected: false,
-              isDark: isDark,
-              onTap: () {
-                onClose?.call();
-                showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const SyncCastSheet());
-              },
-            ),
-            _sidebarItem(
-              icon: Icons.equalizer_rounded,
-              label: 'Equalizer FX',
-              isSelected: false,
-              isDark: isDark,
-              onTap: () {
-                onClose?.call();
-                showModalBottomSheet(context: context, backgroundColor: Colors.transparent, builder: (c) => const EqualizerSheet());
-              },
-            ),
-            _sidebarItem(
-              icon: Icons.terminal_rounded,
-              label: 'Developer Suite',
-              isSelected: false,
-              isDark: isDark,
-              onTap: () {
-                onClose?.call();
-                showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const DeveloperPanelSheet());
-              },
-            ),
-            _sidebarItem(
-              icon: Icons.tune_rounded,
-              label: NoctraLocalization.tr('settings'),
-              isSelected: false,
-              isDark: isDark,
-              onTap: () {
-                onClose?.call();
-                showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const SettingsSheet());
-              },
-            ),
-            _sidebarItem(
-              icon: Icons.system_update_rounded,
-              label: 'Check for Updates',
-              isSelected: false,
-              isDark: isDark,
-              onTap: () {
-                onClose?.call();
-                AppUpdateService.checkForUpdateManually(context);
-              },
-            ),
-
-            const Spacer(),
-
-            // Theme Switcher
+            // Theme Switcher & Knowledge Graph Summary Footer
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: GlassCard(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 radius: 14,
@@ -210,7 +218,7 @@ class NoirSidebar extends ConsumerWidget {
             ),
 
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
               child: Text(
                 'On-Device Knowledge Graph • ${repo.localLibrary.length} tracks cached',
                 style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.black38),
@@ -244,12 +252,16 @@ class NoirSidebar extends ConsumerWidget {
             children: [
               Icon(icon, size: 19, color: isSelected ? (isDark ? Colors.black : Colors.white) : (isDark ? Colors.white70 : Colors.black87)),
               const SizedBox(width: 12),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  color: isSelected ? (isDark ? Colors.black : Colors.white) : (isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected ? (isDark ? Colors.black : Colors.white) : (isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary),
+                  ),
                 ),
               ),
             ],
