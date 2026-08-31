@@ -38,6 +38,9 @@ void main() async {
         androidNotificationChannelId: 'com.nomadguy.noctra.channel.audio',
         androidNotificationChannelName: 'Noctra Playback',
         androidNotificationOngoing: true,
+        androidNotificationIcon: 'drawable/ic_notification',
+        androidShowNotificationBadge: true,
+        androidStopForegroundOnPause: false,
       );
     } catch (_) {}
   }
