@@ -127,6 +127,9 @@ class MainActivity : AudioServiceActivity() {
                         val ids = call.argument<List<Int>>("deviceIds") ?: emptyList()
                         result.success(audioRouter?.setMultiOutputMode(enabled, ids) ?: false)
                     }
+                    "openSystemMediaSwitcher" -> {
+                        result.success(audioRouter?.openSystemMediaOutputSwitcher() ?: false)
+                    }
                     else -> result.notImplemented()
                 }
             } catch (_: Throwable) { result.success(false) }
@@ -187,6 +190,28 @@ class MainActivity : AudioServiceActivity() {
                     nm.notify(9001, notification)
                     result.success(true)
                 } catch (_: Throwable) { result.success(false) }
+            } else if (call.method == "installApk") {
+                val filePath = call.argument<String>("filePath") ?: ""
+                try {
+                    val file = java.io.File(filePath)
+                    if (file.exists()) {
+                        val uri = androidx.core.content.FileProvider.getUriForFile(
+                            applicationContext,
+                            "${applicationContext.packageName}.fileprovider",
+                            file
+                        )
+                        val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(uri, "application/vnd.android.package-archive")
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        }
+                        startActivity(installIntent)
+                        result.success(true)
+                    } else {
+                        result.success(false)
+                    }
+                } catch (e: Throwable) {
+                    result.error("INSTALL_ERROR", e.message, null)
+                }
             } else { result.notImplemented() }
         }
 

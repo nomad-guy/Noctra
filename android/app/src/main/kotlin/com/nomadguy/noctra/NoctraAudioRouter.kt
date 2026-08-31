@@ -101,6 +101,28 @@ class NoctraAudioRouter(private val context: Context) {
         return true
     }
 
+    fun openSystemMediaOutputSwitcher(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                val intent = android.content.Intent("android.settings.panel.action.MEDIA_OUTPUT").apply {
+                    putExtra("com.android.settings.panel.extra.PACKAGE_NAME", context.packageName)
+                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(intent)
+                return true
+            } catch (_: Throwable) {}
+        }
+        try {
+            val intent = android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS).apply {
+                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+            return true
+        } catch (_: Throwable) {
+            return false
+        }
+    }
+
     private fun isDeviceCurrentlyActive(dev: AudioDeviceInfo): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val current = audioManager.communicationDevice

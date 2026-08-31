@@ -105,6 +105,15 @@ class AudioRouterService {
     }
   }
 
+  Future<bool> openSystemMediaSwitcher() async {
+    try {
+      final bool? ok = await _methodChannel.invokeMethod('openSystemMediaSwitcher');
+      return ok ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   void dispose() {
     _eventSub?.cancel();
     _deviceController.close();

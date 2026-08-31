@@ -1,9 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/utils/noctra_logger.dart';
 import '../../ui/widgets/glass_card.dart';
 
 class AppUpdateInfo {
@@ -26,18 +29,17 @@ class AppUpdateService {
   static const String currentVersion = 'v1.1.4';
   static const String _releaseApiUrl = 'https://api.github.com/repos/nomad-guy/Noctra/releases/latest';
   static const String fallbackDownloadUrl = 'https://github.com/nomad-guy/Noctra/releases/latest/download/noctra-universal-release.apk';
-  static const _notifyChannel = MethodChannel('com.noctra.app/update_notify');
+  static const notifyChannel = MethodChannel('com.noctra.app/update_notify');
   static bool _notifiedThisSession = false;
 
   /// Silently checks GitHub and fires a system notification if a newer version exists.
-  /// Safe to call on startup — skips check on web, suppresses repeated notifications.
   static Future<void> notifyUpdateAvailable() async {
     if (kIsWeb || _notifiedThisSession) return;
     try {
       final info = await checkForUpdate();
       if (!info.hasUpdate) return;
       _notifiedThisSession = true;
-      await _notifyChannel.invokeMethod('showUpdateNotification', {
+      await notifyChannel.invokeMethod('showUpdateNotification', {
         'title': 'Noctra ${info.latestVersion} is out',
         'body': 'Tap to download the latest update.',
         'url': info.downloadUrl,
@@ -126,79 +128,202 @@ class AppUpdateService {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF0D0D0D) : const Color(0xFFFAFAFA),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(color: isDark ? Colors.white24 : Colors.black12, borderRadius: BorderRadius.circular(2)),
+      builder: (context) => _InAppUpdateModalContent(info: info, isDark: isDark),
+    );
+  }
+}
+
+class _InAppUpdateModalContent extends StatefulWidget {
+  final AppUpdateInfo info;
+  final bool isDark;
+
+  const _InAppUpdateModalContent({required this.info, required this.isDark});
+
+  @override
+  State<_InAppUpdateModalContent> createState() => _InAppUpdateModalContentState();
+}
+
+class _InAppUpdateModalContentState extends State<_InAppUpdateModalContent> {
+  bool _isDownloading = false;
+  double _progress = 0.0;
+  double _downloadedMb = 0.0;
+  double _totalMb = 0.0;
+  String? _errorMessage;
+
+  Future<void> _startInAppUpdate() async {
+    setState(() {
+      _isDownloading = true;
+      _progress = 0.0;
+      _errorMessage = null;
+    });
+
+    try {
+      final client = http.Client();
+      final request = http.Request('GET', Uri.parse(widget.info.downloadUrl));
+      final streamedResponse = await client.send(request);
+
+      if (streamedResponse.statusCode != 200) {
+        throw Exception('Download server returned status ${streamedResponse.statusCode}');
+      }
+
+      final contentLength = streamedResponse.contentLength ?? (60 * 1024 * 1024);
+      final dir = await getTemporaryDirectory();
+      final targetFile = File('${dir.path}/noctra_update_${widget.info.latestVersion}.apk');
+      if (await targetFile.exists()) {
+        await targetFile.delete();
+      }
+
+      final sink = targetFile.openWrite();
+      int received = 0;
+
+      await streamedResponse.stream.listen((chunk) {
+        sink.add(chunk);
+        received += chunk.length;
+        if (mounted) {
+          setState(() {
+            _progress = (received / contentLength).clamp(0.0, 1.0);
+            _downloadedMb = received / (1024 * 1024);
+            _totalMb = contentLength / (1024 * 1024);
+          });
+        }
+      }).asFuture();
+
+      await sink.flush();
+      await sink.close();
+
+      if (!mounted) return;
+
+      // Trigger native package installer
+      final ok = await AppUpdateService.notifyChannel.invokeMethod('installApk', {
+        'filePath': targetFile.path,
+      });
+
+      if (ok != true && mounted) {
+        setState(() {
+          _isDownloading = false;
+          _errorMessage = 'Could not trigger native installer. Tap external download below.';
+        });
+      }
+    } catch (e) {
+      NoctraLogger.e('In-app update download error', e);
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+          _errorMessage = 'Download failed: $e';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+    final info = widget.info;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0D0D0D) : const Color(0xFFFAFAFA),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(color: isDark ? Colors.white24 : Colors.black12, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isDark ? Colors.white12 : Colors.black12,
+                      ),
+                      child: Icon(Icons.system_update_rounded, size: 20, color: isDark ? Colors.white : Colors.black),
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          info.hasUpdate ? 'New Version Available' : 'App is Up to Date',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: isDark ? Colors.white : Colors.black),
+                        ),
+                        Text(
+                          'Installed: ${info.currentVersion} • Latest: ${info.latestVersion}',
+                          style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white54 : Colors.black54),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: Icon(Icons.close_rounded, color: isDark ? Colors.white70 : Colors.black54),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (info.hasUpdate) ...[
+              Text(
+                'RELEASE HIGHLIGHTS',
+                style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: isDark ? Colors.white60 : Colors.black54),
+              ),
+              const SizedBox(height: 8),
+              GlassCard(
+                radius: 14,
+                padding: const EdgeInsets.all(14),
+                child: Text(
+                  info.releaseNotes.isNotEmpty ? info.releaseNotes : 'Performance optimizations and UI enhancements.',
+                  maxLines: 6,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12.5, height: 1.4, color: isDark ? Colors.white70 : Colors.black87),
                 ),
               ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isDark ? Colors.white12 : Colors.black12,
-                        ),
-                        child: Icon(Icons.system_update_rounded, size: 20, color: isDark ? Colors.white : Colors.black),
-                      ),
-                      const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            info.hasUpdate ? 'New Version Available' : 'App is Up to Date',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: isDark ? Colors.white : Colors.black),
-                          ),
-                          Text(
-                            'Installed: ${info.currentVersion} • Latest: ${info.latestVersion}',
-                            style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white54 : Colors.black54),
-                          ),
-                        ],
-                      ),
-                    ],
+              const SizedBox(height: 18),
+              if (_isDownloading) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: LinearProgressIndicator(
+                    value: _progress > 0 ? _progress : null,
+                    minHeight: 8,
+                    backgroundColor: isDark ? Colors.white12 : Colors.black12,
+                    valueColor: AlwaysStoppedAnimation<Color>(isDark ? Colors.white : Colors.black),
                   ),
-                  IconButton(
-                    icon: Icon(Icons.close_rounded, color: isDark ? Colors.white70 : Colors.black54),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              if (info.hasUpdate) ...[
-                Text(
-                  'RELEASE HIGHLIGHTS',
-                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: isDark ? Colors.white60 : Colors.black54),
                 ),
                 const SizedBox(height: 8),
-                GlassCard(
-                  radius: 14,
-                  padding: const EdgeInsets.all(14),
-                  child: Text(
-                    info.releaseNotes.isNotEmpty ? info.releaseNotes : 'Performance optimizations and UI enhancements.',
-                    maxLines: 6,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12.5, height: 1.4, color: isDark ? Colors.white70 : Colors.black87),
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _progress >= 1.0 ? 'Launching system installer...' : 'Downloading update (${(_progress * 100).toInt()}%)',
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white70 : Colors.black87),
+                    ),
+                    Text(
+                      '${_downloadedMb.toStringAsFixed(1)} MB / ${_totalMb.toStringAsFixed(1)} MB',
+                      style: TextStyle(fontSize: 11.5, fontFamily: 'monospace', color: isDark ? Colors.white54 : Colors.black54),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
+              ] else ...[
+                if (_errorMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(_errorMessage!, style: const TextStyle(fontSize: 12, color: Colors.redAccent)),
+                  ),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -208,8 +333,16 @@ class AppUpdateService {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
-                    icon: const Icon(Icons.download_rounded, size: 18),
-                    label: const Text('Download Universal APK', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+                    icon: const Icon(Icons.flash_on_rounded, size: 18),
+                    label: const Text('Update Now (Direct In-App)', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+                    onPressed: _startInAppUpdate,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Center(
+                  child: TextButton.icon(
+                    icon: const Icon(Icons.open_in_browser_rounded, size: 14),
+                    label: const Text('Or download APK from browser', style: TextStyle(fontSize: 11.5)),
                     onPressed: () async {
                       final uri = Uri.parse(info.downloadUrl);
                       if (await canLaunchUrl(uri)) {
@@ -219,27 +352,27 @@ class AppUpdateService {
                     },
                   ),
                 ),
-              ] else ...[
-                GlassCard(
-                  radius: 14,
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_circle_rounded, color: Colors.greenAccent.shade400, size: 22),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'You are running the latest official build of Noctra (${info.currentVersion}).',
-                          style: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.black87),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
               ],
+            ] else ...[
+              GlassCard(
+                radius: 14,
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle_rounded, color: Colors.greenAccent.shade400, size: 22),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'You are running the latest official build of Noctra (${info.currentVersion}).',
+                        style: TextStyle(fontSize: 13, color: isDark ? Colors.white70 : Colors.black87),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
             ],
-          ),
+          ],
         ),
       ),
     );

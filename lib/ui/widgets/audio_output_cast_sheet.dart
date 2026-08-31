@@ -148,6 +148,29 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                 ],
               ),
             ),
+            const SizedBox(height: 12),
+
+            // Native Android System Media Switcher / Dual Audio Panel
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  side: BorderSide(color: isDark ? Colors.white24 : Colors.black26),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                icon: Icon(Icons.tune_rounded, size: 16, color: isDark ? Colors.white70 : Colors.black87),
+                label: Text(
+                  'Open System Output Panel / Dual Audio',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+                onPressed: () => router.openSystemMediaSwitcher(),
+              ),
+            ),
             const SizedBox(height: 16),
 
             // Connected Devices List
