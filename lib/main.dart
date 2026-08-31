@@ -102,7 +102,9 @@ class _NoctraAppState extends ConsumerState<NoctraApp> {
     return MaterialApp(
       title: 'Noctra',
       debugShowCheckedModeBanner: false,
-      theme: NoirTheme.getTheme(themeMode),
+      theme: NoirTheme.getTheme(NoirThemeMode.noirWhite),
+      darkTheme: NoirTheme.getTheme(NoirThemeMode.noirBlack),
+      themeMode: themeMode.isDark ? ThemeMode.dark : ThemeMode.light,
       home: AnimatedSwitcher(
         duration: const Duration(milliseconds: 600),
         switchInCurve: Curves.easeOutCubic,
@@ -140,14 +142,11 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   @override
   Widget build(BuildContext context) {
     final currentIndex = ref.watch(bottomNavIndexProvider);
-    final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode.isDark;
     final scaffoldKey = ref.watch(rootScaffoldKeyProvider);
 
     return Scaffold(
       key: scaffoldKey,
       drawer: const NoirSidebar(),
-      backgroundColor: isDark ? (themeMode.isAmoled ? const Color(0xFF000000) : const Color(0xFF070709)) : const Color(0xFFFFFFFF),
       body: Stack(
         children: [
           IndexedStack(
@@ -184,7 +183,9 @@ class _CustomBottomNavBar extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
       height: 58,
       decoration: BoxDecoration(
         color: isDark ? (themeMode.isAmoled ? const Color(0xFF000000) : const Color(0xF2080808)) : const Color(0xF2FFFFFF),

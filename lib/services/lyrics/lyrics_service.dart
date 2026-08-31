@@ -81,10 +81,11 @@ class LyricsService {
         if (sRes.statusCode == 200) {
           final sList = jsonDecode(sRes.body) as List?;
           if (sList != null && sList.isNotEmpty) {
-            // Filter: title MUST match. Artist match is a strong bonus.
+            // Filter: title MUST match. Artist match is verified too.
             final verified = sList.where((it) {
               final lrclibTitle = (it['trackName'] as String?) ?? '';
-              return _titlesMatch(song.title, lrclibTitle);
+              final lrclibArtist = (it['artistName'] as String?) ?? '';
+              return _titlesMatch(song.title, lrclibTitle) && _artistMatches(primaryArtist, lrclibArtist);
             }).toList();
             // Unverified results as fallback when no verified match exists
             final candidates = verified.isNotEmpty ? verified : [];
@@ -211,13 +212,12 @@ class LyricsService {
       }
     } catch (_) {}
 
-    // Tier 6: Last resort — LRCLIB unverified results
-    // If all tiers fail, try LRCLIB results without strict title verification.
-    // This handles songs with slightly different titles across providers.
+    // Tier 6: Last resort — LRCLIB search with artist+title combination.
+    // Always include artist to prevent wrong-song matches.
     try {
       final fallbackQueries = [
-        song.title,
-        cleanTitle,
+        if (primaryArtist.isNotEmpty) '$cleanTitle $primaryArtist',
+        if (primaryArtist.isNotEmpty) '${song.title} $primaryArtist',
       ];
       for (final fq in fallbackQueries) {
         if (fq.isEmpty) continue;
@@ -226,20 +226,27 @@ class LyricsService {
         if (res.statusCode == 200) {
           final list = jsonDecode(res.body) as List?;
           if (list != null && list.isNotEmpty) {
-            // Pick the best result (most lines of synced lyrics)
-            LyricsData? best;
+            // Only accept results where BOTH title AND artist match
             for (final item in list) {
+              final lrclibTitle = (item['trackName'] as String?) ?? '';
+              final lrclibArtist = (item['artistName'] as String?) ?? '';
+              if (!_titlesMatch(song.title, lrclibTitle)) continue;
+              if (primaryArtist.isNotEmpty && !_artistMatches(primaryArtist, lrclibArtist)) continue;
               final syncedLrc = item['syncedLyrics'] as String?;
               if (syncedLrc != null && syncedLrc.isNotEmpty && _isValidLyrics(syncedLrc)) {
                 final lines = _parseLrc(syncedLrc);
-                if (lines.isNotEmpty && (best == null || lines.length > best.lines.length)) {
-                  best = LyricsData(isSynced: true, lines: lines, plainText: item['plainLyrics'] ?? syncedLrc);
+                if (lines.isNotEmpty) {
+                  final res2 = LyricsData(isSynced: true, lines: lines, plainText: item['plainLyrics'] ?? syncedLrc);
+                  _setCache(cacheKey, res2);
+                  return res2;
                 }
               }
-            }
-            if (best != null) {
-              _setCache(cacheKey, best);
-              return best;
+              final plain = item['plainLyrics'] as String?;
+              if (plain != null && plain.trim().isNotEmpty && _isValidLyrics(plain)) {
+                final res2 = LyricsData(isSynced: false, lines: const [], plainText: plain.trim());
+                _setCache(cacheKey, res2);
+                return res2;
+              }
             }
           }
         }
@@ -348,16 +355,33 @@ class LyricsService {
     final na = _normalizeForMatch(a), nb = _normalizeForMatch(b);
     if (na.isEmpty || nb.isEmpty) return false;
     if (na == nb) return true;
-    // One contains the other — but only if the SHORTER string is >= 7 chars.
-    // This prevents "Noor" (4), "Pathak" (6), "Shape" (5) matching
-    // unrelated songs while still allowing "Tum Hi Ho" → "Tum Hi Ho Acoustic".
     final shorter = na.length <= nb.length ? na : nb;
     final longer = na.length <= nb.length ? nb : na;
-    if (shorter.length >= 7 && longer.contains(shorter)) return true;
-    // Levenshtein distance check
-    final maxDist = (na.length < nb.length ? na.length : nb.length) ~/ 3;
-    if (maxDist < 2) return false;
+    // Containment: only accept if the longer title isn't much longer than shorter
+    // "Tum Hi Ho" (7) in "Tum Hi Ho Acoustic" (15) → ratio 7/15=0.47 → allow
+    // "Phir Se" (7) in "Phir Se Dekh Le" (12) → ratio 7/12=0.58 → reject
+    // Containment ratio: reject when the longer title adds too much extra content.
+    // Artist verification in each tier prevents wrong-song matches.
+    if (shorter.length >= 7 && longer.contains(shorter)) {
+      final ratio = shorter.length / longer.length;
+      if (ratio > 0.35) return true;
+    }
+    // Levenshtein distance — stricter for short titles
+    final minLen = na.length < nb.length ? na.length : nb.length;
+    final maxDist = minLen <= 8 ? 1 : minLen ~/ 3;
+    if (maxDist < 1) return false;
     return _levenshtein(na, nb) <= maxDist;
+  }
+
+  /// Check if two artist names likely refer to the same artist.
+  static bool _artistMatches(String a, String b) {
+    final na = _normalizeForMatch(a), nb = _normalizeForMatch(b);
+    if (na.isEmpty || nb.isEmpty) return true; // No artist to verify — allow
+    if (na == nb) return true;
+    final shorter = na.length <= nb.length ? na : nb;
+    final longer = na.length <= nb.length ? nb : na;
+    if (longer.contains(shorter)) return true;
+    return _levenshtein(na, nb) <= (shorter.length ~/ 4).clamp(1, 3);
   }
 
   static int _levenshtein(String a, String b) {
