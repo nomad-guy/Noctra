@@ -95,7 +95,7 @@ class AudioPlayerService {
     });
   }
 
-  Future<void> restoreLastPlaybackSession() async {
+  Future<void> restoreLastPlaybackSession({bool autoPlay = false}) async {
     try {
       final saved = await NoctraLocalDatabase().loadPlaybackPosition();
       if (saved != null && saved['song'] != null) {
@@ -108,6 +108,7 @@ class AudioPlayerService {
         if (url != null && url.isNotEmpty) {
           final src = url.startsWith('http') ? AudioSource.uri(Uri.parse(url), tag: _createMediaItem(_currentSong!)) : AudioSource.file(url, tag: _createMediaItem(_currentSong!));
           await _player.setAudioSource(src, initialPosition: _lastSavedPosition);
+          if (autoPlay) { await _player.setVolume(1.0); await _player.play(); }
         }
       }
     } catch (_) {}

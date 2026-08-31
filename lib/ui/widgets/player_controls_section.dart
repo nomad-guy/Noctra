@@ -90,54 +90,76 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            IconButton(
-              tooltip: widget.isShuffle ? 'Shuffle: ON' : 'Shuffle: OFF',
-              icon: Icon(
-                Icons.shuffle_rounded,
-                size: 22,
-                color: widget.isShuffle ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white30 : Colors.black26),
-              ),
-              onPressed: () => widget.audioPlayerService.toggleShuffle(),
-            ),
-            IconButton(
-              icon: Icon(Icons.skip_previous_rounded, size: 34, color: isDark ? Colors.white : Colors.black),
-              onPressed: () => widget.audioPlayerService.skipPrevious(),
-            ),
-            GestureDetector(
-              onTap: () => widget.audioPlayerService.togglePlayPause(),
-              child: Container(
-                width: 58,
-                height: 58,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isDark ? Colors.white : Colors.black,
-                  boxShadow: [
-                    BoxShadow(
-                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.25),
-                      blurRadius: 18,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+            Semantics(
+              label: widget.isShuffle ? 'Shuffle enabled' : 'Shuffle disabled',
+              button: true,
+              child: IconButton(
+                tooltip: widget.isShuffle ? 'Shuffle: ON' : 'Shuffle: OFF',
+                icon: Icon(
+                  Icons.shuffle_rounded,
+                  size: 22,
+                  color: widget.isShuffle ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white30 : Colors.black26),
                 ),
-                child: Icon(
-                  widget.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                  size: 32,
-                  color: isDark ? Colors.black : Colors.white,
+                onPressed: () => widget.audioPlayerService.toggleShuffle(),
+              ),
+            ),
+            Semantics(
+              label: 'Previous track',
+              button: true,
+              child: IconButton(
+                tooltip: 'Previous Track',
+                icon: Icon(Icons.skip_previous_rounded, size: 34, color: isDark ? Colors.white : Colors.black),
+                onPressed: () => widget.audioPlayerService.skipPrevious(),
+              ),
+            ),
+            Semantics(
+              label: widget.isPlaying ? 'Pause' : 'Play',
+              button: true,
+              child: GestureDetector(
+                onTap: () => widget.audioPlayerService.togglePlayPause(),
+                child: Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isDark ? Colors.white : Colors.black,
+                    boxShadow: [
+                      BoxShadow(
+                        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.25),
+                        blurRadius: 18,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    widget.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    size: 32,
+                    color: isDark ? Colors.black : Colors.white,
+                  ),
                 ),
               ),
             ),
-            IconButton(
-              icon: Icon(Icons.skip_next_rounded, size: 34, color: isDark ? Colors.white : Colors.black),
-              onPressed: () => widget.audioPlayerService.skipNext(),
-            ),
-            IconButton(
-              tooltip: widget.loopMode == LoopMode.all ? 'Loop: ALL' : (widget.loopMode == LoopMode.one ? 'Loop: ONE' : 'Loop: OFF'),
-              icon: Icon(
-                widget.loopMode == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
-                size: 22,
-                color: widget.loopMode != LoopMode.off ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white30 : Colors.black26),
+            Semantics(
+              label: 'Next track',
+              button: true,
+              child: IconButton(
+                tooltip: 'Next Track',
+                icon: Icon(Icons.skip_next_rounded, size: 34, color: isDark ? Colors.white : Colors.black),
+                onPressed: () => widget.audioPlayerService.skipNext(),
               ),
-              onPressed: () => widget.audioPlayerService.toggleLoopMode(),
+            ),
+            Semantics(
+              label: widget.loopMode == LoopMode.all ? 'Loop all' : (widget.loopMode == LoopMode.one ? 'Loop single' : 'Loop off'),
+              button: true,
+              child: IconButton(
+                tooltip: widget.loopMode == LoopMode.all ? 'Loop: ALL' : (widget.loopMode == LoopMode.one ? 'Loop: ONE' : 'Loop: OFF'),
+                icon: Icon(
+                  widget.loopMode == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
+                  size: 22,
+                  color: widget.loopMode != LoopMode.off ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white30 : Colors.black26),
+                ),
+                onPressed: () => widget.audioPlayerService.toggleLoopMode(),
+              ),
             ),
           ],
         ),
