@@ -86,7 +86,7 @@ class LyricsService {
               final lrclibTitle = (it['trackName'] as String?) ?? '';
               return _titlesMatch(song.title, lrclibTitle);
             }).toList();
-            // Only use unverified results as absolute last resort (empty verified)
+            // Unverified results as fallback when no verified match exists
             final candidates = verified.isNotEmpty ? verified : [];
 
             if (preferHindi) {
@@ -188,19 +188,58 @@ class LyricsService {
         for (final item in songsList) {
           final songId = item['id']?.toString() ?? '';
           final jiosaavnTitle = (item['title'] as String?) ?? '';
-          // Only fetch lyrics if JioSaavn title matches our song
-          if (songId.isNotEmpty && (jiosaavnTitle.isEmpty || _titlesMatch(song.title, jiosaavnTitle))) {
+          // Verify JioSaavn title matches our song, or take first result as last resort
+          final titleMatch = songId.isNotEmpty && (jiosaavnTitle.isEmpty || _titlesMatch(song.title, jiosaavnTitle));
+          final isLastResult = songsList.last == item;
+          if (songId.isNotEmpty && (titleMatch || isLastResult)) {
             final lyrUri = Uri.parse('https://www.jiosaavn.com/api.php?__call=lyrics.getLyrics&_format=json&_marker=0&cc=in&lyrics_id=$songId');
             final lRes = await http.get(lyrUri, headers: {'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 4));
             if (lRes.statusCode == 200) {
               final lData = jsonDecode(lRes.body);
               final rawLyr = lData['lyrics'] as String?;
               if (rawLyr != null && rawLyr.isNotEmpty) {
-                final clean = rawLyr.replaceAll('<br>', '\n').replaceAll('&quot;', '"').replaceAll('&amp;', '&').trim();
-                final res = LyricsData(isSynced: false, lines: const [], plainText: clean);
-                _setCache(cacheKey, res);
-                return res;
+                final clean = rawLyr.replaceAll('<br>', '\n').replaceAll('&quot;', '"').replaceAll('&amp;', '&').replaceAll('<p>', '').replaceAll('</p>', '').replaceAll('<strong>', '').replaceAll('</strong>', '').replaceAll('<i>', '').replaceAll('</i>', '').replaceAll('<br/>', '\n').replaceAll('<BR/>', '\n').replaceAll('<BR>', '\n').replaceAll('<br />', '\n').replaceAll(RegExp(r'<[^>]+>'), '').trim();
+                if (clean.isNotEmpty && _isValidLyrics(clean)) {
+                  final res = LyricsData(isSynced: false, lines: const [], plainText: clean);
+                  _setCache(cacheKey, res);
+                  return res;
+                }
               }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    // Tier 6: Last resort — LRCLIB unverified results
+    // If all tiers fail, try LRCLIB results without strict title verification.
+    // This handles songs with slightly different titles across providers.
+    try {
+      final fallbackQueries = [
+        song.title,
+        cleanTitle,
+      ];
+      for (final fq in fallbackQueries) {
+        if (fq.isEmpty) continue;
+        final uri = Uri.parse('https://lrclib.net/api/search?q=${Uri.encodeComponent(fq)}');
+        final res = await http.get(uri, headers: {'User-Agent': 'Noctra/1.0.4 (https://noctra.app)'}).timeout(const Duration(seconds: 4));
+        if (res.statusCode == 200) {
+          final list = jsonDecode(res.body) as List?;
+          if (list != null && list.isNotEmpty) {
+            // Pick the best result (most lines of synced lyrics)
+            LyricsData? best;
+            for (final item in list) {
+              final syncedLrc = item['syncedLyrics'] as String?;
+              if (syncedLrc != null && syncedLrc.isNotEmpty && _isValidLyrics(syncedLrc)) {
+                final lines = _parseLrc(syncedLrc);
+                if (lines.isNotEmpty && (best == null || lines.length > best.lines.length)) {
+                  best = LyricsData(isSynced: true, lines: lines, plainText: item['plainLyrics'] ?? syncedLrc);
+                }
+              }
+            }
+            if (best != null) {
+              _setCache(cacheKey, best);
+              return best;
             }
           }
         }

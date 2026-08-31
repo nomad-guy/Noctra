@@ -332,6 +332,63 @@ class AudioPlayerService {
     _playbackSettingsController.add({'shuffle': _isShuffleEnabled, 'loopMode': _loopMode, 'autoplay': _isAutoplayEnabled, 'delay': _autoplayDelaySeconds, 'crossfade': _crossfadeSeconds, 'sleepTimer': _sleepTimerRemainingMinutes, 'fade': _isFadeEnabled});
   }
 
+  // ── Queue Management ──
+
+  /// Add song to the end of the queue.
+  void addToQueue(Song song) {
+    _queue.add(song);
+    _queueController.add(_queue);
+    NoctraLogger.d('addToQueue: ${song.title} (queue size: ${_queue.length})');
+  }
+
+  /// Insert song right after the currently playing track.
+  void playNext(Song song) {
+    final insertAt = (_currentIndex + 1).clamp(0, _queue.length);
+    _queue.insert(insertAt, song);
+    _queueController.add(_queue);
+    NoctraLogger.d('playNext: ${song.title} at index $insertAt');
+  }
+
+  /// Remove song at given index from the queue.
+  void removeFromQueue(int index) {
+    if (index < 0 || index >= _queue.length) return;
+    final wasPlaying = index == _currentIndex;
+    _queue.removeAt(index);
+    if (index < _currentIndex) {
+      _currentIndex--;
+    } else if (wasPlaying && _queue.isNotEmpty) {
+      _currentIndex = _currentIndex.clamp(0, _queue.length - 1);
+    }
+    _queueController.add(_queue);
+  }
+
+  /// Reorder queue: move song from [oldIndex] to [newIndex].
+  void reorderQueue(int oldIndex, int newIndex) {
+    if (oldIndex < 0 || oldIndex >= _queue.length) return;
+    if (newIndex < 0 || newIndex >= _queue.length) return;
+    final song = _queue.removeAt(oldIndex);
+    _queue.insert(newIndex, song);
+    // Update current index to follow the playing song
+    if (oldIndex == _currentIndex) {
+      _currentIndex = newIndex;
+    } else if (oldIndex < _currentIndex && newIndex >= _currentIndex) {
+      _currentIndex--;
+    } else if (oldIndex > _currentIndex && newIndex <= _currentIndex) {
+      _currentIndex++;
+    }
+    _queueController.add(_queue);
+  }
+
+  /// Clear queue except currently playing song.
+  void clearQueue() {
+    if (_currentSong == null) return;
+    final current = _queue[_currentIndex];
+    _queue.clear();
+    _queue.add(current);
+    _currentIndex = 0;
+    _queueController.add(_queue);
+  }
+
   Future<void> _onSongCompleted() async {
     final playedSec = _songStartTime != null ? DateTime.now().difference(_songStartTime!).inSeconds : 210;
     if (_currentSong != null) {

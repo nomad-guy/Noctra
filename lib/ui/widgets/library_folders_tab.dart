@@ -102,11 +102,15 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
   @override
   Widget build(BuildContext context) {
     if (_openedFolder != null) {
-      final folderSongs = widget.repo.customFolders[_openedFolder] ?? widget.customFolders[_openedFolder] ?? [];
+      final folderSongs = _openedFolder == 'Favorites'
+          ? widget.repo.favorites
+          : (widget.repo.customFolders[_openedFolder] ?? widget.customFolders[_openedFolder] ?? []);
       return _buildFolderDetailView(_openedFolder!, folderSongs);
     }
 
-    final folderNames = (widget.repo.customFolders.isNotEmpty ? widget.repo.customFolders : widget.customFolders).keys.toList();
+    // Build folder list: Favorites first (if has songs), then custom folders
+    final customFolderNames = (widget.repo.customFolders.isNotEmpty ? widget.repo.customFolders : widget.customFolders).keys.toList();
+    final folderNames = <String>['Favorites', ...customFolderNames];
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
@@ -203,7 +207,9 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
             delegate: SliverChildBuilderDelegate(
               (context, i) {
                 final folderName = folderNames[i];
-                final folderSongs = widget.customFolders[folderName] ?? [];
+                final folderSongs = folderName == 'Favorites'
+                    ? widget.repo.favorites
+                    : (widget.customFolders[folderName] ?? []);
 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),

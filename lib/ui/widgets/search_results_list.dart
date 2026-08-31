@@ -6,7 +6,7 @@ import '../../providers/app_providers.dart';
 import '../../services/ytdlp/music_service.dart';
 import '../screens/artist_screen.dart';
 import 'glass_card.dart';
-import 'add_to_folder_sheet.dart';
+import 'song_context_menu.dart';
 import 'ai_radio_sheet.dart';
 
 class SearchResultsList extends ConsumerWidget {
@@ -227,9 +227,9 @@ class SearchResultsList extends ConsumerWidget {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.playlist_add_rounded, size: 21, color: isDark ? Colors.white70 : Colors.black87),
-                  tooltip: 'Add to Folder',
-                  onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (context) => AddToFolderSheet(song: song)),
+                  icon: Icon(Icons.more_vert_rounded, size: 21, color: isDark ? Colors.white70 : Colors.black87),
+                  tooltip: 'More Options',
+                  onPressed: () => SongContextMenu.show(context, song),
                 ),
                 IconButton(
                   icon: Icon(Icons.radar_rounded, size: 20, color: isDark ? Colors.white70 : Colors.black87),

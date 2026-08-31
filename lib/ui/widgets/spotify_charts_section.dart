@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
 import '../../data/models/song_model.dart';
 import '../../providers/app_providers.dart';
-import 'ai_radio_sheet.dart';
 import 'glass_card.dart';
 import 'live_audio_wave.dart';
+import 'song_context_menu.dart';
 
 class SpotifyChartsSection extends ConsumerWidget {
   final bool isDark;
@@ -133,14 +133,7 @@ class SpotifyChartsSection extends ConsumerWidget {
                         onTap: () {
                           ref.read(audioPlayerServiceProvider).playSong(song, newQueue: tracks);
                         },
-                        onLongPress: () {
-                          showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (_) => AIRadioSheet(seedSong: song),
-                          );
-                        },
+                        onLongPress: () => SongContextMenu.show(context, song),
                         child: GlassCard(
                           padding: const EdgeInsets.all(8),
                           radius: 16,

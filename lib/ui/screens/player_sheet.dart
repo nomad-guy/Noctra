@@ -14,7 +14,8 @@ import '../widgets/ambient_glow_art.dart';
 import '../widgets/spectrum_bars_visualizer.dart';
 import '../widgets/radial_circle_visualizer.dart';
 import '../widgets/proper_synthwave_visualizer.dart';
-import '../widgets/add_to_folder_sheet.dart';
+import '../widgets/queue_sheet.dart';
+import '../widgets/song_context_menu.dart';
 import '../widgets/audio_output_cast_sheet.dart';
 import '../widgets/sleep_timer_sheet.dart';
 import '../widgets/player_controls_section.dart';
@@ -83,6 +84,7 @@ class PlayerSheet extends ConsumerWidget {
                   IconButton(visualDensity: VisualDensity.compact, padding: EdgeInsets.zero, icon: Icon(Icons.keyboard_arrow_down_rounded, size: 28, color: isDark ? Colors.white : Colors.black), onPressed: () => Navigator.of(context).pop()),
                   Text('NOW PLAYING', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.8, color: isDark ? Colors.white60 : Colors.black54)),
                   Row(mainAxisSize: MainAxisSize.min, children: [
+                    _iconBtn(Icons.queue_music_rounded, isDark ? Colors.white : Colors.black, 'Queue', () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const QueueSheet())),
                     _iconBtn(audioPlayerService.sleepTimerRemainingMinutes != null ? Icons.bedtime_rounded : Icons.bedtime_outlined, audioPlayerService.sleepTimerRemainingMinutes != null ? Colors.cyanAccent : (isDark ? Colors.white : Colors.black), 'Sleep Timer', () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const SleepTimerSheet())),
                     _iconBtn(Icons.speaker_group_rounded, isDark ? Colors.white : Colors.black, 'Audio Output', () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => AudioOutputCastSheet(isDark: isDark))),
                     _iconBtn(Icons.podcasts_rounded, isDark ? Colors.white : Colors.black, 'Jam Room', () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const JamStudioSheet())),
@@ -120,7 +122,7 @@ class PlayerSheet extends ConsumerWidget {
                     ]),
                   ),
                   IconButton(icon: Icon(repo.isFavorite(song.id) ? Icons.favorite_rounded : Icons.favorite_border_rounded, size: 22, color: isDark ? Colors.white : Colors.black), onPressed: () => repo.toggleFavorite(song)),
-                  IconButton(icon: Icon(Icons.playlist_add_rounded, size: 22, color: isDark ? Colors.white : Colors.black), onPressed: () => showModalBottomSheet(context: context, backgroundColor: Colors.transparent, builder: (c) => AddToFolderSheet(song: song))),
+                  IconButton(icon: Icon(Icons.playlist_add_rounded, size: 22, color: isDark ? Colors.white : Colors.black), onPressed: () => SongContextMenu.show(context, song)),
                   IconButton(icon: Icon(isDownloaded ? Icons.download_done_rounded : Icons.download_rounded, size: 22, color: isDownloaded ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white38 : Colors.black38)), onPressed: () => _handleDownload(context, song, isDownloaded)),
                 ],
               ),
