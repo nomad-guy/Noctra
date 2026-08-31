@@ -218,7 +218,12 @@ class _CustomBottomNavBar extends ConsumerWidget {
     bool isDark,
   ) {
     return InkWell(
-      onTap: () => ref.read(bottomNavIndexProvider.notifier).state = index,
+      onTap: () {
+        if (!isSelected) {
+          HapticFeedback.selectionClick();
+          ref.read(bottomNavIndexProvider.notifier).state = index;
+        }
+      },
       borderRadius: BorderRadius.circular(16),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

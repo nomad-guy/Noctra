@@ -66,9 +66,20 @@ class AudioPlayerService {
     _player.playerStateStream.listen((s) {
       if (s.processingState == ProcessingState.completed) _onSongCompleted();
     });
-    // just_audio 0.10: errorStream replaces the removed playbackEventStream.onError
+    // just_audio 0.10: errorStream with self-healing stream auto-recovery
     _player.errorStream.listen((e) {
       NoctraLogger.e('AudioPlayer error: ${e.toString()}', e);
+      final active = _currentSong;
+      if (active != null) {
+        final pos = _player.position;
+        CompositeStreamResolver.invalidateCache(active.id);
+        // Automatic resilient recovery from next stream tier
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (_currentSong?.id == active.id) {
+            playSong(active, initialPosition: pos);
+          }
+        });
+      }
     });
     _player.positionStream.listen((pos) {
       // C2: epoch guard — skip stale events from the old song

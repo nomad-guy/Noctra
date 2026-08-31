@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import '../../services/audio/audio_player_service.dart';
@@ -63,6 +64,7 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
             max: widget.duration.inMilliseconds.toDouble() > 0 ? widget.duration.inMilliseconds.toDouble() : 1.0,
             onChanged: (val) => setState(() => _dragValue = val),
             onChangeEnd: (val) {
+              HapticFeedback.selectionClick();
               widget.audioPlayerService.seek(Duration(milliseconds: val.toInt()));
               setState(() => _dragValue = null);
             },
@@ -100,7 +102,10 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
                   size: 22,
                   color: widget.isShuffle ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white30 : Colors.black26),
                 ),
-                onPressed: () => widget.audioPlayerService.toggleShuffle(),
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  widget.audioPlayerService.toggleShuffle();
+                },
               ),
             ),
             Semantics(
@@ -109,14 +114,20 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
               child: IconButton(
                 tooltip: 'Previous Track',
                 icon: Icon(Icons.skip_previous_rounded, size: 34, color: isDark ? Colors.white : Colors.black),
-                onPressed: () => widget.audioPlayerService.skipPrevious(),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  widget.audioPlayerService.skipPrevious();
+                },
               ),
             ),
             Semantics(
               label: widget.isPlaying ? 'Pause' : 'Play',
               button: true,
               child: GestureDetector(
-                onTap: () => widget.audioPlayerService.togglePlayPause(),
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  widget.audioPlayerService.togglePlayPause();
+                },
                 child: Container(
                   width: 58,
                   height: 58,
@@ -145,7 +156,10 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
               child: IconButton(
                 tooltip: 'Next Track',
                 icon: Icon(Icons.skip_next_rounded, size: 34, color: isDark ? Colors.white : Colors.black),
-                onPressed: () => widget.audioPlayerService.skipNext(),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  widget.audioPlayerService.skipNext();
+                },
               ),
             ),
             Semantics(
@@ -158,7 +172,10 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
                   size: 22,
                   color: widget.loopMode != LoopMode.off ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white30 : Colors.black26),
                 ),
-                onPressed: () => widget.audioPlayerService.toggleLoopMode(),
+                onPressed: () {
+                  HapticFeedback.selectionClick();
+                  widget.audioPlayerService.toggleLoopMode();
+                },
               ),
             ),
           ],

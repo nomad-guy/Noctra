@@ -152,7 +152,10 @@ class _NoirMiniPlayerState extends ConsumerState<NoirMiniPlayer> {
                   IconButton(
                     icon: Icon(Icons.equalizer_rounded, size: 20, color: isDark ? Colors.white60 : Colors.black54),
                     tooltip: 'Equalizer',
-                    onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const EqualizerSheet()),
+                    onPressed: () {
+                      HapticFeedback.selectionClick();
+                      showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const EqualizerSheet());
+                    },
                   ),
                   IconButton(
                     icon: Icon(
@@ -160,12 +163,18 @@ class _NoirMiniPlayerState extends ConsumerState<NoirMiniPlayer> {
                       size: 20,
                       color: ref.watch(musicRepositoryProvider).isFavorite(song.id) ? Colors.redAccent : (isDark ? Colors.white60 : Colors.black54),
                     ),
-                    onPressed: () => ref.read(musicRepositoryProvider).toggleFavorite(song),
+                    onPressed: () {
+                      HapticFeedback.mediumImpact();
+                      ref.read(musicRepositoryProvider).toggleFavorite(song);
+                    },
                   ),
                   IconButton(
                     icon: Icon(isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
                       size: 32, color: isDark ? Colors.white : Colors.black),
-                    onPressed: () => ref.read(audioPlayerServiceProvider).togglePlayPause(),
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      ref.read(audioPlayerServiceProvider).togglePlayPause();
+                    },
                   ),
                 ]),
               ),
