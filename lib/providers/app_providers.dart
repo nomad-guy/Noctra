@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/noir_theme.dart';
+import '../core/utils/noctra_localization.dart';
 import '../data/models/song_model.dart';
 import '../data/repositories/music_repository.dart';
 import '../data/sources/noctra_local_database.dart';
@@ -16,6 +17,9 @@ final currentNavigationIndexProvider = StateProvider<int>((ref) => 0);
 final bottomNavIndexProvider = currentNavigationIndexProvider;
 final appInitializedProvider = StateProvider<bool>((ref) => false);
 final rootScaffoldKeyProvider = Provider<GlobalKey<ScaffoldState>>((ref) => GlobalKey<ScaffoldState>());
+
+// App Language state
+final appLanguageProvider = StateProvider<String>((ref) => NoctraLocalization.currentLanguage);
 
 // Theme state with persistent storage
 final themeModeProvider = StateProvider<NoirThemeMode>((ref) {

@@ -77,7 +77,7 @@ class LibraryAllSongsTab extends ConsumerWidget {
                           style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black),
                         ),
                         Text(
-                          '${downloads.length} Downloaded Offline • Lossless 320k Ready',
+                          '${downloads.length} Downloaded Offline • High-Fidelity 320k Ready',
                           style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54),
                         ),
                       ],

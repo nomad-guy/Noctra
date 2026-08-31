@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/noctra_localization.dart';
 import '../../providers/app_providers.dart';
 import '../../services/updater/app_update_service.dart';
 import '../screens/settings_sheet.dart';
@@ -17,6 +18,7 @@ class NoirSidebar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(appLanguageProvider);
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
     final currentIndex = ref.watch(currentNavigationIndexProvider);
@@ -44,7 +46,7 @@ class NoirSidebar extends ConsumerWidget {
                       NoctraAppLogo(size: 28, radius: 8, isDark: isDark),
                       const SizedBox(width: 10),
                       Text(
-                        'NOCTRA',
+                        NoctraLocalization.tr('app_name'),
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
@@ -80,7 +82,7 @@ class NoirSidebar extends ConsumerWidget {
             ),
             _sidebarItem(
               icon: Icons.search_rounded,
-              label: 'Search & Catalog',
+              label: NoctraLocalization.tr('search_explore'),
               isSelected: currentIndex == 1,
               isDark: isDark,
               onTap: () {
@@ -90,7 +92,7 @@ class NoirSidebar extends ConsumerWidget {
             ),
             _sidebarItem(
               icon: Icons.my_library_music_rounded,
-              label: 'Your Library',
+              label: NoctraLocalization.tr('library_title'),
               isSelected: currentIndex == 2,
               isDark: isDark,
               onTap: () {
@@ -100,7 +102,7 @@ class NoirSidebar extends ConsumerWidget {
             ),
             _sidebarItem(
               icon: Icons.auto_awesome_rounded,
-              label: 'AI Music Agent',
+              label: NoctraLocalization.tr('ai_studio_title'),
               isSelected: currentIndex == 3,
               isDark: isDark,
               onTap: () {
@@ -125,7 +127,7 @@ class NoirSidebar extends ConsumerWidget {
             ),
             _sidebarItem(
               icon: Icons.podcasts_rounded,
-              label: 'Noctra Jam Room',
+              label: NoctraLocalization.tr('party_mode'),
               isSelected: false,
               isDark: isDark,
               onTap: () {
@@ -155,7 +157,7 @@ class NoirSidebar extends ConsumerWidget {
             ),
             _sidebarItem(
               icon: Icons.tune_rounded,
-              label: 'Settings & Storage',
+              label: NoctraLocalization.tr('settings'),
               isSelected: false,
               isDark: isDark,
               onTap: () {

@@ -79,7 +79,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                   children: [
                     Text('Language / भाषा', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
                     DropdownButton<String>(
-                      value: NoctraLocalization.currentLanguage,
+                      value: ref.watch(appLanguageProvider),
                       dropdownColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                       underline: const SizedBox.shrink(),
                       style: TextStyle(fontSize: 13, color: isDark ? Colors.white : Colors.black),
@@ -92,9 +92,8 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                       ],
                       onChanged: (val) {
                         if (val != null) {
-                          setState(() {
-                            NoctraLocalization.currentLanguage = val;
-                          });
+                          NoctraLocalization.currentLanguage = val;
+                          ref.read(appLanguageProvider.notifier).state = val;
                         }
                       },
                     ),

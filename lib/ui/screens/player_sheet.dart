@@ -222,7 +222,7 @@ class PlayerSheet extends ConsumerWidget {
   void _handleDownload(BuildContext context, Song song, bool isDownloaded) async {
     final sm = ScaffoldMessenger.of(context);
     if (isDownloaded) { sm.showSnackBar(const SnackBar(content: Text('Song already downloaded for offline playback.'), duration: Duration(seconds: 2))); return; }
-    sm.showSnackBar(SnackBar(content: Text('Downloading "${song.title}" in 320kbps CD lossless...'), duration: const Duration(seconds: 2)));
+    sm.showSnackBar(SnackBar(content: Text('Downloading "${song.title}" in 320kbps High-Fidelity...'), duration: const Duration(seconds: 2)));
     final res = await MusicService.downloadTrack(song);
     if (context.mounted) sm.showSnackBar(SnackBar(content: Text(res != null ? 'Downloaded "${song.title}" for offline playback' : 'Download failed. Check connection.'), duration: const Duration(seconds: 3)));
   }

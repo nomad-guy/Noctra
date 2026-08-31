@@ -183,7 +183,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   children: [
                     _sourceChip('All Sources', 'all', isDark),
                     const SizedBox(width: 8),
-                    _sourceChip('JioSaavn 320k Lossless', 'saavn', isDark),
+                    _sourceChip('JioSaavn 320k High-Fidelity', 'saavn', isDark),
                     const SizedBox(width: 8),
                     _sourceChip('YouTube Music', 'ytmusic', isDark),
                   ],
