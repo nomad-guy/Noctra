@@ -309,10 +309,12 @@ class LyricsService {
     final na = _normalizeForMatch(a), nb = _normalizeForMatch(b);
     if (na.isEmpty || nb.isEmpty) return false;
     if (na == nb) return true;
-    // One contains the other — but only if the shorter one is >= 5 chars
-    // to avoid "Noor" matching "Noor-e-Jahan" or "Pathak" matching any Pathak song
-    if (na.length >= 5 && na.contains(nb)) return true;
-    if (nb.length >= 5 && nb.contains(na)) return true;
+    // One contains the other — but only if the SHORTER string is >= 7 chars.
+    // This prevents "Noor" (4), "Pathak" (6), "Shape" (5) matching
+    // unrelated songs while still allowing "Tum Hi Ho" → "Tum Hi Ho Acoustic".
+    final shorter = na.length <= nb.length ? na : nb;
+    final longer = na.length <= nb.length ? nb : na;
+    if (shorter.length >= 7 && longer.contains(shorter)) return true;
     // Levenshtein distance check
     final maxDist = (na.length < nb.length ? na.length : nb.length) ~/ 3;
     if (maxDist < 2) return false;
@@ -362,4 +364,9 @@ class LyricsService {
     lines.sort((a, b) => a.timestamp.compareTo(b.timestamp));
     return lines;
   }
+
+  // ── Test-only public wrappers for private helpers ──
+  static bool titlesMatchForTest(String a, String b) => _titlesMatch(a, b);
+  static List<LyricLine> parseLrcForTest(String lrc) => _parseLrc(lrc);
+  static String sanitizeTitleForTest(String title) => _sanitizeTitle(title);
 }
