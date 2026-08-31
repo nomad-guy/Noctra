@@ -33,6 +33,15 @@ The project adheres to Semantic Versioning: `vX.Y.Z`
   - Expanded search discovery across *Trending Global Hits, Bollywood & Desi, Synthwave & Retrowave, Sufi & Qawwali, Punjabi Hip-Hop, Lo-Fi, Phonk, French Chanson, Latin Fiesta, Midnight Jazz, Ambient Zen, and Epic Scores*.
 - **Music-Centric Dynamic Artist PFP Resolver**:
   - Multi-tier artist profile photo pipeline integrating **Deezer Music Graph (500x500/1000x1000 HD)**, **JioSaavn Directory**, **Apple Music/iTunes**, and **Musician-Validated Wikipedia Summary** to ensure 100% accurate artist portrait resolution.
+- **In-App Direct APK Downloader & Native Package Installer**:
+  - Download updates directly from inside the app with real-time streaming progress (`%` and `MB / MB`).
+  - Automatically invokes Android's native package installer via configured `FileProvider` (`REQUEST_INSTALL_PACKAGES`) for zero-redirect in-place upgrades.
+- **Hardware Bluetooth Dual-Audio & System Media Output Switcher**:
+  - Native integration with Android's system-level media output switcher panel (`android.settings.panel.action.MEDIA_OUTPUT`).
+  - Route audio directly across multiple connected Bluetooth headphones, speakers (Samsung Dual Audio / Realme Multi-Point), USB-C DACs, and phone speaker with 1 tap.
+- **Self-Healing Stream Auto-Recovery & Tactile Haptic Micro-Interactions**:
+  - Automatic background fallback stream recovery when a CDN token expires or network stutters, resuming playback from the exact position without interrupting the user.
+  - Subtle tactile haptic clicks on navigation tabs, player controls, favorites, and scrubber seek.
 - **Noir Black, White & Silver Synthwave Visualizer**:
   - Completely rebuilt `_ProperSynthwavePainter` with pure obsidian `#000000`, deep charcoal `#141414`, metallic silver `#E0E0E0`, and bright white `#FFFFFF` dual-layer audio waveforms and forward-moving perspective grid.
 
