@@ -1,48 +1,61 @@
-# Noctra
-
 <div align="center">
 
-![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
-![FOSS](https://img.shields.io/badge/FOSS-Free%20%26%20Open%20Source-brightgreen)
-![Privacy](https://img.shields.io/badge/Privacy-100%25%20On--Device-success)
-![Flutter](https://img.shields.io/badge/Flutter-v3.24+-02569B?logo=flutter)
-![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Linux%20%7C%20Windows-lightgrey)
+# NOCTRA
 
-**An authentication-less, privacy-first lossless music player powered by an on-device two-stage neural recommender (MLP + MMR), SQLite telemetry, and dual Noir themes. Zero ads, zero tracking.**
+### The Autonomous, Privacy-First & 100% Free Music Intelligence Player
 
-[Download Release APK](https://github.com/nomad-guy/Noctra/releases/latest) • [Report Issue](https://github.com/nomad-guy/Noctra/issues) • [Changelog](CHANGELOG.md)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-0052CC.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
+[![FOSS](https://img.shields.io/badge/Type-100%25%20FOSS-00C853.svg?style=for-the-badge)](#-license)
+[![Privacy](https://img.shields.io/badge/Privacy-Zero%20Telemetry-7C4DFF.svg?style=for-the-badge)](#-privacy-first--free-to-use)
+[![No Ads](https://img.shields.io/badge/Monetization-Zero%20Ads%20%2F%20No%20Login-FF6D00.svg?style=for-the-badge)](#-privacy-first--free-to-use)
+[![Flutter](https://img.shields.io/badge/Engine-Flutter%20%7C%20Kotlin%20DSP-02569B.svg?style=for-the-badge&logo=flutter)](https://flutter.dev)
+
+<p align="center">
+  <b>Noctra</b> is a modern, high-fidelity music streaming client engineered for audiophiles and privacy purists.<br/>
+  It features an <b>on-device two-stage neural recommender (MLP + MMR)</b>, <b>SQLite telemetry</b>, <b>hardware-accelerated DSP audio effects</b>, and a dual <b>Noir liquid-glass aesthetic</b>.
+</p>
+
+[Download Latest APK](https://github.com/nomad-guy/Noctra/releases/latest) • [Report a Bug](https://github.com/nomad-guy/Noctra/issues) • [Changelog](CHANGELOG.md) • [Legal & Compliance](#%EF%B8%8F-strict-legal-disclaimer--compliance-policy)
 
 </div>
 
 ---
 
-## Highlights
+## 🔒 Privacy-First & Free to Use
 
-- **100% Free & Open Source (FOSS)**: Licensed under the GNU General Public License v3.0 (GPL-3.0).
-- **Authentication-Free**: Zero accounts, zero login screens, and zero tracking cookies.
-- **Pure On-Device Neural Recommender**:
-  - **Stage 1 (Retrieval)**: Fast candidate generator extracting ~100 candidate tracks across SQLite history, library, and live charts.
-  - **Stage 2 (Tiny Neural MLP Ranker)**: 3-Layer Dense network ($80 \rightarrow 32 \rightarrow 16 \rightarrow 1$) predicting $P(\text{meaningful engagement})$ in $<1\text{ms}$ with zero battery drain.
-  - **Stage 3 (Maximal Marginal Relevance Diversity Reranker)**: MMR algorithm ($\lambda = 0.75$) with hard constraint capping repeat artists to max 2 in Top 15 to eliminate recommendation fatigue.
-- **SQLite Telemetry & Vector Store**: Full ACID transaction database (`noctra_neural_store.db`) with Write-Ahead Logging (WAL) for local-first speed.
-- **Lossless & High-Bitrate Audio**: Direct 320kbps CD lossless stream resolution with zero ads and background playback support.
-- **Hardware DSP Equalizer**: Native Android 5-band millibel Equalizer, Bass Boost exciter, 3D Spatial Virtualizer, and Reverb effects.
-- **Multi-Engine Synced Lyrics**: Millisecond time-coded LRC lyrics with Devanagari transliteration and Roman script support.
-- **P2P SyncCast Jam Studio**: Decentralized local-network party playback synchronization with automatic socket reconnection.
-- **Spotify-Style First-Run Onboarding**: Multilingual, vibe, and artist selection with live Wikipedia portrait avatars.
-- **Triple Noir Aesthetic**: Obsidian Dark, AMOLED Pitch-Black (`#000000`), and Editorial Minimal Light modes with adaptive app icon switching.
+Noctra is built on the fundamental principle that listening to music should be private, ad-free, and unrestricted.
+
+- **100% Free to Use**: No subscriptions, no paid tier paywalls, no in-app purchases, and no artificial feature locks.
+- **Zero Advertisements**: Enjoy uninterrupted, gapless playback without commercial interruptions or audio interstitials.
+- **Authentication-Less**: No accounts, emails, phone numbers, or passwords required. Open the app and start listening instantly.
+- **Zero Cloud Telemetry**: Your listening history, taste profile, and habits never leave your physical device. All metrics are stored locally in an encrypted SQLite database.
 
 ---
 
-## Screenshots & Visual Experience
+## 🌟 Core Features
 
-| Dual Noir Aesthetic | Neural Player Sheet | Equalizer & DSP |
-|:---:|:---:|:---:|
-| Dual Noir Glassmorphism with adaptive contrast typography | Real-time 60FPS audio visualizers & millisecond-synced lyrics | 5-Band Hardware Equalizer, 3D Spatializer & Presets |
+### 🧠 On-Device Neural Recommendation Engine
+- **Stage 1 (Candidate Retrieval)**: Dynamically queries ~100 candidate tracks across local SQLite history, curated libraries, and live charts.
+- **Stage 2 (Tiny Neural MLP Ranker)**: A 3-layer Dense Neural Network ($80 \rightarrow 32 \rightarrow 16 \rightarrow 1$) evaluates user embeddings, track features, and contextual signals to compute $P(\text{meaningful engagement})$ in under **1 millisecond** with zero battery drain.
+- **Stage 3 (MMR Diversity Reranker)**: Maximal Marginal Relevance ($\lambda = 0.75$) with strict artist caps ensures high-relevance recommendations without playlist fatigue.
+- **Online Behavioral Gradient Learning**: Adapts dynamically to micro-signals ($-1.0$ for fast skips, $+1.0$ for full completions, $+1.5$ for replays, $+3.0$ for favorites) with a **14-day exponential half-life recency decay**.
+
+### 🎧 Audiophile-Grade Sound & Hardware DSP
+- **Lossless 320kbps CD Quality**: Resolves bit-perfect high-bitrate audio streams directly on-device.
+- **Native Android Hardware DSP**: 5-band millibel Equalizer mapped directly to native audio sessions (`android.media.audiofx.Equalizer`).
+- **Studio Master Modes**: One-tap DSP presets for *3D Spatial Virtualizer*, *Concert Hall Reverb*, and *BassBoost Exciter*.
+
+### ⚡ Real-Time Synced Lyrics & Dynamic Discovery
+- **Millisecond Time-Coded Lyrics**: Word-by-word synchronized LRC playback with intelligent Roman-to-Devanagari transliteration.
+- **100% Dynamic Artist Discovery**: Real-time Wikipedia REST API integration for high-resolution artist portraits and biographical summaries.
+- **Spotify-Style Onboarding**: Multi-step first-run selector for Languages, Genres, and Artists to immediately seed the neural recommendation space.
+
+### 🌐 P2P SyncCast Jam Studio
+- **Decentralized Party Mode**: Stream and synchronize playback across multiple devices on the same local Wi-Fi or mobile hotspot using a low-latency WebSocket protocol with automatic reconnect.
 
 ---
 
-## Architectural Principles
+## 🏗️ System Architecture
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
@@ -51,7 +64,7 @@
 └────────────────────────────┬─────────────────────────────┘
                              ▼
 ┌──────────────────────────────────────────────────────────┐
-│             ONLINE GRADIENT DESCENT LEARNER              │
+│         ON-DEVICE IMPLICIT SIGNAL TRACKER (SQLITE)       │
 │       U_new = normalize(U_old + alpha * signal * T)      │
 │          with Half-Life Recency Decay (tau = 14d)        │
 └────────────────────────────┬─────────────────────────────┘
@@ -73,52 +86,70 @@
 └──────────────────────────────────────────────────────────┘
 ```
 
-- **Strict Modularity**: Every source file in the codebase is strictly maintained under 300 lines of code.
-- **Zero Cloud AI Dependency**: The neural MLP and matrix mathematics run 100% on-device in pure Dart.
-
 ---
 
-## Building from Source
+## 📦 Getting Started & Installation
 
-### Prerequisites
-- [Flutter SDK](https://flutter.dev) (v3.24.0 or higher)
-- Android SDK (API Level 24 to 35)
-- Java 17 / OpenJDK 17
+### Option 1: Direct APK Download
+Download the latest signed release APK from [GitHub Releases](https://github.com/nomad-guy/Noctra/releases/latest).
 
-### Build Steps
+### Option 2: Build from Source
 ```bash
-# Clone the repository
+# 1. Clone the repository
 git clone https://github.com/nomad-guy/Noctra.git
 cd Noctra
 
-# Fetch dependencies
+# 2. Install Flutter packages
 flutter pub get
 
-# Run unit tests (10/10 green)
+# 3. Verify test suite (10/10 green)
 flutter test
 
-# Run static analysis (0 issues)
-flutter analyze
-
-# Build release APK
+# 4. Build release APK
 flutter build apk --release
 ```
 
 ---
 
-## Legal Disclaimer
+## ⚖️ Strict Legal Disclaimer & Compliance Policy
 
-Noctra is a Free and Open Source Software (FOSS) client application developed for personal, educational, and research purposes.
+Please read this section carefully before downloading, compiling, or using Noctra.
 
-- **No Media Hosting**: Noctra does not operate central servers that host, store, cache, or redistribute copyrighted audio, video, or media files. 
-- **Client-Side Resolution**: All stream resolution, metadata indexing, Wikipedia biographies, and lyric parsing occur strictly on-device via publicly accessible web APIs and user-initiated queries.
-- **Trademarks & Attribution**: Spotify, YouTube, YouTube Music, JioSaavn, Wikipedia, and other third-party brand names or logos mentioned in the codebase are the property of their respective owners and are used strictly for nominal identification and referencing purposes under fair use.
-- **User Responsibility**: Users are responsible for complying with the terms of service of the third-party platforms they access and the applicable copyright laws in their respective jurisdictions.
+### 1. Client-Side Only Architecture & Zero Media Hosting
+Noctra is strictly a **client-side media browser, parser, and player**. 
+- Noctra **does not own, host, store, cache on remote servers, re-encode, or redistribute** any copyrighted music, audio streams, lyrics, or video files.
+- All media stream URLs, lyric timestamps, Wikipedia biographical extracts, and metadata are dynamically queried, fetched, and parsed **purely on the end-user's local device** from public web endpoints upon explicit user interaction.
+
+### 2. Non-Commercial & Educational Purpose
+Noctra is developed and distributed solely as a **Free and Open Source Software (FOSS)** research and educational tool demonstrating:
+- Client-side on-device neural network ranking without server telemetry.
+- Hardware-level digital signal processing on mobile operating systems.
+- Decentralized peer-to-peer clock synchronization over local networks.
+
+The maintainers do not monetize, sell, license, or profit from the operation of this application in any manner.
+
+### 3. Trademark & Intellectual Property Disclaimers
+- All product names, logos, brand names, trademarks, and registered trademarks (*including Spotify, YouTube, YouTube Music, JioSaavn, Wikipedia, and others*) are the property of their respective trademark holders.
+- The use of these names and marks within the codebase, documentation, or user interface is strictly for **nominal identification, reference, and technical interoperability** purposes under Fair Use. Noctra is not affiliated with, endorsed by, sponsored by, or officially associated with any of these entities.
+
+### 4. End-User Compliance & Responsibility
+- End users are solely responsible for ensuring that their use of Noctra complies with applicable copyright laws, intellectual property regulations, and the terms of service of third-party platforms in their respective legal jurisdictions.
+- The developers and contributors of Noctra disclaim any responsibility or legal liability for unauthorized use, misuse, copyright infringement, or violations of third-party platform terms by end users.
+
+### 5. Disclaimer of Warranty & Limitation of Liability
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS **"AS IS"** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ---
 
-## License
+## 📄 License
 
-Copyright (C) 2026 Nomad Guy
+Noctra is Free and Open Source Software (FOSS) released under the **GNU General Public License v3.0 (GPL-3.0)**.  
+You are free to run, study, modify, and redistribute this software in accordance with the terms of the license.
 
-This project is Free and Open Source Software licensed under the **GNU General Public License v3.0 (GPL-3.0)**. See the [LICENSE](LICENSE) file for complete details.
+Full license text is available in the [LICENSE](LICENSE) file.
+
+---
+
+<div align="center">
+  <sub>Crafted with engineering discipline and privacy by <b>Nomad Guy</b> • <a href="https://github.com/nomad-guy">@nomad-guy</a></sub>
+</div>
