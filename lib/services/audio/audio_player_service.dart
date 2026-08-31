@@ -50,13 +50,16 @@ class AudioPlayerService {
   StreamResolutionMetadata? _lastResolution;
   StreamResolutionMetadata? get lastResolution => _lastResolution;
 
+  int _lastSavedSec = 0;
+
   AudioPlayerService._internal() {
     _initAudioSession();
     _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) _onSongCompleted();
     });
     _player.positionStream.listen((pos) {
-      if (_currentSong != null && pos.inSeconds > 0 && pos.inSeconds % 5 == 0) {
+      if (_currentSong != null && _loopMode != LoopMode.one && pos.inSeconds >= 5 && pos.inSeconds != _lastSavedSec && pos.inSeconds % 5 == 0) {
+        _lastSavedSec = pos.inSeconds;
         NoctraLocalDatabase().savePlaybackPosition(_currentSong, pos.inMilliseconds);
       }
     });
@@ -76,6 +79,7 @@ class AudioPlayerService {
 
   void setSleepTimer(int minutes) {
     _sleepTimer?.cancel();
+    if (_isFading) { _player.setVolume(1.0); }
     _isFading = false;
     if (minutes <= 0) { _sleepTimerRemainingMinutes = null; _emitSettings(); return; }
     _sleepTimerRemainingMinutes = minutes; _emitSettings();
@@ -238,19 +242,9 @@ class AudioPlayerService {
     _currentSong = null; _currentSongController.add(null);
   }
 
-  Future<void> toggleShuffle() async {
-    _isShuffleEnabled = !_isShuffleEnabled;
-    await _player.setShuffleModeEnabled(_isShuffleEnabled);
-    _emitSettings();
-  }
-
+  Future<void> toggleShuffle() async { _isShuffleEnabled = !_isShuffleEnabled; await _player.setShuffleModeEnabled(_isShuffleEnabled); _emitSettings(); }
   void toggleAutoplay() { _isAutoplayEnabled = !_isAutoplayEnabled; _emitSettings(); }
-
-  Future<void> toggleLoopMode() async {
-    _loopMode = _loopMode == LoopMode.off ? LoopMode.all : (_loopMode == LoopMode.all ? LoopMode.one : LoopMode.off);
-    await _player.setLoopMode(_loopMode);
-    _emitSettings();
-  }
+  Future<void> toggleLoopMode() async { _loopMode = _loopMode == LoopMode.off ? LoopMode.all : (_loopMode == LoopMode.all ? LoopMode.one : LoopMode.off); await _player.setLoopMode(_loopMode); _emitSettings(); }
 
   static const _effectsChannel = MethodChannel('com.noctra.app/audio_effects');
 

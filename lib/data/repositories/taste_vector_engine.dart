@@ -11,31 +11,31 @@ class TasteVectorEngine {
 
   static List<double> getDefaultVector() => [0.65, 0.50, 0.60, 0.50, 0.45, 0.35, 0.70, 0.60, 0.55, 0.75, 0.80, 0.55, 0.50, 0.70, 0.65, 0.40];
 
-  /// Computes cosine similarity with full mathematical span [-1.0, 1.0] normalized to [0.0, 1.0]
+  /// Computes mathematically normalized cosine similarity on [0.0, 1.0] with symmetric dimensions
   static double cosineSimilarity(List<double> v1, List<double> v2) {
     if (v1.isEmpty || v2.isEmpty) return 0.5;
-    final maxLen = max(v1.length, v2.length);
-    double dot = 0.0, mag1 = 0.0, mag2 = 0.0;
-    int validDimensions = 0;
+    final int n = min(min(v1.length, v2.length), 16);
+    if (n == 0) return 0.5;
 
-    for (int i = 0; i < maxLen; i++) {
-      final val1 = i < v1.length ? v1[i] : 0.5;
-      final val2 = i < v2.length ? v2[i] : 0.5;
+    double dot = 0.0, mag1 = 0.0, mag2 = 0.0;
+    int valid = 0;
+
+    for (int i = 0; i < n; i++) {
+      final double val1 = v1[i];
+      final double val2 = v2[i];
       if (val1.isNaN || val1.isInfinite || val2.isNaN || val2.isInfinite) continue;
 
       dot += val1 * val2;
       mag1 += val1 * val1;
       mag2 += val2 * val2;
-      validDimensions++;
+      valid++;
     }
 
-    if (validDimensions == 0 || mag1 == 0 || mag2 == 0) return 0.5;
-    final denom = sqrt(mag1) * sqrt(mag2);
+    if (valid == 0 || mag1 == 0 || mag2 == 0) return 0.5;
+    final double denom = sqrt(mag1) * sqrt(mag2);
     if (denom == 0 || denom.isNaN) return 0.5;
 
-    final rawCosine = (dot / denom).clamp(-1.0, 1.0);
-    // Maps raw cosine similarity from [-1.0, 1.0] to normalized [0.0, 1.0]
-    return ((rawCosine + 1.0) / 2.0).clamp(0.0, 1.0);
+    return (dot / denom).clamp(0.0, 1.0);
   }
 
   /// Extracts 16-dimensional acoustic feature embedding using additive multi-axis weighting
@@ -99,12 +99,6 @@ class TasteVectorEngine {
       updated[i] = (updated[i] + delta).clamp(0.05, 0.95);
     }
 
-    // Regularization decay to prevent dimensional saturation
-    for (int i = 0; i < updated.length; i++) {
-      if (updated[i] > 0.90) updated[i] -= 0.012;
-      if (updated[i] < 0.10) updated[i] += 0.012;
-    }
-
     return updated;
   }
 
@@ -119,88 +113,45 @@ class TasteVectorEngine {
         artworkUrl: '',
         streamUrl: '',
         duration: Duration.zero,
-        genre: '',
         featureVector: songVector,
       ),
       eventType: action,
     );
   }
 
-  /// Context-aware target vector with prompt parsing
-  static List<double> getTargetVector({String? vibeKey, String? prompt, required List<double> defaultTaste}) {
-    if (vibeKey == 'noir_night' || vibeKey == 'late_night') {
-      return [0.92, 0.75, 0.30, 0.85, 0.70, 0.20, 0.65, 0.50, 0.60, 0.85, 0.98, 0.75, 0.20, 0.80, 0.40, 0.50];
-    } else if (vibeKey == 'retro_synth' || vibeKey == 'dark_synth') {
-      return [0.85, 0.55, 0.85, 0.40, 0.50, 0.05, 0.98, 0.40, 0.50, 0.98, 0.95, 0.65, 0.35, 0.90, 0.80, 0.70];
-    } else if (vibeKey == 'high_energy') {
-      return [0.30, 0.10, 0.98, 0.10, 0.20, 0.10, 0.85, 0.70, 0.85, 0.75, 0.60, 0.40, 0.90, 0.75, 0.95, 0.30];
-    } else if (vibeKey == 'deep_focus') {
-      return [0.40, 0.85, 0.30, 0.90, 0.30, 0.40, 0.70, 0.15, 0.75, 0.70, 0.80, 0.98, 0.40, 0.50, 0.45, 0.90];
-    } else if (vibeKey == 'ambient_chill') {
-      return [0.35, 0.95, 0.20, 0.98, 0.40, 0.70, 0.50, 0.60, 0.40, 0.50, 0.75, 0.90, 0.50, 0.40, 0.30, 0.75];
-    } else if (vibeKey == 'acoustic_warm') {
-      return [0.20, 0.50, 0.40, 0.85, 0.40, 0.98, 0.05, 0.90, 0.30, 0.10, 0.40, 0.75, 0.60, 0.30, 0.45, 0.20];
+  static List<double> getTargetVector({String? vibeKey, String? prompt, List<double>? defaultTaste}) {
+    final vec = List<double>.from(defaultTaste ?? getDefaultVector());
+    if (vibeKey != null) {
+      switch (vibeKey) {
+        case 'noir_night': vec[0] = 0.95; vec[10] = 0.98; vec[13] = 0.85; break;
+        case 'retro_synth': vec[6] = 0.98; vec[9] = 0.98; vec[10] = 0.92; break;
+        case 'deep_focus': vec[11] = 0.95; vec[15] = 0.90; vec[2] = 0.35; break;
+        case 'high_energy': vec[2] = 0.98; vec[14] = 0.95; vec[12] = 0.85; break;
+        case 'ambient_chill': vec[1] = 0.95; vec[3] = 0.98; vec[2] = 0.20; break;
+      }
     }
-
     if (prompt != null && prompt.isNotEmpty) {
       final p = prompt.toLowerCase();
-      final vec = List<double>.from(defaultTaste.isNotEmpty ? defaultTaste : getDefaultVector());
-      void nudge(int axis, double target, double weight) {
-        if (axis >= 0 && axis < 16) {
-          vec[axis] = (vec[axis] * (1.0 - weight) + target * weight).clamp(0.05, 0.98);
-        }
-      }
-
-      if (p.contains('dark') || p.contains('night') || p.contains('noir')) {
-        nudge(0, 0.95, 0.6); nudge(4, 0.80, 0.5); nudge(10, 0.95, 0.6); nudge(13, 0.85, 0.5);
-      }
-      if (p.contains('fast') || p.contains('energy') || p.contains('workout') || p.contains('hype')) {
-        nudge(2, 0.95, 0.7); nudge(14, 0.92, 0.6); nudge(12, 0.85, 0.5);
-      }
-      if (p.contains('chill') || p.contains('study') || p.contains('sleep') || p.contains('calm') || p.contains('focus')) {
-        nudge(3, 0.98, 0.7); nudge(11, 0.95, 0.7); nudge(1, 0.95, 0.6); nudge(5, 0.90, 0.5); nudge(2, 0.10, 0.5);
-      }
-      if (p.contains('synth') || p.contains('cyber') || p.contains('retro')) {
-        nudge(6, 0.95, 0.6); nudge(9, 0.98, 0.7); nudge(10, 0.95, 0.6); nudge(13, 0.88, 0.5);
-      }
-      if (p.contains('acoustic') || p.contains('guitar') || p.contains('organic')) {
-        nudge(5, 0.98, 0.7); nudge(7, 0.90, 0.6); nudge(15, 0.20, 0.5);
-      }
-      return vec;
+      if (p.contains('lofi') || p.contains('chill') || p.contains('study')) { vec[1] = 0.92; vec[3] = 0.95; vec[11] = 0.90; }
+      if (p.contains('gym') || p.contains('workout') || p.contains('heavy')) { vec[2] = 0.98; vec[13] = 0.95; vec[14] = 0.92; }
+      if (p.contains('coding') || p.contains('hack') || p.contains('synth')) { vec[6] = 0.95; vec[9] = 0.95; vec[11] = 0.92; }
     }
-
-    return defaultTaste;
+    return vec;
   }
 
-  static String generateExplanation(Song song, int matchPercentage, String? vibeKey, String? prompt) {
-    if (prompt != null && prompt.isNotEmpty) {
-      final shortPrompt = prompt.length > 25 ? '${prompt.substring(0, 22)}...' : prompt;
-      return 'Neural match to "$shortPrompt" ($matchPercentage% acoustic fit)';
-    }
-    if (vibeKey != null) {
-      final clean = vibeKey.replaceAll('_', ' ').toUpperCase();
-      return '$clean vector alignment with your listening habits ($matchPercentage%)';
-    }
-    return '16-axis harmonic resonance with your ${song.genre ?? "music"} profile ($matchPercentage%)';
+  static String generateExplanation(Song song, int score, [String? vibeKey, String? prompt]) {
+    final shortPrompt = (prompt != null && prompt.isNotEmpty) ? prompt : (vibeKey ?? 'Vibe');
+    return 'Neural match to "$shortPrompt" ($score% acoustic fit)';
   }
 
-  /// Multi-Head Neural Archetype Classification
   static String calculateArchetype(List<double> vector) {
-    final dark = vector.isNotEmpty ? vector[0] : 0.5;
-    final ambient = vector.length > 1 ? vector[1] : 0.5;
-    final energy = vector.length > 2 ? vector[2] : 0.5;
-    final chill = vector.length > 3 ? vector[3] : 0.5;
-    final acoustic = vector.length > 5 ? vector[5] : 0.5;
-    final synth = vector.length > 9 ? vector[9] : 0.5;
-    final nightDrive = vector.length > 10 ? vector[10] : 0.5;
-    final subBass = vector.length > 13 ? vector[13] : 0.5;
-
-    if (nightDrive >= 0.65 && synth >= 0.60) return 'Nocturnal Cyber-Audiophile';
-    if (energy >= 0.70 && subBass >= 0.65) return 'High-Velocity Kinetic Flow';
-    if (acoustic >= 0.65 && chill >= 0.55) return 'Organic Acoustic Realist';
-    if (ambient >= 0.70 && chill >= 0.65) return 'Ambient Serenade Dreamer';
-    if (dark >= 0.70 && subBass >= 0.70) return 'Obsidian Deep Sub-Bassist';
-    if (synth >= 0.70) return 'Retro-Futurist Sound Architect';
-    return 'Eclectic Noir Connoisseur';
+    if (vector.length < 16) return 'Nocturnal Cyber-Audiophile';
+    if (vector[0] >= 0.70 && vector[10] >= 0.70) return 'Nocturnal Cyber-Audiophile';
+    if (vector[2] >= 0.70 && vector[14] >= 0.70) return 'Kinetic High-BPM Enthusiast';
+    if (vector[1] >= 0.70 && vector[3] >= 0.70) return 'Ambient Lofi Explorer';
+    if (vector[5] >= 0.70 && vector[7] >= 0.70) return 'Acoustic Warmth Connoisseur';
+    if (vector[6] >= 0.70 && vector[9] >= 0.70) return 'Retro Analog Synthesist';
+    if (vector[11] >= 0.70 && vector[15] >= 0.70) return 'Deep-Focus Cognitive Architect';
+    return 'Universal Acoustic Minimalist';
   }
 }

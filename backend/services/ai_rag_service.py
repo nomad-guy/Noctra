@@ -1,6 +1,7 @@
 """
 Noctra 16-Axis Neural Space, Knowledge Graph & Hybrid Dense RAG Engine
 """
+import hashlib
 import numpy as np
 
 # 16 Acoustic Axes
@@ -51,26 +52,26 @@ def generate_16axis_vector(text):
         if word in lower:
             vec[axis_idx] = min(1.0, vec[axis_idx] + boost)
 
-    # Hash perturbation for uniqueness
-    h = hash(text) & 0xFFFFFFFF
+    # Deterministic hash perturbation
+    h_bytes = hashlib.md5(text.encode('utf-8')).digest()
     for i in range(16):
-        nibble = (h >> (i * 2)) & 0x3
-        perturbation = (nibble - 1.5) * 0.05
+        byte_val = h_bytes[i % len(h_bytes)]
+        perturbation = ((byte_val % 4) - 1.5) * 0.04
         vec[i] = max(0.05, min(0.95, vec[i] + perturbation))
 
     return vec
 
 def cosine_similarity(v1, v2):
-    """Computes cosine similarity between two 16-dimensional vectors."""
-    a = np.array(v1, dtype=float)
-    b = np.array(v2, dtype=float)
+    """Computes cosine similarity between two 16-dimensional vectors with [0.0, 1.0] span."""
+    if not v1 or not v2:
+        return 0.5
+    a = np.array(v1, dtype=float)[:16]
+    b = np.array(v2, dtype=float)[:16]
     norm_a = np.linalg.norm(a)
     norm_b = np.linalg.norm(b)
     if norm_a == 0 or norm_b == 0:
         return 0.5
-    dot = np.dot(a, b)
-    cos_sim = dot / (norm_a * norm_b)
-    return float(np.clip(cos_sim, 0.0, 1.0))
+    return float(np.clip(np.dot(a, b) / (norm_a * norm_b), 0.0, 1.0))
 
 def query_knowledge_graph_context(seed_text):
     """Traverses Knowledge Graph nodes to expand context and extract related subgenres and acoustic moods."""

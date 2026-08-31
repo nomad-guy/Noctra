@@ -264,7 +264,7 @@ class NoctraLocalDatabase {
   Future<void> saveRecent(List<Song> songs) async {
     _recent.clear(); _recent.addAll(songs);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('noctra_recent', jsonEncode(songs.take(40).map((e) => e.toMap()).toList()));
+    await prefs.setString('noctra_recent', jsonEncode(songs.take(50).map((e) => e.toMap()).toList()));
   }
 
   Future<void> saveCustomFolders(Map<String, List<Song>> folders) async {

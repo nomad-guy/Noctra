@@ -9,7 +9,7 @@ class AudioVisualizerService {
   factory AudioVisualizerService() => _instance;
 
   static const _eventChannel = EventChannel('com.noctra.app/audio_visualizer');
-  StreamSubscription? _subscription;
+  StreamSubscription? _subscription, _sessionSub;
   Timer? _fallbackTicker;
   int? _currentSessionId;
   int _lastHardwarePacketMs = 0;
@@ -32,7 +32,8 @@ class AudioVisualizerService {
         if (initialSessionId != null && initialSessionId > 0) {
           _startListening(initialSessionId);
         }
-        playerService.player.androidAudioSessionIdStream.listen((sessionId) {
+        _sessionSub?.cancel();
+        _sessionSub = playerService.player.androidAudioSessionIdStream.listen((sessionId) {
           if (sessionId != null && sessionId > 0 && sessionId != _currentSessionId) {
             _startListening(sessionId);
           }

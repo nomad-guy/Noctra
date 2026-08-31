@@ -25,7 +25,7 @@ class P2PSyncService extends ChangeNotifier {
 
   HttpServer? _server;
   final List<dynamic> _connectedPeers = [];
-  int get connectedPeersCount => isHost ? (_connectedPeers.length + 1) : 2;
+  int get connectedPeersCount => isHost ? (_connectedPeers.length + 1) : (isClient ? 2 : 0);
 
   dynamic _clientSocket;
   String? _localIp;

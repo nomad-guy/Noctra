@@ -175,7 +175,7 @@ class MusicRepository extends ChangeNotifier {
       final sim = TasteVectorEngine.cosineSimilarity(songEmbedding, target);
       final score = ((sim * 80) + 19).round().clamp(60, 99);
       final exp = TasteVectorEngine.generateExplanation(s, score, vibeKey, naturalPrompt);
-      return {'song': s, 'score': score, 'explanation': exp};
+      return {'song': s, 'score': score, 'matchPercentage': score, 'explanation': exp};
     }).toList();
 
     scored.sort((a, b) => (b['score'] as int).compareTo(a['score'] as int));
@@ -199,7 +199,7 @@ class MusicRepository extends ChangeNotifier {
       final sim = TasteVectorEngine.cosineSimilarity(songEmbedding, target);
       final score = ((sim * 80) + 19).round().clamp(60, 99);
       final exp = TasteVectorEngine.generateExplanation(s, score, vibeKey, cleanPrompt);
-      return {'song': s, 'score': score, 'explanation': exp};
+      return {'song': s, 'score': score, 'matchPercentage': score, 'explanation': exp};
     }).toList();
 
     scored.sort((a, b) => (b['score'] as int).compareTo(a['score'] as int));
@@ -213,8 +213,10 @@ class MusicRepository extends ChangeNotifier {
         final unique = results.where((s) => s.id != seed.id).toList();
         return [seed, ...unique];
       }
+      final artistFeed = await MusicService.search('${seed.artist} best songs');
+      if (artistFeed.isNotEmpty) return [seed, ...artistFeed.where((s) => s.id != seed.id)];
     } catch (_) {}
-    return MusicService.fetchVibeFeed('late_night');
+    return [seed, ..._localLibrary.where((s) => s.id != seed.id)];
   }
 
   void createFolder(String name) {

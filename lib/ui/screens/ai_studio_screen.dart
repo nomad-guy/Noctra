@@ -175,7 +175,7 @@ class _AIStudioScreenState extends ConsumerState<AIStudioScreen> {
                   (context, i) {
                     final item = _curatedResults[i];
                     final song = item['song'];
-                    final match = item['matchPercentage'] ?? 90;
+                    final match = item['score'] ?? item['matchPercentage'] ?? 90;
                     final explanation = item['explanation'] ?? '';
 
                     return Padding(
