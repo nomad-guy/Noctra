@@ -47,6 +47,7 @@ class AudioPlayerService {
   Timer? _sleepTimer;
   DateTime? _songStartTime;
   Duration? _lastSavedPosition;
+  String? _lastSavedSongId;
   StreamResolutionMetadata? _lastResolution;
   StreamResolutionMetadata? get lastResolution => _lastResolution;
 
@@ -108,6 +109,7 @@ class AudioPlayerService {
       final saved = await NoctraLocalDatabase().loadPlaybackPosition();
       if (saved != null && saved['song'] != null) {
         _currentSong = saved['song'] as Song;
+        _lastSavedSongId = _currentSong!.id;
         _lastSavedPosition = Duration(milliseconds: saved['positionMs'] ?? 0);
         _queue.clear(); _queue.add(_currentSong!); _currentIndex = 0;
         _currentSongController.add(_currentSong); _queueController.add(_queue);
@@ -159,7 +161,15 @@ class AudioPlayerService {
       if (url == null || url.isEmpty) url = await CompositeStreamResolver.resolve(song);
 
       if (url != null && url.isNotEmpty) {
-        final startPos = initialPosition ?? _lastSavedPosition;
+        Duration startPos = Duration.zero;
+        if (initialPosition != null) {
+          startPos = initialPosition;
+        } else if (_lastSavedPosition != null && _lastSavedSongId == song.id) {
+          startPos = _lastSavedPosition!;
+        }
+        _lastSavedPosition = null;
+        _lastSavedSongId = null;
+
         final mediaItem = MediaItem(id: song.id, album: song.album, title: song.title, artist: song.artist, artUri: (song.artworkUrl != null && song.artworkUrl!.startsWith('http')) ? Uri.parse(song.artworkUrl!) : null, duration: song.duration);
 
         bool loaded = false;
@@ -184,12 +194,6 @@ class AudioPlayerService {
         if (loaded && epoch == _playSessionEpoch) {
           await _player.setVolume(1.0);
           await _player.play();
-          _lastSavedPosition = null;
-          if (song.id.length == 11) {
-            MusicService.fetchSponsorBlockIntroSkip(song.id).then((skip) {
-              if (skip != null && skip > 3.0 && _currentSong?.id == song.id) _player.seek(Duration(milliseconds: (skip * 1000).toInt()));
-            });
-          }
         }
       }
     } catch (e) {
