@@ -3,6 +3,7 @@ import '../models/song_model.dart';
 import '../sources/noctra_local_database.dart';
 import 'taste_vector_engine.dart';
 import '../../services/ytdlp/music_service.dart';
+import '../../core/utils/noctra_localization.dart';
 
 class AIPlaylist {
   final String id, title, subtitle, artworkUrl, vibeKey;
@@ -60,9 +61,11 @@ class MusicRepository extends ChangeNotifier {
   }
 
   void initOnboardingTaste({required List<String> languages, required List<String> genres, required List<String> artists}) {
-    final text = '${languages.join(' ')} ${genres.join(' ')} ${artists.join(' ')}';
-    final customSeed = Song(id: 'onboarding', title: text, artist: artists.join(' '), album: '', artworkUrl: '', streamUrl: '', duration: Duration.zero);
-    final vec = TasteVectorEngine.extractSongEmbedding(customSeed);
+    final vec = TasteVectorEngine.createVectorFromPreferences(
+      languages: languages,
+      genres: genres,
+      artists: artists,
+    );
     _userTasteVector = vec;
     _cachedTasteVector = List.unmodifiable(_userTasteVector);
     _persistState();
@@ -82,9 +85,9 @@ class MusicRepository extends ChangeNotifier {
 
   String getTimeOfDayGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
+    if (hour < 12) return NoctraLocalization.tr('good_morning');
+    if (hour < 17) return NoctraLocalization.tr('good_afternoon');
+    return NoctraLocalization.tr('good_evening');
   }
 
   bool isFavorite(String songId) => _favorites.any((s) => s.id == songId);

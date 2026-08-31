@@ -15,7 +15,7 @@ class NoctraLocalization {
       'delete_folder': 'Delete Folder',
       'settings': 'Settings & Storage',
       'party_mode': 'SyncCast Party Mode',
-      'lossless_quality': 'Lossless 320k Ready',
+      'lossless_quality': 'Master 320k Ready',
     },
     'hi': {
       'app_name': 'नोक्ट्रा',
@@ -30,7 +30,7 @@ class NoctraLocalization {
       'delete_folder': 'फ़ोल्डर हटाएं',
       'settings': 'सेटिंग्स और स्टोरेज',
       'party_mode': 'सिंककास्ट पार्टी मोड',
-      'lossless_quality': 'लॉसलेस 320k तैयार',
+      'lossless_quality': 'मास्टर 320k तैयार',
     },
     'ur': {
       'app_name': 'نوکٹرا',
@@ -45,7 +45,7 @@ class NoctraLocalization {
       'delete_folder': 'فولڈر حذف کریں',
       'settings': 'ترتیبات اور اسٹوریج',
       'party_mode': 'سنک کاسٹ پارٹی موڈ',
-      'lossless_quality': 'لاس لیس 320k تیار',
+      'lossless_quality': 'ماسٹر 320k تیار',
     },
     'es': {
       'app_name': 'Noctra',
@@ -60,7 +60,7 @@ class NoctraLocalization {
       'delete_folder': 'Eliminar Carpeta',
       'settings': 'Ajustes y Almacenamiento',
       'party_mode': 'Modo Fiesta SyncCast',
-      'lossless_quality': 'Sin Pérdidas 320k Listo',
+      'lossless_quality': 'Calidad Master 320k Lista',
     },
     'fr': {
       'app_name': 'Noctra',
@@ -75,7 +75,7 @@ class NoctraLocalization {
       'delete_folder': 'Supprimer le Dossier',
       'settings': 'Paramètres & Stockage',
       'party_mode': 'Mode Fête SyncCast',
-      'lossless_quality': 'Qualité 320k Sans Perte',
+      'lossless_quality': 'Qualité Master 320k Prête',
     },
   };
 

@@ -26,7 +26,7 @@ class NoctraAudioEffectsEngine {
             presetReverb = PresetReverb(0, sessionId).apply { enabled = true }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 loudnessEnhancer = LoudnessEnhancer(sessionId).apply {
-                    setTargetGain(200)
+                    setTargetGain(100)
                     enabled = true
                 }
             }
@@ -48,13 +48,13 @@ class NoctraAudioEffectsEngine {
             }
             bassBoost?.let { bb ->
                 if (bb.strengthSupported) {
-                    val strength = ((bassStrength / 10.0).coerceIn(0.0, 1.0) * 1000).toInt().toShort()
+                    val strength = ((bassStrength / 12.0).coerceIn(0.0, 1.0) * 1000).toInt().toShort()
                     bb.setStrength(strength)
                 }
             }
             virtualizer?.let { v ->
                 if (v.strengthSupported) {
-                    val strength = ((virtualizerStrength / 10.0).coerceIn(0.0, 1.0) * 1000).toInt().toShort()
+                    val strength = ((virtualizerStrength / 12.0).coerceIn(0.0, 1.0) * 1000).toInt().toShort()
                     v.setStrength(strength)
                 }
             }

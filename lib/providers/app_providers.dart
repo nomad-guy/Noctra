@@ -26,7 +26,7 @@ final themeModeProvider = StateProvider<NoirThemeMode>((ref) {
 });
 
 // Settings state
-final audioQualityProvider = StateProvider<String>((ref) => 'Master (320 kbps Lossless CD)');
+final audioQualityProvider = StateProvider<String>((ref) => 'Master (320 kbps High-Fidelity)');
 final lyricsPreferenceProvider = StateProvider<String>((ref) => 'English / Global (Standard)');
 final autoplayDelayProvider = StateProvider<int>((ref) => 3);
 final audioFadeTransitionProvider = StateProvider<bool>((ref) => true);

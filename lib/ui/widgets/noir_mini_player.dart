@@ -32,9 +32,14 @@ class _NoirMiniPlayerState extends ConsumerState<NoirMiniPlayer> {
     final isDark = themeMode.isDark;
 
     final song = currentSongAsync.value;
-    if (song == null || _dismissedSongId == song.id) return const SizedBox.shrink();
-
     final isPlaying = isPlayingAsync.value ?? false;
+
+    if (isPlaying && _dismissedSongId != null) {
+      _dismissedSongId = null;
+    }
+
+    if (song == null || (!isPlaying && _dismissedSongId == song.id)) return const SizedBox.shrink();
+
     final position = positionAsync.value ?? Duration.zero;
     final duration = song.duration.inMilliseconds > 0 ? song.duration : const Duration(minutes: 3, seconds: 30);
     final remaining = duration - position;
@@ -255,9 +260,7 @@ class _NoirMiniPlayerState extends ConsumerState<NoirMiniPlayer> {
                       child: Slider(
                         value: position.inMilliseconds.toDouble().clamp(0.0, duration.inMilliseconds.toDouble()),
                         max: duration.inMilliseconds.toDouble() > 0 ? duration.inMilliseconds.toDouble() : 1.0,
-                        onChanged: (value) {
-                          ref.read(audioPlayerServiceProvider).seek(Duration(milliseconds: value.toInt()));
-                        },
+                        onChanged: (v) => ref.read(audioPlayerServiceProvider).seek(Duration(milliseconds: v.toInt())),
                       ),
                     ),
                     Padding(
@@ -265,22 +268,8 @@ class _NoirMiniPlayerState extends ConsumerState<NoirMiniPlayer> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            _formatDuration(position),
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.white54 : Colors.black54,
-                            ),
-                          ),
-                          Text(
-                            '-${_formatDuration(remaining)}',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.white54 : Colors.black54,
-                            ),
-                          ),
+                          Text(_formatDuration(position), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: isDark ? Colors.white54 : Colors.black54)),
+                          Text('-${_formatDuration(remaining)}', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: isDark ? Colors.white54 : Colors.black54)),
                         ],
                       ),
                     ),

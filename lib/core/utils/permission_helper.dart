@@ -8,10 +8,21 @@ class PermissionHelper {
       final statuses = await [
         Permission.audio,
         Permission.storage,
-        Permission.microphone,
         Permission.notification,
       ].request();
-      return statuses.values.any((s) => s.isGranted);
+      final audioGranted = statuses[Permission.audio]?.isGranted ?? false;
+      final storageGranted = statuses[Permission.storage]?.isGranted ?? false;
+      return audioGranted || storageGranted;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> requestMicrophonePermission() async {
+    if (kIsWeb) return true;
+    try {
+      final status = await Permission.microphone.request();
+      return status.isGranted;
     } catch (_) {
       return false;
     }

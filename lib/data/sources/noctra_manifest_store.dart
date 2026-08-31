@@ -77,10 +77,17 @@ class NoctraManifestStore {
     rawMap.forEach((k, v) {
       final m = SongManifest.fromMap(Map<String, dynamic>.from(v));
       manifests[k] = m;
+    });
+    _rebuildWeights();
+  }
+
+  void _rebuildWeights() {
+    artistWeights.clear(); genreWeights.clear(); languageWeights.clear();
+    for (final m in manifests.values) {
       artistWeights[m.artist] = (artistWeights[m.artist] ?? 0) + m.playCount;
       genreWeights[m.genre] = (genreWeights[m.genre] ?? 0) + m.playCount;
       languageWeights[m.language] = (languageWeights[m.language] ?? 0) + m.playCount;
-    });
+    }
   }
 
   void recordManifest(Song song, {String action = 'play', int listenedSeconds = 0, double completionRate = 1.0}) {
@@ -125,6 +132,7 @@ class NoctraManifestStore {
         final sortedKeys = manifests.keys.toList()
           ..sort((a, b) => manifests[a]!.lastPlayedTimestamp.compareTo(manifests[b]!.lastPlayedTimestamp));
         for (final k in sortedKeys.take(manifests.length - 500)) { manifests.remove(k); }
+        _rebuildWeights();
       }
       final prefs = await SharedPreferences.getInstance();
       final map = <String, dynamic>{};

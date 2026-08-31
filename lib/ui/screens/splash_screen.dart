@@ -23,7 +23,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
 
   int _bootStep = 0;
   final List<String> _bootLogs = [
-    'Calibrating 16-Axis Neural Graph',
+    'Calibrating 32-Axis Neural Graph',
     'Decrypting 320kbps CD Sound Engine',
     'Synthesizing Local P2P Audio Mesh',
     'Tuning Liquid Glass Acoustic Refraction',

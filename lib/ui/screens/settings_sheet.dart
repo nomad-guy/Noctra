@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/noctra_localization.dart';
 import '../../data/sources/noctra_local_database.dart';
 import '../../providers/app_providers.dart';
 import '../widgets/developer_panel_sheet.dart';
 import '../widgets/glass_card.dart';
 
-class SettingsSheet extends ConsumerWidget {
+class SettingsSheet extends ConsumerStatefulWidget {
   const SettingsSheet({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsSheet> createState() => _SettingsSheetState();
+}
+
+class _SettingsSheetState extends ConsumerState<SettingsSheet> {
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
     final lyricsPref = ref.watch(lyricsPreferenceProvider);
     final autoplayDelay = ref.watch(autoplayDelayProvider);
@@ -37,7 +43,7 @@ class SettingsSheet extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Preferences', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: isDark ? Colors.white : Colors.black)),
+                  Text(NoctraLocalization.tr('settings'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: isDark ? Colors.white : Colors.black)),
                   IconButton(icon: Icon(Icons.close_rounded, color: isDark ? Colors.white70 : Colors.black54), onPressed: () => Navigator.of(context).pop()),
                 ],
               ),
@@ -62,45 +68,81 @@ class SettingsSheet extends ConsumerWidget {
 
               const SizedBox(height: 18),
 
+              // Language Selector (i18n)
+              Text('APPLICATION LANGUAGE', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: isDark ? Colors.white60 : Colors.black54)),
+              const SizedBox(height: 8),
+              GlassCard(
+                radius: 16,
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Language / भाषा', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
+                    DropdownButton<String>(
+                      value: NoctraLocalization.currentLanguage,
+                      dropdownColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                      underline: const SizedBox.shrink(),
+                      style: TextStyle(fontSize: 13, color: isDark ? Colors.white : Colors.black),
+                      items: const [
+                        DropdownMenuItem(value: 'en', child: Text('English')),
+                        DropdownMenuItem(value: 'hi', child: Text('हिंदी (Hindi)')),
+                        DropdownMenuItem(value: 'ur', child: Text('اردو (Urdu)')),
+                        DropdownMenuItem(value: 'es', child: Text('Español')),
+                        DropdownMenuItem(value: 'fr', child: Text('Français')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            NoctraLocalization.currentLanguage = val;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
               // Sleep Timer
               Text('SLEEP TIMER & AUTO FADE-OUT', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: isDark ? Colors.white60 : Colors.black54)),
               const SizedBox(height: 8),
               GlassCard(
                 radius: 16,
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Fade-Out Timer', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
-                        Text(sleepRemaining != null ? '$sleepRemaining min remaining' : 'Inactive', style: TextStyle(fontSize: 11, fontFamily: 'monospace', color: sleepRemaining != null ? Colors.cyanAccent : (isDark ? Colors.white54 : Colors.black54))),
+                        Text('Playback Sleep Timer', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
+                        const SizedBox(height: 2),
+                        Text(sleepRemaining != null ? 'Active: $sleepRemaining min remaining' : 'Disabled (Continuous playback)', style: TextStyle(fontSize: 11.5, color: sleepRemaining != null ? Colors.amber : (isDark ? Colors.white54 : Colors.black54))),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [0, 15, 30, 45, 60].map((m) {
-                        final isSel = (m == 0 && sleepRemaining == null) || (m > 0 && sleepRemaining != null && sleepRemaining <= m && sleepRemaining > m - 15);
-                        return Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 3),
-                            child: InkWell(
-                              onTap: () { audioPlayer.setSleepTimer(m); (context as Element).markNeedsBuild(); },
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 7),
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: isSel ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white10 : Colors.black12),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(m == 0 ? 'Off' : '${m}m', style: TextStyle(fontSize: 11.5, fontWeight: isSel ? FontWeight.w700 : FontWeight.w500, color: isSel ? (isDark ? Colors.black : Colors.white) : (isDark ? Colors.white70 : Colors.black87))),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
+                    DropdownButton<int>(
+                      value: sleepRemaining ?? 0,
+                      dropdownColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                      underline: const SizedBox.shrink(),
+                      style: TextStyle(fontSize: 13, color: isDark ? Colors.white : Colors.black),
+                      items: const [
+                        DropdownMenuItem(value: 0, child: Text('Off')),
+                        DropdownMenuItem(value: 15, child: Text('15 min')),
+                        DropdownMenuItem(value: 30, child: Text('30 min')),
+                        DropdownMenuItem(value: 45, child: Text('45 min')),
+                        DropdownMenuItem(value: 60, child: Text('60 min')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          if (val == 0) {
+                            audioPlayer.cancelSleepTimer();
+                          } else {
+                            audioPlayer.setSleepTimer(val);
+                          }
+                          setState(() {});
+                        }
+                      },
                     ),
                   ],
                 ),
@@ -108,54 +150,34 @@ class SettingsSheet extends ConsumerWidget {
 
               const SizedBox(height: 18),
 
-              // Playback Behaviors
-              Text('PLAYBACK & TRANSITIONS', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: isDark ? Colors.white60 : Colors.black54)),
+              // Playback Configuration
+              Text('PLAYBACK & QUEUE BEHAVIOR', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: isDark ? Colors.white60 : Colors.black54)),
               const SizedBox(height: 8),
               GlassCard(
                 radius: 16,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 child: Column(
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Autoplay Transition Delay', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
-                            const SizedBox(height: 2),
-                            Text('$autoplayDelay seconds between tracks', style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54)),
-                          ],
-                        ),
-                        DropdownButton<int>(
-                          value: autoplayDelay,
-                          dropdownColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-                          style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.w600),
-                          underline: const SizedBox.shrink(),
-                          items: const [DropdownMenuItem(value: 0, child: Text('0s (Instant)')), DropdownMenuItem(value: 3, child: Text('3s (Default)')), DropdownMenuItem(value: 5, child: Text('5s (Relaxed)'))],
-                          onChanged: (v) { if (v != null) { ref.read(autoplayDelayProvider.notifier).state = v; audioPlayer.setAutoplayDelay(v); } },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Divider(height: 1),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Studio Fade In / Out', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
-                            const SizedBox(height: 2),
-                            Text('Smooth volume transitions on play/pause', style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54)),
-                          ],
-                        ),
+                        Text('Gapless Fade Transitions', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
                         Switch(
                           value: audioFade,
-                          activeThumbColor: isDark ? Colors.white : Colors.black,
-                          onChanged: (v) { ref.read(audioFadeTransitionProvider.notifier).state = v; audioPlayer.toggleFade(v); },
+                          activeThumbImage: null,
+                          onChanged: (v) {
+                            ref.read(audioFadeTransitionProvider.notifier).state = v;
+                            audioPlayer.toggleFade(v);
+                          },
                         ),
+                      ],
+                    ),
+                    const Divider(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Autoplay Delay (Radio)', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
+                        Text('${autoplayDelay}s', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black)),
                       ],
                     ),
                   ],
@@ -164,55 +186,24 @@ class SettingsSheet extends ConsumerWidget {
 
               const SizedBox(height: 18),
 
-              // Lyrics Preference
-              Text('LYRICS LANGUAGE & PROVIDER', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: isDark ? Colors.white60 : Colors.black54)),
+              // Synced Lyrics Configuration
+              Text('SYNCHRONIZED LYRICS ENGINE', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: isDark ? Colors.white60 : Colors.black54)),
               const SizedBox(height: 8),
               GlassCard(
                 radius: 16,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 child: Column(
                   children: [
                     _lyricsRadio('English / Global (Standard)', lyricsPref, ref, isDark),
-                    const Divider(height: 1),
-                    _lyricsRadio('Original Master Track', lyricsPref, ref, isDark),
-                    const Divider(height: 1),
-                    _lyricsRadio('Romanized Phonetics', lyricsPref, ref, isDark),
+                    const Divider(height: 4),
+                    _lyricsRadio('Romanized Hindi/Punjabi (LRC)', lyricsPref, ref, isDark),
+                    const Divider(height: 4),
+                    _lyricsRadio('Devanagari Transliteration', lyricsPref, ref, isDark),
                   ],
                 ),
               ),
 
               const SizedBox(height: 18),
-
-              // Download Storage Location Tile
-              GlassCard(
-                radius: 16,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.folder_special_rounded, size: 18, color: isDark ? Colors.white70 : Colors.black87),
-                            const SizedBox(width: 10),
-                            Text('Download Storage Location', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(color: isDark ? Colors.white12 : Colors.black12, borderRadius: BorderRadius.circular(8)),
-                          child: Text('320k FLAC/AAC', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: isDark ? Colors.white70 : Colors.black87)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text('/storage/emulated/0/Music/Noctra (Lossless)', style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white54 : Colors.black54)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
 
               // Developer Panel Link
               GlassCard(

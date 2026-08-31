@@ -32,7 +32,7 @@ class Song {
     List<double>? featureVector,
     this.replayCount = 0,
     this.skipCount = 0,
-  }) : featureVector = featureVector ?? List.filled(16, 0.5);
+  }) : featureVector = featureVector ?? List.filled(32, 0.5);
 
   Song copyWith({
     String? id,
@@ -90,7 +90,7 @@ class Song {
   Map<String, dynamic> toJson() => toMap();
 
   factory Song.fromMap(Map<String, dynamic> map) {
-    List<double> vec = List.filled(16, 0.5);
+    List<double> vec = List.filled(32, 0.5);
     if (map['featureVector'] != null) {
       try {
         if (map['featureVector'] is List) {
@@ -101,6 +101,7 @@ class Song {
             vec = decoded.map((e) => (e as num).toDouble()).toList();
           }
         }
+        while (vec.length < 32) { vec.add(0.5); }
       } catch (_) {}
     }
 

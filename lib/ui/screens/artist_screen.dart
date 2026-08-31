@@ -93,7 +93,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
                       const SizedBox(height: 12),
                       Text(widget.artistName, textAlign: TextAlign.center, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: isDark ? Colors.white : Colors.black)),
                       const SizedBox(height: 4),
-                      Text(_artistMetadata?.shortDescription ?? '${tracks.length} Master Releases • Lossless 320k', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.black54)),
+                      Text(_artistMetadata?.shortDescription ?? '${tracks.length} Master Releases • 320 kbps High-Fidelity', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.black54)),
                       if (_artistMetadata?.bio != null && _artistMetadata!.bio!.isNotEmpty) ...[
                         const SizedBox(height: 10),
                         Container(

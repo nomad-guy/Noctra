@@ -95,6 +95,51 @@ class TasteVectorEngine {
     return vec;
   }
 
+  static List<double> createVectorFromPreferences({
+    required List<String> languages,
+    required List<String> genres,
+    required List<String> artists,
+  }) {
+    final vec = List<double>.from(getDefaultVector());
+    void nudge(int axis, double target, double weight) {
+      if (axis >= 0 && axis < vectorDimension) {
+        vec[axis] = (vec[axis] * (1.0 - weight) + target * weight).clamp(0.05, 0.98);
+      }
+    }
+
+    for (final g in genres) {
+      final lg = g.toLowerCase();
+      if (lg.contains('bollywood')) { nudge(19, 0.95, 0.8); nudge(7, 0.90, 0.7); }
+      if (lg.contains('lo-fi') || lg.contains('lofi')) { nudge(1, 0.92, 0.7); nudge(18, 0.95, 0.8); }
+      if (lg.contains('hip-hop') || lg.contains('hip hop')) { nudge(20, 0.95, 0.8); nudge(24, 0.92, 0.7); }
+      if (lg.contains('synthwave')) { nudge(6, 0.95, 0.8); nudge(9, 0.98, 0.8); nudge(26, 0.95, 0.8); }
+      if (lg.contains('acoustic')) { nudge(5, 0.95, 0.8); nudge(25, 0.90, 0.7); }
+      if (lg.contains('pop')) { nudge(7, 0.95, 0.7); nudge(8, 0.90, 0.6); }
+      if (lg.contains('edm')) { nudge(2, 0.95, 0.8); nudge(14, 0.92, 0.7); }
+      if (lg.contains('sufi')) { nudge(16, 0.98, 0.8); nudge(17, 0.92, 0.8); }
+      if (lg.contains('rock')) { nudge(21, 0.95, 0.8); nudge(2, 0.90, 0.7); }
+      if (lg.contains('phonk')) { nudge(31, 0.95, 0.8); nudge(20, 0.92, 0.8); }
+    }
+
+    for (final a in artists) {
+      final la = a.toLowerCase();
+      if (la.contains('arijit') || la.contains('pritam') || la.contains('shreya')) { nudge(19, 0.95, 0.8); nudge(7, 0.92, 0.7); }
+      if (la.contains('weeknd') || la.contains('midnight')) { nudge(6, 0.95, 0.8); nudge(9, 0.95, 0.8); nudge(0, 0.90, 0.7); }
+      if (la.contains('sidhu') || la.contains('diljit') || la.contains('aujla') || la.contains('dhillon')) { nudge(20, 0.95, 0.8); nudge(24, 0.92, 0.8); }
+      if (la.contains('swift') || la.contains('lipa') || la.contains('billie')) { nudge(7, 0.95, 0.8); nudge(8, 0.90, 0.7); }
+      if (la.contains('drake') || la.contains('badshah')) { nudge(20, 0.95, 0.8); nudge(13, 0.90, 0.7); }
+    }
+
+    for (final l in languages) {
+      final ll = l.toLowerCase();
+      if (ll.contains('hindi') || ll.contains('urdu')) { nudge(19, 0.90, 0.6); }
+      if (ll.contains('punjabi')) { nudge(20, 0.90, 0.6); }
+      if (ll.contains('korean') || ll.contains('japanese')) { nudge(9, 0.90, 0.6); nudge(26, 0.88, 0.6); }
+    }
+
+    return vec;
+  }
+
   static List<double> selfHealAndRecalibrate(List<double> currentVector, {Song? lastSong, String eventType = 'listen'}) {
     final List<double> targetVector = lastSong != null && lastSong.featureVector.isNotEmpty
         ? (lastSong.featureVector.every((x) => x == 0.5) ? extractSongEmbedding(lastSong) : lastSong.featureVector)

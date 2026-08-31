@@ -124,7 +124,7 @@ class PlayerSheet extends ConsumerWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _masterChip(ref, 'Lossless 320k', StudioMasterMode.lossless320, Icons.album_rounded, masterMode, isDark),
+                    _masterChip(ref, 'Master 320k', StudioMasterMode.lossless320, Icons.album_rounded, masterMode, isDark),
                     const SizedBox(width: 8),
                     _masterChip(ref, 'Spatial 3D', StudioMasterMode.spatial3d, Icons.surround_sound_rounded, masterMode, isDark),
                     const SizedBox(width: 8),
@@ -210,7 +210,7 @@ class PlayerSheet extends ConsumerWidget {
   Widget _masterChip(WidgetRef ref, String label, StudioMasterMode mode, IconData icon, StudioMasterMode current, bool isDark) {
     final isSel = current == mode;
     return InkWell(
-      onTap: () { ref.read(studioMasterModeProvider.notifier).state = mode; ref.read(audioPlayerServiceProvider).applyStudioMasterMode(mode); },
+      onTap: () { ref.read(studioMasterModeProvider.notifier).state = mode; ref.read(audioPlayerServiceProvider).applyStudioMasterMode(mode.name); },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(color: isSel ? (isDark ? Colors.white : Colors.black) : (isDark ? const Color(0xFF141414) : const Color(0xFFEBEBEB)), borderRadius: BorderRadius.circular(12), border: Border.all(color: isSel ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white12 : Colors.black12))),

@@ -157,8 +157,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         ? IconButton(
                             icon: Icon(Icons.clear_rounded, size: 18, color: isDark ? Colors.white60 : Colors.black54),
                             onPressed: () {
-                              _searchController.clear();
+                              _searchSequence++;
                               _debounceTimer?.cancel();
+                              _searchController.clear();
                               ref.read(searchResultsProvider.notifier).state = [];
                               ref.read(isSearchingProvider.notifier).state = false;
                               setState(() {});

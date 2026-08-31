@@ -19,24 +19,77 @@ class OnboardingArtistPicker extends StatefulWidget {
     'Drake', 'Coldplay', 'Billie Eilish', 'Badshah',
   ];
 
+  static const Map<String, List<String>> similarArtistsMap = {
+    'Arijit Singh': ['Atif Aslam', 'Mohit Chauhan', 'Jubin Nautiyal', 'KK'],
+    'The Weeknd': ['Post Malone', 'Bruno Mars', 'Lana Del Rey', 'Daft Punk'],
+    'Sidhu Moose Wala': ['Amrit Maan', 'Shubh', 'Amrinder Gill', 'B Praak'],
+    'Diljit Dosanjh': ['Gippy Grewal', 'Guru Randhawa', 'Jassie Gill'],
+    'Taylor Swift': ['Olivia Rodrigo', 'Ariana Grande', 'Selena Gomez', 'Ed Sheeran'],
+    'Pritam': ['Vishal-Shekhar', 'Sachin-Jigar', 'Amit Trivedi'],
+    'Karan Aujla': ['Ikky', 'Deep Jandu', 'Jay Trak'],
+    'AP Dhillon': ['Gurinder Gill', 'Shinda Kahlon', 'Gminxr'],
+    'Fly By Midnight': ['Prateek Kuhad', 'Anuv Jain', 'Lauv', 'Jeremy Zucker'],
+    'Shreya Ghoshal': ['Sunidhi Chauhan', 'Neeti Mohan', 'Monali Thakur'],
+    'Dua Lipa': ['Bebe Rexha', 'Rita Ora', 'Ava Max'],
+    'Atif Aslam': ['Rahat Fateh Ali Khan', 'Ali Zafar', 'Mustafa Zahid'],
+    'Drake': ['Travis Scott', 'Future', 'Kendrick Lamar'],
+    'Coldplay': ['Imagine Dragons', 'OneRepublic', 'The Chainsmokers'],
+    'Billie Eilish': ['FINNEAS', 'Lorde', 'Girl in Red'],
+    'Badshah': ['Raftaar', 'Yo Yo Honey Singh', 'DIVINE', 'Seedhe Maut'],
+  };
+
   @override
   State<OnboardingArtistPicker> createState() => _OnboardingArtistPickerState();
 }
 
 class _OnboardingArtistPickerState extends State<OnboardingArtistPicker> {
   final Map<String, String?> _resolvedPhotos = {};
+  final List<String> _displayedArtists = List.from(OnboardingArtistPicker.popularArtists);
 
   @override
   void initState() {
     super.initState();
-    _loadPhotos();
+    _loadPhotos(_displayedArtists);
   }
 
-  void _loadPhotos() async {
-    for (final artist in OnboardingArtistPicker.popularArtists) {
-      final meta = await ArtistMetadataService.fetchArtistInfo(artist);
-      if (mounted && meta.imageUrl != null) {
-        setState(() => _resolvedPhotos[artist] = meta.imageUrl);
+  void _loadPhotos(List<String> artists) async {
+    try {
+      final futures = artists.where((a) => !_resolvedPhotos.containsKey(a)).map((artist) async {
+        final meta = await ArtistMetadataService.fetchArtistInfo(artist);
+        return MapEntry(artist, meta.imageUrl);
+      });
+      final results = await Future.wait(futures);
+      if (mounted) {
+        setState(() {
+          for (final entry in results) {
+            _resolvedPhotos[entry.key] = entry.value;
+          }
+        });
+      }
+    } catch (_) {}
+  }
+
+  void _handleArtistTapped(String artist) {
+    widget.onToggle(artist);
+    final willBeSelected = !widget.selectedArtists.contains(artist);
+
+    if (willBeSelected) {
+      final similar = OnboardingArtistPicker.similarArtistsMap[artist];
+      if (similar != null) {
+        final newToLoad = <String>[];
+        for (final sim in similar) {
+          if (!_displayedArtists.contains(sim)) {
+            _displayedArtists.insert(
+              (_displayedArtists.indexOf(artist) + 1).clamp(0, _displayedArtists.length),
+              sim,
+            );
+            newToLoad.add(sim);
+          }
+        }
+        if (newToLoad.isNotEmpty) {
+          setState(() {});
+          _loadPhotos(newToLoad);
+        }
       }
     }
   }
@@ -52,16 +105,17 @@ class _OnboardingArtistPickerState extends State<OnboardingArtistPicker> {
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: OnboardingArtistPicker.popularArtists.length,
+      itemCount: _displayedArtists.length,
       itemBuilder: (context, i) {
-        final artist = OnboardingArtistPicker.popularArtists[i];
+        final artist = _displayedArtists[i];
         final isSelected = widget.selectedArtists.contains(artist);
         final photo = _resolvedPhotos[artist];
 
         return GestureDetector(
-          onTap: () => widget.onToggle(artist),
+          onTap: () => _handleArtistTapped(artist),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
             decoration: BoxDecoration(
               color: isSelected ? Colors.white.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(16),
