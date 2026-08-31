@@ -7,6 +7,22 @@ The project adheres to Semantic Versioning: `vX.Y.Z`
 - **Y**: Major Features and Architecture Overhauls
 - **Z**: Bug Fixes, Reliability Patches, and Performance Optimizations
 
+## [1.1.5] - 2026-08-31
+
+### Added & Enhanced
+- **Interactive Drag-to-Reorder Queue Management**:
+  - Added smooth reordering for the active playback queue via `ReorderableListView.builder` in `QueueSheet`.
+  - Implemented boundary-safe index offset calculations and active-song tracking so currently playing song indices stay synchronized during reorders.
+- **English / Roman Transliteration Alignment**:
+  - Integrated `RomanizedTranslationEngine` with phonetic schwa-deletion heuristics across all Brahmic and Indic scripts (Devanagari, Gurmukhi, Bengali, Tamil, Telugu, Malayalam, Gujarati).
+  - Prioritized clean Romanized synced lyrics in LRCLIB fetcher when `English / Global` lyric preference is active.
+- **In-App Direct Package Installer Hardening**:
+  - Fixed Android `FileProvider` path resolutions across internal cache and external files.
+- **Self-Healing Stream Auto-Recovery & Haptics**:
+  - Background auto-reconnect fallback with zero playback interruption when CDN tokens expire.
+
+---
+
 ## [1.1.4] - 2026-08-31
 
 ### Added

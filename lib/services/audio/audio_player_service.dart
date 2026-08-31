@@ -365,15 +365,15 @@ class AudioPlayerService {
   /// Reorder queue: move song from [oldIndex] to [newIndex].
   void reorderQueue(int oldIndex, int newIndex) {
     if (oldIndex < 0 || oldIndex >= _queue.length) return;
-    if (newIndex < 0 || newIndex >= _queue.length) return;
     final song = _queue.removeAt(oldIndex);
-    _queue.insert(newIndex, song);
+    final targetIndex = newIndex.clamp(0, _queue.length);
+    _queue.insert(targetIndex, song);
     // Update current index to follow the playing song
     if (oldIndex == _currentIndex) {
-      _currentIndex = newIndex;
-    } else if (oldIndex < _currentIndex && newIndex >= _currentIndex) {
+      _currentIndex = targetIndex;
+    } else if (oldIndex < _currentIndex && targetIndex >= _currentIndex) {
       _currentIndex--;
-    } else if (oldIndex > _currentIndex && newIndex <= _currentIndex) {
+    } else if (oldIndex > _currentIndex && targetIndex <= _currentIndex) {
       _currentIndex++;
     }
     _queueController.add(_queue);
