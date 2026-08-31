@@ -7,6 +7,17 @@ The project adheres to Semantic Versioning: `vX.Y.Z`
 - **Y**: Major Features and Architecture Overhauls
 - **Z**: Bug Fixes, Reliability Patches, and Performance Optimizations
 
+## [1.1.2] - 2026-08-31
+
+### Fixed & Enhanced
+- **Android Media Quick Settings Notification Controls**: Added native vector drawables for Previous, Next, Favorite, and Repeat actions with dynamic queue integration.
+- **Dynamic Launcher Icon Swapping**: Implemented runtime home screen launcher icon swapping between Noir Black and Noir White matching the active theme mode.
+- **Soft-Coded Live Music Graph Discovery**: Replaced hardcoded artist lookup with real-time live music graph collaboration discovery with infinite recursive expansion capped at 50 artists.
+- **Dynamic Onboarding Languages & Genres**: Selecting any language or genre dynamically unveils related regional and global options.
+- **In-App Update Version Synchronization**: Fixed version comparator to properly reflect v1.1.2.
+- **Hardware DSP Bass & Preamp Gain Calibration**: Enhanced Android Kotlin effects engine with calibrated bass boost and dynamic preamp scaling.
+- **TalkBack & Accessibility Semantics**: Annotated all player control targets with descriptive Semantics for screen readers.
+
 ---
 
 ## [1.1.1] - 2026-08-31
