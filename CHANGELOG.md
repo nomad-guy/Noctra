@@ -10,6 +10,18 @@ The project adheres to Semantic Versioning: `vX.Y.Z`
 ## [1.1.4] - 2026-08-31
 
 ### Added
+- **Universal Multi-Script Lyrics Transliteration Engine (`UniversalLyricsTransliterationEngine`)**:
+  - Zero-latency, 100% offline multi-script lyric transliteration and pronunciation layer based on the `lyric-romanizer` + `ICU` + `Sanscript` architecture.
+  - **Unicode Script Detector**: Automatically detects Japanese (Hiragana/Katakana/Kanji), Korean (Hangul), Chinese (Hanzi), Cyrillic (Russian/Ukrainian), Arabic, Persian, Greek, Thai, Hebrew, Devanagari, Gurmukhi, and Latin scripts.
+  - **Multi-Script Conversion Matrix**:
+    - 🇯🇵 **Japanese**: Full Hepburn Romaji converter with digraph and sokuon gemination handling.
+    - 🇰🇷 **Korean**: Algorithmic 11,172 Unicode Hangul syllable block decomposition ($U+AC00$ to $U+D7A3$) into Initial, Medial, and Final consonants $\to$ Revised Romanization.
+    - 🇨🇳 **Chinese**: Hanzi to Pinyin phonetics.
+    - 🇷🇺 **Russian / Cyrillic**: BGN/PCGN Cyrillic to Latin mapping.
+    - 🇸🇦 **Arabic / Persian**: ALA-LC standard transliteration.
+    - 🇬🇷 **Greek & 🇹🇭 Thai**: Greek and RTGS Thai to Latin.
+    - 🇮🇳 **Indic Multi-Script Hub**: Bidirectional cross-script rendering between Roman, Devanagari, Gurmukhi, Bengali, Tamil, Telugu, Gujarati, Kannada, and Malayalam.
+  - **Dynamic Script Selector in Lyrics View**: Automatically displays contextual chips tailored to the active song (e.g., `[Original (日本語)] [Romaji] [देवनागरी]` for Japanese, `[मूल (देवनागरी)] [Roman (English)] [ਗੁਰਮੁਖੀ]` for Hindi).
 - **Multi-Script Indic Transliteration & Script Conversion Suite**:
   - **`SanscriptEngine`**: Pure Dart zero-latency Brahmic script transliteration matrix supporting Devanagari, Gurmukhi (Punjabi), Bengali, Gujarati, Telugu, Tamil, Kannada, Malayalam, ITRANS, IAST, and Harvard-Kyoto.
   - **`AksharamukhaService`**: Multi-script conversion engine connecting to Aksharamukha with local fallback to `SanscriptEngine` for resilient offline operation.
@@ -24,14 +36,16 @@ The project adheres to Semantic Versioning: `vX.Y.Z`
 - **Noir Black, White & Silver Synthwave Visualizer**:
   - Completely rebuilt `_ProperSynthwavePainter` with pure obsidian `#000000`, deep charcoal `#141414`, metallic silver `#E0E0E0`, and bright white `#FFFFFF` dual-layer audio waveforms and forward-moving perspective grid.
 
-### Fixed & Audited (Passes 1–4, Bugs 1–101)
-- Single-source theme persistence via `ref.listen` in `main.dart` with synchronous SharedPreferences writes.
-- Sleep timer volume loop uses `break` with guaranteed `1.0` volume restoration.
-- Track download progress reporting with fallback progress estimation and stream size integrity checks.
-- Deterministic synthetic song IDs derived from title and artist hash combinations.
-- Guarded `_onSongCompleted` against audio player skip deadlocks.
-- Expanded `NoctraLogger` in-memory ring buffer for release diagnostics.
-- Defensive deep-copies for `MusicBrainzService` metadata caches.
+### Fixed & Audited (Passes 1–5, All Bugs 1–128)
+- **Singleton + Riverpod Double Instance (Bug 1, 8)**: Unified `MusicRepository.instance` and `AudioPlayerService.instance` across background services and Riverpod state providers.
+- **Defensive Collections & Mutation Leaks (Bug 2, 19)**: Enforced `List.unmodifiable` on folder collections and deep value copies for `featureVector` in `Song.copyWith()`.
+- **Async Initialization Race Hazards (Bug 3, 4)**: Added `try/finally` blocks clearing initialization futures on failure in both repository and local database.
+- **Stale Playback Session Guard (Bug 5)**: Protected `_playSessionEpoch` counter preventing delayed position updates from wrong tracks.
+- **Unified Theme Persistence (Bug 6)**: Consolidated `saveThemeMode` into single atomic SharedPreferences writer.
+- **Stream Resolver LRU Order (Bug 10)**: Corrected cache entry re-insertion before eviction in `CompositeStreamResolver`.
+- **Title Sanitizer Regex (Bug 16)**: Replaced overly greedy regex with word-bounded audio/video keyword matchers.
+- **Semantic Versioning Parser (Bug 24)**: Upgraded `AppUpdateService` with clean semver extractor regex.
+- **Non-Volatile Download Directory Cascade (Bug 26)**: Cascades application documents, external storage, and support directories.
 
 ---
 
