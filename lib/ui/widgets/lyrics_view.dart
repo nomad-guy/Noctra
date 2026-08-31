@@ -5,7 +5,7 @@ import '../../core/theme/noir_theme.dart';
 import '../../data/models/song_model.dart';
 import '../../providers/app_providers.dart';
 import '../../services/lyrics/lyrics_service.dart';
-import '../../services/lyrics/devanagari_transliteration_service.dart';
+import '../../services/lyrics/universal_lyrics_transliteration_engine.dart';
 
 class LyricsView extends ConsumerStatefulWidget {
   final Song song;
@@ -22,7 +22,7 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
   int _lastActiveIndex = -2;
   bool _userIsScrolling = false;
   Timer? _resumeAutoScrollTimer;
-  String _selectedScript = 'english';
+  String _selectedScript = 'original';
 
   @override
   void initState() {
@@ -41,6 +41,7 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
     if (oldWidget.song.id != widget.song.id) {
       _lineKeys.clear();
       _lastActiveIndex = -2;
+      _selectedScript = 'original';
       setState(_loadLyrics);
     }
   }
@@ -69,8 +70,6 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
 
   void _scrollToIndex(int index) {
     if (_userIsScrolling) return;
-    // Only scroll when the active line actually changes — prevents
-    // firing every frame which caused early scroll-away from the current line.
     if (index == _lastActiveIndex) return;
     _lastActiveIndex = index;
     if (index < 0) {
@@ -81,8 +80,6 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
     }
     final key = _lineKeys[index];
     if (key?.currentContext != null) {
-      // alignment: 0.5 centers the active line in the viewport so it dwells
-      // visibly for the full duration before the next line triggers a scroll.
       Scrollable.ensureVisible(key!.currentContext!, alignment: 0.5, duration: const Duration(milliseconds: 400), curve: Curves.easeOutCubic);
     }
   }
@@ -93,137 +90,139 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
     final isDark = themeMode.isDark;
     final currentPos = ref.watch(positionStreamProvider).value ?? Duration.zero;
 
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: FutureBuilder<LyricsData>(
-            future: _lyricsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(strokeWidth: 2, color: isDark ? Colors.white70 : Colors.black87),
-                      const SizedBox(height: 14),
-                      Text('Syncing Studio Lyrics...', style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.black54)),
-                    ],
-                  ),
-                );
-              }
+    return FutureBuilder<LyricsData>(
+      future: _lyricsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(strokeWidth: 2, color: isDark ? Colors.white70 : Colors.black87),
+                const SizedBox(height: 14),
+                Text('Syncing Studio Lyrics...', style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.black54)),
+              ],
+            ),
+          );
+        }
 
-              final rawData = snapshot.data ?? LyricsData.empty();
-              final data = _selectedScript == 'devanagari'
-                  ? DevanagariTransliterationService.transliterateLyrics(rawData, 'devanagari')
-                  : rawData;
+        final rawData = snapshot.data ?? LyricsData.empty();
+        final options = UniversalLyricsTransliterationEngine.getAvailableScriptOptions(rawData);
+        final data = UniversalLyricsTransliterationEngine.transliterateLyrics(rawData, _selectedScript);
 
-              if (data.isSynced && data.lines.isNotEmpty) {
-                final activeIndex = _findActiveIndex(data.lines, currentPos);
-                WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToIndex(activeIndex));
-
-                return NotificationListener<ScrollNotification>(
-                  onNotification: (notification) {
-                    if (notification is ScrollStartNotification && notification.dragDetails != null) {
-                      _userIsScrolling = true;
-                      _resumeAutoScrollTimer?.cancel();
-                    } else if (notification is ScrollEndNotification) {
-                      _resumeAutoScrollTimer?.cancel();
-                      // 5s gives the user time to read before auto-scroll resumes.
-                      _resumeAutoScrollTimer = Timer(const Duration(seconds: 5), () {
-                        if (mounted) setState(() => _userIsScrolling = false);
-                      });
-                    }
-                    return false;
-                  },
-                  child: ShaderMask(
-                    shaderCallback: (Rect bounds) {
-                      return const LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Colors.white, Colors.white, Colors.transparent],
-                        stops: [0.0, 0.06, 0.92, 1.0],
-                      ).createShader(bounds);
-                    },
-                    blendMode: BlendMode.dstIn,
-                    child: ListView.builder(
-                      controller: _scrollController,
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 64, 20, 80),
-                      itemCount: data.lines.length,
-                      itemBuilder: (context, index) {
-                        final line = data.lines[index];
-                        final isActive = index == activeIndex;
-                        final isPast = activeIndex >= 0 && index < activeIndex;
-                        final key = _lineKeys.putIfAbsent(index, () => GlobalKey());
-
-                        return GestureDetector(
-                          key: key,
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            ref.read(audioPlayerServiceProvider).seek(line.timestamp);
-                            setState(() => _userIsScrolling = false);
-                            _scrollToIndex(index);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 280),
-                            curve: Curves.easeOutCubic,
-                            margin: const EdgeInsets.symmetric(vertical: 4),
-                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              color: isActive
-                                  ? (isDark ? const Color(0x1FFFFFFF) : const Color(0x12000000))
-                                  : Colors.transparent,
-                              border: isActive
-                                  ? Border.all(
-                                      color: isDark ? const Color(0x33E0E0E0) : const Color(0x22000000),
-                                      width: 1,
-                                    )
-                                  : null,
-                            ),
-                            child: Text(
-                              line.text,
-                              style: TextStyle(
-                                fontSize: isActive ? 19.5 : (isPast ? 14.0 : 15.0),
-                                fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
-                                letterSpacing: isActive ? 0.2 : 0.0,
-                                height: 1.4,
-                                color: isActive
-                                    ? (isDark ? Colors.white : Colors.black)
-                                    : (isDark
-                                        ? Colors.white.withValues(alpha: isPast ? 0.32 : 0.60)
-                                        : Colors.black.withValues(alpha: isPast ? 0.26 : 0.50)),
-                              ),
-                            ),
-                          ),
-                        );
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: data.isSynced && data.lines.isNotEmpty
+                  ? NotificationListener<ScrollNotification>(
+                      onNotification: (notification) {
+                        if (notification is ScrollStartNotification && notification.dragDetails != null) {
+                          _userIsScrolling = true;
+                          _resumeAutoScrollTimer?.cancel();
+                        } else if (notification is ScrollEndNotification) {
+                          _resumeAutoScrollTimer?.cancel();
+                          _resumeAutoScrollTimer = Timer(const Duration(seconds: 5), () {
+                            if (mounted) setState(() => _userIsScrolling = false);
+                          });
+                        }
+                        return false;
                       },
-                    ),
-                  ),
-                );
-              }
+                      child: ShaderMask(
+                        shaderCallback: (Rect bounds) {
+                          return const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.transparent, Colors.white, Colors.white, Colors.transparent],
+                            stops: [0.0, 0.06, 0.92, 1.0],
+                          ).createShader(bounds);
+                        },
+                        blendMode: BlendMode.dstIn,
+                        child: Builder(
+                          builder: (context) {
+                            final activeIndex = _findActiveIndex(data.lines, currentPos);
+                            WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToIndex(activeIndex));
 
-              return SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
-                child: Text(data.plainText, textAlign: TextAlign.center, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w500, height: 1.8, color: isDark ? Colors.white70 : Colors.black87)),
-              );
-            },
-          ),
-        ),
-        Positioned(
-          top: 10,
-          right: 14,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _scriptChip('English', 'english', isDark),
-              const SizedBox(width: 6),
-              _scriptChip('देवनागरी', 'devanagari', isDark),
-            ],
-          ),
-        ),
-      ],
+                            return ListView.builder(
+                              controller: _scrollController,
+                              physics: const BouncingScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(20, 64, 20, 80),
+                              itemCount: data.lines.length,
+                              itemBuilder: (context, index) {
+                                final line = data.lines[index];
+                                final isActive = index == activeIndex;
+                                final isPast = activeIndex >= 0 && index < activeIndex;
+                                final key = _lineKeys.putIfAbsent(index, () => GlobalKey());
+
+                                return GestureDetector(
+                                  key: key,
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () {
+                                    ref.read(audioPlayerServiceProvider).seek(line.timestamp);
+                                    setState(() => _userIsScrolling = false);
+                                    _scrollToIndex(index);
+                                  },
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 280),
+                                    curve: Curves.easeOutCubic,
+                                    margin: const EdgeInsets.symmetric(vertical: 4),
+                                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      color: isActive
+                                          ? (isDark ? const Color(0x1FFFFFFF) : const Color(0x12000000))
+                                          : Colors.transparent,
+                                      border: isActive
+                                          ? Border.all(
+                                              color: isDark ? const Color(0x33E0E0E0) : const Color(0x22000000),
+                                              width: 1,
+                                            )
+                                          : null,
+                                    ),
+                                    child: Text(
+                                      line.text,
+                                      style: TextStyle(
+                                        fontSize: isActive ? 19.5 : (isPast ? 14.0 : 15.0),
+                                        fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
+                                        letterSpacing: isActive ? 0.2 : 0.0,
+                                        height: 1.4,
+                                        color: isActive
+                                            ? (isDark ? Colors.white : Colors.black)
+                                            : (isDark
+                                                ? Colors.white.withValues(alpha: isPast ? 0.32 : 0.60)
+                                                : Colors.black.withValues(alpha: isPast ? 0.26 : 0.50)),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
+                      child: Text(data.plainText, textAlign: TextAlign.center, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w500, height: 1.8, color: isDark ? Colors.white70 : Colors.black87)),
+                    ),
+            ),
+            if (options.length > 1)
+              Positioned(
+                top: 10,
+                right: 14,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: options.map((opt) {
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 6),
+                      child: _scriptChip(opt.label, opt.code, isDark),
+                    );
+                  }).toList(),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 

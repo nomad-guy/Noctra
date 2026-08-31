@@ -40,10 +40,10 @@ final autoplayDelayProvider = StateProvider<int>((ref) => 3);
 final audioFadeTransitionProvider = StateProvider<bool>((ref) => true);
 
 // Repository
-final musicRepositoryProvider = ChangeNotifierProvider<MusicRepository>((ref) => MusicRepository());
+final musicRepositoryProvider = ChangeNotifierProvider<MusicRepository>((ref) => MusicRepository.instance);
 
 // Audio Player Service & Router
-final audioPlayerServiceProvider = Provider<AudioPlayerService>((ref) => AudioPlayerService());
+final audioPlayerServiceProvider = Provider<AudioPlayerService>((ref) => AudioPlayerService.instance);
 final audioRouterServiceProvider = Provider<AudioRouterService>((ref) => AudioRouterService());
 
 // Audio Output Devices Stream

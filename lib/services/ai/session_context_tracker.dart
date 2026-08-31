@@ -103,10 +103,11 @@ class SessionContextTracker {
 
   // Direction of taste shift in this session (last-3 vs prev-3 embeddings)
   List<double> get momentumFeatures {
-    if (_queue.length < _momentumWindow * 2) return List.filled(8, 0.5);
+    final qLen = _queue.length;
+    if (qLen < _momentumWindow * 2) return List.filled(8, 0.5);
     final dim = TasteVectorEngine.vectorDimension;
-    final recent = _queue.sublist(_queue.length - _momentumWindow);
-    final prev = _queue.sublist(_queue.length - _momentumWindow * 2, _queue.length - _momentumWindow);
+    final recent = _queue.sublist(qLen - _momentumWindow);
+    final prev = _queue.sublist(qLen - _momentumWindow * 2, qLen - _momentumWindow);
 
     List<double> avg(List<_SessionEntry> entries) {
       final r = List<double>.filled(dim, 0.0);

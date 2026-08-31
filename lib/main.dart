@@ -130,11 +130,11 @@ class MainNavigationShell extends ConsumerStatefulWidget {
 }
 
 class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
-  static final List<Widget> _screens = [
-    const HomeScreen(),
-    const SearchScreen(),
-    const LibraryScreen(),
-    const AIStudioScreen(),
+  final List<Widget> _screens = const [
+    HomeScreen(),
+    SearchScreen(),
+    LibraryScreen(),
+    AIStudioScreen(),
   ];
 
   @override
@@ -162,9 +162,9 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
               top: false,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
-                  NoirMiniPlayer(),
-                  _CustomBottomNavBar(),
+                children: [
+                  const NoirMiniPlayer(),
+                  const _CustomBottomNavBar(),
                 ],
               ),
             ),

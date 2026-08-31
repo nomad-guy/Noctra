@@ -21,6 +21,7 @@ class VibeChip {
 class MusicRepository extends ChangeNotifier {
   static final MusicRepository _instance = MusicRepository._internal();
   factory MusicRepository() => _instance;
+  static MusicRepository get instance => _instance;
 
   final List<Song> _localLibrary = [];
   final List<Song> _downloads = [];
@@ -34,7 +35,9 @@ class MusicRepository extends ChangeNotifier {
   List<Song> get downloads => List.unmodifiable(_downloads);
   List<Song> get favorites => List.unmodifiable(_favorites);
   List<Song> get recentlyPlayed => List.unmodifiable(_recentlyPlayed);
-  Map<String, List<Song>> get customFolders => Map.unmodifiable(_customFolders);
+  Map<String, List<Song>> get customFolders => Map<String, List<Song>>.unmodifiable(
+    _customFolders.map((k, v) => MapEntry<String, List<Song>>(k, List<Song>.unmodifiable(v))),
+  );
   List<double> get userTasteVector => _cachedTasteVector;
 
   bool _isLoaded = false;
@@ -46,8 +49,11 @@ class MusicRepository extends ChangeNotifier {
     if (_isLoaded) return;
     if (_initFuture != null) return _initFuture!;
     _initFuture = _loadFromDatabase();
-    await _initFuture;
-    _initFuture = null;
+    try {
+      await _initFuture;
+    } finally {
+      _initFuture = null;
+    }
   }
 
   Future<void> _loadFromDatabase() async {
@@ -386,8 +392,8 @@ class MusicRepository extends ChangeNotifier {
 
   List<Map<String, dynamic>> curateByVibe({String? vibeKey, String? naturalPrompt}) {
     final target = TasteVectorEngine.getTargetVector(vibeKey: vibeKey, prompt: naturalPrompt, defaultTaste: _userTasteVector);
-    final candidates = {..._localLibrary, ..._downloads, ..._recentlyPlayed}.toList();
-    if (candidates.isEmpty) candidates.addAll(_localLibrary);
+    final candidates = {..._localLibrary, ..._downloads, ..._recentlyPlayed}.map((s) => s.copyWith()).toList();
+    if (candidates.isEmpty) candidates.addAll(_localLibrary.map((s) => s.copyWith()));
 
     final scored = candidates.map((s) {
       final songEmbedding = s.featureVector.every((x) => x == 0.5) ? TasteVectorEngine.extractSongEmbedding(s) : s.featureVector;
@@ -409,7 +415,7 @@ class MusicRepository extends ChangeNotifier {
       searched = <Song>{...searched, ...expanded}.toList();
     }
     final target = TasteVectorEngine.getTargetVector(vibeKey: vibeKey, prompt: cleanPrompt, defaultTaste: _userTasteVector);
-    final candidates = searched.isNotEmpty ? searched : {..._localLibrary, ..._downloads, ..._recentlyPlayed}.toList();
+    final candidates = (searched.isNotEmpty ? searched : {..._localLibrary, ..._downloads, ..._recentlyPlayed}).map((s) => s.copyWith()).toList();
 
     final scored = candidates.map((s) {
       final songEmbedding = s.featureVector.every((x) => x == 0.5)

@@ -13,10 +13,12 @@ class NoctraLogger {
   static final List<LogEntry> _recentLogs = [];
   static const int _maxLogs = 250;
 
-  static List<LogEntry> get recentLogs => List.unmodifiable(_recentLogs);
+  static List<LogEntry> get recentLogs => List.unmodifiable(List<LogEntry>.from(_recentLogs));
 
   static void _record(String level, String message, [dynamic error]) {
-    if (_recentLogs.length >= _maxLogs) _recentLogs.removeAt(0);
+    while (_recentLogs.length >= _maxLogs) {
+      if (_recentLogs.isNotEmpty) _recentLogs.removeAt(0);
+    }
     _recentLogs.add(LogEntry(level, message, error, DateTime.now()));
   }
 

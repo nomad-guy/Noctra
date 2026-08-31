@@ -201,12 +201,9 @@ class LyricsService {
         .replaceAll(RegExp(r'\(.*?\)', caseSensitive: false), '')
         .replaceAll(RegExp(r'\[.*?\]', caseSensitive: false), '')
         .replaceAll(RegExp(r'\|.*'), '')
-        .replaceAll(RegExp(r'feat\..*', caseSensitive: false), '')
-        .replaceAll(RegExp(r'ft\..*', caseSensitive: false), '')
-        .replaceAll(RegExp(r'official.*', caseSensitive: false), '')
-        .replaceAll(RegExp(r'video.*', caseSensitive: false), '')
-        .replaceAll(RegExp(r'audio.*', caseSensitive: false), '')
-        .replaceAll(RegExp(r'lyrics?.*', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\b(feat|ft)\.?\s+.*', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\b(official\s+)?(music\s+)?(video|audio|lyrics?|track)\b.*', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\s+-\s+.*'), '')
         .trim();
   }
 

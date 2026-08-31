@@ -100,15 +100,24 @@ class AppUpdateService {
 
   static bool _isVersionNewer(String latest, String current) {
     try {
-      final cleanLatest = latest.replaceAll(RegExp(r'[^0-9.]'), '').split('.').where((s) => s.isNotEmpty).map(int.parse).toList();
-      final cleanCurrent = current.replaceAll(RegExp(r'[^0-9.]'), '').split('.').where((s) => s.isNotEmpty).map(int.parse).toList();
-      for (int i = 0; i < cleanLatest.length && i < cleanCurrent.length; i++) {
-        if (cleanLatest[i] > cleanCurrent[i]) return true;
-        if (cleanLatest[i] < cleanCurrent[i]) return false;
-      }
-      return cleanLatest.length > cleanCurrent.length;
+      final reg = RegExp(r'(\d+)\.(\d+)\.(\d+)');
+      final mLatest = reg.firstMatch(latest);
+      final mCurrent = reg.firstMatch(current);
+      if (mLatest == null || mCurrent == null) return false;
+
+      final lMajor = int.parse(mLatest.group(1)!);
+      final lMinor = int.parse(mLatest.group(2)!);
+      final lPatch = int.parse(mLatest.group(3)!);
+
+      final cMajor = int.parse(mCurrent.group(1)!);
+      final cMinor = int.parse(mCurrent.group(2)!);
+      final cPatch = int.parse(mCurrent.group(3)!);
+
+      if (lMajor != cMajor) return lMajor > cMajor;
+      if (lMinor != cMinor) return lMinor > cMinor;
+      return lPatch > cPatch;
     } catch (_) {
-      return latest != current;
+      return false;
     }
   }
 

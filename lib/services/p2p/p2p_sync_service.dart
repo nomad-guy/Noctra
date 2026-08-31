@@ -58,25 +58,30 @@ class P2PSyncService extends ChangeNotifier {
   void setUserName(String name) { _userName = name.trim().isEmpty ? 'Listener' : name.trim(); notifyListeners(); }
   String _generateRoomCode() => 'JAM-${1000 + Random().nextInt(9000)}';
 
-  bool _isValidIpv4(String ip) {
-    if (ip == 'localhost' || ip == '127.0.0.1') return true;
-    final parts = ip.split('.');
-    if (parts.length != 4) return false;
-    int first = 0, second = 0;
-    for (int i = 0; i < 4; i++) {
-      final n = int.tryParse(parts[i]);
-      if (n == null || n < 0 || n > 255) return false;
-      if (i == 0) first = n;
-      if (i == 1) second = n;
+  bool _isValidHostOrIp(String host) {
+    if (host == 'localhost' || host == '127.0.0.1' || host == '::1') return true;
+    // Hostnames (.local, .lan, alphanumeric)
+    if (RegExp(r'^[a-zA-Z0-9._-]+$').hasMatch(host) && !host.contains('..')) {
+      // If looks like IPv4, validate strictly
+      if (RegExp(r'^\d+\.\d+\.\d+\.\d+$').hasMatch(host)) {
+        final parts = host.split('.');
+        if (parts.length != 4) return false;
+        int first = 0, second = 0;
+        for (int i = 0; i < 4; i++) {
+          final n = int.tryParse(parts[i]);
+          if (n == null || n < 0 || n > 255) return false;
+          if (i == 0) first = n;
+          if (i == 1) second = n;
+        }
+        if (first == 0 || first == 127) return false;
+        if (first == 169 && second == 254) return false;
+        if (first >= 224) return false;
+        return true;
+      }
+      // Valid hostname or IPv6
+      return true;
     }
-    // Block unspecified, loopback, link-local, multicast, and broadcast
-    if (first == 0) return false; // 0.x.x.x (unspecified)
-    if (first == 127) return false; // 127.x.x.x (loopback)
-    if (first == 169 && second == 254) return false; // 169.254.x.x (link-local auto-ip)
-    if (first >= 224 && first <= 239) return false; // 224-239.x.x.x (multicast)
-    if (first == 255 && second == 255 && parts[2] == '255' && parts[3] == '255') return false; // broadcast
-    if (first >= 240) return false; // 240+ (reserved)
-    return true; // 10.x.x.x, 172.16-31.x.x, 192.168.x.x are valid LAN IPs
+    return false;
   }
 
   Future<bool> startHost({int port = 8099, String? customRoomCode}) async {
@@ -204,7 +209,7 @@ class P2PSyncService extends ChangeNotifier {
 
   Future<bool> joinParty(String hostIp, {int port = 8099}) async {
     final cleanIp = hostIp.trim();
-    if (!_isValidIpv4(cleanIp)) return false;
+    if (!_isValidHostOrIp(cleanIp)) return false;
     await stopParty();
     _connectedHostIp = cleanIp;
     _userName = 'Listener';
@@ -354,7 +359,8 @@ class P2PSyncService extends ChangeNotifier {
 
   void _broadcastToPeers(String message) {
     final dead = <dynamic>[];
-    for (final peer in _connectedPeers) {
+    final peersSnapshot = List<dynamic>.from(_connectedPeers);
+    for (final peer in peersSnapshot) {
       try {
         peer.add(message);
       } catch (_) {

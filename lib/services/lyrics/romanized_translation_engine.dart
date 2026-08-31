@@ -29,7 +29,9 @@ class RomanizedTranslationEngine {
     for (final key in _lexicon.allKeys) {
       final dev = _lexicon.lookup(key);
       if (dev != null && dev.isNotEmpty) {
-        _inverseDevanagariToRoman[dev] = _capitalize(key);
+        if (!_inverseDevanagariToRoman.containsKey(dev) || (!key.contains(RegExp(r'[A-Z]')) && key.length <= _inverseDevanagariToRoman[dev]!.length)) {
+          _inverseDevanagariToRoman[dev] = _capitalize(key);
+        }
       }
     }
 

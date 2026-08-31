@@ -136,7 +136,7 @@ class NoctraManifestStore {
     _rebuildWeights();
   }
 
-  Future<void> persist() async {
+  Future<void> persist({SharedPreferences? prefs}) async {
     try {
       if (manifests.length > 500) {
         final sortedKeys = manifests.keys.toList()
@@ -144,10 +144,10 @@ class NoctraManifestStore {
         for (final k in sortedKeys.take(manifests.length - 500)) { manifests.remove(k); }
         _rebuildWeights();
       }
-      final prefs = await SharedPreferences.getInstance();
+      final p = prefs ?? await SharedPreferences.getInstance();
       final map = <String, dynamic>{};
       manifests.forEach((k, v) => map[k] = v.toMap());
-      await prefs.setString('noctra_kg_manifests', jsonEncode(map));
+      await p.setString('noctra_kg_manifests', jsonEncode(map));
     } catch (e) {
       NoctraLogger.e('Failed to persist manifests store', e);
     }

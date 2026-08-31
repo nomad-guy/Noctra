@@ -17,6 +17,7 @@ import '../ai/implicit_signal_tracker.dart';
 class AudioPlayerService {
   static final AudioPlayerService _instance = AudioPlayerService._internal();
   factory AudioPlayerService() => _instance;
+  static AudioPlayerService get instance => _instance;
   // just_audio 0.10 (Media3): maxSkipsOnError replaces old skip-on-error behavior
   // from the deprecated playbackEventStream. 6 = skip after 6 consecutive load failures.
   final AudioPlayer _player = AudioPlayer(maxSkipsOnError: 6);
@@ -43,10 +44,10 @@ class AudioPlayerService {
   bool get isAutoplayEnabled => _isAutoplayEnabled;
   bool get isFadeEnabled => _isFadeEnabled;
   LoopMode _loopMode = LoopMode.off;
-  LoopMode get loopMode => _loopMode;    int _autoplayDelaySeconds = 0, _crossfadeSeconds = 0, _lastSavedSec = 0, _playSessionEpoch = 0;
-  bool _restoredPositionUsed = false;
-  int _positionSaveEpoch = 0; // C2: epoch guard for position save listener
+  LoopMode get loopMode => _loopMode;
+  int _autoplayDelaySeconds = 3;
   int get autoplayDelaySeconds => _autoplayDelaySeconds;
+  int _crossfadeSeconds = 3;
   int get crossfadeSeconds => _crossfadeSeconds;
   int? _sleepTimerRemainingMinutes;
   int? get sleepTimerRemainingMinutes => _sleepTimerRemainingMinutes;
@@ -56,6 +57,9 @@ class AudioPlayerService {
   String? _lastSavedSongId;
   StreamResolutionMetadata? _lastResolution;
   StreamResolutionMetadata? get lastResolution => _lastResolution;
+  int _lastSavedSec = 0, _playSessionEpoch = 0;
+  bool _restoredPositionUsed = false;
+  int _positionSaveEpoch = 0; // C2: epoch guard for position save listener
 
   AudioPlayerService._internal() {
     _initAudioSession();
@@ -69,13 +73,14 @@ class AudioPlayerService {
     _player.positionStream.listen((pos) {
       // C2: epoch guard — skip stale events from the old song
       if (_playSessionEpoch != _positionSaveEpoch) return;
-      if (_currentSong != null && _loopMode != LoopMode.one && pos.inSeconds >= 5 && pos.inSeconds != _lastSavedSec && pos.inSeconds % 5 == 0) {
+      final activeSong = _currentSong;
+      if (activeSong != null && _loopMode != LoopMode.one && pos.inSeconds >= 5 && pos.inSeconds != _lastSavedSec && pos.inSeconds % 5 == 0) {
         _lastSavedSec = pos.inSeconds;
-        // H-R5-06: Skip saving during the first few seconds after a
+        // Skip saving during the first few seconds after a
         // restored position to avoid overwriting the restored 50s with 5s.
         if (_restoredPositionUsed && pos.inSeconds < 15) return;
         _restoredPositionUsed = false;
-        NoctraLocalDatabase().savePlaybackPosition(_currentSong, pos.inMilliseconds);
+        NoctraLocalDatabase().savePlaybackPosition(activeSong, pos.inMilliseconds);
       }
     });
   }
@@ -158,7 +163,6 @@ class AudioPlayerService {
     }
     _currentSong = song; _songStartTime = DateTime.now();
     _currentSongController.add(song); _queueController.add(_queue);
-    NoctraLocalDatabase().recordManifest(song, action: 'play');
     MusicRepository().recordSongPlayed(song);
     try { await _player.stop(); } catch (_) {}
     // C-1 + C2 fix: reset AFTER stop and bump epoch so stale position

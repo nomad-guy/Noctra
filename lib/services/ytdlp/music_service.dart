@@ -57,9 +57,14 @@ class MusicService {
       mergedResults.add(s);
     }
 
+    final src = source.toLowerCase().trim();
+    final bool querySaavn = src == 'all' || src == 'saavn' || src == 'jiosaavn';
+    final bool queryYt = src == 'all' || src == 'youtube' || src == 'ytmusic';
+    final bool queryItunes = src == 'all' || src == 'itunes' || src == 'apple';
+
     final futures = <Future>[];
 
-    if (!kIsWeb) {
+    if (!kIsWeb && querySaavn) {
       futures.add(() async {
         try {
           final List<dynamic>? nativeSongs = await const MethodChannel('com.noctra.app/native_resolver').invokeListMethod('searchJioSaavn', {'query': clean, 'limit': 20}).timeout(const Duration(seconds: 4));
@@ -71,7 +76,9 @@ class MusicService {
           }
         } catch (_) {}
       }());
+    }
 
+    if (queryYt) {
       futures.add(() async {
         try {
           final sUri = Uri.parse('https://music.youtube.com/youtubei/v1/search');
@@ -101,21 +108,23 @@ class MusicService {
       }());
     }
 
-    futures.add(() async {
-      try {
-        final res = await http.get(Uri.parse('https://itunes.apple.com/search?term=${Uri.encodeComponent(clean)}&entity=song&limit=25')).timeout(const Duration(seconds: 4));
-        if (res.statusCode == 200) {
-          final results = jsonDecode(res.body)['results'] as List?;
-          if (results != null) {
-            for (final item in results) {
-              addSong(Song(id: 'itunes_${item['trackId']}', title: item['trackName'] ?? 'Unknown Track', artist: item['artistName'] ?? 'Unknown Artist', album: item['collectionName'] ?? 'Master Album', artworkUrl: (item['artworkUrl100'] as String?)?.replaceAll('100x100bb', '600x600bb'), streamUrl: null, duration: Duration(milliseconds: item['trackTimeMillis'] ?? 210000), genre: item['primaryGenreName'] ?? 'Global', featureVector: _deriveFeatureVector(item['trackName'] ?? '', artist: item['artistName'] ?? '', album: item['collectionName'] ?? '', genre: item['primaryGenreName'] ?? '')));
+    if (queryItunes) {
+      futures.add(() async {
+        try {
+          final res = await http.get(Uri.parse('https://itunes.apple.com/search?term=${Uri.encodeComponent(clean)}&entity=song&limit=25')).timeout(const Duration(seconds: 4));
+          if (res.statusCode == 200) {
+            final results = jsonDecode(res.body)['results'] as List?;
+            if (results != null) {
+              for (final item in results) {
+                addSong(Song(id: 'itunes_${item['trackId']}', title: item['trackName'] ?? 'Unknown Track', artist: item['artistName'] ?? 'Unknown Artist', album: item['collectionName'] ?? 'Master Album', artworkUrl: (item['artworkUrl100'] as String?)?.replaceAll('100x100bb', '600x600bb'), streamUrl: null, duration: Duration(milliseconds: item['trackTimeMillis'] ?? 210000), genre: item['primaryGenreName'] ?? 'Global', featureVector: _deriveFeatureVector(item['trackName'] ?? '', artist: item['artistName'] ?? '', album: item['collectionName'] ?? '', genre: item['primaryGenreName'] ?? '')));
+              }
             }
           }
-        }
-      } catch (_) {}
-    }());
+        } catch (_) {}
+      }());
+    }
 
-    if (clean.split(' ').length >= 2 || clean.length > 10) {
+    if (src == 'all' && (clean.split(' ').length >= 2 || clean.length > 10)) {
       futures.add(() async {
         try {
           final lUri = Uri.parse('https://lrclib.net/api/search?q=${Uri.encodeComponent(clean)}');
@@ -220,7 +229,15 @@ class MusicService {
     try {
       await PermissionHelper.requestStoragePermissions();
       Directory? baseDir;
-      try { baseDir = await getApplicationDocumentsDirectory(); } catch (_) { baseDir = await getTemporaryDirectory(); }
+      try {
+        baseDir = await getApplicationDocumentsDirectory();
+      } catch (_) {
+        try {
+          baseDir = await getApplicationSupportDirectory();
+        } catch (_) {
+          baseDir = await getTemporaryDirectory();
+        }
+      }
       final musicDir = Directory('${baseDir.path}/NoctraMusic');
       if (!musicDir.existsSync()) musicDir.createSync(recursive: true);
       final rawName = '${song.artist}_${song.title}'.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(' ', '_');

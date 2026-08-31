@@ -238,7 +238,8 @@ class CompositeStreamResolver {
         if (await resolver.canResolve(song)) {
           final url = await resolver.resolveStreamUrl(song);
           if (url != null && url.isNotEmpty && !url.contains('preview') && !url.contains('scdn.co')) {
-            if (_cache.length > 200) {
+            _cache.remove(song.id);
+            if (_cache.length >= 200) {
               _cache.remove(_cache.keys.first);
             }
             _cache[song.id] = _CacheEntry(url, now);

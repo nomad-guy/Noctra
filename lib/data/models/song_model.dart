@@ -66,30 +66,28 @@ class Song {
       genre: clearGenre ? null : (genre ?? this.genre),
       mood: clearMood ? null : (mood ?? this.mood),
       isDownloaded: isDownloaded ?? this.isDownloaded,
-      featureVector: featureVector ?? this.featureVector,
+      featureVector: featureVector != null ? List<double>.from(featureVector) : List<double>.from(this.featureVector),
       replayCount: replayCount ?? this.replayCount,
       skipCount: skipCount ?? this.skipCount,
     );
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'title': title,
-      'artist': artist,
-      'album': album,
-      'artworkUrl': artworkUrl,
-      'localFilePath': localFilePath,
-      'streamUrl': streamUrl,
-      'durationMs': duration.inMilliseconds,
-      'genre': genre,
-      'mood': mood,
-      'isDownloaded': isDownloaded ? 1 : 0,
-      'featureVector': featureVector,
-      'replayCount': replayCount,
-      'skipCount': skipCount,
-    };
-  }
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'title': title,
+        'artist': artist,
+        'album': album,
+        'artworkUrl': artworkUrl,
+        'localFilePath': localFilePath,
+        'streamUrl': streamUrl,
+        'durationMs': duration.inMilliseconds,
+        'genre': genre,
+        'mood': mood,
+        'isDownloaded': isDownloaded ? 1 : 0,
+        'featureVector': jsonEncode(featureVector),
+        'replayCount': replayCount,
+        'skipCount': skipCount,
+      };
 
   Map<String, dynamic> toJson() => toMap();
 
@@ -110,6 +108,21 @@ class Song {
       } catch (_) {}
     }
 
+    int parsedDurationMs = 0;
+    final msVal = map['durationMs'];
+    final secVal = map['duration'];
+    if (msVal != null) {
+      final num? p = msVal is num ? msVal : num.tryParse(msVal.toString());
+      if (p != null && p > 0) {
+        parsedDurationMs = p < 1000 ? (p * 1000).toInt() : p.toInt();
+      }
+    } else if (secVal != null) {
+      final num? p = secVal is num ? secVal : num.tryParse(secVal.toString());
+      if (p != null && p > 0) {
+        parsedDurationMs = p > 10000 ? p.toInt() : (p * 1000).toInt();
+      }
+    }
+
     return Song(
       id: map['id'] ?? '',
       title: map['title'] ?? 'Unknown Track',
@@ -118,14 +131,7 @@ class Song {
       artworkUrl: map['artworkUrl'],
       localFilePath: map['localFilePath'],
       streamUrl: map['streamUrl'],
-      duration: Duration(
-        milliseconds: (map['durationMs'] is num
-            ? (map['durationMs'] as num).toInt()
-            : int.tryParse(map['durationMs']?.toString() ?? '')) ??
-        (map['duration'] != null
-            ? ((num.tryParse(map['duration'].toString()) ?? 0).toInt() * 1000)
-            : 0),
-      ),
+      duration: Duration(milliseconds: parsedDurationMs),
       genre: map['genre'],
       mood: map['mood'],
       isDownloaded: map['isDownloaded'] == 1 || map['isDownloaded'] == true,

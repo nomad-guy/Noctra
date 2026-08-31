@@ -7,6 +7,7 @@ import 'package:noctra/services/lyrics/dynamic_lexicon.dart';
 import 'package:noctra/services/lyrics/romanized_translation_engine.dart';
 import 'package:noctra/services/lyrics/sanscript_engine.dart';
 import 'package:noctra/services/lyrics/indic_xlit_engine.dart';
+import 'package:noctra/services/lyrics/universal_lyrics_transliteration_engine.dart';
 import 'package:noctra/core/utils/noctra_localization.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -104,6 +105,37 @@ void main() {
 
       final punjabi = await IndicXlitEngine.transliterate('mera dil', targetLang: 'pa');
       expect(punjabi.isNotEmpty, isTrue);
+    });
+  });
+
+  group('Universal Lyrics Transliteration Engine Tests', () {
+    test('Detects Japanese, Korean, Cyrillic, Devanagari, and Latin scripts accurately', () {
+      expect(UniversalLyricsTransliterationEngine.detectScript('こんにちは 世界'), LyricScript.japanese);
+      expect(UniversalLyricsTransliterationEngine.detectScript('안녕하세요'), LyricScript.korean);
+      expect(UniversalLyricsTransliterationEngine.detectScript('Привет мир'), LyricScript.cyrillic);
+      expect(UniversalLyricsTransliterationEngine.detectScript('मेरा दिल ये पुकारे'), LyricScript.devanagari);
+      expect(UniversalLyricsTransliterationEngine.detectScript('Shape of You'), LyricScript.latin);
+    });
+
+    test('Transliterates Japanese Kana to Romaji accurately', () {
+      final romaji = UniversalLyricsTransliterationEngine.transliterateText('こんにちは', 'roman');
+      expect(romaji.toLowerCase(), 'konnichiwa');
+    });
+
+    test('Transliterates Korean Hangul to Romanized text accurately', () {
+      final roman = UniversalLyricsTransliterationEngine.transliterateText('안녕하세요', 'roman');
+      expect(roman.isNotEmpty, isTrue);
+      expect(roman.contains('annyeong'), isTrue);
+    });
+
+    test('Transliterates Russian Cyrillic to Latin text accurately', () {
+      final latin = UniversalLyricsTransliterationEngine.transliterateText('Привет мир', 'roman');
+      expect(latin.toLowerCase().contains('privet'), isTrue);
+    });
+
+    test('Transliterates Roman lyrics into Devanagari accurately', () {
+      final dev = UniversalLyricsTransliterationEngine.transliterateText('mera dil', 'devanagari');
+      expect(dev.contains('दिल'), isTrue);
     });
   });
 

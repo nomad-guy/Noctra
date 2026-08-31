@@ -32,20 +32,17 @@ class NoctraLocalDatabase {
   String getCachedThemeMode() => _cachedThemeMode;
 
   /// Persists the active theme so it survives app restarts.
-  Future<void> saveCachedThemeMode(String modeName) async {
-    _cachedThemeMode = modeName;
-    try {
-      final prefs = _prefs ?? await SharedPreferences.getInstance();
-      await prefs.setString('noctra_theme_mode', modeName);
-    } catch (_) {}
-  }
+  Future<void> saveCachedThemeMode(String modeName) => saveThemeMode(modeName);
 
   Future<void> init() async {
     if (_isLoaded) return;
     if (_initFuture != null) return _initFuture!; // C3: reuse in-flight init
     _initFuture = _doInit();
-    await _initFuture;
-    _initFuture = null;
+    try {
+      await _initFuture;
+    } finally {
+      _initFuture = null;
+    }
   }
 
   Future<void> _doInit() async {

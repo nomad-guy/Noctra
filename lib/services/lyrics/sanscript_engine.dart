@@ -44,6 +44,7 @@ class SanscriptEngine {
   };
 
   /// Transliterate [input] text from [fromScript] to [toScript].
+  static String transliterate(String input, String fromScript, String toScript) => t(input, fromScript, toScript);
   static String t(String input, String fromScript, String toScript) {
     if (input.trim().isEmpty || fromScript == toScript) return input;
 
