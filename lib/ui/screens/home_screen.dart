@@ -32,176 +32,193 @@ class HomeScreen extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       body: SafeArea(
         bottom: false,
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            // Collapsing / Expanding Floating Glass Top Header
-            SliverAppBar(
-              floating: true,
-              snap: true,
-              pinned: false,
-              elevation: 0,
-              backgroundColor: isDark ? const Color(0xDD0A0A0A) : const Color(0xDDFAFAFA),
-              surfaceTintColor: Colors.transparent,
-              toolbarHeight: 54,
-              automaticallyImplyLeading: false,
-              titleSpacing: 0,
-              flexibleSpace: ClipRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                  child: Container(
-                    color: isDark ? Colors.black.withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.7),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            // Invalidate all feed providers to force re-fetch
+            ref.invalidate(dynamicTrendingFeedProvider);
+            ref.invalidate(dynamicVibeTracksProvider);
+            ref.invalidate(dynamicSpotifyChartsProvider);
+            await Future.delayed(const Duration(milliseconds: 800));
+          },
+          color: isDark ? Colors.white : Colors.black,
+          backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+            slivers: [
+              // Collapsing / Expanding Floating Glass Top Header
+              SliverAppBar(
+                floating: true,
+                snap: true,
+                pinned: false,
+                elevation: 0,
+                backgroundColor: isDark ? const Color(0xDD0A0A0A) : const Color(0xDDFAFAFA),
+                surfaceTintColor: Colors.transparent,
+                toolbarHeight: 54,
+                automaticallyImplyLeading: false,
+                titleSpacing: 0,
+                flexibleSpace: ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                    child: Container(
+                      color: isDark ? Colors.black.withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.7),
+                    ),
                   ),
                 ),
-              ),
-              title: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.menu_rounded, color: isDark ? Colors.white : Colors.black, size: 22),
-                          tooltip: 'Open Sidebar',
-                          onPressed: () => ref.read(rootScaffoldKeyProvider).currentState?.openDrawer(),
-                        ),
-                        NoctraAppLogo(size: 24, radius: 6, isDark: isDark),
-                        const SizedBox(width: 6),
-                        Text(
-                          'NOCTRA',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 2.0,
-                            color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        _topBarIcon(
-                          Icons.podcasts_rounded,
-                          'SyncCast',
-                          isDark,
-                          active: syncService.isHost || syncService.isClient,
-                          onPressed: () => showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (_) => const SyncCastSheet(),
-                          ),
-                        ),
-                        _themeMenuButton(context, ref, themeMode, isDark),
-                        _topBarIcon(
-                          Icons.tune_rounded,
-                          'Settings',
-                          isDark,
-                          onPressed: () => showModalBottomSheet(
-                            context: context,
-                            backgroundColor: Colors.transparent,
-                            builder: (_) => const SettingsSheet(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Greeting -- Spotify-style bold greeting
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 10, 20, 2),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      repo.getTimeOfDayGreeting(),
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
-                        color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
-                      ),
-                      child: Row(
+                title: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          LiveAudioWave(isPlaying: isPlaying, color: isDark ? Colors.white : Colors.black, height: 11, barCount: 3),
-                          const SizedBox(width: 5),
+                          IconButton(
+                            icon: Icon(Icons.menu_rounded, color: isDark ? Colors.white : Colors.black, size: 22),
+                            tooltip: 'Open Sidebar',
+                            onPressed: () => ref.read(rootScaffoldKeyProvider).currentState?.openDrawer(),
+                          ),
+                          NoctraAppLogo(size: 24, radius: 6, isDark: isDark),
+                          const SizedBox(width: 6),
                           Text(
-                            isPlaying ? 'PLAYING' : 'READY',
+                            'NOCTRA',
                             style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.8,
-                              color: isDark ? Colors.white : Colors.black,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 2.0,
+                              color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
+                      Row(
+                        children: [
+                          _topBarIcon(
+                            Icons.podcasts_rounded,
+                            'SyncCast',
+                            isDark,
+                            active: syncService.isHost || syncService.isClient,
+                            onPressed: () => showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (_) => const SyncCastSheet(),
+                            ),
+                          ),
+                          _refreshButton(isDark, () async {
+                            ref.invalidate(dynamicTrendingFeedProvider);
+                            ref.invalidate(dynamicVibeTracksProvider);
+                            ref.invalidate(dynamicSpotifyChartsProvider);
+                            await Future.delayed(const Duration(milliseconds: 600));
+                          }),
+                          _themeMenuButton(context, ref, themeMode, isDark),
+                          _topBarIcon(
+                            Icons.tune_rounded,
+                            'Settings',
+                            isDark,
+                            onPressed: () => showModalBottomSheet(
+                              context: context,
+                              backgroundColor: Colors.transparent,
+                              builder: (_) => const SettingsSheet(),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
 
-            // Recently Played
-            SliverToBoxAdapter(
-              child: RecentlyPlayedSection(isDark: isDark, currentSong: currentSong, isPlaying: isPlaying),
-            ),
+              // Greeting -- Spotify-style bold greeting
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 2),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        repo.getTimeOfDayGreeting(),
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
+                          color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            LiveAudioWave(isPlaying: isPlaying, color: isDark ? Colors.white : Colors.black, height: 11, barCount: 3),
+                            const SizedBox(width: 5),
+                            Text(
+                              isPlaying ? 'PLAYING' : 'READY',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.8,
+                                color: isDark ? Colors.white : Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 6)),
+              // Recently Played
+              SliverToBoxAdapter(
+                child: RecentlyPlayedSection(isDark: isDark, currentSong: currentSong, isPlaying: isPlaying),
+              ),
 
-            // Top Trending Hits Carousel
-            SliverToBoxAdapter(
-              child: TrendingCarouselSection(isDark: isDark, currentSong: currentSong, isPlaying: isPlaying),
-            ),
+              const SliverToBoxAdapter(child: SizedBox(height: 6)),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 8)),
+              // Top Trending Hits Carousel
+              SliverToBoxAdapter(
+                child: TrendingCarouselSection(isDark: isDark, currentSong: currentSong, isPlaying: isPlaying),
+              ),
 
-            // Explore Top & Featured Artists
-            SliverToBoxAdapter(
-              child: TopArtistsCarousel(isDark: isDark),
-            ),
+              const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 8)),
+              // Explore Top & Featured Artists
+              SliverToBoxAdapter(
+                child: TopArtistsCarousel(isDark: isDark),
+              ),
 
-            // Dynamic Spotify Global Charts
-            SliverToBoxAdapter(
-              child: SpotifyChartsSection(isDark: isDark, currentSong: currentSong, isPlaying: isPlaying),
-            ),
+              const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 6)),
+              // Dynamic Spotify Global Charts
+              SliverToBoxAdapter(
+                child: SpotifyChartsSection(isDark: isDark, currentSong: currentSong, isPlaying: isPlaying),
+              ),
 
-            // AI Generated Mixes
-            SliverToBoxAdapter(child: AIGeneratedPlaylistsSection(isDark: isDark)),
+              const SliverToBoxAdapter(child: SizedBox(height: 6)),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 10)),
+              // AI Generated Mixes
+              SliverToBoxAdapter(child: AIGeneratedPlaylistsSection(isDark: isDark)),
 
-            // Dynamic Vibe Selector Chips
-            const SliverToBoxAdapter(child: VibeChipSelector()),
+              const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 10)),
+              // Dynamic Vibe Selector Chips
+              const SliverToBoxAdapter(child: VibeChipSelector()),
 
-            // Made For You (Dynamic Vibe Stream)
-            SliverToBoxAdapter(
-              child: DynamicVibeStreamSection(isDark: isDark, currentSong: currentSong, isPlaying: isPlaying),
-            ),
+              const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 160)),
-          ],
+              // Made For You (Dynamic Vibe Stream)
+              SliverToBoxAdapter(
+                child: DynamicVibeStreamSection(isDark: isDark, currentSong: currentSong, isPlaying: isPlaying),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 160)),
+            ],
+          ),
         ),
       ),
     );
@@ -213,6 +230,16 @@ class HomeScreen extends ConsumerWidget {
       iconSize: 20,
       constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
       icon: Icon(icon, color: active ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white60 : Colors.black54)),
+      onPressed: onPressed,
+    );
+  }
+
+  Widget _refreshButton(bool isDark, VoidCallback onPressed) {
+    return IconButton(
+      tooltip: 'Refresh Feed',
+      iconSize: 20,
+      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+      icon: Icon(Icons.refresh_rounded, color: isDark ? Colors.white60 : Colors.black54),
       onPressed: onPressed,
     );
   }
