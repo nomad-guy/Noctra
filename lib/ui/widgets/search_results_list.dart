@@ -158,7 +158,7 @@ class SearchResultsList extends ConsumerWidget {
                       Row(
                         children: [
                           Flexible(child: Text('${song.artist} • ${song.album.isNotEmpty ? song.album : "Lossless"}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary))),
-                          if (song.id.startsWith('jio_') || song.genre.contains('320k')) ...[
+                          if (song.id.startsWith('jio_') || (song.genre?.contains('320k') ?? false)) ...[
                             const SizedBox(width: 4),
                             Container(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1), decoration: BoxDecoration(color: isDark ? Colors.white12 : Colors.black12, borderRadius: BorderRadius.circular(4)), child: Text('320k', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: isDark ? Colors.white70 : Colors.black87))),
                           ],

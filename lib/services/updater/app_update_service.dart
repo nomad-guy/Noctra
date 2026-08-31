@@ -70,6 +70,14 @@ class AppUpdateService {
     );
   }
 
+  static Future<void> checkForUpdateManually(BuildContext context, [bool isDark = true]) async {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Checking for new releases...'), duration: Duration(seconds: 1)));
+    final info = await checkForUpdate();
+    if (context.mounted) {
+      showUpdateModal(context, info, isDark);
+    }
+  }
+
   static bool _isVersionNewer(String latest, String current) {
     try {
       final cleanLatest = latest.replaceAll(RegExp(r'[^0-9.]'), '').split('.').map(int.parse).toList();

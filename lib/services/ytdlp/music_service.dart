@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import '../../core/utils/permission_helper.dart';
 import '../../data/models/song_model.dart';
-import '../../data/repositories/music_repository.dart';
+import '../../data/repositories/taste_vector_engine.dart';
 import '../resolvers/stream_resolver.dart';
 import '../metadata/spotify_oembed_service.dart';
 
@@ -274,5 +274,24 @@ class MusicService {
 
   static List<double> _deriveFeatureVector(String title) {
     return TasteVectorEngine.extractSongEmbedding(Song(id: '', title: title, artist: '', album: '', artworkUrl: '', streamUrl: '', duration: Duration.zero));
+  }
+
+  static Future<double?> fetchSponsorBlockIntroSkip(String videoId) async {
+    try {
+      final uri = Uri.parse('https://sponsor.ajay.app/api/skipSegments?videoID=$videoId&categories=["music_offtopic"]');
+      final res = await http.get(uri).timeout(const Duration(seconds: 2));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as List?;
+        if (data != null && data.isNotEmpty) {
+          final seg = data[0]['segment'] as List?;
+          if (seg != null && seg.length >= 2) {
+            final start = (seg[0] as num).toDouble();
+            final end = (seg[1] as num).toDouble();
+            if (start < 15.0 && end > 0) return end;
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
   }
 }

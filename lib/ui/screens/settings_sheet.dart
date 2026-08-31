@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
 import '../../data/sources/noctra_local_database.dart';
 import '../../providers/app_providers.dart';
-import '../../services/updater/app_update_service.dart';
 import '../widgets/developer_panel_sheet.dart';
 import '../widgets/glass_card.dart';
 
