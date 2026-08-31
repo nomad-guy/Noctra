@@ -1,5 +1,7 @@
 package com.nomadguy.noctra
 
+import android.content.ComponentName
+import android.content.pm.PackageManager
 import android.media.audiofx.Visualizer
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -153,7 +155,28 @@ class MainActivity : AudioServiceActivity() {
         }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ICON_CHANNEL).setMethodCallHandler { call, result ->
-            if (call.method == "setLauncherIcon") result.success(true) else result.notImplemented()
+            if (call.method == "setLauncherIcon") {
+                val icon = call.argument<String>("icon") ?: "noir_black"
+                try {
+                    val pm = applicationContext.packageManager
+                    val pkg = applicationContext.packageName
+                    val darkAlias = ComponentName(pkg, "$pkg.MainActivityDark")
+                    val lightAlias = ComponentName(pkg, "$pkg.MainActivityLight")
+
+                    if (icon == "noir_white") {
+                        pm.setComponentEnabledSetting(darkAlias, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
+                        pm.setComponentEnabledSetting(lightAlias, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+                    } else {
+                        pm.setComponentEnabledSetting(lightAlias, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
+                        pm.setComponentEnabledSetting(darkAlias, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+                    }
+                    result.success(true)
+                } catch (_: Throwable) {
+                    result.success(false)
+                }
+            } else {
+                result.notImplemented()
+            }
         }
     }
 
