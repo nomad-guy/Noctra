@@ -21,45 +21,6 @@ class OnboardingArtistPicker extends StatefulWidget {
     'Drake', 'Coldplay', 'Billie Eilish', 'Badshah',
   ];
 
-  static const Map<String, List<String>> similarArtistsMap = {
-    'Arijit Singh': ['Atif Aslam', 'Mohit Chauhan', 'Jubin Nautiyal', 'KK', 'Darshan Raval'],
-    'Pritam': ['Vishal-Shekhar', 'Sachin-Jigar', 'Amit Trivedi', 'Shankar-Ehsaan-Loy', 'AR Rahman'],
-    'Shreya Ghoshal': ['Sunidhi Chauhan', 'Neeti Mohan', 'Monali Thakur', 'Jasleen Royal', 'Palak Muchhal'],
-    'Atif Aslam': ['Rahat Fateh Ali Khan', 'Ali Zafar', 'Mustafa Zahid', 'Jal', 'Shafqat Amanat Ali'],
-    'Mohit Chauhan': ['Lucky Ali', 'Papon', 'Kailash Kher', 'Sonu Nigam'],
-    'KK': ['Sonu Nigam', 'Shaan', 'Kunal Ganjawala', 'Javed Ali'],
-    'Jubin Nautiyal': ['Stebin Ben', 'B Praak', 'Akhil Sachdeva'],
-    'Darshan Raval': ['Armaan Malik', 'Asim Azhar', 'Anuv Jain'],
-    'AR Rahman': ['Harris Jayaraj', 'Anirudh Ravichander', 'Yuvan Shankar Raja'],
-    'Anirudh Ravichander': ['Santhosh Narayanan', 'G.V. Prakash Kumar', 'Devi Sri Prasad'],
-    'Sidhu Moose Wala': ['Amrit Maan', 'Shubh', 'Amrinder Gill', 'B Praak', 'Prem Dhillon'],
-    'Diljit Dosanjh': ['Gippy Grewal', 'Guru Randhawa', 'Jassie Gill', 'Maninder Buttar'],
-    'Karan Aujla': ['Ikky', 'Deep Jandu', 'Jay Trak', 'Avvy Sra'],
-    'AP Dhillon': ['Gurinder Gill', 'Shinda Kahlon', 'Gminxr'],
-    'Shubh': ['Raf-Saperra', 'Wazir Patar', 'Hustinder'],
-    'Badshah': ['Raftaar', 'Yo Yo Honey Singh', 'DIVINE', 'Seedhe Maut', 'King'],
-    'DIVINE': ['MC Stan', 'Seedhe Maut', r'KR$NA', 'Raftaar', 'Talha Anjum'],
-    'Seedhe Maut': ['Prabh Deep', 'Ahmer', 'Sez on the Beat', 'Rawal'],
-    r'KR$NA': ['Karma', 'Talhah Yunus', 'Young Stunners'],
-    'Yo Yo Honey Singh': ['Alfaaz', 'Lil Golu', 'J-Star'],
-    'The Weeknd': ['Post Malone', 'Bruno Mars', 'Lana Del Rey', 'Daft Punk', 'Kavinsky'],
-    'Taylor Swift': ['Olivia Rodrigo', 'Ariana Grande', 'Selena Gomez', 'Ed Sheeran', 'Sabrina Carpenter'],
-    'Dua Lipa': ['Bebe Rexha', 'Rita Ora', 'Ava Max', 'Katy Perry', 'Charli XCX'],
-    'Drake': ['Travis Scott', 'Future', '21 Savage', 'Kendrick Lamar', 'J. Cole'],
-    'Travis Scott': ['Don Toliver', 'Playboi Carti', 'Gunna', 'Lil Uzi Vert'],
-    'Coldplay': ['Imagine Dragons', 'OneRepublic', 'The Chainsmokers', 'Maroon 5'],
-    'Billie Eilish': ['FINNEAS', 'Lorde', 'Melanie Martinez', 'Girl in Red', 'Clairo'],
-    'Post Malone': ['The Kid LAROI', 'Khalid', 'Juice WRLD'],
-    'Ariana Grande': ['Camila Cabello', 'Halsey', 'Doja Cat', 'ZAYN'],
-    'Daft Punk': ['Justice', 'Kavinsky', 'Gesaffelstein', 'M83'],
-    'Lana Del Rey': ['Marina', 'Mitski', 'Florence + The Machine'],
-    'Fly By Midnight': ['Prateek Kuhad', 'Anuv Jain', 'Lauv', 'Jeremy Zucker'],
-    'Anuv Jain': ['Prateek Kuhad', 'Jasleen Royal', 'Zaeden', 'When Chai Met Toast'],
-    'Prateek Kuhad': ['The Local Train', 'Twin Strings', 'Dream Note'],
-    'Lauv': ['Troye Sivan', 'Conan Gray', 'Bazzi', 'LANY'],
-    'The Local Train': ['Parvaaz', 'Indian Ocean', 'Agnee', 'Euphoria'],
-  };
-
   @override
   State<OnboardingArtistPicker> createState() => _OnboardingArtistPickerState();
 }
@@ -91,13 +52,13 @@ class _OnboardingArtistPickerState extends State<OnboardingArtistPicker> {
     } catch (_) {}
   }
 
-  void _handleArtistTapped(String artist) {
+  void _handleArtistTapped(String artist) async {
     widget.onToggle(artist);
     final willBeSelected = !widget.selectedArtists.contains(artist);
 
     if (willBeSelected && _displayedArtists.length < OnboardingArtistPicker.maxArtistsLimit) {
-      final similar = OnboardingArtistPicker.similarArtistsMap[artist];
-      if (similar != null) {
+      final similar = await ArtistMetadataService.fetchDynamicSimilarArtists(artist);
+      if (similar.isNotEmpty && mounted) {
         final newToLoad = <String>[];
         final insertIndex = (_displayedArtists.indexOf(artist) + 1).clamp(0, _displayedArtists.length);
         int offset = 0;
