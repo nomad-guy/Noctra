@@ -11,7 +11,7 @@ class IndicXlitEngine {
   static final Map<String, String> _xlitCache = {};
   static const int _maxCache = 300;
 
-  /// Transliterates Romanized [text] to target script ([targetLang]: 'hi' (Hindi/Devanagari), 'pa' (Punjabi/Gurmukhi), etc.)
+  /// Transliterates Romanized [text] to target script ([targetLang]: 'hi' (Hindi/Devanagari), etc.)
   static Future<String> transliterate(
     String text, {
     String sourceLang = 'en',
@@ -26,18 +26,7 @@ class IndicXlitEngine {
     // 1. Primary on-device high-speed Devanagari transliteration
     final devanagariText = DevanagariTransliterationService.toDevanagari(text);
 
-    // 2. If target is Gurmukhi (Punjabi), convert Devanagari -> Gurmukhi using Aksharamukha / Sanscript
-    if (targetLang == 'pa' || targetLang == 'gurmukhi' || targetLang == 'punjabi') {
-      final gurmukhi = await AksharamukhaService.convert(
-        devanagariText,
-        sourceScript: SanscriptEngine.devanagari,
-        targetScript: SanscriptEngine.gurmukhi,
-      );
-      _putCache(cacheKey, gurmukhi);
-      return gurmukhi;
-    }
-
-    // 3. If target is Bengali
+    // 2. If target is Bengali
     if (targetLang == 'bn' || targetLang == 'bengali') {
       final bengali = await AksharamukhaService.convert(
         devanagariText,
@@ -53,7 +42,7 @@ class IndicXlitEngine {
     return devanagariText;
   }
 
-  /// Transliterates an entire [LyricsData] payload across Roman, Devanagari, or Gurmukhi.
+  /// Transliterates an entire [LyricsData] payload across Roman or Devanagari.
   static Future<LyricsData> transliterateLyrics(
     LyricsData data, {
     required String targetScript,

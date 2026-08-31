@@ -14,7 +14,6 @@ enum LyricScript {
   thai,
   hebrew,
   devanagari,
-  gurmukhi,
   bengali,
   tamil,
   telugu,
@@ -38,7 +37,6 @@ class UniversalLyricsTransliterationEngine {
   /// Detects the primary script of a given piece of lyric text.
   static LyricScript detectScript(String text) {
     int devanagariCount = 0;
-    int gurmukhiCount = 0;
     int bengaliCount = 0;
     int tamilCount = 0;
     int teluguCount = 0;
@@ -58,8 +56,6 @@ class UniversalLyricsTransliterationEngine {
     for (final rune in text.runes) {
       if (rune >= 0x0900 && rune <= 0x097F) {
         devanagariCount++;
-      } else if (rune >= 0x0A00 && rune <= 0x0A7F) {
-        gurmukhiCount++;
       } else if (rune >= 0x0980 && rune <= 0x09FF) {
         bengaliCount++;
       } else if (rune >= 0x0B80 && rune <= 0x0BFF) {
@@ -97,7 +93,6 @@ class UniversalLyricsTransliterationEngine {
     if (koreanCount > 0) return LyricScript.korean;
     if (chineseCount > 5) return LyricScript.chinese;
     if (devanagariCount > 3) return LyricScript.devanagari;
-    if (gurmukhiCount > 3) return LyricScript.gurmukhi;
     if (tamilCount > 3) return LyricScript.tamil;
     if (teluguCount > 3) return LyricScript.telugu;
     if (bengaliCount > 3) return LyricScript.bengali;
@@ -172,13 +167,6 @@ class UniversalLyricsTransliterationEngine {
         return const [
           ScriptOption(code: 'original', label: 'मूल (देवनागरी)'),
           ScriptOption(code: 'roman', label: 'Roman (English)'),
-          ScriptOption(code: 'gurmukhi', label: 'ਗੁਰਮੁਖੀ (Punjabi)'),
-        ];
-      case LyricScript.gurmukhi:
-        return const [
-          ScriptOption(code: 'original', label: 'ਮੂਲ (ਗੁਰਮੁਖੀ)'),
-          ScriptOption(code: 'roman', label: 'Roman (English)'),
-          ScriptOption(code: 'devanagari', label: 'देवनागरी (Hindi)'),
         ];
       case LyricScript.tamil:
       case LyricScript.telugu:
@@ -196,7 +184,6 @@ class UniversalLyricsTransliterationEngine {
         return const [
           ScriptOption(code: 'original', label: 'Original (English)'),
           ScriptOption(code: 'devanagari', label: 'देवनागरी (Hindi)'),
-          ScriptOption(code: 'gurmukhi', label: 'ਗੁਰਮੁਖੀ (Punjabi)'),
         ];
     }
   }
@@ -269,10 +256,6 @@ class UniversalLyricsTransliterationEngine {
       case LyricScript.devanagari:
         romanText = _romanizer.toRomanized(clean);
         break;
-      case LyricScript.gurmukhi:
-        final deva = SanscriptEngine.t(clean, SanscriptEngine.gurmukhi, SanscriptEngine.devanagari);
-        romanText = _romanizer.toRomanized(deva);
-        break;
       case LyricScript.bengali:
         final deva = SanscriptEngine.t(clean, SanscriptEngine.bengali, SanscriptEngine.devanagari);
         romanText = _romanizer.toRomanized(deva);
@@ -310,20 +293,10 @@ class UniversalLyricsTransliterationEngine {
     // 2. Convert from Universal Roman to Target Script
     if (targetScript == 'devanagari') {
       if (sourceScript == LyricScript.devanagari) return clean;
-      if (sourceScript == LyricScript.gurmukhi) {
-        return SanscriptEngine.t(clean, SanscriptEngine.gurmukhi, SanscriptEngine.devanagari);
-      }
       if (sourceScript == LyricScript.bengali) {
         return SanscriptEngine.t(clean, SanscriptEngine.bengali, SanscriptEngine.devanagari);
       }
       return DevanagariTransliterationService.toDevanagari(romanText);
-    } else if (targetScript == 'gurmukhi') {
-      if (sourceScript == LyricScript.gurmukhi) return clean;
-      if (sourceScript == LyricScript.devanagari) {
-        return SanscriptEngine.t(clean, SanscriptEngine.devanagari, SanscriptEngine.gurmukhi);
-      }
-      final dev = DevanagariTransliterationService.toDevanagari(romanText);
-      return SanscriptEngine.t(dev, SanscriptEngine.devanagari, SanscriptEngine.gurmukhi);
     }
 
     return romanText;
