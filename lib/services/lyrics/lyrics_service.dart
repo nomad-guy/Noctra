@@ -143,9 +143,7 @@ class LyricsService {
       }
     } catch (_) {}
 
-    final empty = LyricsData.empty();
-    _cache[cacheKey] = empty;
-    return empty;
+    return LyricsData.empty();
   }
 
   static Future<LyricsData?> _fetchInnerTubeLyrics(String rawSongId, String title, String artist) async {

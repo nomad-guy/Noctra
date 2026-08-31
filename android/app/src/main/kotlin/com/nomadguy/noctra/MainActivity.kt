@@ -1,8 +1,13 @@
 package com.nomadguy.noctra
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.ComponentName
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.audiofx.Visualizer
+import androidx.core.app.NotificationCompat
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -12,6 +17,7 @@ import kotlin.concurrent.thread
 class MainActivity : AudioServiceActivity() {
     private val RESOLVER_CHANNEL = "com.noctra.app/native_resolver"
     private val ICON_CHANNEL = "com.noctra.app/launcher_icon"
+    private val UPDATE_NOTIFY_CHANNEL = "com.noctra.app/update_notify"
     private val VISUALIZER_CHANNEL = "com.noctra.app/audio_visualizer"
     private val ROUTER_CHANNEL = "com.noctra.app/audio_router"
     private val DEVICES_EVENT_CHANNEL = "com.noctra.app/audio_devices"
@@ -154,6 +160,36 @@ class MainActivity : AudioServiceActivity() {
             }
         }
 
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, UPDATE_NOTIFY_CHANNEL).setMethodCallHandler { call, result ->
+            if (call.method == "showUpdateNotification") {
+                val title = call.argument<String>("title") ?: "Noctra update available"
+                val body = call.argument<String>("body") ?: "Tap to download."
+                val url = call.argument<String>("url") ?: ""
+                try {
+                    val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                    val channelId = "noctra_updates"
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        val ch = NotificationChannel(channelId, "Noctra Updates", NotificationManager.IMPORTANCE_HIGH).apply {
+                            description = "New version release alerts"
+                        }
+                        nm.createNotificationChannel(ch)
+                    }
+                    val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                    val pi = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+                    val notification = NotificationCompat.Builder(this, channelId)
+                        .setSmallIcon(R.drawable.ic_notification)
+                        .setContentTitle(title)
+                        .setContentText(body)
+                        .setAutoCancel(true)
+                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                        .setContentIntent(pi)
+                        .build()
+                    nm.notify(9001, notification)
+                    result.success(true)
+                } catch (_: Throwable) { result.success(false) }
+            } else { result.notImplemented() }
+        }
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ICON_CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "setLauncherIcon") {
                 val icon = call.argument<String>("icon") ?: "noir_black"
@@ -162,13 +198,22 @@ class MainActivity : AudioServiceActivity() {
                     val pkg = applicationContext.packageName
                     val darkAlias = ComponentName(pkg, "$pkg.MainActivityDark")
                     val lightAlias = ComponentName(pkg, "$pkg.MainActivityLight")
+                    val amoledAlias = ComponentName(pkg, "$pkg.MainActivityAmoled")
 
-                    if (icon == "noir_white") {
-                        pm.setComponentEnabledSetting(darkAlias, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
-                        pm.setComponentEnabledSetting(lightAlias, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
-                    } else {
-                        pm.setComponentEnabledSetting(lightAlias, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
-                        pm.setComponentEnabledSetting(darkAlias, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+                    val target = when (icon) {
+                        "noir_white" -> lightAlias
+                        "noir_amoled" -> amoledAlias
+                        else -> darkAlias
+                    }
+
+                    // Enable target FIRST so there is always an active launcher alias.
+                    // Disabling all aliases before enabling the new one causes ColorOS/MIUI
+                    // to force-kill the app even when DONT_KILL_APP is specified.
+                    pm.setComponentEnabledSetting(target, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+
+                    // Then disable the non-targets.
+                    listOf(darkAlias, lightAlias, amoledAlias).filter { it != target }.forEach { alias ->
+                        pm.setComponentEnabledSetting(alias, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
                     }
                     result.success(true)
                 } catch (_: Throwable) {

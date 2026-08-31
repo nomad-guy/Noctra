@@ -10,6 +10,7 @@ import 'data/repositories/music_repository.dart';
 import 'data/sources/noctra_local_database.dart';
 import 'providers/app_providers.dart';
 import 'services/audio/audio_player_service.dart';
+import 'services/updater/app_update_service.dart';
 import 'ui/screens/ai_studio_screen.dart';
 import 'ui/screens/home_screen.dart';
 import 'ui/screens/library_screen.dart';
@@ -51,6 +52,11 @@ void main() async {
   try { await AudioPlayerService().restoreLastPlaybackSession(); } catch (_) {}
 
   runApp(const ProviderScope(child: NoctraApp()));
+
+  // Silent background update check — fires a system notification if a newer
+  // version is on GitHub. Runs 3 seconds after launch to not compete with
+  // audio session init or first-frame render.
+  Future.delayed(const Duration(seconds: 3), AppUpdateService.notifyUpdateAvailable);
 }
 
 class NoctraApp extends ConsumerWidget {
@@ -61,7 +67,7 @@ class NoctraApp extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final isInitialized = ref.watch(appInitializedProvider);
 
-    DynamicIconService.updateAppIcon(isDark: themeMode.isDark);
+    DynamicIconService.updateForTheme(themeMode);
 
     return MaterialApp(
       title: 'Noctra',

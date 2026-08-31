@@ -59,7 +59,7 @@ class MusicService {
           if (nativeSongs != null) {
             for (final m in nativeSongs) {
               final map = m as Map;
-              addSong(Song(id: (map['id'] ?? 'jio_${clean.hashCode}').toString(), title: (map['title'] ?? 'Unknown Track').toString(), artist: (map['artist'] ?? 'Unknown Artist').toString(), album: (map['album'] ?? '320k Master').toString(), artworkUrl: map['thumbnail'] as String?, streamUrl: (map['stream_url'] as String?)?.isNotEmpty == true ? map['stream_url'] as String? : null, duration: Duration(seconds: (map['duration'] as num?)?.toInt() ?? 210), genre: (map['source'] ?? '320k High-Fidelity').toString(), featureVector: _deriveFeatureVector(map['title']?.toString() ?? '')));
+              addSong(Song(id: (map['id'] ?? 'jio_${(map['title']?.toString() ?? '').hashCode}_${(map['artist']?.toString() ?? '').hashCode}').toString(), title: (map['title'] ?? 'Unknown Track').toString(), artist: (map['artist'] ?? 'Unknown Artist').toString(), album: (map['album'] ?? '320k Master').toString(), artworkUrl: map['thumbnail'] as String?, streamUrl: (map['stream_url'] as String?)?.isNotEmpty == true ? map['stream_url'] as String? : null, duration: Duration(seconds: (map['duration'] as num?)?.toInt() ?? 210), genre: (map['source'] ?? '320k High-Fidelity').toString(), featureVector: _deriveFeatureVector(map['title']?.toString() ?? '')));
             }
           }
         } catch (_) {}

@@ -7,6 +7,18 @@ The project adheres to Semantic Versioning: `vX.Y.Z`
 - **Y**: Major Features and Architecture Overhauls
 - **Z**: Bug Fixes, Reliability Patches, and Performance Optimizations
 
+## [1.1.3] - 2026-08-31
+
+### Fixed
+- **Dynamic Icon Crash on ColorOS / MIUI**: Resolved critical crash where switching themes caused the app to force-close on Realme, Xiaomi, and similar OEM Android skins. Root cause was disabling all activity-aliases simultaneously before enabling the target, which Android treated as no active launcher component and killed the process. Fix: always enable the target alias first, then disable the others.
+- **Theme Reverts to Noir Black After Crash**: Fixed race condition where the async SharedPreferences write was not completing before the OS killed the app, causing the theme to reset to the default on next launch. Fix: SharedPreferences instance is now cached at startup and reused for synchronous writes.
+- **Launcher Icon Switch Now Works Without Killing App**: Confirmed correct DONT_KILL_APP flag usage and alias switch ordering matching Reddit and Telegram implementation.
+- **AMOLED Theme Launcher Alias**: Added missing MainActivityAmoled activity-alias to AndroidManifest.xml and MainActivity.kt, completing 3-mode icon support (Noir Black, Noir White, AMOLED).
+- **Status Bar Icon Brightness**: Status bar icons now correctly invert to dark on Noir White theme and light on Noir Black/AMOLED.
+- **Search ID Collision**: Fixed JioSaavn search result ID hash collision where all songs in one query shared the same fallback ID. Each song now gets a unique ID derived from its title and artist.
+- **P2P URL Allowlist**: Added CDN domain allowlist validation for songs added to the collaborative queue by remote peers, preventing arbitrary URL injection.
+- **Lyrics Negative Cache**: Stopped caching empty lyrics results permanently. Transient network failures no longer permanently block lyrics for a track.
+
 ## [1.1.2] - 2026-08-31
 
 ### Fixed & Enhanced

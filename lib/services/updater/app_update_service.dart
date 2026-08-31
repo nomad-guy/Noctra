@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import '../../ui/widgets/glass_card.dart';
@@ -21,9 +23,27 @@ class AppUpdateInfo {
 }
 
 class AppUpdateService {
-  static const String currentVersion = 'v1.1.2';
+  static const String currentVersion = 'v1.1.3';
   static const String _releaseApiUrl = 'https://api.github.com/repos/nomad-guy/Noctra/releases/latest';
   static const String fallbackDownloadUrl = 'https://github.com/nomad-guy/Noctra/releases/latest/download/noctra-universal-release.apk';
+  static const _notifyChannel = MethodChannel('com.noctra.app/update_notify');
+  static bool _notifiedThisSession = false;
+
+  /// Silently checks GitHub and fires a system notification if a newer version exists.
+  /// Safe to call on startup — skips check on web, suppresses repeated notifications.
+  static Future<void> notifyUpdateAvailable() async {
+    if (kIsWeb || _notifiedThisSession) return;
+    try {
+      final info = await checkForUpdate();
+      if (!info.hasUpdate) return;
+      _notifiedThisSession = true;
+      await _notifyChannel.invokeMethod('showUpdateNotification', {
+        'title': 'Noctra ${info.latestVersion} is out',
+        'body': 'Tap to download the latest update.',
+        'url': info.downloadUrl,
+      });
+    } catch (_) {}
+  }
 
   static Future<AppUpdateInfo> checkForUpdate() async {
     try {

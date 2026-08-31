@@ -17,6 +17,7 @@ class NoctraLocalDatabase {
   final Map<String, List<Song>> _customFolders = {};
   List<double>? _cachedTasteVector;
   String _cachedThemeMode = 'dark';
+  SharedPreferences? _prefs;
   bool _hasCompletedOnboarding = false;
   List<String> _onboardedArtists = [];
   List<String> _onboardedGenres = [];
@@ -33,6 +34,7 @@ class NoctraLocalDatabase {
     if (_isLoaded) return;
     try {
       final prefs = await SharedPreferences.getInstance();
+      _prefs = prefs;
       _hasCompletedOnboarding = prefs.getBool('noctra_onboarded') ?? false;
       _onboardedArtists = prefs.getStringList('noctra_onboarded_artists') ?? [];
       _onboardedGenres = prefs.getStringList('noctra_onboarded_genres') ?? [];
@@ -178,8 +180,16 @@ class NoctraLocalDatabase {
 
   Future<void> saveThemeMode(String mode) async {
     _cachedThemeMode = mode;
+    // Write synchronously first via cached prefs instance to survive force-kills
+    // on OEM Android skins (ColorOS, MIUI) that ignore DONT_KILL_APP.
+    final p = _prefs;
+    if (p != null) {
+      p.setString('noctra_theme_mode', mode);
+      return;
+    }
     try {
       final prefs = await SharedPreferences.getInstance();
+      _prefs = prefs;
       await prefs.setString('noctra_theme_mode', mode);
     } catch (e) { NoctraLogger.e('Failed to persist theme mode', e); }
   }

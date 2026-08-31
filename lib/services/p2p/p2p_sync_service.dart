@@ -137,11 +137,40 @@ class P2PSyncService extends ChangeNotifier {
         _broadcastToPeers(str);
         notifyListeners();
       } else if (type == 'add_to_queue') {
-        if (!_hostControlsOnly) addToCollaborativeQueue(Song.fromMap(data['song']));
+        if (!_hostControlsOnly) {
+          final rawSong = Song.fromMap(data['song']);
+          // Only accept stream/artwork URLs from known-safe CDN domains.
+          final sanitized = _sanitizeSongUrls(rawSong);
+          addToCollaborativeQueue(sanitized);
+        }
       } else if (type == 'remove_from_queue') {
         if (!_hostControlsOnly) removeFromCollaborativeQueue(data['songId']);
       }
     } catch (_) {}
+  }
+
+  static const List<String> _allowedUrlHosts = [
+    'saavncdn.com', 'jiosaavn.com',
+    'i.ytimg.com', 'music.youtube.com', 'lh3.googleusercontent.com',
+    'is1-ssl.mzstatic.com', 'itunes.apple.com',
+    'jamendo.com', 'storage.googleapis.com',
+  ];
+
+  Song _sanitizeSongUrls(Song song) {
+    bool isAllowed(String? url) {
+      if (url == null || url.isEmpty) return true;
+      try {
+        final host = Uri.parse(url).host;
+        return _allowedUrlHosts.any((d) => host == d || host.endsWith('.$d'));
+      } catch (_) { return false; }
+    }
+    return Song(
+      id: song.id, title: song.title, artist: song.artist, album: song.album,
+      artworkUrl: isAllowed(song.artworkUrl) ? song.artworkUrl : null,
+      streamUrl: isAllowed(song.streamUrl) ? song.streamUrl : null,
+      localFilePath: null, // never accept local paths from remote peers
+      duration: song.duration, genre: song.genre, featureVector: song.featureVector,
+    );
   }
 
   Future<bool> joinParty(String hostIp, {int port = 8099}) async {
