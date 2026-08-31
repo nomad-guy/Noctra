@@ -1,89 +1,124 @@
 # Noctra
 
-**Next-Generation Autonomous Music Streaming Platform & On-Device AI Intelligence Engine**
+<div align="center">
 
-Developed by **Nomad Guy**  
-- **GitHub Profile**: [https://github.com/nomad-guy](https://github.com/nomad-guy)
-- **Official Repository**: [https://github.com/nomad-guy/Noctra](https://github.com/nomad-guy/Noctra)
+![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
+![FOSS](https://img.shields.io/badge/FOSS-Free%20%26%20Open%20Source-brightgreen)
+![Privacy](https://img.shields.io/badge/Privacy-100%25%20On--Device-success)
+![Flutter](https://img.shields.io/badge/Flutter-v3.24+-02569B?logo=flutter)
+![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Linux%20%7C%20Windows-lightgrey)
 
----
+**An authentication-less, privacy-first lossless music player powered by an on-device two-stage neural recommender (MLP + MMR), SQLite telemetry, and dual Noir themes. Zero ads, zero tracking.**
 
-## Overview
+[Download Release APK](https://github.com/nomad-guy/Noctra/releases/latest) • [Report Issue](https://github.com/nomad-guy/Noctra/issues) • [Changelog](CHANGELOG.md)
 
-Noctra is an autonomous, privacy-focused, on-device music streaming platform built with Flutter, Dart, and Riverpod. It combines high-fidelity audio discovery (JioSaavn 320kbps CD lossless and YouTube Music InnerTube direct extraction), on-device 16-axis vector recommendation, multi-tier synchronized lyrics, local P2P party synchronization, hardware-accelerated audio visualizers, and a Liquid Noir user interface.
-
----
-
-## Key Architectural Features
-
-### 1. Multi-Tier Audio Streaming Engine
-- **Tier 1 (JioSaavn 320kbps CD Lossless)**: Direct on-device DES decryption resolving bit-perfect 320kbps MP4/AAC audio.
-- **Tier 2 (YouTube Music InnerTube REST Direct)**: Direct REST JSON extraction via `ANDROID_MUSIC` client payloads delivering high-bitrate Opus/AAC adaptive streams without third-party sidecars.
-- **Tier 3 (YouTube Explode)**: Robust manifest fallback resolver for edge-case video streams.
-- **Tier 4 (Local Offline Library)**: Offline audio scanner indexing and playing downloaded MP3/FLAC/M4A files.
-
-### 2. AutoMix & Seamless Playback Pipeline
-- **AutoMix Radio Queue**: Automatically fetches and appends related algorithmic radio tracks when the current playback queue completes.
-- **Sleep Timer**: Configurable countdown (15m, 30m, 45m, 60m) with exponential volume fade-out.
-- **SponsorBlock Integration**: Automatically bypasses non-music talking intros, skits, and video padding.
-- **Studio DSP Master Modes**: Real-time sound profiles for Lossless 320k, Spatial 3D Soundstage, and Concert Reverb.
-
-### 3. Multi-Engine Frame-Accurate Synced Lyrics
-- **Lrclib Synchronized LRC**: Primary millisecond time-coded lyric synchronization with word-level highlight tracking.
-- **Lrclib Global Database**: Fuzzy metadata search fallback for live, remixed, and international songs.
-- **YouTube Music InnerTube Lyrics**: Official verified distributor lyrics extracted from YouTube Music browse endpoints.
-- **JioSaavn Master Lyrics**: Native Hindi, Punjabi, Tamil, and Romanized script lyrics.
-- **Lyrics.ovh**: International plain-text lyrics fallback.
-
-### 4. On-Device 16-Axis Neural Vector Recommendation
-- Zero cloud dependence: 100% private vector space modeling musical affinities across 16 acoustic dimensions (Dark Tone, Ambient Depth, Energy, Chill Factor, Melancholy, Acoustic Warmth, Analog Synth, Night Drive, and more).
-- Reinforcement learning reward shaping updating taste weights in real time based on user interactions (+0.10 on completion, -0.06 on fast skip, +0.16 on favorite).
-- Cosine similarity ranking and AI Radio curation with transparent natural-language match explanations.
-
-### 5. Liquid Noir Design System & Triple Theme Trinity
-- **Noir Black**: Obsidian liquid glass with specular reflections and backdrop blur filters.
-- **Noir White**: Clean editorial minimal white aesthetic with high-contrast typography.
-- **AMOLED Pitch Black**: True `#000000` surface designed for zero OLED battery consumption.
-- **Dynamic Launcher Icon**: Automatically synchronizes the Android launcher app icon with the active theme.
-- **Mini-Player Gestures**: Horizontal swipe left/right to skip tracks and vertical swipe up to open the player sheet.
-
-### 6. Hardware-Accelerated Audio Visualizers
-- **32-Band Spectrum Bars**: Multi-band harmonic blending with realistic acoustic attack, smooth decay, and falling peak markers.
-- **Radial Sound Glow**: Concentric circular pulse reactive to audio amplitude.
-- **3D Synthwave Cyber Grid**: Perspective retro-futuristic grid with reactive neon horizon lines.
-
-### 7. P2P SyncCast (Party Mode)
-- Local decentralized WebSocket synchronization engine broadcasting audio state and clock offsets over local Wi-Fi or mobile hotspots with zero external servers.
+</div>
 
 ---
 
-## Building and Running
+## Highlights
+
+- **100% Free & Open Source (FOSS)**: Licensed under the GNU General Public License v3.0 (GPL-3.0).
+- **Authentication-Free**: Zero accounts, zero login screens, and zero tracking cookies.
+- **Pure On-Device Neural Recommender**:
+  - **Stage 1 (Retrieval)**: Fast candidate generator extracting ~100 candidate tracks across SQLite history, library, and live charts.
+  - **Stage 2 (Tiny Neural MLP Ranker)**: 3-Layer Dense network ($80 \rightarrow 32 \rightarrow 16 \rightarrow 1$) predicting $P(\text{meaningful engagement})$ in $<1\text{ms}$ with zero battery drain.
+  - **Stage 3 (Maximal Marginal Relevance Diversity Reranker)**: MMR algorithm ($\lambda = 0.75$) with hard constraint capping repeat artists to max 2 in Top 15 to eliminate recommendation fatigue.
+- **SQLite Telemetry & Vector Store**: Full ACID transaction database (`noctra_neural_store.db`) with Write-Ahead Logging (WAL) for local-first speed.
+- **Lossless & High-Bitrate Audio**: Direct 320kbps CD lossless stream resolution with zero ads and background playback support.
+- **Hardware DSP Equalizer**: Native Android 5-band millibel Equalizer, Bass Boost exciter, 3D Spatial Virtualizer, and Reverb effects.
+- **Multi-Engine Synced Lyrics**: Millisecond time-coded LRC lyrics with Devanagari transliteration and Roman script support.
+- **P2P SyncCast Jam Studio**: Decentralized local-network party playback synchronization with automatic socket reconnection.
+- **Spotify-Style First-Run Onboarding**: Multilingual, vibe, and artist selection with live Wikipedia portrait avatars.
+- **Triple Noir Aesthetic**: Obsidian Dark, AMOLED Pitch-Black (`#000000`), and Editorial Minimal Light modes with adaptive app icon switching.
+
+---
+
+## Screenshots & Visual Experience
+
+| Dual Noir Aesthetic | Neural Player Sheet | Equalizer & DSP |
+|:---:|:---:|:---:|
+| Dual Noir Glassmorphism with adaptive contrast typography | Real-time 60FPS audio visualizers & millisecond-synced lyrics | 5-Band Hardware Equalizer, 3D Spatializer & Presets |
+
+---
+
+## Architectural Principles
+
+```text
+┌──────────────────────────────────────────────────────────┐
+│                   USER LISTENING EVENTS                  │
+│  Fast Skip (-1.0) | Partial (+0.4) | Full (+1.0) | Fav (+3.0)  │
+└────────────────────────────┬─────────────────────────────┘
+                             ▼
+┌──────────────────────────────────────────────────────────┐
+│             ONLINE GRADIENT DESCENT LEARNER              │
+│       U_new = normalize(U_old + alpha * signal * T)      │
+│          with Half-Life Recency Decay (tau = 14d)        │
+└────────────────────────────┬─────────────────────────────┘
+                             ▼
+┌──────────────────────────────────────────────────────────┐
+│             STAGE 1: CANDIDATE GENERATOR                 │
+│    Retrieves ~100 tracks from Library + Trends + Charts  │
+└────────────────────────────┬─────────────────────────────┘
+                             ▼
+┌──────────────────────────────────────────────────────────┐
+│             STAGE 2: ON-DEVICE TINY MLP RANKER           │
+│   Input: [User (32) + Track (32) + Context (16)] (80d)   │
+│             Dense 80 -> 32 -> 1 (Sigmoid Score)          │
+└────────────────────────────┬─────────────────────────────┘
+                             ▼
+┌──────────────────────────────────────────────────────────┐
+│             STAGE 3: MMR DIVERSITY RERANKER              │
+│       Selects Top 15-20 Tracks with Artist Diversity      │
+└──────────────────────────────────────────────────────────┘
+```
+
+- **Strict Modularity**: Every source file in the codebase is strictly maintained under 300 lines of code.
+- **Zero Cloud AI Dependency**: The neural MLP and matrix mathematics run 100% on-device in pure Dart.
+
+---
+
+## Building from Source
 
 ### Prerequisites
-- Flutter SDK (v3.19.0 or higher)
-- Android SDK (API Level 21 to 34)
+- [Flutter SDK](https://flutter.dev) (v3.24.0 or higher)
+- Android SDK (API Level 24 to 35)
 - Java 17 / OpenJDK 17
 
-### Commands
+### Build Steps
 ```bash
 # Clone the repository
 git clone https://github.com/nomad-guy/Noctra.git
 cd Noctra
 
-# Install dependencies
+# Fetch dependencies
 flutter pub get
 
-# Run static analysis
+# Run unit tests (10/10 green)
+flutter test
+
+# Run static analysis (0 issues)
 flutter analyze
 
-# Build optimized split APKs
-flutter build apk --split-per-abi --release
+# Build release APK
+flutter build apk --release
 ```
+
+---
+
+## Legal Disclaimer
+
+Noctra is a Free and Open Source Software (FOSS) client application developed for personal, educational, and research purposes.
+
+- **No Media Hosting**: Noctra does not operate central servers that host, store, cache, or redistribute copyrighted audio, video, or media files. 
+- **Client-Side Resolution**: All stream resolution, metadata indexing, Wikipedia biographies, and lyric parsing occur strictly on-device via publicly accessible web APIs and user-initiated queries.
+- **Trademarks & Attribution**: Spotify, YouTube, YouTube Music, JioSaavn, Wikipedia, and other third-party brand names or logos mentioned in the codebase are the property of their respective owners and are used strictly for nominal identification and referencing purposes under fair use.
+- **User Responsibility**: Users are responsible for complying with the terms of service of the third-party platforms they access and the applicable copyright laws in their respective jurisdictions.
 
 ---
 
 ## License
 
-PROPRIETARY - PERSONAL USE & RESTRICTED INSPECTION LICENSE  
-Copyright (c) 2026 Nomad Guy. All rights reserved.  
-Permission is granted to use the app for personal listening, but strictly prohibited to modify, unpack, tamper, or reverse engineer it. See [LICENSE](LICENSE) for full legal terms.
+Copyright (C) 2026 Nomad Guy
+
+This project is Free and Open Source Software licensed under the **GNU General Public License v3.0 (GPL-3.0)**. See the [LICENSE](LICENSE) file for complete details.

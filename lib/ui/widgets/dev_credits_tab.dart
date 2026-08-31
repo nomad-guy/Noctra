@@ -69,7 +69,7 @@ class DevCreditsTab extends StatelessWidget {
                 ),
                 const Divider(height: 24),
                 Text(
-                  'ABOUT NOCTRA',
+                  'ABOUT NOCTRA (FOSS)',
                   style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w700,
@@ -79,7 +79,7 @@ class DevCreditsTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Noctra is an autonomous, on-device audio platform combining bit-perfect 320kbps CD lossless stream decryption, YouTube Music InnerTube direct extraction, and a private 16-axis neural vector engine that models acoustic affinities in real time with zero external servers.',
+                  'Noctra is a Free and Open Source (FOSS) on-device music platform featuring a two-stage neural recommender (MLP + MMR), SQLite telemetry, hardware DSP effects, and dual Noir aesthetic.',
                   style: TextStyle(
                     fontSize: 12,
                     height: 1.45,
@@ -87,17 +87,19 @@ class DevCreditsTab extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _devSpecClickableRow('Repository', 'https://github.com/nomad-guy/Noctra', () => _openUrl('https://github.com/nomad-guy/Noctra'), isDark),
-                _devSpecRow('License', 'Personal Use & Restricted Inspection', isDark),
-                _devSpecRow('Audio Core', 'JioSaavn 320k Lossless + YouTube InnerTube', isDark),
-                _devSpecRow('Build Target', 'v1.0.0-RELEASE (arm64-v8a / multi-abi)', isDark),
+                _devSpecClickableRow('Repository', 'github.com/nomad-guy/Noctra', () => _openUrl('https://github.com/nomad-guy/Noctra'), isDark),
+                _devSpecRow('License', 'GNU GPL v3.0 (FOSS)', isDark),
+                _devSpecRow('Audio Engine', 'Lossless 320k + YouTube Direct', isDark),
+                _devSpecRow('Recommender', 'On-Device MLP + MMR (Pure Dart)', isDark),
+                _devSpecRow('Telemetry', 'Local SQLite WAL (Zero Cloud)', isDark),
+                _devSpecRow('Version', 'v1.1.0 (Build 6)', isDark),
               ],
             ),
           ),
 
           const SizedBox(height: 14),
 
-          // License & Permission Card
+          // License & Legal Disclaimer Card
           GlassCard(
             radius: 18,
             padding: const EdgeInsets.all(16),
@@ -105,7 +107,7 @@ class DevCreditsTab extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'INTELLECTUAL PROPERTY & PERMISSION',
+                  'LEGAL DISCLAIMER & FOSS LICENSE',
                   style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w700,
@@ -115,7 +117,7 @@ class DevCreditsTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Copyright (c) 2026 Nomad Guy. All rights reserved.\nPermission is granted to use the app for personal listening, but strictly prohibited to modify, unpack, tamper, or reverse engineer it.',
+                  'Noctra is licensed under the GNU General Public License v3.0 (GPL-3.0).\n\nNoctra does not host, store, or redistribute any media files. All streams and lyrics are resolved on-device from public web endpoints for personal, educational, and research use.',
                   style: TextStyle(
                     fontSize: 11.5,
                     height: 1.45,
@@ -138,7 +140,7 @@ class DevCreditsTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 90,
+            width: 95,
             child: Text(
               label,
               style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white54 : Colors.black54),
@@ -162,7 +164,7 @@ class DevCreditsTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 90,
+            width: 95,
             child: Text(
               label,
               style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white54 : Colors.black54),
