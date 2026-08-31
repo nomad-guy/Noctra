@@ -3,13 +3,15 @@ import 'package:http/http.dart' as http;
 
 class MusicBrainzService {
   static const String _userAgent = 'NoctraMusicApp/1.0.0 ( contact@noctra.local )';
+  static const int _maxCacheSize = 200;
   static final Map<String, Map<String, dynamic>> _cache = {};
 
   /// Searches MusicBrainz for recording metadata without any API key.
   static Future<Map<String, dynamic>?> searchRecording(String title, String artist) async {
     final cacheKey = '$title::$artist'.toLowerCase();
     if (_cache.containsKey(cacheKey)) {
-      return _cache[cacheKey];
+      final cached = _cache[cacheKey]!;
+      return cached.isEmpty ? null : Map<String, dynamic>.from(cached);
     }
 
     try {
@@ -49,14 +51,23 @@ class MusicBrainzService {
             'album': albumTitle,
             'releaseMbid': releaseMbid,
             'releaseDate': releaseDate,
-            'tags': tags,
+            'tags': List<String>.unmodifiable(tags),
           };
 
-          _cache[cacheKey] = result;
-          return result;
+          if (_cache.length >= _maxCacheSize) {
+            _cache.remove(_cache.keys.first);
+          }
+          _cache[cacheKey] = Map<String, dynamic>.unmodifiable(result);
+          return Map<String, dynamic>.from(result);
         }
       }
     } catch (_) {}
+
+    // Cache negative result (miss) to prevent hammering the API repeatedly
+    if (_cache.length >= _maxCacheSize) {
+      _cache.remove(_cache.keys.first);
+    }
+    _cache[cacheKey] = const {};
     return null;
   }
 
@@ -73,10 +84,10 @@ class MusicBrainzService {
         final images = data['images'] as List?;
         if (images != null && images.isNotEmpty) {
           final front = images.firstWhere(
-            (img) => img['front'] == true,
+            (img) => img is Map && img['front'] == true,
             orElse: () => images.first,
           );
-          return front['image'] as String?;
+          if (front is Map) return front['image'] as String?;
         }
       }
     } catch (_) {}

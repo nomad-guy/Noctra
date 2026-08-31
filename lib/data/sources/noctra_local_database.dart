@@ -16,13 +16,14 @@ class NoctraLocalDatabase {
   final List<Song> _recent = [];
   final Map<String, List<Song>> _customFolders = {};
   List<double>? _cachedTasteVector;
-  String _cachedThemeMode = 'dark';
+  String _cachedThemeMode = 'noirBlack';
   SharedPreferences? _prefs;
   bool _hasCompletedOnboarding = false;
   List<String> _onboardedArtists = [];
   List<String> _onboardedGenres = [];
   List<String> _onboardedLanguages = [];
   bool _isLoaded = false;
+  Future<void>? _initFuture; // C3: cache to prevent concurrent init() calls
 
   bool get hasCompletedOnboarding => _hasCompletedOnboarding;
   List<String> get onboardedArtists => List.unmodifiable(_onboardedArtists);
@@ -30,8 +31,24 @@ class NoctraLocalDatabase {
   List<String> get onboardedLanguages => List.unmodifiable(_onboardedLanguages);
   String getCachedThemeMode() => _cachedThemeMode;
 
+  /// Persists the active theme so it survives app restarts.
+  Future<void> saveCachedThemeMode(String modeName) async {
+    _cachedThemeMode = modeName;
+    try {
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
+      await prefs.setString('noctra_theme_mode', modeName);
+    } catch (_) {}
+  }
+
   Future<void> init() async {
     if (_isLoaded) return;
+    if (_initFuture != null) return _initFuture!; // C3: reuse in-flight init
+    _initFuture = _doInit();
+    await _initFuture;
+    _initFuture = null;
+  }
+
+  Future<void> _doInit() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       _prefs = prefs;
@@ -49,7 +66,7 @@ class NoctraLocalDatabase {
       _customFolders.clear();
       _customFolders.addAll(_safeDecodeCustomFolders(prefs.getString('noctra_custom_folders'), prefs));
       _cachedTasteVector = _safeDecodeTasteVector(prefs.getString('noctra_taste_vector'), prefs);
-      _cachedThemeMode = prefs.getString('noctra_theme_mode') ?? 'dark';
+      _cachedThemeMode = prefs.getString('noctra_theme_mode') ?? 'noirBlack';
 
       final kgStr = prefs.getString('noctra_kg_manifests');
       if (kgStr != null) {
@@ -62,8 +79,14 @@ class NoctraLocalDatabase {
       }
       _isLoaded = true;
     } catch (e) {
-      NoctraLogger.e('Database initialization self-healed', e);
-      _isLoaded = true;
+      NoctraLogger.e('Database initialization failed; will retry on next access', e);
+      // Reset in-memory state and keep _isLoaded false so subsequent calls can retry
+      _favorites.clear();
+      _downloads.clear();
+      _recent.clear();
+      _customFolders.clear();
+      _cachedTasteVector = null;
+      _isLoaded = false;
     }
   }
 
@@ -77,7 +100,10 @@ class NoctraLocalDatabase {
       for (final item in decoded) {
         if (item is Map) {
           final song = Song.fromMap(Map<String, dynamic>.from(item));
-          if (song.id.isNotEmpty && song.title.isNotEmpty && seen.add(song.id)) list.add(song);
+          if (song.title.isEmpty) continue;
+          final effectiveId = song.id.isNotEmpty ? song.id : 'syn_${song.title.hashCode ^ song.artist.hashCode}';
+          final dedupSong = song.id.isEmpty ? song.copyWith(id: effectiveId) : song;
+          if (seen.add(effectiveId)) list.add(dedupSong);
         }
       }
       return list;
@@ -94,10 +120,21 @@ class NoctraLocalDatabase {
       final decoded = jsonDecode(jsonStr);
       if (decoded is! Map) throw const FormatException('Expected Map');
       final res = <String, List<Song>>{};
-      decoded.forEach((k, v) {
-        if (k is String && v is List) {
+      int syntheticId = 0;
+      decoded.forEach((rawK, v) {
+        final k = rawK?.toString();
+        if (k != null && k.isNotEmpty && v is List) {
+          final seen = <String>{};
           final songs = <Song>[];
-          for (final item in v) { if (item is Map) songs.add(Song.fromMap(Map<String, dynamic>.from(item))); }
+          for (final item in v) {
+            if (item is Map) {
+              final song = Song.fromMap(Map<String, dynamic>.from(item));
+              if (song.title.isEmpty) continue;
+              final effectiveId = song.id.isNotEmpty ? song.id : 'syn_f_${song.title.hashCode}_${syntheticId++}';
+              final dedupSong = song.id.isEmpty ? song.copyWith(id: effectiveId) : song;
+              if (seen.add(effectiveId)) songs.add(dedupSong);
+            }
+          }
           res[k] = songs;
         }
       });
@@ -134,7 +171,8 @@ class NoctraLocalDatabase {
     _onboardedLanguages = languages;
     _onboardedGenres = genres;
     _onboardedArtists = artists;
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    _prefs = prefs;
     await prefs.setBool('noctra_onboarded', true);
     await prefs.setStringList('noctra_onboarded_languages', languages);
     await prefs.setStringList('noctra_onboarded_genres', genres);
@@ -144,7 +182,7 @@ class NoctraLocalDatabase {
   Future<void> recordManifest(Song song, {String action = 'play', int listenedSeconds = 0, double completionRate = 1.0}) async {
     await init();
     _manifestStore.recordManifest(song, action: action, listenedSeconds: listenedSeconds, completionRate: completionRate);
-    _manifestStore.persist();
+    await _manifestStore.persist();
   }
 
   List<String> getTopArtists({int limit = 6}) {
@@ -180,32 +218,37 @@ class NoctraLocalDatabase {
 
   Future<void> saveThemeMode(String mode) async {
     _cachedThemeMode = mode;
-    // Write synchronously first via cached prefs instance to survive force-kills
-    // on OEM Android skins (ColorOS, MIUI) that ignore DONT_KILL_APP.
-    final p = _prefs;
-    if (p != null) {
-      p.setString('noctra_theme_mode', mode);
-      return;
-    }
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
       _prefs = prefs;
       await prefs.setString('noctra_theme_mode', mode);
-    } catch (e) { NoctraLogger.e('Failed to persist theme mode', e); }
+    } catch (e) {
+      NoctraLogger.e('Failed to persist theme mode', e);
+    }
   }
 
   Future<void> savePlaybackPosition(Song? song, int positionMs) async {
     if (song == null) return;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('noctra_last_song', jsonEncode(song.toMap()));
-      await prefs.setInt('noctra_last_pos_ms', positionMs);
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
+      _prefs = prefs;
+      final payload = jsonEncode({'song': song.toMap(), 'positionMs': positionMs});
+      await prefs.setString('noctra_last_playback', payload);
     } catch (_) {}
   }
 
   Future<Map<String, dynamic>?> loadPlaybackPosition() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
+      _prefs = prefs;
+      final combined = prefs.getString('noctra_last_playback');
+      if (combined != null) {
+        final decoded = jsonDecode(combined) as Map<String, dynamic>;
+        final songMap = decoded['song'] as Map<String, dynamic>?;
+        if (songMap != null) {
+          return {'song': Song.fromMap(songMap), 'positionMs': (decoded['positionMs'] as num?)?.toInt() ?? 0};
+        }
+      }
       final songJson = prefs.getString('noctra_last_song');
       final posMs = prefs.getInt('noctra_last_pos_ms') ?? 0;
       if (songJson != null) {
@@ -217,26 +260,33 @@ class NoctraLocalDatabase {
   }
 
   Future<void> saveFavorites(List<Song> songs) async {
-    _favorites.clear(); _favorites.addAll(songs);
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    _prefs = prefs;
     await prefs.setString('noctra_favs', jsonEncode(songs.map((e) => e.toMap()).toList()));
+    _favorites.clear();
+    _favorites.addAll(songs);
   }
 
   Future<void> saveDownloads(List<Song> songs) async {
-    _downloads.clear(); _downloads.addAll(songs);
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    _prefs = prefs;
     await prefs.setString('noctra_downloads', jsonEncode(songs.map((e) => e.toMap()).toList()));
+    _downloads.clear();
+    _downloads.addAll(songs);
   }
 
   Future<void> saveRecent(List<Song> songs) async {
-    _recent.clear(); _recent.addAll(songs);
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    _prefs = prefs;
     await prefs.setString('noctra_recent', jsonEncode(songs.take(50).map((e) => e.toMap()).toList()));
+    _recent.clear();
+    _recent.addAll(songs);
   }
 
   Future<void> saveCustomFolders(Map<String, List<Song>> folders) async {
     _customFolders.clear(); _customFolders.addAll(folders);
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    _prefs = prefs;
     final map = <String, dynamic>{};
     folders.forEach((k, v) => map[k] = v.map((s) => s.toMap()).toList());
     await prefs.setString('noctra_custom_folders', jsonEncode(map));
@@ -244,13 +294,14 @@ class NoctraLocalDatabase {
 
   Future<void> saveTasteVector(List<double> vector) async {
     _cachedTasteVector = vector;
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    _prefs = prefs;
     await prefs.setString('noctra_taste_vector', jsonEncode(vector));
   }
 
-  Future<List<Song>> loadFavorites() async { await init(); return _favorites; }
-  Future<List<Song>> loadDownloads() async { await init(); return _downloads; }
-  Future<List<Song>> loadRecent() async { await init(); return _recent; }
-  Future<Map<String, List<Song>>> loadCustomFolders() async { await init(); return _customFolders; }
-  Future<List<double>?> loadTasteVector() async { await init(); return _cachedTasteVector; }
+  Future<List<Song>> loadFavorites() async { await init(); return List<Song>.unmodifiable(_favorites); }
+  Future<List<Song>> loadDownloads() async { await init(); return List<Song>.unmodifiable(_downloads); }
+  Future<List<Song>> loadRecent() async { await init(); return List<Song>.unmodifiable(_recent); }
+  Future<Map<String, List<Song>>> loadCustomFolders() async { await init(); return Map<String, List<Song>>.unmodifiable(_customFolders); }
+  Future<List<double>?> loadTasteVector() async { await init(); return _cachedTasteVector != null ? List<double>.unmodifiable(_cachedTasteVector!) : null; }
 }

@@ -63,7 +63,9 @@ class _DynamicVibeStreamSectionState extends ConsumerState<DynamicVibeStreamSect
         vibeTracksAsync.when(
           data: (tracks) {
             if (tracks.isEmpty) return _emptyRetry();
-            _retryCount = 0;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _retryCount = 0;
+            });
             return ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -162,7 +164,7 @@ class _DynamicVibeStreamSectionState extends ConsumerState<DynamicVibeStreamSect
               isDownloaded ? null : () async {
                 ref.read(downloadingSongsProvider.notifier).update((s) => {...s, song.id});
                 final dl = await MusicService.downloadTrack(song);
-                ref.read(musicRepositoryProvider).addDownloadedSong(dl ?? song);
+                if (dl != null) ref.read(musicRepositoryProvider).addDownloadedSong(dl);
               },
             ),
           ],

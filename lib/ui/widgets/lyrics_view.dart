@@ -31,7 +31,8 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
   }
 
   void _loadLyrics() {
-    _lyricsFuture = LyricsService.fetchLyrics(widget.song, preference: 'English / Global');
+    final pref = ref.read(lyricsPreferenceProvider);
+    _lyricsFuture = LyricsService.fetchLyrics(widget.song, preference: pref);
   }
 
   @override
@@ -67,7 +68,10 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
   }
 
   void _scrollToIndex(int index) {
-    if (_userIsScrolling || index == _lastActiveIndex) return;
+    if (_userIsScrolling) return;
+    // Only scroll when the active line actually changes — prevents
+    // firing every frame which caused early scroll-away from the current line.
+    if (index == _lastActiveIndex) return;
     _lastActiveIndex = index;
     if (index < 0) {
       if (_scrollController.hasClients && _scrollController.offset > 0) {
@@ -77,7 +81,9 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
     }
     final key = _lineKeys[index];
     if (key?.currentContext != null) {
-      Scrollable.ensureVisible(key!.currentContext!, alignment: 0.35, duration: const Duration(milliseconds: 380), curve: Curves.easeOutCubic);
+      // alignment: 0.5 centers the active line in the viewport so it dwells
+      // visibly for the full duration before the next line triggers a scroll.
+      Scrollable.ensureVisible(key!.currentContext!, alignment: 0.5, duration: const Duration(milliseconds: 400), curve: Curves.easeOutCubic);
     }
   }
 
@@ -122,7 +128,8 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
                       _resumeAutoScrollTimer?.cancel();
                     } else if (notification is ScrollEndNotification) {
                       _resumeAutoScrollTimer?.cancel();
-                      _resumeAutoScrollTimer = Timer(const Duration(seconds: 4), () {
+                      // 5s gives the user time to read before auto-scroll resumes.
+                      _resumeAutoScrollTimer = Timer(const Duration(seconds: 5), () {
                         if (mounted) setState(() => _userIsScrolling = false);
                       });
                     }
@@ -134,14 +141,14 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [Colors.transparent, Colors.white, Colors.white, Colors.transparent],
-                        stops: [0.0, 0.08, 0.90, 1.0],
+                        stops: [0.0, 0.06, 0.92, 1.0],
                       ).createShader(bounds);
                     },
                     blendMode: BlendMode.dstIn,
                     child: ListView.builder(
                       controller: _scrollController,
                       physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 60, 20, 60),
+                      padding: const EdgeInsets.fromLTRB(20, 64, 20, 80),
                       itemCount: data.lines.length,
                       itemBuilder: (context, index) {
                         final line = data.lines[index];
@@ -152,16 +159,40 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
                         return GestureDetector(
                           key: key,
                           behavior: HitTestBehavior.opaque,
-                          onTap: () { ref.read(audioPlayerServiceProvider).seek(line.timestamp); setState(() => _userIsScrolling = false); },
+                          onTap: () {
+                            ref.read(audioPlayerServiceProvider).seek(line.timestamp);
+                            setState(() => _userIsScrolling = false);
+                            _scrollToIndex(index);
+                          },
                           child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 260),
-                            padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 6),
+                            duration: const Duration(milliseconds: 280),
+                            curve: Curves.easeOutCubic,
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: isActive
+                                  ? (isDark ? const Color(0x1FFFFFFF) : const Color(0x12000000))
+                                  : Colors.transparent,
+                              border: isActive
+                                  ? Border.all(
+                                      color: isDark ? const Color(0x33E0E0E0) : const Color(0x22000000),
+                                      width: 1,
+                                    )
+                                  : null,
+                            ),
                             child: Text(
                               line.text,
                               style: TextStyle(
-                                fontSize: isActive ? 19 : (isPast ? 13.5 : 14.5),
+                                fontSize: isActive ? 19.5 : (isPast ? 14.0 : 15.0),
                                 fontWeight: isActive ? FontWeight.w800 : FontWeight.w500,
-                                color: isActive ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white.withValues(alpha: isPast ? 0.28 : 0.55) : Colors.black.withValues(alpha: isPast ? 0.22 : 0.45)),
+                                letterSpacing: isActive ? 0.2 : 0.0,
+                                height: 1.4,
+                                color: isActive
+                                    ? (isDark ? Colors.white : Colors.black)
+                                    : (isDark
+                                        ? Colors.white.withValues(alpha: isPast ? 0.32 : 0.60)
+                                        : Colors.black.withValues(alpha: isPast ? 0.26 : 0.50)),
                               ),
                             ),
                           ),

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/utils/noctra_logger.dart';
 import '../models/song_model.dart';
 
 class SongManifest {
@@ -97,11 +98,22 @@ class NoctraManifestStore {
     final totalSec = (existing?.totalListenSeconds ?? 0) + listenedSeconds;
 
     String inferredLang = 'English';
-    final lTitle = song.title.toLowerCase();
-    final lArtist = song.artist.toLowerCase();
-    if (lTitle.contains('tum') || lTitle.contains('dil') || lArtist.contains('arijit') || lArtist.contains('pritam') || lTitle.contains('pyaar')) {
+    final lGenre = (song.genre ?? '').toLowerCase();
+    if (lGenre.contains('hindi') || lGenre.contains('bollywood')) {
       inferredLang = 'Hindi';
-    } else if (lTitle.contains('jatt') || lArtist.contains('sidhu') || lArtist.contains('diljit') || lTitle.contains('punjabi')) {
+    } else if (lGenre.contains('punjabi')) {
+      inferredLang = 'Punjabi';
+    } else if (lGenre.contains('spanish') || lGenre.contains('latin')) {
+      inferredLang = 'Spanish';
+    } else if (lGenre.contains('korean') || lGenre.contains('k-pop')) {
+      inferredLang = 'Korean';
+    } else if (lGenre.contains('japanese') || lGenre.contains('j-pop')) {
+      inferredLang = 'Japanese';
+    } else if (RegExp(r'\b(tum|dil|pyaar|ishq|tere|hum|zindagi|saath|mera|meri)\b', caseSensitive: false).hasMatch(song.title) ||
+        RegExp(r'\b(arijit|pritam|shreya|atif|sonu|alka|kumar sanu|kk)\b', caseSensitive: false).hasMatch(song.artist)) {
+      inferredLang = 'Hindi';
+    } else if (RegExp(r'\b(jatt|pind|gabru|punjab|yaar|tere bina)\b', caseSensitive: false).hasMatch(song.title) ||
+        RegExp(r'\b(sidhu|diljit|karan aujla|ap dhillon|shubh|amrit maan)\b', caseSensitive: false).hasMatch(song.artist)) {
       inferredLang = 'Punjabi';
     }
 
@@ -121,12 +133,10 @@ class NoctraManifestStore {
     );
 
     manifests[song.id] = updated;
-    artistWeights[song.artist] = (artistWeights[song.artist] ?? 0) + 1;
-    genreWeights[updated.genre] = (genreWeights[updated.genre] ?? 0) + 1;
-    languageWeights[inferredLang] = (languageWeights[inferredLang] ?? 0) + 1;
+    _rebuildWeights();
   }
 
-  void persist() async {
+  Future<void> persist() async {
     try {
       if (manifests.length > 500) {
         final sortedKeys = manifests.keys.toList()
@@ -138,6 +148,8 @@ class NoctraManifestStore {
       final map = <String, dynamic>{};
       manifests.forEach((k, v) => map[k] = v.toMap());
       await prefs.setString('noctra_kg_manifests', jsonEncode(map));
-    } catch (_) {}
+    } catch (e) {
+      NoctraLogger.e('Failed to persist manifests store', e);
+    }
   }
 }

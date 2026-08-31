@@ -25,9 +25,12 @@ class _ProperSynthwaveVisualizerState extends State<ProperSynthwaveVisualizer> w
   final List<double> _mountainPeakHeights = List.filled(16, 4.0);
   double _bassEnergy = 0.4;
 
+  late bool _isPlaying;
+
   @override
   void initState() {
     super.initState();
+    _isPlaying = widget.isPlaying;
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
@@ -53,12 +56,13 @@ class _ProperSynthwaveVisualizerState extends State<ProperSynthwaveVisualizer> w
   @override
   void didUpdateWidget(ProperSynthwaveVisualizer oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _isPlaying = widget.isPlaying;
     if (widget.isPlaying != oldWidget.isPlaying) {
       if (widget.isPlaying) {
         if (!_controller.isAnimating) _controller.repeat();
       } else {
         Future.delayed(const Duration(milliseconds: 300), () {
-          if (mounted && !widget.isPlaying && _controller.isAnimating) {
+          if (mounted && !_isPlaying && _controller.isAnimating) {
             _controller.stop();
           }
         });
@@ -68,7 +72,7 @@ class _ProperSynthwaveVisualizerState extends State<ProperSynthwaveVisualizer> w
 
   void _applyTick() {
     final t = DateTime.now().millisecondsSinceEpoch / 1000.0;
-    if (widget.isPlaying) {
+    if (_isPlaying) {
       final pulse = (sin(t * 8.5) * 0.35 + 0.65).clamp(0.2, 1.2);
       _bassEnergy = (_bassEnergy * 0.60 + pulse * 0.40).clamp(0.1, 1.4);
       for (int i = 0; i < 16; i++) {
@@ -138,81 +142,134 @@ class _ProperSynthwavePainter extends CustomPainter {
     final h = size.height;
     if (w <= 0 || h <= 0) return;
 
-    final horizonY = h * 0.46;
+    final horizonY = h * 0.44;
     final vp = Offset(w / 2, horizonY);
 
+    // 1. Black & Silver Noir Sky
     final Rect skyRect = Rect.fromLTWH(0, 0, w, horizonY);
     final Paint skyPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: isDark ? [const Color(0xFF050010), const Color(0xFF260447)] : [const Color(0xFFEDE8F8), const Color(0xFFD0C3E6)],
+        colors: isDark
+            ? [const Color(0xFF000000), const Color(0xFF141414)]
+            : [const Color(0xFFE5E5E5), const Color(0xFFC0C0C0)],
       ).createShader(skyRect);
     canvas.drawRect(skyRect, skyPaint);
 
-    final double sunRadius = (h * 0.27) + (bassEnergy * 8.0).clamp(0.0, 14.0);
+    // 2. Silver Chrome Sun / Horizon Orb
+    final double sunRadius = (h * 0.28) + (bassEnergy * 10.0).clamp(0.0, 18.0);
     final Offset sunCenter = Offset(w / 2, horizonY);
     final Rect sunRect = Rect.fromCircle(center: sunCenter, radius: sunRadius);
 
     final Paint sunPaint = Paint()
-      ..shader = const RadialGradient(colors: [Color(0xFFFF007F), Color(0xFFFF8C00)]).createShader(sunRect);
+      ..shader = RadialGradient(
+        colors: isDark
+            ? [const Color(0xFFFFFFFF), const Color(0xFF9E9E9E), const Color(0xFF424242)]
+            : [const Color(0xFFFFFFFF), const Color(0xFFB0B0B0), const Color(0xFF757575)],
+      ).createShader(sunRect);
 
     canvas.save();
     canvas.clipRect(skyRect);
     canvas.drawCircle(sunCenter, sunRadius, sunPaint);
 
-    final Paint slatPaint = Paint()..color = isDark ? const Color(0xFF120326) : const Color(0xFFD0C3E6);
+    // Horizontal Slats across the Sun (Synthwave aesthetic)
+    final Paint slatPaint = Paint()..color = isDark ? const Color(0xFF000000) : const Color(0xFFDCDCDC);
     for (int i = 1; i <= 6; i++) {
       final slatY = horizonY - (i * (sunRadius / 7));
-      final slatH = 1.0 + (i * 1.0);
+      final slatH = 1.2 + (i * 0.8);
       canvas.drawRect(Rect.fromLTWH(sunCenter.dx - sunRadius, slatY, sunRadius * 2, slatH), slatPaint);
     }
     canvas.restore();
 
-    final Path mountainPath = Path();
-    mountainPath.moveTo(0, horizonY);
-    const int pts = 16;
+    // 3. High-Visibility Audio Wave Mountains (Dual-Layer: Silver Shadow + Pure White Peak)
+    final Path waveBgPath = Path()..moveTo(0, horizonY);
+    final Path waveFgPath = Path()..moveTo(0, horizonY);
+    const int pts = 24;
+
     for (int i = 0; i <= pts; i++) {
       final double x = (w * (i / pts));
-      final double bump = isPlaying ? (mountainHeights[i % 16] * sin((i / pts) * pi)) : 2.0;
-      final double y = horizonY - 4.0 - bump;
-      mountainPath.lineTo(x, y);
+      final double normI = (i / pts);
+      final double peakFactor = sin(normI * pi);
+      final double audioBump = isPlaying
+          ? ((mountainHeights[i % 16] * 1.5) * peakFactor + (bassEnergy * 8.0 * peakFactor))
+          : 4.0 * peakFactor;
+
+      final double yBg = horizonY - 4.0 - (audioBump * 0.65);
+      final double yFg = horizonY - 6.0 - audioBump;
+
+      waveBgPath.lineTo(x, yBg);
+      waveFgPath.lineTo(x, yFg);
     }
-    mountainPath.lineTo(w, horizonY);
-    mountainPath.close();
+    waveBgPath.lineTo(w, horizonY);
+    waveBgPath.close();
+    waveFgPath.lineTo(w, horizonY);
+    waveFgPath.close();
 
-    final Paint mountainPaint = Paint()..color = isDark ? const Color(0xFF130026) : const Color(0xFF9072B0);
-    canvas.drawPath(mountainPath, mountainPaint);
+    // Draw Background Wave Layer (Muted Silver)
+    final Paint waveBgPaint = Paint()
+      ..color = isDark ? const Color(0x66757575) : const Color(0x66A0A0A0)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(waveBgPath, waveBgPaint);
 
+    // Draw Foreground Wave Layer (Silver Gradient Fill + Bright White Outline)
+    final Paint waveFgPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: isDark
+            ? [const Color(0xD0E0E0E0), const Color(0x801A1A1A)]
+            : [const Color(0xD0FFFFFF), const Color(0x808E8E93)],
+      ).createShader(Rect.fromLTWH(0, 0, w, horizonY));
+    canvas.drawPath(waveFgPath, waveFgPaint);
+
+    final Paint waveStrokePaint = Paint()
+      ..color = isDark ? const Color(0xFFFFFFFF) : const Color(0xFF000000)
+      ..strokeWidth = 2.0
+      ..style = PaintingStyle.stroke;
+    canvas.drawPath(waveFgPath, waveStrokePaint);
+
+    // 4. Ground Perspective Grid (Jet Black to Charcoal Ground)
     final Rect groundRect = Rect.fromLTWH(0, horizonY, w, h - horizonY);
     final Paint groundPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: isDark ? [const Color(0xFF0F001F), const Color(0xFF000000)] : [const Color(0xFFCFBFE3), const Color(0xFFF7F7F9)],
+        colors: isDark
+            ? [const Color(0xFF101010), const Color(0xFF000000)]
+            : [const Color(0xFFC8C8C8), const Color(0xFFEEEEEE)],
       ).createShader(groundRect);
     canvas.drawRect(groundRect, groundPaint);
 
-    final gridColor = isDark ? const Color(0xFF00F0FF) : const Color(0xFF7000FF);
-    final Paint linePaint = Paint()..color = gridColor.withValues(alpha: isPlaying ? 0.75 : 0.40)..strokeWidth = 1.4;
+    // Perspective Vertical Lines (Silver)
+    final silverColor = isDark ? const Color(0xFFE0E0E0) : const Color(0xFF2C2C2E);
+    final Paint linePaint = Paint()
+      ..color = silverColor.withValues(alpha: isPlaying ? 0.65 : 0.35)
+      ..strokeWidth = 1.4;
 
-    const int numVLines = 18;
+    const int numVLines = 20;
     for (int i = 0; i <= numVLines; i++) {
       final double bottomX = w * (i / numVLines);
       canvas.drawLine(vp, Offset(bottomX, h), linePaint);
     }
 
-    const int numHLines = 10;
+    // Perspective Forward Moving Horizontal Lines (Silver)
+    const int numHLines = 12;
     for (int i = 0; i < numHLines; i++) {
       final double norm = ((i + progress) % numHLines) / numHLines;
-      final double eased = pow(norm, 2.5).toDouble();
+      final double eased = pow(norm, 2.8).toDouble();
       final double lineY = horizonY + (eased * (h - horizonY));
-      final double alpha = (norm * 0.90).clamp(0.0, 0.95);
-      final hPaint = Paint()..color = gridColor.withValues(alpha: alpha)..strokeWidth = 1.0 + (norm * 2.0);
+      final double alpha = (norm * 0.95).clamp(0.0, 0.95);
+      final hPaint = Paint()
+        ..color = silverColor.withValues(alpha: alpha)
+        ..strokeWidth = 1.0 + (norm * 2.2);
       canvas.drawLine(Offset(0, lineY), Offset(w, lineY), hPaint);
     }
 
-    final horizonPaint = Paint()..color = const Color(0xFFFF007F).withValues(alpha: 0.95)..strokeWidth = 2.4;
+    // 5. Razor-Sharp Metallic Silver Horizon Laser Line
+    final horizonPaint = Paint()
+      ..color = isDark ? const Color(0xFFFFFFFF) : const Color(0xFF1A1A1A)
+      ..strokeWidth = 2.4;
     canvas.drawLine(Offset(0, horizonY), Offset(w, horizonY), horizonPaint);
   }
 

@@ -102,11 +102,11 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
   @override
   Widget build(BuildContext context) {
     if (_openedFolder != null) {
-      final folderSongs = widget.customFolders[_openedFolder] ?? [];
+      final folderSongs = widget.repo.customFolders[_openedFolder] ?? widget.customFolders[_openedFolder] ?? [];
       return _buildFolderDetailView(_openedFolder!, folderSongs);
     }
 
-    final folderNames = widget.customFolders.keys.toList();
+    final folderNames = (widget.repo.customFolders.isNotEmpty ? widget.repo.customFolders : widget.customFolders).keys.toList();
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [

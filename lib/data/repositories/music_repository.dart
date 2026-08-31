@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/song_model.dart';
+import '../models/ai_folder_model.dart';
 import '../sources/noctra_local_database.dart';
 import 'taste_vector_engine.dart';
 import '../../services/ytdlp/music_service.dart';
@@ -8,7 +9,7 @@ import '../../core/utils/noctra_localization.dart';
 class AIPlaylist {
   final String id, title, subtitle, artworkUrl, vibeKey;
   final List<Song> tracks;
-  const AIPlaylist({required this.id, required this.title, required this.subtitle, required this.artworkUrl, required this.vibeKey, required this.tracks});
+  const AIPlaylist({required this.id, required this.title, required this.subtitle, required this.artworkUrl, required this.vibeKey, this.tracks = const []});
 }
 
 class VibeChip {
@@ -36,9 +37,18 @@ class MusicRepository extends ChangeNotifier {
   Map<String, List<Song>> get customFolders => Map.unmodifiable(_customFolders);
   List<double> get userTasteVector => _cachedTasteVector;
 
+  bool _isLoaded = false;
+  Future<void>? _initFuture;
+
   MusicRepository._internal();
 
-  Future<void> init() async => _loadFromDatabase();
+  Future<void> init() async {
+    if (_isLoaded) return;
+    if (_initFuture != null) return _initFuture!;
+    _initFuture = _loadFromDatabase();
+    await _initFuture;
+    _initFuture = null;
+  }
 
   Future<void> _loadFromDatabase() async {
     try {
@@ -56,8 +66,13 @@ class MusicRepository extends ChangeNotifier {
         _userTasteVector = tv;
         _cachedTasteVector = List.unmodifiable(_userTasteVector);
       }
-      notifyListeners();
-    } catch (_) {}
+      _isLoaded = true;
+    } catch (_) {
+      _isLoaded = true;
+    }
+    // Always notify listeners — even on partial failure — so widgets
+    // don't remain stuck on stale default state.
+    notifyListeners();
   }
 
   void initOnboardingTaste({required List<String> languages, required List<String> genres, required List<String> artists}) {
@@ -136,19 +151,217 @@ class MusicRepository extends ChangeNotifier {
         : song.featureVector;
     final sim = TasteVectorEngine.cosineSimilarity(songEmbedding, _userTasteVector);
     final historyAffinity = NoctraLocalDatabase().getArtistAffinity(song.artist);
-    return ((sim * 80) + (historyAffinity * 19)).round().clamp(60, 99);
+    return ((sim * 80) + (historyAffinity * 19)).round().clamp(10, 99);
   }
 
-  List<AIPlaylist> getSmartAIPlaylists() {
-    return [
-      AIPlaylist(id: 'ai_1', title: 'Obsidian Noir Mix', subtitle: 'Late Night Focus • 98% Taste Resonance', artworkUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500', vibeKey: 'noir_night', tracks: _localLibrary),
-      AIPlaylist(id: 'ai_2', title: 'Midnight Velocity', subtitle: 'Synthwave & Outrun Drive • AI Curated', artworkUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500', vibeKey: 'retro_synth', tracks: _localLibrary),
-      AIPlaylist(id: 'ai_3', title: 'Kinetic Wave Mix', subtitle: 'High Velocity • Peak Energy Pulse', artworkUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500', vibeKey: 'high_energy', tracks: _localLibrary),
-      AIPlaylist(id: 'ai_4', title: 'Deep Cuts & Discoveries', subtitle: 'Acoustic Warmth • 16-Axis Neural Picks', artworkUrl: 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=500', vibeKey: 'acoustic_warm', tracks: _localLibrary),
-    ];
+  List<String> getTopArtists({int limit = 5}) => NoctraLocalDatabase().getTopArtists(limit: limit);
+
+  List<AIPlaylist> getSmartAIPlaylists() => getAIGeneratedPlaylists();
+  List<AIPlaylist> getAIGeneratedPlaylists() => _buildAIPlaylists();
+
+  // Build deduplicated seed track pool from all available sources.
+  // Used as initial tracks for AI mix cards before live recommendations load.
+  List<Song> _seedTrackPool() {
+    final seen = <String>{};
+    final pool = <Song>[];
+    for (final src in [_favorites, _downloads, _recentlyPlayed]) {
+      for (final s in src) {
+        if (seen.add(s.id)) pool.add(s);
+      }
+    }
+    return pool;
   }
 
-  List<AIPlaylist> getAIGeneratedPlaylists() => getSmartAIPlaylists();
+  List<AIPlaylist> _buildAIPlaylists() {
+    final v = _userTasteVector;
+    final playlists = <AIPlaylist>[];
+    final pool = _seedTrackPool();
+
+    // Always include a "For You Today" mix
+    playlists.add(AIPlaylist(
+      id: 'ai_for_you',
+      title: 'For You Today',
+      subtitle: 'Personalized mix based on your taste',
+      artworkUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500',
+      vibeKey: 'late_night',
+      tracks: pool,
+    ));
+
+    if (v.length > 10 && v[10] >= 0.60) {
+      playlists.add(AIPlaylist(id: 'ai_late_night', title: 'Late Night Drive',
+        subtitle: 'Dark atmosphere for the night hours',
+        artworkUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500',
+        vibeKey: 'noir_night', tracks: pool));
+    }
+    if (v.length > 9 && v[9] >= 0.60) {
+      playlists.add(AIPlaylist(id: 'ai_retro', title: 'Retro Synth Session',
+        subtitle: 'Analog warmth and synthwave energy',
+        artworkUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500',
+        vibeKey: 'retro_synth', tracks: pool));
+    }
+    if (v.length > 2 && v[2] >= 0.65) {
+      playlists.add(AIPlaylist(id: 'ai_energy', title: 'High Energy',
+        subtitle: 'Kinetic tracks to keep you moving',
+        artworkUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500',
+        vibeKey: 'high_energy', tracks: pool));
+    }
+    if (v.length > 19 && v[19] >= 0.60) {
+      playlists.add(AIPlaylist(id: 'ai_bollywood', title: 'Desi Vibes',
+        subtitle: 'Bollywood and South Asian favorites',
+        artworkUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=500',
+        vibeKey: 'bollywood', tracks: pool));
+    }
+    if (v.length > 3 && v[3] >= 0.65) {
+      playlists.add(AIPlaylist(id: 'ai_chill', title: 'Chill & Unwind',
+        subtitle: 'Calm tracks for easy listening',
+        artworkUrl: 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=500',
+        vibeKey: 'ambient_chill', tracks: pool));
+    }
+
+    // New Discoveries: always included
+    playlists.add(AIPlaylist(
+      id: 'ai_discovery',
+      title: 'New Discoveries',
+      subtitle: 'Fresh tracks outside your usual rotation',
+      artworkUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=500',
+      vibeKey: 'discovery',
+      tracks: pool,
+    ));
+
+    return playlists;
+  }
+
+  // Dynamic AI curated folders based on user taste evidence
+  List<AIFolder> getAICuratedFolders() {
+    final v = _userTasteVector;
+    final folders = <AIFolder>[];
+    // Top artists data available via NoctraLocalDatabase().getTopArtists()
+    final recentCount = _recentlyPlayed.length;
+
+    // Heavy Rotation: songs replayed often (proxy: recent play count > 10)
+    if (recentCount >= 10) {
+      folders.add(AIFolder(
+        id: 'folder_rotation', name: 'Heavy Rotation',
+        description: 'Songs you keep coming back to',
+        vibeKey: 'late_night', icon: Icons.repeat_rounded, trackCount: recentCount.clamp(5, 30),
+      ));
+    }
+    if (v.length > 10 && v[10] >= 0.62) {
+      folders.add(AIFolder(
+        id: 'folder_night', name: 'Late Night',
+        description: 'Dark and atmospheric for quiet hours',
+        vibeKey: 'noir_night', icon: Icons.nightlight_round, trackCount: 15,
+      ));
+    }
+    if (v.length > 19 && v[19] >= 0.62) {
+      folders.add(AIFolder(
+        id: 'folder_bollywood', name: 'Bollywood Favorites',
+        description: 'Your top Bollywood and Desi picks',
+        vibeKey: 'bollywood', icon: Icons.music_note_rounded, trackCount: 18,
+      ));
+    }
+    if (v.length > 2 && v[2] >= 0.68) {
+      folders.add(AIFolder(
+        id: 'folder_energy', name: 'High Energy',
+        description: 'Maximum energy, maximum output',
+        vibeKey: 'high_energy', icon: Icons.bolt_rounded, trackCount: 12,
+      ));
+    }
+    if (v.length > 9 && v[9] >= 0.65) {
+      folders.add(AIFolder(
+        id: 'folder_synth', name: 'Synthwave & Electronic',
+        description: 'Retro analog and electronic sounds',
+        vibeKey: 'retro_synth', icon: Icons.graphic_eq_rounded, trackCount: 14,
+      ));
+    }
+    if (v.length > 3 && v[3] >= 0.68) {
+      folders.add(AIFolder(
+        id: 'folder_chill', name: 'Chill Sessions',
+        description: 'Relaxed and ambient listening',
+        vibeKey: 'ambient_chill', icon: Icons.spa_rounded, trackCount: 16,
+      ));
+    }
+    if (v.length > 16 && v[16] >= 0.65) {
+      folders.add(AIFolder(
+        id: 'folder_sufi', name: 'Sufi & Spiritual',
+        description: 'Devotional and soul-stirring music',
+        vibeKey: 'late_night', icon: Icons.self_improvement_rounded, trackCount: 10,
+      ));
+    }
+    if (v.length > 21 && v[21] >= 0.65) {
+      folders.add(AIFolder(
+        id: 'folder_rock', name: 'Rock Discoveries',
+        description: 'Guitar-driven intensity',
+        vibeKey: 'high_energy', icon: Icons.electric_bolt_rounded, trackCount: 12,
+      ));
+    }
+    if (v.length > 5 && v[5] >= 0.65) {
+      folders.add(AIFolder(
+        id: 'folder_acoustic', name: 'Acoustic & Folk',
+        description: 'Warm, intimate, and unplugged',
+        vibeKey: 'acoustic_warm', icon: Icons.library_music_rounded, trackCount: 13,
+      ));
+    }
+
+    return folders;
+  }
+
+  // Personalized mixes derived from actual dominant taste axes.
+  // Generates mixes for all 6 sourceTypes: longTerm, session, genre,
+  // artist, discovery, prompt — so the SessionContextTracker's session
+  // blending is visible in the Library tab.
+  List<AIMix> getPersonalizedMixes() {
+    final mixes = <AIMix>[];
+    final topArtists = NoctraLocalDatabase().getTopArtists(limit: 3);
+
+    // Map vibeKeys to MixSourceType
+    MixSourceType typeForKey(String vk) {
+      if (vk == 'discovery') return MixSourceType.discovery;
+      if (vk == 'bollywood') return MixSourceType.genre;
+      return MixSourceType.longTerm;
+    }
+
+    for (final pl in getAIGeneratedPlaylists()) {
+      mixes.add(AIMix(
+        id: pl.id, title: pl.title, subtitle: pl.subtitle,
+        artworkUrl: pl.artworkUrl, vibeKey: pl.vibeKey,
+        sourceType: typeForKey(pl.vibeKey),
+      ));
+    }
+
+    // Session-based mix: from recently played in this session
+    if (_recentlyPlayed.length >= 3) {
+      mixes.add(AIMix(
+        id: 'ai_session_mix', title: 'Session Vibes',
+        subtitle: 'Based on what you\'re feeling right now',
+        artworkUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500',
+        vibeKey: 'late_night', sourceType: MixSourceType.session,
+      ));
+    }
+
+    // Artist-based mix: from top artists
+    if (topArtists.isNotEmpty) {
+      mixes.add(AIMix(
+        id: 'ai_artist_mix', title: '${topArtists.first} & More',
+        subtitle: 'Artists you love most',
+        artworkUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=500',
+        vibeKey: 'high_energy', sourceType: MixSourceType.artist,
+      ));
+    }
+
+    // Prompt-based mix: from favorite genres
+    final topGenres = NoctraLocalDatabase().getTopGenres(limit: 2);
+    if (topGenres.isNotEmpty) {
+      mixes.add(AIMix(
+        id: 'ai_prompt_mix', title: '${topGenres.first} Discovery',
+        subtitle: 'Fresh picks in your favorite genres',
+        artworkUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500',
+        vibeKey: 'deep_focus', sourceType: MixSourceType.prompt,
+      ));
+    }
+
+    return mixes;
+  }
 
   List<VibeChip> getDynamicVibeChips() {
     return const [
@@ -179,7 +392,7 @@ class MusicRepository extends ChangeNotifier {
     final scored = candidates.map((s) {
       final songEmbedding = s.featureVector.every((x) => x == 0.5) ? TasteVectorEngine.extractSongEmbedding(s) : s.featureVector;
       final sim = TasteVectorEngine.cosineSimilarity(songEmbedding, target);
-      final score = ((sim * 80) + 19).round().clamp(60, 99);
+      final score = ((sim * 85) + 14).round().clamp(10, 99);
       final exp = TasteVectorEngine.generateExplanation(s, score, vibeKey, naturalPrompt);
       return {'song': s, 'score': score, 'matchPercentage': score, 'explanation': exp};
     }).toList();
@@ -203,7 +416,7 @@ class MusicRepository extends ChangeNotifier {
           ? TasteVectorEngine.extractSongEmbedding(s)
           : s.featureVector;
       final sim = TasteVectorEngine.cosineSimilarity(songEmbedding, target);
-      final score = ((sim * 80) + 19).round().clamp(60, 99);
+      final score = ((sim * 85) + 14).round().clamp(10, 99);
       final exp = TasteVectorEngine.generateExplanation(s, score, vibeKey, cleanPrompt);
       return {'song': s, 'score': score, 'matchPercentage': score, 'explanation': exp};
     }).toList();
@@ -243,6 +456,16 @@ class MusicRepository extends ChangeNotifier {
     if (_customFolders.containsKey(folderName)) {
       _customFolders[folderName]!.removeWhere((s) => s.id == songId);
       _persistState(); notifyListeners();
+    }
+  }
+
+  void renameFolder(String oldName, String newName) {
+    final cleanNew = newName.trim();
+    if (oldName != cleanNew && cleanNew.isNotEmpty && _customFolders.containsKey(oldName) && !_customFolders.containsKey(cleanNew)) {
+      final songs = _customFolders.remove(oldName)!;
+      _customFolders[cleanNew] = songs;
+      _persistState();
+      notifyListeners();
     }
   }
 

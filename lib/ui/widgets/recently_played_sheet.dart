@@ -76,8 +76,8 @@ class RecentlyPlayedSheet extends ConsumerWidget {
                       style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : Colors.black87),
                     ),
                     onPressed: () {
-                      repo.clearRecentlyPlayed();
                       Navigator.pop(context);
+                      repo.clearRecentlyPlayed();
                     },
                   ),
               ],

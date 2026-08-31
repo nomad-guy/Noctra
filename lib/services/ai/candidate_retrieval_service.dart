@@ -4,37 +4,58 @@ import '../../data/repositories/neural_recommender_engine.dart';
 import '../../data/repositories/taste_vector_engine.dart';
 import '../../services/ytdlp/music_service.dart';
 import 'mmr_diversity_filter.dart';
+import 'session_context_tracker.dart';
 
 class CandidateRetrievalService {
-  /// Two-stage neural retrieval + MLP scoring + MMR diversity filter
+  // Two-stage neural retrieval + MLP scoring + MMR diversity + session context
   static Future<List<Map<String, dynamic>>> curatePersonalizedFeed({
     String? vibeKey,
     String? naturalPrompt,
+    Song? seedSong,
     int targetCount = 15,
+    bool preferDeepCuts = false,
   }) async {
     final repo = MusicRepository();
-    final userVector = repo.userTasteVector;
+    final session = SessionContextTracker();
+    final longTerm = repo.userTasteVector;
 
-    // Stage 1: Fast Candidate Pool Retrieval (~100 items)
+    // Blended user vector: 60% long-term + 40% session
+    final userVector = session.sessionSongCount > 3
+        ? session.blendedVector(longTerm)
+        : longTerm;
+
+    // Stage 1: Candidate pool (~100 items)
     final Set<String> seenIds = {};
     final List<Song> pool = [];
-
     void addTracks(List<Song> tracks) {
       for (final s in tracks) {
         if (s.id.isNotEmpty && seenIds.add(s.id)) pool.add(s);
       }
     }
-
     addTracks(repo.localLibrary);
     addTracks(repo.downloads);
     addTracks(repo.recentlyPlayed);
     addTracks(repo.favorites);
 
+    // Seed song context: "something like this"
+    if (seedSong != null) {
+      try {
+        final similar = await MusicService.search('${seedSong.artist} ${seedSong.title}');
+        addTracks(similar);
+      } catch (_) {}
+    }
+
     // Fetch dynamic live candidates
     try {
       if (naturalPrompt != null && naturalPrompt.trim().isNotEmpty) {
-        final searchResults = await MusicService.search(naturalPrompt.trim());
-        addTracks(searchResults);
+        final clean = naturalPrompt.trim();
+        final results = await Future.wait([
+          MusicService.search(clean).catchError((_) => <Song>[]),
+          MusicService.search('$clean top songs').catchError((_) => <Song>[]),
+        ]);
+        for (final list in results) {
+          addTracks(list);
+        }
       } else if (vibeKey != null) {
         final vibeTracks = await MusicService.fetchVibeFeed(vibeKey);
         addTracks(vibeTracks);
@@ -46,33 +67,58 @@ class CandidateRetrievalService {
 
     if (pool.isEmpty) return [];
 
-    // Stage 2: On-Device Tiny Neural MLP Scoring
-    final List<ScoredCandidate> scored = [];
-    final targetVector = TasteVectorEngine.getTargetVector(
+    // Stage 2: Build target vector applying prompt modifiers + vibe
+    List<double> targetVector = TasteVectorEngine.getTargetVector(
       vibeKey: vibeKey,
       prompt: naturalPrompt,
       defaultTaste: userVector,
     );
 
-    for (final song in pool) {
-      final double mlpProb = NeuralRecommenderEngine.predictScore(
-        userVector: targetVector,
-        song: song,
-      );
-      final int score = ((mlpProb * 78) + 21).round().clamp(60, 99);
-      final explanation = TasteVectorEngine.generateExplanation(song, score, vibeKey, naturalPrompt);
-
-      scored.add(ScoredCandidate(
-        song: song,
-        score: mlpProb,
-        explanation: explanation,
-      ));
+    // If seed song given, blend its embedding into target (30%)
+    if (seedSong != null) {
+      final seedEmbed = seedSong.featureVector.every((x) => x == 0.5)
+          ? TasteVectorEngine.extractSongEmbedding(seedSong)
+          : seedSong.featureVector;
+      targetVector = TasteVectorEngine.blendVectors(targetVector, seedEmbed, 0.70);
     }
 
-    // Sort by Neural Probabilities
+    // Build rich 24-dim context from session
+    final contextFeatures = NeuralRecommenderEngine.buildContext(
+      sessionSongCount: session.sessionSongCount,
+      momentumFeatures: session.momentumFeatures,
+      affinityFeatures: session.topArtistAffinityFeatures(),
+    );
+
+    // Check if user wants deep cuts / unpopular tracks
+    final wantsDeepCuts = preferDeepCuts ||
+        (naturalPrompt != null &&
+            (naturalPrompt.contains('deep cut') || naturalPrompt.contains('less popular') ||
+             naturalPrompt.contains('underground') || naturalPrompt.contains('hidden gem')));
+
+    // Stage 3: Neural MLP scoring
+    final List<ScoredCandidate> scored = [];
+    for (final song in pool) {
+      double mlpProb = NeuralRecommenderEngine.predictScore(
+        userVector: targetVector,
+        song: song,
+        contextFeatures: contextFeatures,
+      );
+
+      // Deep cuts: penalize songs from frequently played artists
+      if (wantsDeepCuts) {
+        final artistKey = song.artist.toLowerCase();
+        final topArtists = session.artistAffinity;
+        if ((topArtists[artistKey] ?? 0.0) > 0.7) mlpProb *= 0.6;
+      }
+
+      final int score = ((mlpProb * 85) + 14).round().clamp(10, 99);
+      final explanation = TasteVectorEngine.generateExplanation(song, score, vibeKey, naturalPrompt);
+      scored.add(ScoredCandidate(song: song, score: score / 100.0, explanation: explanation));
+    }
+
     scored.sort((a, b) => b.score.compareTo(a.score));
 
-    // Stage 3: MMR Diversity Reranker
+    // Stage 4: MMR diversity reranker
     final diversified = MMRDiversityFilter.rerankWithMMR(
       candidates: scored,
       targetCount: targetCount,

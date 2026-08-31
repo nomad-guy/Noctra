@@ -56,7 +56,7 @@ class _JamChatTabState extends ConsumerState<JamChatTab> {
                   itemCount: messages.length,
                   itemBuilder: (context, i) {
                     final msg = messages[i];
-                    final isSelf = msg.senderName.contains('Host') || msg.senderName.contains('You');
+                    final isSelf = msg.senderName == widget.syncService.userName;
 
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

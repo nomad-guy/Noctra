@@ -1,63 +1,180 @@
 import 'lyrics_service.dart';
+import 'dynamic_lexicon.dart';
 
-class DevanagariTransliterationService {
-  static final Map<String, String> _lexicon = {
-    'tere': 'तेरे', 'mera': 'मेरा', 'meri': 'मेरी', 'mere': 'मेरे', 'tum': 'तुम',
-    'hum': 'हम', 'aap': 'आप', 'hai': 'है', 'hain': 'हैं', 'ho': 'हो', 'tha': 'था',
-    'the': 'थे', 'thi': 'थी', 'dil': 'दिल', 'ishq': 'इश्क़', 'pyaar': 'प्यार',
-    'mohabbat': 'मोहब्बत', 'zindagi': 'ज़िंदगी', 'khuda': 'ख़ुदा', 'rabba': 'रब्बा',
-    'naina': 'नैना', 'aankhen': 'आँखें', 'raat': 'रात', 'din': 'दिन', 'sanam': 'सनम',
-    'jaana': 'जाना', 'deewana': 'दीवाना', 'sukoon': 'सुकून', 'dard': 'दर्द',
-    'duniya': 'दुनिया', 'kahan': 'कहाँ', 'jahan': 'जहाँ', 'tu': 'तू', 'kya': 'क्या',
-    'kyun': 'क्यों', 'kaise': 'कैसे', 'nahi': 'नहीं', 'nahin': 'नहीं', 'mat': 'मत',
-    'saath': 'साथ', 'paas': 'पास', 'door': 'दूर', 'yaad': 'याद', 'baat': 'बात',
-    'khwab': 'ख़्वाब', 'rooh': 'रूह', 'safar': 'सफ़र', 'humsafar': 'हमसफ़र',
-    'love': 'लव', 'baby': 'बेबी', 'night': 'नाइट', 'starboy': 'स्टारबॉय',
-    'feel': 'फ़ील', 'coming': 'कमिंग', 'never': 'नेवर', 'forever': 'फ़ॉरएवर',
-    'heart': 'हार्ट', 'time': 'टाइम', 'dream': 'ड्रीम', 'music': 'म्यूज़िक',
-  };
+/// DevanagariTransliterationEngine: converts Romanized Hindustani lyrics to
+/// Devanagari script using a dynamic lexicon + rule-based phonetic parser.
+///
+/// What changed vs. the original static version:
+///   - Lexicon is now a [DynamicLexicon]: loadable at runtime, and the
+///     engine can *learn* words (see [learnWord]) instead of only shipping
+///     with a fixed word list.
+///   - Fallback parser is smarter for words the lexicon has never seen:
+///       * fuzzy lookup catches near-miss spellings ("pyaaar" -> "pyaar")
+///       * an optional ITRANS-style capital-letter convention
+///         (T/D/N/Sh) lets callers disambiguate retroflex consonants,
+///         which plain lowercase Roman text can never resolve on its own
+///       * word-final single "a" is treated as the long आ/ा sound, which
+///         matches how Hindi/Urdu song lyrics are conventionally romanized
+///         (schwa is normally dropped and not written at all — a written
+///         final "a" almost always means "gaya", "hua", "dekha" etc., not
+///         a short schwa)
+///   - Results are memoized (small LRU) so repeated words/lines — very
+///     common in song lyrics with repeating chorus — are cheap to redo,
+///     which matters once this is driving live/keystroke-level UI.
+class DevanagariTransliterationEngine {
+  DevanagariTransliterationEngine({DynamicLexicon? lexicon, int cacheSize = 500})
+      : lexicon = lexicon ?? DynamicLexicon(),
+        _cacheSize = cacheSize;
 
-  static final List<List<String>> _consonants = [
-    ['kh', 'ख़'], ['gh', 'ग़'], ['ch', 'च'], ['chh', 'छ'], ['jh', 'झ'],
-    ['th', 'थ'], ['dh', 'ध'], ['ph', 'फ़'], ['bh', 'भ'], ['sh', 'श'],
+  final DynamicLexicon lexicon;
+  final int _cacheSize;
+  final Map<String, String> _cache = {}; // simple LRU (insertion-order map)
+
+  static final List<List<String>> _digraphs = [
+    ['ksh', 'क्ष'], ['tr', 'त्र'], ['gyn', 'ज्ञ'], ['shr', 'श्र'],
+    ['chh', 'छ'], ['kh', 'ख'], ['gh', 'घ'], ['ch', 'च'], ['jh', 'झ'],
+    ['th', 'थ'], ['dh', 'ध'], ['ph', 'फ'], ['bh', 'भ'], ['sh', 'श'],
+    ['ng', 'ङ'], ['ny', 'ञ'],
+  ];
+
+  static final List<List<String>> _simpleConsonants = [
     ['k', 'क'], ['g', 'ग'], ['j', 'ज'], ['t', 'त'], ['d', 'द'],
     ['n', 'न'], ['p', 'प'], ['f', 'फ़'], ['b', 'ब'], ['m', 'म'],
     ['y', 'य'], ['r', 'र'], ['l', 'ल'], ['v', 'व'], ['w', 'व'],
     ['s', 'स'], ['h', 'ह'], ['z', 'ज़'], ['q', 'क़'],
   ];
 
-  static final List<List<String>> _matras = [
-    ['aa', 'ा'], ['ee', 'ी'], ['oo', 'ू'], ['ai', 'ै'], ['au', 'ौ'],
+  // ITRANS-style capitals for sounds plain lowercase Roman can't
+  // represent at all. Checked BEFORE lowercasing. Purely additive — any
+  // caller not using capitals behaves exactly as before.
+  static final List<List<String>> _retroflexCapitals = [
+    ['Ksh', 'क्ष'], ['Tr', 'ट्र'],
+    ['Th', 'ठ'], ['Dh', 'ढ'], ['Sh', 'ष'],
+    ['T', 'ट'], ['D', 'ड'], ['N', 'ण'], ['R', 'ड़'],
+  ];
+
+  static final List<List<String>> _vowelMatras = [
+    ['aan', 'ां'], ['oon', 'ूं'], ['een', 'ीं'], ['ain', 'ैं'], ['aun', 'ौं'],
+    ['aa', 'ा'], ['ii', 'ी'], ['ee', 'ी'], ['oo', 'ू'], ['uu', 'ू'],
+    ['ai', 'ै'], ['au', 'ौ'], ['ei', 'ै'],
     ['a', ''], ['i', 'ि'], ['u', 'ु'], ['e', 'े'], ['o', 'ो'],
   ];
 
   static final List<List<String>> _initialVowels = [
-    ['aa', 'आ'], ['ee', 'ई'], ['oo', 'ऊ'], ['ai', 'ऐ'], ['au', 'औ'],
+    ['aan', 'आं'], ['oon', 'ऊं'], ['een', 'ईं'], ['ain', 'ऐं'], ['aun', 'औं'],
+    ['aa', 'आ'], ['ii', 'ई'], ['ee', 'ई'], ['oo', 'ऊ'], ['uu', 'ऊ'],
+    ['ai', 'ऐ'], ['au', 'औ'],
     ['a', 'अ'], ['i', 'इ'], ['u', 'उ'], ['e', 'ए'], ['o', 'ओ'],
   ];
 
-  static String toDevanagari(String text) {
-    if (text.trim().isEmpty) return text;
-    final words = text.split(' ');
-    final converted = words.map((w) => _convertWordToDevanagari(w)).toList();
-    return converted.join(' ');
+  static bool _isDevanagari(String word) {
+    for (int i = 0; i < word.length; i++) {
+      final cp = word.codeUnitAt(i);
+      if (cp >= 0x0900 && cp <= 0x097F) return true;
+    }
+    return false;
   }
 
-  static String _convertWordToDevanagari(String word) {
-    final clean = word.toLowerCase().replaceAll(RegExp(r'[^\w]'), '');
-    if (clean.isEmpty) return word;
-    if (_lexicon.containsKey(clean)) {
-      final dev = _lexicon[clean]!;
-      return word.replaceAll(RegExp(clean, caseSensitive: false), dev);
+  String toDevanagari(String text) {
+    if (text.trim().isEmpty) return text;
+    final buffer = StringBuffer();
+    final tokens = text.split(RegExp(r'(\s+)'));
+    bool first = true;
+    for (final token in tokens) {
+      if (!first) buffer.write(' ');
+      first = false;
+      if (token.isEmpty) continue;
+      final leading = RegExp(r'^[\s\p{P}]+', unicode: true).stringMatch(token) ?? '';
+      final trailing = RegExp(r'[\s\p{P}]+$', unicode: true).stringMatch(token) ?? '';
+      final core = token.substring(leading.length, token.length - trailing.length);
+      buffer.write(leading);
+      if (core.isNotEmpty) buffer.write(_isDevanagari(core) ? core : _convertWordCached(core));
+      buffer.write(trailing);
     }
-    String s = clean;
+    return buffer.toString();
+  }
+
+  String _convertWordCached(String word) {
+    final cached = _cache[word];
+    if (cached != null) return cached;
+
+    final result = _convertWord(word);
+
+    if (_cache.length >= _cacheSize) {
+      _cache.remove(_cache.keys.first); // evict oldest
+    }
+    _cache[word] = result;
+    return result;
+  }
+
+  String _convertWord(String word) {
+    // 1. Exact lexicon hit (case-insensitive).
+    final exact = lexicon.lookup(word);
+    if (exact != null) return exact;
+
+    // 2. Fuzzy lexicon hit — catches near-miss spellings that are common in
+    //    fan-typed/UGC lyrics ("pyaaar", "zindgi", "kabhii"). Only tried on
+    //    words long enough that a 1-edit match is meaningfully close, and
+    //    capped so it stays cheap even against a large lexicon.
+    if (word.length >= 4) {
+      final fuzzy = _fuzzyLookup(word.toLowerCase());
+      if (fuzzy != null) return fuzzy;
+    }
+
+    // 3. Rule-based phonetic parse for words the lexicon has never seen.
+    return _parseRomanToDevanagari(word);
+  }
+
+  String? _fuzzyLookup(String word) {
+    String? best;
+    int bestDist = 2; // allow up to 2-edit distance
+    for (final key in lexicon.allKeys) {
+      if ((key.length - word.length).abs() > bestDist) continue;
+      final dist = _levenshtein(word, key, bestDist);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = key;
+        if (bestDist == 0) break;
+      }
+    }
+    return best == null ? null : lexicon.lookup(best);
+  }
+
+  /// Bounded Levenshtein distance — returns early once it's clear the
+  /// distance exceeds [maxDist], so this stays cheap across a big lexicon.
+  static int _levenshtein(String a, String b, int maxDist) {
+    if ((a.length - b.length).abs() > maxDist) return maxDist + 1;
+    final la = a.length, lb = b.length;
+    var prev = List<int>.generate(lb + 1, (j) => j);
+    for (int i = 1; i <= la; i++) {
+      final curr = List<int>.filled(lb + 1, 0);
+      curr[0] = i;
+      int rowMin = curr[0];
+      for (int j = 1; j <= lb; j++) {
+        final cost = a[i - 1] == b[j - 1] ? 0 : 1;
+        curr[j] = [curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost].reduce((x, y) => x < y ? x : y);
+        if (curr[j] < rowMin) rowMin = curr[j];
+      }
+      if (rowMin > maxDist) return maxDist + 1;
+      prev = curr;
+    }
+    return prev[lb];
+  }
+
+  String _parseRomanToDevanagari(String rawWord) {
+    // Detect ITRANS-style retroflex capitals BEFORE lowercasing everything.
+    final hasRetroflexHint = _retroflexCapitals.any((r) => rawWord.contains(r[0]));
+    final s = hasRetroflexHint ? rawWord : rawWord.toLowerCase();
+
     final buf = StringBuffer();
     int idx = 0;
+    bool consonantPending = false;
+
     while (idx < s.length) {
-      if (idx == 0) {
+      if (!consonantPending) {
         bool matchedVowel = false;
         for (final v in _initialVowels) {
-          if (s.startsWith(v[0], idx)) {
+          if (_startsWithCI(s, v[0], idx, caseSensitive: hasRetroflexHint)) {
             buf.write(v[1]);
             idx += v[0].length;
             matchedVowel = true;
@@ -66,43 +183,132 @@ class DevanagariTransliterationService {
         }
         if (matchedVowel) continue;
       }
-      bool matchedConsonant = false;
-      for (final c in _consonants) {
-        if (s.startsWith(c[0], idx)) {
-          buf.write(c[1]);
-          idx += c[0].length;
-          bool matchedMatra = false;
-          for (final m in _matras) {
-            if (s.startsWith(m[0], idx)) {
-              buf.write(m[1]);
-              idx += m[0].length;
-              matchedMatra = true;
-              break;
-            }
+
+      bool foundConsonant = false;
+
+      if (hasRetroflexHint) {
+        for (final rc in _retroflexCapitals) {
+          if (s.startsWith(rc[0], idx)) {
+            if (consonantPending) buf.write('्');
+            buf.write(rc[1]);
+            idx += rc[0].length;
+            consonantPending = true;
+            foundConsonant = true;
+            break;
           }
-          if (!matchedMatra && idx < s.length && !_isVowel(s[idx])) {
-            buf.write('्');
-          }
-          matchedConsonant = true;
-          break;
         }
       }
-      if (!matchedConsonant) {
-        buf.write(s[idx]);
-        idx++;
+
+      if (!foundConsonant) {
+        final lowerFromHere = s.substring(idx).toLowerCase();
+        for (final dg in _digraphs) {
+          if (lowerFromHere.startsWith(dg[0])) {
+            if (consonantPending) buf.write('्');
+            buf.write(dg[1]);
+            idx += dg[0].length;
+            consonantPending = true;
+            foundConsonant = true;
+            break;
+          }
+        }
       }
+      if (!foundConsonant) {
+        final lowerFromHere = s.substring(idx).toLowerCase();
+        for (final sc in _simpleConsonants) {
+          if (lowerFromHere.startsWith(sc[0])) {
+            if (consonantPending) buf.write('्');
+            buf.write(sc[1]);
+            idx += sc[0].length;
+            consonantPending = true;
+            foundConsonant = true;
+            break;
+          }
+        }
+      }
+
+      if (foundConsonant) {
+        final lowerFromHere = s.substring(idx).toLowerCase();
+        final isWordFinal = idx + 1 >= s.length; // exactly one char of vowel left, or none
+
+        // Lone word-final "a" is conventionally the long आ/ा sound
+        // in romanized lyrics (schwa is normally dropped, not spelled),
+        // so prefer the visible matra over the silent inherent vowel here.
+        if (isWordFinal && lowerFromHere.startsWith('a') && !lowerFromHere.startsWith('aa')) {
+          buf.write('ा');
+          idx += 1;
+          consonantPending = false;
+          continue;
+        }
+
+        bool foundMatra = false;
+        for (final m in _vowelMatras) {
+          if (lowerFromHere.startsWith(m[0])) {
+            buf.write(m[1]);
+            idx += m[0].length;
+            foundMatra = true;
+            break;
+          }
+        }
+        if (foundMatra) consonantPending = false;
+        continue;
+      }
+
+      if (consonantPending) { buf.write('्'); consonantPending = false; }
+      buf.write(s[idx]);
+      idx++;
     }
-    return buf.toString();
+
+    String result = buf.toString();
+    if (result.endsWith('्')) {
+      result = result.substring(0, result.length - 1);
+    }
+    return result;
   }
 
-  static bool _isVowel(String ch) => 'aeiou'.contains(ch.toLowerCase());
+  static bool _startsWithCI(String s, String pattern, int idx, {required bool caseSensitive}) {
+    if (caseSensitive) return s.startsWith(pattern, idx);
+    if (idx + pattern.length > s.length) return false;
+    return s.substring(idx, idx + pattern.length).toLowerCase() == pattern;
+  }
 
-  static LyricsData transliterateLyrics(LyricsData data, String targetScript) {
+  /// Teach the engine a word directly (e.g. user edited a suggestion in the
+  /// UI). Clears any cached (wrong) conversion for it so the fix applies
+  /// immediately, including to text already on screen if you re-run it.
+  void learnWord(String romanWord, String devanagari) {
+    lexicon.learnWord(romanWord, devanagari);
+    _cache.remove(romanWord);
+    _cache.remove(romanWord.toLowerCase());
+  }
+
+  void clearCache() => _cache.clear();
+
+  LyricsData transliterateLyrics(LyricsData data, String targetScript) {
     if (targetScript == 'devanagari') {
-      final newLines = data.lines.map((l) => LyricLine(timestamp: l.timestamp, text: toDevanagari(l.text))).toList();
-      final newPlain = data.lines.isNotEmpty ? newLines.map((l) => l.text).join('\n') : toDevanagari(data.plainText);
+      final newLines = data.lines
+          .map((l) => LyricLine(timestamp: l.timestamp, text: toDevanagari(l.text)))
+          .toList();
+      final newPlain = data.lines.isNotEmpty
+          ? newLines.map((l) => l.text).join('\n')
+          : toDevanagari(data.plainText);
       return LyricsData(isSynced: data.isSynced, lines: newLines, plainText: newPlain);
     }
     return data;
   }
+}
+
+/// Drop-in-compatible static facade for existing call sites
+/// (`DevanagariTransliterationService.toDevanagari(...)`,
+/// `.transliterateLyrics(...)`). Delegates to a shared engine instance so
+/// existing code needs zero changes, while `engine` exposes the new dynamic
+/// features (loading a lexicon at runtime, learning words, live use) to
+/// anywhere that wants them.
+class DevanagariTransliterationService {
+  DevanagariTransliterationService._();
+
+  static final DevanagariTransliterationEngine engine = DevanagariTransliterationEngine();
+
+  static String toDevanagari(String text) => engine.toDevanagari(text);
+
+  static LyricsData transliterateLyrics(LyricsData data, String targetScript) =>
+      engine.transliterateLyrics(data, targetScript);
 }

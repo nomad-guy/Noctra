@@ -16,16 +16,13 @@ android {
 
     defaultConfig {
         applicationId = "com.nomadguy.noctra"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        // just_audio 0.10 (Media3 ExoPlayer) requires API 21 minimum
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
-        // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
-        // You can force using the value of versionCode by specifying the `-P force-version-code-ignoring-abi=true`
-        // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Media3 can push method count over 64k — multiDex handles it
+        multiDexEnabled = true
     }
 
     buildTypes {

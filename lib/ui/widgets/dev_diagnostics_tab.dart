@@ -49,7 +49,7 @@ class DevDiagnosticsTab extends StatelessWidget {
                 const SizedBox(height: 8),
                 _telemetryRow('Active Track', currentSong?.title ?? 'Idle', isDark),
                 _telemetryRow('Source Engine', currentSong?.genre ?? 'Local Library', isDark),
-                _telemetryRow('Stream Bitrate', telemetry?.quality ?? '320 kbps (Master)', isDark),
+                _telemetryRow('Resolver Engine', telemetry?.resolverUsed ?? '320 kbps (Master)', isDark),
                 _telemetryRow('ML Inference', '< 2.0 ms (On-Device)', isDark),
               ],
             ),

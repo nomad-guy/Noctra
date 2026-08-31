@@ -28,12 +28,20 @@
 -keep class io.flutter.** { *; }
 -keep class io.flutter.plugins.** { *; }
 
-# 6. Audio, JustAudio & Background Media Service Preservation
+# 6. Audio, JustAudio 0.10 (Media3) & Background Media Service Preservation
 -keep class com.ryanheise.** { *; }
 -keep class androidx.media.** { *; }
+# Media3 ExoPlayer — just_audio 0.10 uses Media3, NOT legacy exoplayer2
 -keep class androidx.media3.** { *; }
--keep class com.google.android.exoplayer2.** { *; }
+-keep class androidx.media3.exoplayer.** { *; }
+-keep class androidx.media3.extractor.** { *; }
+-keep class androidx.media3.datasource.** { *; }
+-keep class androidx.media3.common.** { *; }
+-keep class androidx.media3.session.** { *; }
 -keep class com.google.android.gms.** { *; }
+# Keep MediaItem and related classes for lock screen / notification controls
+-keepclassmembers class androidx.media3.common.MediaItem { *; }
+-keepclassmembers class androidx.media3.common.MediaMetadata { *; }
 
 # 7. Keep Native JNI Methods & Noctra Classes
 -keep class com.nomadguy.noctra.** { *; }

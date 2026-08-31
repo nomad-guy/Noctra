@@ -36,6 +36,9 @@ void main() {
     expect(find.text('Step 1 of 3'), findsOneWidget);
     expect(find.text('Hindi'), findsOneWidget);
 
+    await tester.tap(find.text('Hindi'));
+    await tester.pumpAndSettle();
+
     final nextButton = find.text('Next');
     expect(nextButton, findsOneWidget);
     await tester.tap(nextButton);

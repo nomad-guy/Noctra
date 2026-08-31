@@ -22,9 +22,8 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
   Widget build(BuildContext context) {
     final devicesStream = ref.watch(connectedAudioDevicesProvider);
     final initialDevices = ref.watch(initialAudioDevicesProvider);
-    final router = ref.read(audioRouterServiceProvider);
-
-    final devices = devicesStream.asData?.value ?? initialDevices.asData?.value ?? [
+    final devices = devicesStream.asData?.value ?? initialDevices.asData?.value;
+    final effectiveDevices = devices ?? [
       const AudioDeviceEndpoint(
         id: 1,
         name: 'Built-in Phone Speaker',
@@ -34,7 +33,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
         isActive: true,
       ),
     ];
-
+    final router = ref.watch(audioRouterServiceProvider);
     final isDark = widget.isDark;
 
     return Container(
@@ -95,7 +94,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '${devices.length} Connected',
+                    '${effectiveDevices.length} Connected',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -166,9 +165,9 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: devices.length,
+              itemCount: effectiveDevices.length,
               itemBuilder: (context, index) {
-                final dev = devices[index];
+                final dev = effectiveDevices[index];
                 final isSelected = dev.isActive || (_isMultiCastEnabled && _selectedMultiIds.contains(dev.id));
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),

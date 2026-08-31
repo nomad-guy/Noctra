@@ -43,8 +43,8 @@ class VibeChipSelector extends ConsumerWidget {
                 ),
                 label: Text(vibe.label),
                 selected: isSelected,
-                onSelected: (selected) {
-                  ref.read(selectedVibeKeyProvider.notifier).state = selected ? vibe.keyName : null;
+                onSelected: (_) {
+                  ref.read(selectedVibeKeyProvider.notifier).state = vibe.keyName;
                 },
                 backgroundColor: isDark ? const Color(0xFF141414) : const Color(0xFFE5E5E5),
                 selectedColor: isDark ? Colors.white : Colors.black,

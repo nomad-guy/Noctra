@@ -79,13 +79,15 @@ class AudioVisualizerService {
     } catch (_) {}
   }
 
+  final AudioPlayerService _audioPlayer = AudioPlayerService();
+
   void _startFallbackLoop() {
     _fallbackTicker?.cancel();
     _fallbackTicker = Timer.periodic(const Duration(milliseconds: 33), (_) {
       final now = DateTime.now().millisecondsSinceEpoch;
       if (now - _lastHardwarePacketMs > 150) {
         final t = now / 1000.0;
-        final isPlaying = AudioPlayerService().player.playing;
+        final isPlaying = _audioPlayer.player.playing;
         final List<double> bins = List.filled(32, 0.0);
         for (int i = 0; i < 32; i++) {
           if (isPlaying) {

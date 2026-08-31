@@ -12,7 +12,8 @@ class SleepTimerSheet extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
     final audioPlayer = ref.watch(audioPlayerServiceProvider);
-    final remaining = audioPlayer.sleepTimerRemainingMinutes;
+    final remainingStream = ref.watch(sleepTimerStreamProvider);
+    final remaining = remainingStream.asData?.value ?? audioPlayer.sleepTimerRemainingMinutes;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -86,8 +87,11 @@ class SleepTimerSheet extends ConsumerWidget {
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [0, 15, 30, 45, 60, 90].map((m) {
-                  final isSel = (m == 0 && remaining == null) ||
-                      (m > 0 && remaining != null && remaining <= m && remaining > m - 15);
+                  final isSel = m == 0
+                      ? remaining == null
+                      : (remaining != null &&
+                          remaining > 0 &&
+                          m == [15, 30, 45, 60, 90].reduce((a, b) => (a - remaining).abs() < (b - remaining).abs() ? a : b));
                   return Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 2.5),

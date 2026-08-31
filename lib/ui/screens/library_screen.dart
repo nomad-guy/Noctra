@@ -6,6 +6,7 @@ import '../widgets/synccast_sheet.dart';
 import '../widgets/library_folders_tab.dart';
 import '../widgets/library_all_songs_tab.dart';
 import '../widgets/library_ai_mixes_tab.dart';
+import 'migration_screen.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -66,6 +67,19 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                         color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
                       ),
                     ),
+                  ),
+                  IconButton(
+                    tooltip: 'Import / Migrate Library',
+                    icon: Icon(Icons.file_download_outlined, color: isDark ? Colors.white60 : Colors.black54, size: 22),
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        useRootNavigator: true,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => const MigrationScreen(),
+                      );
+                    },
                   ),
                   IconButton(
                     tooltip: 'SyncCast Party Mode',

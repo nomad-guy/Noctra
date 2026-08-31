@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
+import '../../core/utils/noctra_logger.dart';
 
 class AudioDeviceEndpoint {
   final int id;
@@ -53,8 +54,18 @@ class AudioRouterService {
           final list = event.map((e) => AudioDeviceEndpoint.fromMap(e as Map)).toList();
           _deviceController.add(list);
         }
-      }, onError: (_) {});
-    } catch (_) {}
+      }, onError: (e) {
+        NoctraLogger.w('AudioRouterService event stream error', e);
+        Future.delayed(const Duration(seconds: 4), () {
+          if (!_deviceController.isClosed) {
+            _eventSub?.cancel();
+            _initListener();
+          }
+        });
+      });
+    } catch (e) {
+      NoctraLogger.w('AudioRouterService initListener failed', e);
+    }
   }
 
   Future<List<AudioDeviceEndpoint>> getConnectedDevices() async {

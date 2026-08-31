@@ -94,13 +94,7 @@ class HomeScreen extends ConsumerWidget {
                             builder: (_) => const SyncCastSheet(),
                           ),
                         ),
-                        _topBarIcon(
-                          isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                          isDark ? 'Light' : 'Dark',
-                          isDark,
-                          onPressed: () => ref.read(themeModeProvider.notifier).state =
-                              isDark ? NoirThemeMode.noirWhite : NoirThemeMode.noirBlack,
-                        ),
+                        _themeMenuButton(context, ref, themeMode, isDark),
                         _topBarIcon(
                           Icons.tune_rounded,
                           'Settings',
@@ -220,6 +214,26 @@ class HomeScreen extends ConsumerWidget {
       constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
       icon: Icon(icon, color: active ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white60 : Colors.black54)),
       onPressed: onPressed,
+    );
+  }
+
+  Widget _themeMenuButton(BuildContext context, WidgetRef ref, NoirThemeMode current, bool isDark) {
+    final icon = current == NoirThemeMode.noirWhite
+        ? Icons.light_mode_outlined
+        : (current == NoirThemeMode.noirAmoled ? Icons.brightness_medium_outlined : Icons.dark_mode_outlined);
+    return PopupMenuButton<NoirThemeMode>(
+      tooltip: 'Theme',
+      iconSize: 20,
+      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+      icon: Icon(icon, color: isDark ? Colors.white60 : Colors.black54),
+      onSelected: (mode) {
+        ref.read(themeModeProvider.notifier).state = mode;
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(value: NoirThemeMode.noirBlack, child: Text('Noir Black', style: TextStyle(fontSize: 13))),
+        const PopupMenuItem(value: NoirThemeMode.noirAmoled, child: Text('AMOLED', style: TextStyle(fontSize: 13))),
+        const PopupMenuItem(value: NoirThemeMode.noirWhite, child: Text('Noir White', style: TextStyle(fontSize: 13))),
+      ],
     );
   }
 }

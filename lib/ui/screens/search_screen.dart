@@ -46,6 +46,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Future<void> _performSearch(String query) async {
+    _debounceTimer?.cancel();
     final clean = query.trim();
     if (clean.isEmpty) return;
     final seq = ++_searchSequence;

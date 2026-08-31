@@ -44,9 +44,12 @@ object JioSaavnNativeEngine {
     }
 
     private fun sanitizeText(input: String): String {
+        // NFD normalize to separate accent marks, strip combining diacritics,
+        // then NFC re-compose so Devanagari/CJK composite glyphs reassemble.
         val normalized = java.text.Normalizer.normalize(input, java.text.Normalizer.Form.NFD)
         val withoutAccents = normalized.replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "")
-        return withoutAccents
+        val recomposed = java.text.Normalizer.normalize(withoutAccents, java.text.Normalizer.Form.NFC)
+        return recomposed
             .replace(Regex("(?i)\\s*-\\s*topic"), "")
             .replace(Regex("(?i)\\(official.*?\\)"), "")
             .replace(Regex("(?i)\\[official.*?\\]"), "")
@@ -55,7 +58,8 @@ object JioSaavnNativeEngine {
             .replace(Regex("(?i)\\(video\\)"), "")
             .replace(Regex("(?i)\\(slowed.*?\\)"), "")
             .replace(Regex("(?i)\\(speed.*?\\)"), "")
-            .replace(Regex("[^a-zA-Z0-9\\s]"), " ")
+            // Keep Unicode letters, digits, and whitespace — strip only special chars
+            .replace(Regex("[^\\p{L}\\p{N}\\s]"), " ")
             .replace(Regex("\\s+"), " ")
             .trim()
     }

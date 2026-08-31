@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
 import '../../core/utils/noctra_localization.dart';
-import '../../data/sources/noctra_local_database.dart';
 import '../../providers/app_providers.dart';
 import '../widgets/developer_panel_sheet.dart';
 import '../widgets/glass_card.dart';
@@ -22,8 +21,9 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
     final autoplayDelay = ref.watch(autoplayDelayProvider);
     final audioFade = ref.watch(audioFadeTransitionProvider);
     final isDark = themeMode.isDark;
-    final audioPlayer = ref.read(audioPlayerServiceProvider);
-    final sleepRemaining = audioPlayer.sleepTimerRemainingMinutes;
+    final audioPlayer = ref.watch(audioPlayerServiceProvider);
+    final sleepTimerAsync = ref.watch(sleepTimerStreamProvider);
+    final sleepRemaining = sleepTimerAsync.asData?.value ?? audioPlayer.sleepTimerRemainingMinutes;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.88,
@@ -121,7 +121,11 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                       ],
                     ),
                     DropdownButton<int>(
-                      value: sleepRemaining ?? 0,
+                      value: [0, 15, 30, 45, 60, 90].contains(sleepRemaining)
+                          ? sleepRemaining
+                          : (sleepRemaining != null
+                              ? [0, 15, 30, 45, 60, 90].reduce((a, b) => (a - sleepRemaining).abs() < (b - sleepRemaining).abs() ? a : b)
+                              : 0),
                       dropdownColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                       underline: const SizedBox.shrink(),
                       style: TextStyle(fontSize: 13, color: isDark ? Colors.white : Colors.black),
@@ -131,6 +135,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                         DropdownMenuItem(value: 30, child: Text('30 min')),
                         DropdownMenuItem(value: 45, child: Text('45 min')),
                         DropdownMenuItem(value: 60, child: Text('60 min')),
+                        DropdownMenuItem(value: 90, child: Text('90 min')),
                       ],
                       onChanged: (val) {
                         if (val != null) {
@@ -242,7 +247,6 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
       child: GestureDetector(
         onTap: () {
           ref.read(themeModeProvider.notifier).state = mode;
-          NoctraLocalDatabase().saveThemeMode(mode == NoirThemeMode.noirWhite ? 'noirWhite' : (mode == NoirThemeMode.noirAmoled ? 'noirAmoled' : 'noirBlack'));
         },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),

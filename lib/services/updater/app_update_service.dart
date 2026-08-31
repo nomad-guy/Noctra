@@ -23,7 +23,7 @@ class AppUpdateInfo {
 }
 
 class AppUpdateService {
-  static const String currentVersion = 'v1.1.3';
+  static const String currentVersion = 'v1.1.4';
   static const String _releaseApiUrl = 'https://api.github.com/repos/nomad-guy/Noctra/releases/latest';
   static const String fallbackDownloadUrl = 'https://github.com/nomad-guy/Noctra/releases/latest/download/noctra-universal-release.apk';
   static const _notifyChannel = MethodChannel('com.noctra.app/update_notify');
@@ -100,8 +100,8 @@ class AppUpdateService {
 
   static bool _isVersionNewer(String latest, String current) {
     try {
-      final cleanLatest = latest.replaceAll(RegExp(r'[^0-9.]'), '').split('.').map(int.parse).toList();
-      final cleanCurrent = current.replaceAll(RegExp(r'[^0-9.]'), '').split('.').map(int.parse).toList();
+      final cleanLatest = latest.replaceAll(RegExp(r'[^0-9.]'), '').split('.').where((s) => s.isNotEmpty).map(int.parse).toList();
+      final cleanCurrent = current.replaceAll(RegExp(r'[^0-9.]'), '').split('.').where((s) => s.isNotEmpty).map(int.parse).toList();
       for (int i = 0; i < cleanLatest.length && i < cleanCurrent.length; i++) {
         if (cleanLatest[i] > cleanCurrent[i]) return true;
         if (cleanLatest[i] < cleanCurrent[i]) return false;

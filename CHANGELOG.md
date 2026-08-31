@@ -7,6 +7,34 @@ The project adheres to Semantic Versioning: `vX.Y.Z`
 - **Y**: Major Features and Architecture Overhauls
 - **Z**: Bug Fixes, Reliability Patches, and Performance Optimizations
 
+## [1.1.4] - 2026-08-31
+
+### Added
+- **Multi-Script Indic Transliteration & Script Conversion Suite**:
+  - **`SanscriptEngine`**: Pure Dart zero-latency Brahmic script transliteration matrix supporting Devanagari, Gurmukhi (Punjabi), Bengali, Gujarati, Telugu, Tamil, Kannada, Malayalam, ITRANS, IAST, and Harvard-Kyoto.
+  - **`AksharamukhaService`**: Multi-script conversion engine connecting to Aksharamukha with local fallback to `SanscriptEngine` for resilient offline operation.
+  - **`IndicXlitEngine`**: Neural and algorithmic Roman $\leftrightarrow$ Native Indic transliterator for unstructured fan lyrics with parallel lyric batching and LRU caching.
+  - **`LiveTransliterationController`**: Real-time debounced (`150ms`) as-you-type transliteration controller with `ValueNotifier<String>` output and dynamic learning.
+- **Bidirectional Romanized Translation & Semantic Glossing Engine**:
+  - **`RomanizedTranslationEngine`**: Converts Devanagari/Gurmukhi scripts to natural Romanized English script with intelligent Hindi schwa-deletion heuristics and poetic lyrical glosses.
+- **Dynamic 16+ Global Catalogs & Genres**:
+  - Expanded search discovery across *Trending Global Hits, Bollywood & Desi, Synthwave & Retrowave, Sufi & Qawwali, Punjabi Hip-Hop, Lo-Fi, Phonk, French Chanson, Latin Fiesta, Midnight Jazz, Ambient Zen, and Epic Scores*.
+- **Music-Centric Dynamic Artist PFP Resolver**:
+  - Multi-tier artist profile photo pipeline integrating **Deezer Music Graph (500x500/1000x1000 HD)**, **JioSaavn Directory**, **Apple Music/iTunes**, and **Musician-Validated Wikipedia Summary** to ensure 100% accurate artist portrait resolution.
+- **Noir Black, White & Silver Synthwave Visualizer**:
+  - Completely rebuilt `_ProperSynthwavePainter` with pure obsidian `#000000`, deep charcoal `#141414`, metallic silver `#E0E0E0`, and bright white `#FFFFFF` dual-layer audio waveforms and forward-moving perspective grid.
+
+### Fixed & Audited (Passes 1–4, Bugs 1–101)
+- Single-source theme persistence via `ref.listen` in `main.dart` with synchronous SharedPreferences writes.
+- Sleep timer volume loop uses `break` with guaranteed `1.0` volume restoration.
+- Track download progress reporting with fallback progress estimation and stream size integrity checks.
+- Deterministic synthetic song IDs derived from title and artist hash combinations.
+- Guarded `_onSongCompleted` against audio player skip deadlocks.
+- Expanded `NoctraLogger` in-memory ring buffer for release diagnostics.
+- Defensive deep-copies for `MusicBrainzService` metadata caches.
+
+---
+
 ## [1.1.3] - 2026-08-31
 
 ### Fixed

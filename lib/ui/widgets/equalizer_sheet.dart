@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart'; // Riverpod 3.x: StateProvider
 import '../../core/theme/noir_theme.dart';
 import '../../providers/app_providers.dart';
 import 'glass_card.dart';

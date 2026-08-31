@@ -1,242 +1,209 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../data/models/ai_folder_model.dart';
 import '../../data/repositories/music_repository.dart';
-import '../../data/sources/noctra_local_database.dart';
 import '../../providers/app_providers.dart';
 import '../../services/ytdlp/music_service.dart';
-import 'glass_card.dart';
 
-class LibraryAIMixesTab extends ConsumerWidget {
+class LibraryAIMixesTab extends ConsumerStatefulWidget {
   final bool isDark;
   final MusicRepository repo;
-
   const LibraryAIMixesTab({super.key, required this.isDark, required this.repo});
+  @override
+  ConsumerState<LibraryAIMixesTab> createState() => _LibraryAIMixesTabState();
+}
+
+class _LibraryAIMixesTabState extends ConsumerState<LibraryAIMixesTab> {
+  bool _playingMix = false;
+
+  Future<void> _playMix(AIPlaylist pl) async {
+    if (_playingMix) return;
+    setState(() => _playingMix = true);
+    try {
+      final tracks = await MusicService.fetchVibeFeed(pl.vibeKey)
+          .timeout(const Duration(seconds: 8));
+      if (tracks.isNotEmpty && mounted) {
+        ref.read(audioPlayerServiceProvider).playSong(tracks.first, newQueue: tracks);
+      }
+    } catch (_) {} finally {
+      if (mounted) setState(() => _playingMix = false);
+    }
+  }
+
+  Future<void> _playFolder(AIFolder folder) async {
+    if (_playingMix) return;
+    setState(() => _playingMix = true);
+    try {
+      final tracks = await MusicService.fetchVibeFeed(folder.vibeKey)
+          .timeout(const Duration(seconds: 8));
+      if (tracks.isNotEmpty && mounted) {
+        ref.read(audioPlayerServiceProvider).playSong(tracks.first, newQueue: tracks);
+      }
+    } catch (_) {} finally {
+      if (mounted) setState(() => _playingMix = false);
+    }
+  }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final playlists = repo.getAIGeneratedPlaylists();
-    final topArtists = NoctraLocalDatabase().getTopArtists(limit: 5);
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+    final repo = widget.repo;
+    final mixes = repo.getAIGeneratedPlaylists();
+    final folders = repo.getAICuratedFolders();
     final archetype = repo.getUserMusicalArchetype();
-    final dominant = repo.getDominantAxes();
+    final topArtists = repo.getTopArtists(limit: 5);
 
     return ListView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 160),
       children: [
-        // 1. On-Device Neural Profile Card
-        GlassCard(
-          radius: 18,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isDark ? Colors.white : Colors.black,
-                        ),
-                        child: Icon(Icons.psychology_rounded, size: 16, color: isDark ? Colors.black : Colors.white),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'On-Device Taste Profile',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '100% Private',
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: isDark ? Colors.white70 : Colors.black87),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Text(
-                archetype,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Dominant Dimensions
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: dominant.map((d) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
-                    ),
-                    child: Text(
-                      '${d['name']}: ${d['percentage']}%',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isDark ? Colors.white70 : Colors.black87),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
+        // Subtle archetype greeting
+        Padding(
+          padding: const EdgeInsets.only(bottom: 18, top: 4),
+          child: Row(children: [
+            Icon(Icons.auto_awesome_rounded, size: 14, color: isDark ? Colors.white38 : Colors.black38),
+            const SizedBox(width: 6),
+            Expanded(child: Text('Your sound: $archetype',
+              style: TextStyle(fontSize: 13, color: isDark ? Colors.white54 : Colors.black54, fontWeight: FontWeight.w500))),
+          ]),
         ),
 
-        const SizedBox(height: 14),
-
-        // 2. Top Artists Section
-        if (topArtists.isNotEmpty) ...[
+        // AI Mixes — horizontal scroll of square cards
+        if (mixes.isNotEmpty) ...[
           Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 8),
-            child: Text(
-              'Top Artists in Rotation',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
-              ),
-            ),
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text('Your Mixes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary)),
           ),
           SizedBox(
-            height: 40,
+            height: 160,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: topArtists.length,
+              itemCount: mixes.length,
               itemBuilder: (context, i) {
-                final artist = topArtists[i];
+                final pl = mixes[i];
                 return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF161616) : const Color(0xFFEBEBEB),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.person_rounded, size: 14, color: isDark ? Colors.white70 : Colors.black87),
-                        const SizedBox(width: 6),
-                        Text(
-                          artist,
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black),
+                  padding: const EdgeInsets.only(right: 12),
+                  child: GestureDetector(
+                    onTap: () => _playMix(pl),
+                    child: SizedBox(
+                      width: 130,
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: Stack(children: [
+                            Image.network(pl.artworkUrl, width: 130, height: 108, fit: BoxFit.cover,
+                              errorBuilder: (c, e, st) => Container(width: 130, height: 108,
+                                color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFE5E5E5),
+                                child: Icon(Icons.album_rounded, size: 36, color: isDark ? Colors.white24 : Colors.black.withValues(alpha: 0.24)))),
+                            Positioned(bottom: 8, right: 8,
+                              child: Container(
+                                width: 30, height: 30,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isDark ? Colors.white : Colors.black,
+                                ),
+                                child: Icon(Icons.play_arrow_rounded, size: 16, color: isDark ? Colors.black : Colors.white),
+                              )),
+                          ]),
                         ),
-                      ],
+                        const SizedBox(height: 6),
+                        Text(pl.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black)),
+                        Text(pl.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54)),
+                      ]),
                     ),
                   ),
                 );
               },
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 24),
         ],
 
-        // 3. AI Generated Mixes List
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            'Personalized AI Mixes',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
-            ),
+        // AI Curated Folders
+        if (folders.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text('AI Folders', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary)),
           ),
-        ),
-
-        ...playlists.map((pl) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: GlassCard(
-              radius: 14,
-              padding: const EdgeInsets.all(10),
-              onTap: () async {
-                final tracks = await MusicService.fetchVibeFeed(pl.vibeKey);
-                if (tracks.isNotEmpty) {
-                  ref.read(audioPlayerServiceProvider).playSong(tracks.first, newQueue: tracks);
-                }
-              },
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.network(
-                      pl.artworkUrl,
-                      width: 52,
-                      height: 52,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        width: 52,
-                        height: 52,
-                        color: isDark ? const Color(0xFF222222) : const Color(0xFFE5E5E5),
-                        child: Icon(Icons.album_rounded, color: isDark ? Colors.white54 : Colors.black54),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          pl.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          pl.subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+          ...folders.map((folder) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: GestureDetector(
+              onTap: () => _playFolder(folder),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(children: [
                   Container(
-                    width: 32,
-                    height: 32,
+                    width: 42, height: 42,
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(Icons.play_arrow_rounded, size: 18, color: isDark ? Colors.black : Colors.white),
+                    child: Icon(folder.icon, size: 20, color: isDark ? Colors.white70 : Colors.black.withValues(alpha: 0.70)),
                   ),
-                ],
+                  const SizedBox(width: 14),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(folder.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black)),
+                    const SizedBox(height: 2),
+                    Text(folder.description, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.black54)),
+                  ])),
+                  Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                    Text('${folder.trackCount}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: isDark ? Colors.white60 : Colors.black.withValues(alpha: 0.60))),
+                    Text('tracks', style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.black38)),
+                  ]),
+                  const SizedBox(width: 10),
+                  Icon(Icons.chevron_right_rounded, size: 18, color: isDark ? Colors.white38 : Colors.black38),
+                ]),
               ),
             ),
-          );
-        }),
+          )),
+          const SizedBox(height: 24),
+        ],
 
-        const SizedBox(height: 160),
+        // Top Artists — slim chip row
+        if (topArtists.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text('In Your Rotation', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: isDark ? Colors.white70 : Colors.black.withValues(alpha: 0.70))),
+          ),
+          Wrap(
+            spacing: 8, runSpacing: 8,
+            children: topArtists.map((artist) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.person_rounded, size: 12, color: isDark ? Colors.white54 : Colors.black54),
+                const SizedBox(width: 5),
+                Text(artist, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.white.withValues(alpha: 0.80) : Colors.black87)),
+              ]),
+            )).toList(),
+          ),
+        ],
+
+        // Empty state
+        if (mixes.isEmpty && folders.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 60),
+            child: Column(children: [
+              Icon(Icons.auto_awesome_outlined, size: 48, color: isDark ? Colors.white24 : Colors.black.withValues(alpha: 0.24)),
+              const SizedBox(height: 12),
+              Text('Keep listening', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: isDark ? Colors.white54 : Colors.black54)),
+              const SizedBox(height: 6),
+              Text('Your AI mixes and folders will appear\nas you build your listening history.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: isDark ? Colors.white38 : Colors.black38)),
+            ]),
+          ),
       ],
     );
   }

@@ -193,7 +193,19 @@ class LibraryAllSongsTab extends ConsumerWidget {
                             return IconButton(
                               icon: Icon(Icons.download_rounded, size: 19, color: isDark ? Colors.white60 : Colors.black54),
                               tooltip: 'Download Offline',
-                              onPressed: () => MusicService.downloadTrack(s),
+                              onPressed: () async {
+                                ref.read(downloadingSongsProvider.notifier).update((set) => {...set, s.id});
+                                final dl = await MusicService.downloadTrack(s);
+                                if (dl != null) {
+                                  ref.read(musicRepositoryProvider).addDownloadedSong(dl);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Downloaded "${s.title}"'), duration: const Duration(seconds: 2)),
+                                    );
+                                  }
+                                }
+                                ref.read(downloadingSongsProvider.notifier).update((set) => {...set}..remove(s.id));
+                              },
                             );
                           },
                         ),

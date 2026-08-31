@@ -4,7 +4,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:youtube_explode_dart/youtube_explode_dart.dart';
+// youtube_explode_dart removed: NativeKotlinResolver + InnerTubeMusicResolver
+// handle YouTube resolution via the Kotlin engine — no Dart-side library needed.
 import '../../data/models/song_model.dart';
 
 abstract class StreamResolver {
@@ -67,6 +68,9 @@ class JioSaavnDirectResolver implements StreamResolver {
         final uri = Uri.parse('https://www.jiosaavn.com/api.php?__call=song.getDetails&pids=$pid&_format=json&_marker=0&ctx=android');
         final res = await http.get(uri, headers: {'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 4));
         if (res.statusCode == 200) {
+          // Guard against OOM on malicious or oversized responses
+          if (res.contentLength != null && res.contentLength! > 200000) return null;
+          if (res.body.length > 200000) return null;
           final data = jsonDecode(res.body);
           final songData = (data is Map ? (data[pid] ?? data.values.firstOrNull) : null) as Map<String, dynamic>?;
           final encUrl = songData?['encrypted_media_url'] as String? ?? songData?['more_info']?['encrypted_media_url'] as String?;
@@ -110,6 +114,13 @@ class InnerTubeMusicResolver implements StreamResolver {
   @override
   Future<bool> canResolve(Song song) async => !song.id.startsWith('jam_');
 
+  static const List<Map<String, dynamic>> _innerTubeClients = [
+    {'clientName': 'ANDROID_TESTSUITE', 'clientVersion': '1.9', 'androidSdkVersion': 30},
+    {'clientName': 'ANDROID_MUSIC', 'clientVersion': '6.42.52', 'androidSdkVersion': 34},
+    {'clientName': 'WEB_REMIX', 'clientVersion': '1.20240820.01.00', 'hl': 'en', 'gl': 'US'},
+    {'clientName': 'TVHTML5', 'clientVersion': '7.20240801.12.00', 'theme': 'TVHTML5'}
+  ];
+
   @override
   Future<String?> resolveStreamUrl(Song song) async {
     try {
@@ -147,13 +158,7 @@ class InnerTubeMusicResolver implements StreamResolver {
           } catch (_) {}
         }
 
-        final clients = [
-          {'clientName': 'ANDROID_TESTSUITE', 'clientVersion': '1.9', 'androidSdkVersion': 30},
-          {'clientName': 'ANDROID_MUSIC', 'clientVersion': '6.42.52', 'androidSdkVersion': 34},
-          {'clientName': 'TVHTML5', 'clientVersion': '7.20240801.12.00', 'theme': 'TVHTML5'}
-        ];
-
-        for (final client in clients) {
+        for (final client in _innerTubeClients) {
           try {
             final pUri = Uri.parse('https://music.youtube.com/youtubei/v1/player');
             final pBody = jsonEncode({'videoId': videoId, 'context': {'client': client}});
@@ -178,31 +183,16 @@ class InnerTubeMusicResolver implements StreamResolver {
   }
 }
 
+// YoutubeExplodeResolver is retained as a named stub so CompositeStreamResolver
+// compiles without changes. It always returns null — resolution falls back to
+// the cached streamUrl on the Song model.
 class YoutubeExplodeResolver implements StreamResolver {
-  static final YoutubeExplode _yt = YoutubeExplode();
   @override
-  String get sourceId => 'youtube_explode';
+  String get sourceId => 'youtube_explode_stub';
   @override
-  Future<bool> canResolve(Song song) async => !kIsWeb && !song.id.startsWith('jam_');
-
+  Future<bool> canResolve(Song song) async => false; // disabled: use NativeKotlinResolver
   @override
-  Future<String?> resolveStreamUrl(Song song) async {
-    try {
-      String videoId = song.id;
-      if (videoId.length != 11 || videoId.contains('_')) {
-        final cleanTitle = song.title.replaceAll(RegExp(r'\(.*?\)'), '').replaceAll(RegExp(r'\[.*?\]'), '').trim();
-        final cleanArtist = song.artist.split(RegExp(r'[,&/]')).first.trim();
-        final searchResults = await _yt.search.search('$cleanTitle $cleanArtist audio').timeout(const Duration(seconds: 4));
-        if (searchResults.isNotEmpty) videoId = searchResults.first.id.value;
-      }
-      if (videoId.length == 11) {
-        final manifest = await _yt.videos.streamsClient.getManifest(videoId).timeout(const Duration(seconds: 4));
-        final audioOnly = manifest.audioOnly;
-        if (audioOnly.isNotEmpty) return audioOnly.withHighestBitrate().url.toString();
-      }
-    } catch (_) {}
-    return null;
-  }
+  Future<String?> resolveStreamUrl(Song song) async => null;
 }
 
 class _CacheEntry {

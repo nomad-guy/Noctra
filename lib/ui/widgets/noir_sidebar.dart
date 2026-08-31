@@ -186,32 +186,19 @@ class NoirSidebar extends ConsumerWidget {
               ),
             ),
 
-            // Theme Switcher & Knowledge Graph Summary Footer
+            // Theme Switcher — 3-way toggle (Black / AMOLED / White)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: GlassCard(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 radius: 14,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Icon(isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined, size: 18, color: isDark ? Colors.white : Colors.black),
-                        const SizedBox(width: 8),
-                        Text(isDark ? 'Noir Black' : 'Noir White', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
-                      ],
-                    ),
-                    Switch(
-                      value: isDark,
-                      activeThumbColor: Colors.white,
-                      activeTrackColor: const Color(0xFF2C2C2E),
-                      inactiveThumbColor: Colors.black,
-                      inactiveTrackColor: const Color(0xFFE5E5EA),
-                      onChanged: (val) {
-                        ref.read(themeModeProvider.notifier).state = val ? NoirThemeMode.noirBlack : NoirThemeMode.noirWhite;
-                      },
-                    ),
+                    _themeChip(ref, 'Noir', NoirThemeMode.noirBlack, themeMode, isDark),
+                    const SizedBox(width: 6),
+                    _themeChip(ref, 'AMOLED', NoirThemeMode.noirAmoled, themeMode, isDark),
+                    const SizedBox(width: 6),
+                    _themeChip(ref, 'White', NoirThemeMode.noirWhite, themeMode, isDark),
                   ],
                 ),
               ),
@@ -220,7 +207,7 @@ class NoirSidebar extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
               child: Text(
-                'On-Device Knowledge Graph • ${repo.localLibrary.length} tracks cached',
+                'On-Device Knowledge Graph • ${repo.downloads.length + repo.favorites.length + repo.recentlyPlayed.length} tracks',
                 style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.black38),
               ),
             ),
@@ -265,6 +252,34 @@ class NoirSidebar extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _themeChip(WidgetRef ref, String label, NoirThemeMode mode, NoirThemeMode current, bool isDark) {
+    final isSelected = current == mode;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          ref.read(themeModeProvider.notifier).state = mode;
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          decoration: BoxDecoration(
+            color: isSelected ? (isDark ? Colors.white : Colors.black) : (isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE8E8E8)),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? (isDark ? Colors.black : Colors.white) : (isDark ? Colors.white54 : Colors.black54),
+              ),
+            ),
           ),
         ),
       ),

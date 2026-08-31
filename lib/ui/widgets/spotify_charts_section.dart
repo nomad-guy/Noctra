@@ -125,7 +125,7 @@ class SpotifyChartsSection extends ConsumerWidget {
                   itemCount: tracks.length,
                   itemBuilder: (context, i) {
                     final song = tracks[i];
-                    final isThisPlaying = currentSong?.title == song.title && isPlaying;
+                    final isThisPlaying = currentSong?.id == song.id && isPlaying;
 
                     return Padding(
                       padding: const EdgeInsets.only(right: 12),

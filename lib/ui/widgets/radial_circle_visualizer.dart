@@ -25,10 +25,12 @@ class _RadialCircleVisualizerState extends State<RadialCircleVisualizer> with Si
   late AnimationController _controller;
   StreamSubscription? _fftSub;
   final List<double> _spikes = List.filled(48, 0.15);
+  late bool _isPlaying;
 
   @override
   void initState() {
     super.initState();
+    _isPlaying = widget.isPlaying;
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2400),
@@ -53,12 +55,13 @@ class _RadialCircleVisualizerState extends State<RadialCircleVisualizer> with Si
   @override
   void didUpdateWidget(RadialCircleVisualizer oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _isPlaying = widget.isPlaying;
     if (widget.isPlaying != oldWidget.isPlaying) {
       if (widget.isPlaying) {
         if (!_controller.isAnimating) _controller.repeat();
       } else {
         Future.delayed(const Duration(milliseconds: 300), () {
-          if (mounted && !widget.isPlaying && _controller.isAnimating) {
+          if (mounted && !_isPlaying && _controller.isAnimating) {
             _controller.stop();
           }
         });
@@ -69,7 +72,7 @@ class _RadialCircleVisualizerState extends State<RadialCircleVisualizer> with Si
   void _applyTick() {
     final t = DateTime.now().millisecondsSinceEpoch / 1000.0;
     for (int i = 0; i < 48; i++) {
-      if (widget.isPlaying) {
+      if (_isPlaying) {
         final w = (sin(t * 6.5 + i * 0.45) * 0.35 + 0.50) * (cos(t * 3.2 + i * 0.25) * 0.30 + 0.65);
         _spikes[i] = (_spikes[i] * 0.60 + w * 0.40).clamp(0.12, 0.98);
       } else {

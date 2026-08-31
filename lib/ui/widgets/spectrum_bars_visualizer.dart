@@ -28,12 +28,15 @@ class _SpectrumBarsVisualizerState extends State<SpectrumBarsVisualizer> with Si
   final List<double> _peakHeights = List.filled(32, 0.25);
   List<double> _latestFft = List.filled(32, 0.3);
 
+  late bool _isPlaying;
+
   @override
   void initState() {
     super.initState();
+    _isPlaying = widget.isPlaying;
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1400),
     )..addListener(_tickVisualizer);
     _controller.repeat();
 
@@ -49,12 +52,13 @@ class _SpectrumBarsVisualizerState extends State<SpectrumBarsVisualizer> with Si
   @override
   void didUpdateWidget(SpectrumBarsVisualizer oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _isPlaying = widget.isPlaying;
     if (widget.isPlaying != oldWidget.isPlaying) {
       if (widget.isPlaying) {
         if (!_controller.isAnimating) _controller.repeat();
       } else {
         Future.delayed(const Duration(milliseconds: 300), () {
-          if (mounted && !widget.isPlaying && _controller.isAnimating) {
+          if (mounted && !_isPlaying && _controller.isAnimating) {
             _controller.stop();
           }
         });
@@ -65,7 +69,7 @@ class _SpectrumBarsVisualizerState extends State<SpectrumBarsVisualizer> with Si
   void _tickVisualizer() {
     final double t = DateTime.now().millisecondsSinceEpoch / 1000.0;
     for (int i = 0; i < widget.barCount; i++) {
-      if (!widget.isPlaying) {
+      if (!_isPlaying) {
         _currentHeights[i] = max(0.06, _currentHeights[i] * 0.90);
         _peakHeights[i] = max(0.06, _peakHeights[i] * 0.90);
         continue;

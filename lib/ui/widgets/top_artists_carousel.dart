@@ -103,7 +103,20 @@ class _ArtistCardItemState extends State<_ArtistCardItem> {
   @override
   void initState() {
     super.initState();
-    _loadWikipediaPhoto();
+    if (widget.artist.imageUrl.isEmpty) {
+      _loadWikipediaPhoto();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _ArtistCardItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.artist.name != widget.artist.name) {
+      _resolvedImageUrl = null;
+      if (widget.artist.imageUrl.isEmpty) {
+        _loadWikipediaPhoto();
+      }
+    }
   }
 
   void _loadWikipediaPhoto() async {

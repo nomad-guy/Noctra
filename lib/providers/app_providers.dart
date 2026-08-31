@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// Riverpod 3.x: StateProvider & ChangeNotifierProvider moved to legacy.dart.
+// Importing both keeps all existing providers working without rewriting.
+import 'package:flutter_riverpod/legacy.dart';
 import '../core/theme/noir_theme.dart';
 import '../core/utils/noctra_localization.dart';
 import '../data/models/song_model.dart';
@@ -16,6 +19,7 @@ import '../data/models/stream_metadata_model.dart';
 final currentNavigationIndexProvider = StateProvider<int>((ref) => 0);
 final bottomNavIndexProvider = currentNavigationIndexProvider;
 final appInitializedProvider = StateProvider<bool>((ref) => false);
+final onboardingCompletedProvider = StateProvider<bool>((ref) => NoctraLocalDatabase().hasCompletedOnboarding);
 final rootScaffoldKeyProvider = Provider<GlobalKey<ScaffoldState>>((ref) => GlobalKey<ScaffoldState>());
 
 // App Language state
@@ -24,8 +28,8 @@ final appLanguageProvider = StateProvider<String>((ref) => NoctraLocalization.cu
 // Theme state with persistent storage
 final themeModeProvider = StateProvider<NoirThemeMode>((ref) {
   final saved = NoctraLocalDatabase().getCachedThemeMode();
-  if (saved == 'noirWhite') return NoirThemeMode.noirWhite;
-  if (saved == 'noirAmoled') return NoirThemeMode.noirAmoled;
+  if (saved == 'noirWhite' || saved == 'light') return NoirThemeMode.noirWhite;
+  if (saved == 'noirAmoled' || saved == 'amoled') return NoirThemeMode.noirAmoled;
   return NoirThemeMode.noirBlack;
 });
 
@@ -50,6 +54,12 @@ final connectedAudioDevicesProvider = StreamProvider<List<AudioDeviceEndpoint>>(
 final initialAudioDevicesProvider = FutureProvider<List<AudioDeviceEndpoint>>((ref) async {
   final router = ref.watch(audioRouterServiceProvider);
   return router.getConnectedDevices();
+});
+
+// Sleep Timer Stream
+final sleepTimerStreamProvider = StreamProvider<int?>((ref) {
+  final audioPlayer = ref.watch(audioPlayerServiceProvider);
+  return audioPlayer.playbackSettingsStream.map((s) => s['sleepTimer'] as int?);
 });
 
 // Current Playing Song Stream Provider

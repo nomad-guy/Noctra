@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
 
 class Song {
   final String id;
@@ -40,11 +39,16 @@ class Song {
     String? artist,
     String? album,
     String? artworkUrl,
+    bool clearArtworkUrl = false,
     String? localFilePath,
+    bool clearLocalFilePath = false,
     String? streamUrl,
+    bool clearStreamUrl = false,
     Duration? duration,
     String? genre,
+    bool clearGenre = false,
     String? mood,
+    bool clearMood = false,
     bool? isDownloaded,
     List<double>? featureVector,
     int? replayCount,
@@ -55,12 +59,12 @@ class Song {
       title: title ?? this.title,
       artist: artist ?? this.artist,
       album: album ?? this.album,
-      artworkUrl: artworkUrl ?? this.artworkUrl,
-      localFilePath: localFilePath ?? this.localFilePath,
-      streamUrl: streamUrl ?? this.streamUrl,
+      artworkUrl: clearArtworkUrl ? null : (artworkUrl ?? this.artworkUrl),
+      localFilePath: clearLocalFilePath ? null : (localFilePath ?? this.localFilePath),
+      streamUrl: clearStreamUrl ? null : (streamUrl ?? this.streamUrl),
       duration: duration ?? this.duration,
-      genre: genre ?? this.genre,
-      mood: mood ?? this.mood,
+      genre: clearGenre ? null : (genre ?? this.genre),
+      mood: clearMood ? null : (mood ?? this.mood),
       isDownloaded: isDownloaded ?? this.isDownloaded,
       featureVector: featureVector ?? this.featureVector,
       replayCount: replayCount ?? this.replayCount,
@@ -102,6 +106,7 @@ class Song {
           }
         }
         while (vec.length < 32) { vec.add(0.5); }
+        if (vec.length > 32) { vec = vec.take(32).toList(); }
       } catch (_) {}
     }
 
@@ -113,7 +118,14 @@ class Song {
       artworkUrl: map['artworkUrl'],
       localFilePath: map['localFilePath'],
       streamUrl: map['streamUrl'],
-      duration: Duration(milliseconds: map['durationMs'] ?? (map['duration'] != null ? ((map['duration'] as num).toInt() * 1000) : 180000)),
+      duration: Duration(
+        milliseconds: (map['durationMs'] is num
+            ? (map['durationMs'] as num).toInt()
+            : int.tryParse(map['durationMs']?.toString() ?? '')) ??
+        (map['duration'] != null
+            ? ((num.tryParse(map['duration'].toString()) ?? 0).toInt() * 1000)
+            : 0),
+      ),
       genre: map['genre'],
       mood: map['mood'],
       isDownloaded: map['isDownloaded'] == 1 || map['isDownloaded'] == true,
@@ -124,16 +136,4 @@ class Song {
   }
 
   factory Song.fromJson(Map<String, dynamic> json) => Song.fromMap(json);
-}
-
-class VibeChipData {
-  final String label;
-  final IconData iconData;
-  final String keyName;
-
-  const VibeChipData({
-    required this.label,
-    required this.iconData,
-    required this.keyName,
-  });
 }

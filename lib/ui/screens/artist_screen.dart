@@ -52,6 +52,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
     final isDark = themeMode.isDark;
     final currentSong = ref.watch(currentSongStreamProvider).value;
     final audioPlayer = ref.watch(audioPlayerServiceProvider);
+    final repo = ref.watch(musicRepositoryProvider);
     final tracks = _discography?.topTracks ?? [];
     final avatarUrl = _artistMetadata?.imageUrl ?? widget.artistImageUrl ?? (tracks.isNotEmpty ? tracks.first.artworkUrl : null);
 
@@ -193,6 +194,10 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
                     (context, i) {
                       final song = tracks[i];
                       final isCurrent = currentSong?.id == song.id;
+                      final isDownloaded = repo.downloads.any((s) => s.id == song.id) || song.isDownloaded;
+                      final downloadingSet = ref.watch(downloadingSongsProvider);
+                      final isDownloading = downloadingSet.contains(song.id);
+
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: GlassCard(
@@ -211,7 +216,33 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
                                   ],
                                 ),
                               ),
-                              IconButton(icon: Icon(Icons.download_rounded, size: 18, color: isDark ? Colors.white54 : Colors.black45), onPressed: () => MusicService.downloadTrack(song)),
+                              IconButton(
+                                icon: isDownloaded
+                                    ? const Icon(Icons.check_circle_rounded, size: 18, color: Colors.greenAccent)
+                                    : isDownloading
+                                        ? SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: isDark ? Colors.white : Colors.black,
+                                            ),
+                                          )
+                                        : Icon(Icons.download_rounded, size: 18, color: isDark ? Colors.white54 : Colors.black45),
+                                onPressed: isDownloaded || isDownloading
+                                    ? null
+                                    : () async {
+                                        final res = await MusicService.downloadTrack(song);
+                                        if (res != null) {
+                                          repo.addDownloadedSong(res);
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Downloaded "${song.title}"'), duration: const Duration(seconds: 2)),
+                                            );
+                                          }
+                                        }
+                                      },
+                              ),
                             ],
                           ),
                         ),

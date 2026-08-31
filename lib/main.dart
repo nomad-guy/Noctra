@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'core/theme/noir_theme.dart';
 import 'core/utils/dynamic_icon_service.dart';
+import 'core/utils/noctra_logger.dart';
 import 'core/utils/permission_helper.dart';
 import 'data/repositories/music_repository.dart';
 import 'data/sources/noctra_local_database.dart';
@@ -47,27 +48,56 @@ void main() async {
     } catch (_) {}
   }
 
-  try { await NoctraLocalDatabase().init(); } catch (_) {}
-  try { await MusicRepository().init(); } catch (_) {}
-  try { await AudioPlayerService().restoreLastPlaybackSession(); } catch (_) {}
+  try { await NoctraLocalDatabase().init(); } catch (e) { NoctraLogger.e('Database init error', e); }
+  try { await MusicRepository().init(); } catch (e) { NoctraLogger.e('Repository init error', e); }
+  try { await AudioPlayerService().restoreLastPlaybackSession(); } catch (e) { NoctraLogger.e('Session restore error', e); }
 
   runApp(const ProviderScope(child: NoctraApp()));
 
   // Silent background update check — fires a system notification if a newer
   // version is on GitHub. Runs 3 seconds after launch to not compete with
   // audio session init or first-frame render.
-  Future.delayed(const Duration(seconds: 3), AppUpdateService.notifyUpdateAvailable);
+  // unawaited: intentionally fire-and-forget after app launches.
+  Future.delayed(const Duration(seconds: 3)).then((_) => AppUpdateService.notifyUpdateAvailable());
 }
 
-class NoctraApp extends ConsumerWidget {
+class NoctraApp extends ConsumerStatefulWidget {
   const NoctraApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NoctraApp> createState() => _NoctraAppState();
+}
+
+class _NoctraAppState extends ConsumerState<NoctraApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Listen to theme changes: persist to DB and update launcher icon.
+    // Using ref.listen in initState via addPostFrameCallback so the
+    // ProviderScope is fully ready before we attach the listener.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Fire once for the current theme on first launch
+      final initial = ref.read(themeModeProvider);
+      DynamicIconService.updateForTheme(initial);
+      NoctraLocalDatabase().saveCachedThemeMode(initial.name);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
     final isInitialized = ref.watch(appInitializedProvider);
+    final hasCompletedOnboarding = ref.watch(onboardingCompletedProvider);
 
-    DynamicIconService.updateForTheme(themeMode);
+    // ref.listen fires ONLY when themeMode changes — not on every rebuild.
+    // Safe here because listen is idempotent across rebuilds in Riverpod 3.x.
+    ref.listen<NoirThemeMode>(themeModeProvider, (_, next) {
+      // postFrameCallback so MethodChannel calls don't fire mid-frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        DynamicIconService.updateForTheme(next);
+        NoctraLocalDatabase().saveCachedThemeMode(next.name);
+      });
+    });
 
     return MaterialApp(
       title: 'Noctra',
@@ -78,10 +108,12 @@ class NoctraApp extends ConsumerWidget {
         switchInCurve: Curves.easeOutCubic,
         switchOutCurve: Curves.easeInCubic,
         child: isInitialized
-            ? (NoctraLocalDatabase().hasCompletedOnboarding ? const MainNavigationShell() : const OnboardingScreen())
+            ? (hasCompletedOnboarding ? const MainNavigationShell() : const OnboardingScreen())
             : SplashScreen(
-                onInitialized: () {
-                  PermissionHelper.requestStoragePermissions();
+                onInitialized: () async {
+                  try {
+                    await PermissionHelper.requestStoragePermissions();
+                  } catch (_) {}
                   ref.read(appInitializedProvider.notifier).state = true;
                 },
               ),
@@ -104,14 +136,6 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
     const LibraryScreen(),
     const AIStudioScreen(),
   ];
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      PermissionHelper.requestStoragePermissions();
-    });
-  }
 
   @override
   Widget build(BuildContext context) {

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/sources/noctra_local_database.dart';
 import '../../../providers/app_providers.dart';
-import '../../../main.dart';
 import 'onboarding_artist_picker.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -14,9 +13,15 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   int _currentStep = 0;
-  final List<String> _selectedLanguages = ['Hindi', 'English'];
-  final List<String> _selectedGenres = ['Bollywood', 'Lo-Fi', 'Synthwave'];
-  final List<String> _selectedArtists = ['Arijit Singh', 'The Weeknd'];
+  final List<String> _selectedLanguages = [];
+  final List<String> _selectedGenres = [];
+  final List<String> _selectedArtists = [];
+
+  bool get _canProceed {
+    if (_currentStep == 0) return _selectedLanguages.isNotEmpty;
+    if (_currentStep == 1) return _selectedGenres.isNotEmpty;
+    return _selectedArtists.isNotEmpty;
+  }
 
   final List<String> _displayedLanguages = [
     'Hindi', 'English', 'Punjabi', 'Urdu', 'Spanish', 'Korean', 'Japanese', 'Tamil', 'Telugu', 'French'
@@ -56,23 +61,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   void _finishOnboarding() async {
     final db = NoctraLocalDatabase();
+    final effectiveLanguages = _selectedLanguages.isNotEmpty ? _selectedLanguages : ['English'];
+    final effectiveGenres = _selectedGenres.isNotEmpty ? _selectedGenres : ['Pop'];
+    final effectiveArtists = _selectedArtists.isNotEmpty ? _selectedArtists : ['The Weeknd'];
+
     await db.completeOnboarding(
-      languages: _selectedLanguages,
-      genres: _selectedGenres,
-      artists: _selectedArtists,
+      languages: effectiveLanguages,
+      genres: effectiveGenres,
+      artists: effectiveArtists,
     );
 
     ref.read(musicRepositoryProvider).initOnboardingTaste(
-      languages: _selectedLanguages,
-      genres: _selectedGenres,
-      artists: _selectedArtists,
+      languages: effectiveLanguages,
+      genres: effectiveGenres,
+      artists: effectiveArtists,
     );
 
-    if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainNavigationShell()),
-      );
-    }
+    ref.read(onboardingCompletedProvider.notifier).state = true;
   }
 
   void _handleLanguageTapped(String lang) {
@@ -233,15 +238,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           const SizedBox(width: 48),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black,
+            backgroundColor: _canProceed ? Colors.white : Colors.white24,
+            foregroundColor: _canProceed ? Colors.black : Colors.white38,
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-            elevation: 8,
+            elevation: _canProceed ? 8 : 0,
           ),
-          onPressed: () {
-            if (_currentStep < 2) { setState(() => _currentStep++); } else { _finishOnboarding(); }
-          },
+          onPressed: _canProceed
+              ? () {
+                  if (_currentStep < 2) {
+                    setState(() => _currentStep++);
+                  } else {
+                    _finishOnboarding();
+                  }
+                }
+              : null,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

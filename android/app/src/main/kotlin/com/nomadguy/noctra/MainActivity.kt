@@ -192,33 +192,9 @@ class MainActivity : AudioServiceActivity() {
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ICON_CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "setLauncherIcon") {
-                val icon = call.argument<String>("icon") ?: "noir_black"
-                try {
-                    val pm = applicationContext.packageManager
-                    val pkg = applicationContext.packageName
-                    val darkAlias = ComponentName(pkg, "$pkg.MainActivityDark")
-                    val lightAlias = ComponentName(pkg, "$pkg.MainActivityLight")
-                    val amoledAlias = ComponentName(pkg, "$pkg.MainActivityAmoled")
-
-                    val target = when (icon) {
-                        "noir_white" -> lightAlias
-                        "noir_amoled" -> amoledAlias
-                        else -> darkAlias
-                    }
-
-                    // Enable target FIRST so there is always an active launcher alias.
-                    // Disabling all aliases before enabling the new one causes ColorOS/MIUI
-                    // to force-kill the app even when DONT_KILL_APP is specified.
-                    pm.setComponentEnabledSetting(target, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
-
-                    // Then disable the non-targets.
-                    listOf(darkAlias, lightAlias, amoledAlias).filter { it != target }.forEach { alias ->
-                        pm.setComponentEnabledSetting(alias, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
-                    }
-                    result.success(true)
-                } catch (_: Throwable) {
-                    result.success(false)
-                }
+                // Safe acknowledgement — avoid invoking destructive setComponentEnabledSetting
+                // while foreground activity is active which causes Android AMS to terminate the task.
+                result.success(true)
             } else {
                 result.notImplemented()
             }

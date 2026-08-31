@@ -55,7 +55,7 @@ class JamHostControlsTab extends ConsumerWidget {
                   ],
                 ),
                 Text(
-                  'Host IP: ${syncService.localIp ?? "127.0.0.1"}:8099',
+                  'Host IP: ${syncService.localIp ?? "127.0.0.1"}:${syncService.port}',
                   style: TextStyle(fontSize: 12, fontFamily: 'monospace', color: isDark ? Colors.white70 : Colors.black87),
                 ),
               ],

@@ -64,7 +64,12 @@ class _TrendingCarouselSectionState extends ConsumerState<TrendingCarouselSectio
             if (tracks.isEmpty) {
               return _emptyState();
             }
-            _retryCount = 0;
+            // M-R5-08: Reset retry count via postFrameCallback, not inside build()
+            if (_retryCount != 0) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) setState(() => _retryCount = 0);
+              });
+            }
             return SizedBox(
               height: 210,
               child: ScrollConfiguration(

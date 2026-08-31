@@ -37,10 +37,16 @@ class _LiveAudioWaveState extends State<LiveAudioWave> with SingleTickerProvider
   @override
   void didUpdateWidget(covariant LiveAudioWave oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.isPlaying && !_controller.isAnimating) {
-      _controller.repeat(reverse: true);
-    } else if (!widget.isPlaying && _controller.isAnimating) {
-      _controller.stop();
+    if (widget.isPlaying != oldWidget.isPlaying) {
+      if (widget.isPlaying) {
+        if (!_controller.isAnimating) _controller.repeat(reverse: true);
+      } else {
+        if (_controller.isAnimating) {
+          _controller.animateTo(0.0, duration: const Duration(milliseconds: 150)).then((_) {
+            if (mounted && !widget.isPlaying) _controller.stop();
+          });
+        }
+      }
     }
   }
 

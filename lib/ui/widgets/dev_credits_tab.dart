@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../services/updater/app_update_service.dart';
 import 'glass_card.dart';
 import 'noctra_app_logo.dart';
 
@@ -92,7 +93,7 @@ class DevCreditsTab extends StatelessWidget {
                 _devSpecRow('Audio Engine', 'High-Fidelity 320k + YouTube Direct', isDark),
                 _devSpecRow('Recommender', 'On-Device MLP + MMR (Pure Dart)', isDark),
                 _devSpecRow('Telemetry', 'Local SQLite WAL (Zero Cloud)', isDark),
-                _devSpecRow('Version', 'v1.1.1 (Build 7)', isDark),
+                _devSpecRow('Version', '${AppUpdateService.currentVersion} (Build 7)', isDark),
               ],
             ),
           ),

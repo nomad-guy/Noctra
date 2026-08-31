@@ -43,13 +43,23 @@ class SearchResultsList extends ConsumerWidget {
     }
 
     if (searchResults.isEmpty) {
-      final genres = [
-        {'title': 'Sufi & Qawwali', 'query': 'Nusrat Fateh Ali Khan Sufi Coke Studio', 'icon': Icons.flare_rounded, 'color': const Color(0xFF1E140A)},
-        {'title': 'Synthwave & Outrun', 'query': 'Synthwave Retrowave 80s Cyberpunk', 'icon': Icons.grid_goldenratio_rounded, 'color': const Color(0xFF140A1E)},
-        {'title': 'Pakistani & Indian Indie', 'query': 'Hassan & Roshaan Pakistani Indie Pop', 'icon': Icons.mic_rounded, 'color': const Color(0xFF0A141E)},
-        {'title': 'Late Night Lo-Fi', 'query': 'Lofi Chill Study Beats Night', 'icon': Icons.nightlight_round, 'color': const Color(0xFF0A1E14)},
-        {'title': 'Global Pop & R&B', 'query': 'The Weeknd Starboy Pop Top Hits', 'icon': Icons.bolt_rounded, 'color': const Color(0xFF1E0A14)},
-        {'title': 'Acoustic & Unplugged', 'query': 'Acoustic Guitar Warmth Folk', 'icon': Icons.music_note_rounded, 'color': const Color(0xFF1E1E0A)},
+      final globalGenres = [
+        {'title': 'Trending Global Hits', 'category': 'Vibes', 'query': 'Today Top Hits Billboard Hot 100', 'icon': Icons.trending_up_rounded},
+        {'title': 'Bollywood & Desi Top Hits', 'category': 'Regional', 'query': 'Bollywood Butter Arijit Singh Pritam', 'icon': Icons.music_video_rounded},
+        {'title': 'Synthwave & Retrowave', 'category': 'Electronic', 'query': 'Synthwave Retrowave 80s Cyberpunk Night Drive', 'icon': Icons.grid_goldenratio_rounded},
+        {'title': 'Sufi & Qawwali Mysticism', 'category': 'Regional', 'query': 'Nusrat Fateh Ali Khan Rahat Sufi Coke Studio', 'icon': Icons.flare_rounded},
+        {'title': 'Punjabi & Desi Hip-Hop', 'category': 'Regional', 'query': 'Sidhu Moosewala Karan Aujla AP Dhillon', 'icon': Icons.flash_on_rounded},
+        {'title': 'Late Night Lo-Fi Chill', 'category': 'Vibes', 'query': 'Lofi Chill Study Beats Night Relax', 'icon': Icons.nightlight_round},
+        {'title': 'Acoustic & Unplugged', 'category': 'Acoustic', 'query': 'Acoustic Guitar Warmth Folk Singer Songwriter', 'icon': Icons.music_note_rounded},
+        {'title': 'Drift Phonk & Velocity', 'category': 'Electronic', 'query': 'Drift Phonk Wave Memphis Slowed Reverb', 'icon': Icons.speed_rounded},
+        {'title': 'Global Pop & R&B Anthems', 'category': 'Vibes', 'query': 'The Weeknd Starboy Drake Pop Hits', 'icon': Icons.bolt_rounded},
+        {'title': 'Smooth Midnight Jazz', 'category': 'Acoustic', 'query': 'Smooth Jazz Midnight Saxophone Coffeehouse Blues', 'icon': Icons.local_bar_rounded},
+        {'title': 'Latin Reggaeton Fiesta', 'category': 'Regional', 'query': 'Bad Bunny Latin Pop Reggaeton Hits', 'icon': Icons.celebration_rounded},
+        {'title': 'K-Pop & Asian Pop Wave', 'category': 'Regional', 'query': 'BTS Blackpink NewJeans KPop Top Hits', 'icon': Icons.favorite_rounded},
+        {'title': 'Deep House & Club EDM', 'category': 'Electronic', 'query': 'Deep House Electronic Dance Sunset Club', 'icon': Icons.speaker_group_rounded},
+        {'title': 'Cinematic Epic Soundtracks', 'category': 'Acoustic', 'query': 'Hans Zimmer Epic Cinematic Orchestral Score', 'icon': Icons.movie_filter_rounded},
+        {'title': 'Ambient Zen & Meditation', 'category': 'Vibes', 'query': 'Ambient Atmospheric Space Meditation Sleep', 'icon': Icons.spa_rounded},
+        {'title': 'French Chanson & Café', 'category': 'Regional', 'query': 'French Cafe Accordion Chanson Vintage Paris', 'icon': Icons.coffee_rounded},
       ];
 
       return ListView(
@@ -58,15 +68,43 @@ class SearchResultsList extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 12, top: 4),
-            child: Text('Explore Global Catalogs & Genres', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: isDark ? Colors.white70 : Colors.black87)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Explore Global Catalogs & Genres',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white70 : Colors.black87,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white10 : Colors.black12,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${globalGenres.length} Catalogs',
+                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white60 : Colors.black54),
+                  ),
+                ),
+              ],
+            ),
           ),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 1.8, crossAxisSpacing: 10, mainAxisSpacing: 10),
-            itemCount: genres.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 1.85,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+            ),
+            itemCount: globalGenres.length,
             itemBuilder: (context, idx) {
-              final g = genres[idx];
+              final g = globalGenres[idx];
               return GlassCard(
                 radius: 14,
                 padding: const EdgeInsets.all(12),
@@ -75,8 +113,29 @@ class SearchResultsList extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(g['icon'] as IconData, size: 22, color: isDark ? Colors.white : Colors.black),
-                    Text(g['title'] as String, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Icon(g['icon'] as IconData, size: 20, color: isDark ? Colors.white : Colors.black),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white12 : Colors.black12,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            g['category'] as String,
+                            style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white54 : Colors.black54),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      g['title'] as String,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black),
+                    ),
                   ],
                 ),
               );
@@ -185,8 +244,23 @@ class SearchResultsList extends ConsumerWidget {
                       ? null
                       : () async {
                           ref.read(downloadingSongsProvider.notifier).update((s) => {...s, song.id});
-                          final downloaded = await MusicService.downloadTrack(song);
-                          repo.addDownloadedSong(downloaded ?? song);
+                          try {
+                            final downloaded = await MusicService.downloadTrack(song);
+                            if (downloaded != null) {
+                              repo.addDownloadedSong(downloaded);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Saved "${song.title}" to Downloads'),
+                                    duration: const Duration(seconds: 2),
+                                    backgroundColor: isDark ? const Color(0xFF222222) : const Color(0xFF333333),
+                                  ),
+                                );
+                              }
+                            }
+                          } finally {
+                            ref.read(downloadingSongsProvider.notifier).update((s) => {...s}..remove(song.id));
+                          }
                         },
                 ),
               ],

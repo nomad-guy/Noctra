@@ -29,6 +29,14 @@ class LyricsData {
 
 class LyricsService {
   static final Map<String, LyricsData> _cache = {};
+  static const int _maxCacheSize = 100;
+
+  static void _setCache(String key, LyricsData data) {
+    if (_cache.length >= _maxCacheSize) {
+      _cache.remove(_cache.keys.first);
+    }
+    _cache[key] = data;
+  }
 
   static bool _hasDevanagari(String text) => RegExp(r'[\u0900-\u097F]').hasMatch(text);
 
@@ -65,14 +73,14 @@ class LyricsService {
                   final lines = _parseLrc(syncedLrc);
                   if (lines.isNotEmpty) {
                     final res = LyricsData(isSynced: true, lines: lines, plainText: devItem['plainLyrics'] ?? syncedLrc);
-                    _cache[cacheKey] = res;
+                    _setCache(cacheKey, res);
                     return res;
                   }
                 }
                 final plain = devItem['plainLyrics'] as String?;
                 if (plain != null && plain.isNotEmpty) {
                   final res = LyricsData(isSynced: false, lines: const [], plainText: plain.trim());
-                  _cache[cacheKey] = res;
+                  _setCache(cacheKey, res);
                   return res;
                 }
               }
@@ -85,7 +93,7 @@ class LyricsService {
                 final lines = _parseLrc(syncedLrc);
                 if (lines.isNotEmpty) {
                   final res = LyricsData(isSynced: true, lines: lines, plainText: item['plainLyrics'] ?? syncedLrc);
-                  _cache[cacheKey] = res;
+                  _setCache(cacheKey, res);
                   return res;
                 }
               }
@@ -96,7 +104,7 @@ class LyricsService {
               final plain = item['plainLyrics'] as String?;
               if (plain != null && plain.trim().isNotEmpty) {
                 final res = LyricsData(isSynced: false, lines: const [], plainText: plain.trim());
-                _cache[cacheKey] = res;
+                _setCache(cacheKey, res);
                 return res;
               }
             }
@@ -109,7 +117,7 @@ class LyricsService {
     try {
       final ytLyrics = await _fetchInnerTubeLyrics(song.id, cleanTitle, primaryArtist);
       if (ytLyrics != null) {
-        _cache[cacheKey] = ytLyrics;
+        _setCache(cacheKey, ytLyrics);
         return ytLyrics;
       }
     } catch (_) {}
@@ -134,7 +142,7 @@ class LyricsService {
               if (rawLyr != null && rawLyr.isNotEmpty) {
                 final clean = rawLyr.replaceAll('<br>', '\n').replaceAll('&quot;', '"').replaceAll('&amp;', '&').trim();
                 final res = LyricsData(isSynced: false, lines: const [], plainText: clean);
-                _cache[cacheKey] = res;
+                _setCache(cacheKey, res);
                 return res;
               }
             }

@@ -60,15 +60,25 @@ The Android launcher icon automatically synchronizes with the active in-app them
 - **Stage 3 (Maximal Marginal Relevance Diversity Filter)**: MMR reranking (lambda = 0.75) with strict frequency caps eliminates recommendation fatigue by preventing repeat artists.
 - **Online Behavioral Gradient Learning**: Dynamically recalibrates user taste vectors in real time based on micro-interactions (-1.0 for fast skips, +1.0 for completions, +1.5 for replays, +3.0 for favorites) with a 14-day exponential half-life recency decay.
 
-### 2. Audiophile Sound Core and Hardware DSP
-- **Lossless 320kbps Audio**: Direct resolution of bit-perfect CD quality streams on-device.
-- **Native Android Hardware DSP**: 5-band millibel Equalizer mapped directly to native Android audiofx sessions.
+### 2. Multi-Script Indic Transliteration & Script Conversion Suite
+- **Sanscript Brahmic Matrix Engine**: Zero-latency, 100% offline pure Dart script matrix converting across **Devanagari, Gurmukhi (Punjabi), Bengali, Gujarati, Telugu, Tamil, Kannada, Malayalam, ITRANS, IAST, and Harvard-Kyoto**.
+- **Aksharamukha Multi-Script Pipeline**: Full orthographic conventions with fallback to local matrix for offline resilience.
+- **IndicXlit Neural Transliteration Engine**: Roman $\leftrightarrow$ Native Indic script transliterator designed for unstructured fan lyrics with parallel line batching and LRU caching.
+- **Bidirectional Romanized Translation**: Translates native Devanagari/Gurmukhi scripts into clean Romanized text with intelligent Hindi schwa-deletion and poetic lyrical glosses.
+
+### 3. Dynamic Music Artist Photo (PFP) Resolver
+- **Deezer Music Graph (500x500/1000x1000 HD)**: Verified studio artist portraits with 100% music exclusivity (zero entity disambiguation errors).
+- **JioSaavn 500x500 Directory**: Real-time regional Bollywood, Punjabi, and Sufi artist portrait resolution.
+- **Apple Music / iTunes Store**: High-resolution catalog imagery and artwork extraction.
+
+### 4. Noir Monochrome Black & Silver Synthwave Visualizer
+- Pure obsidian (`#000000`), deep charcoal (`#141414`), chrome silver (`#E0E0E0`), and bright white (`#FFFFFF`) palette with dual-layer audio waveform peaks and real-time forward-moving perspective scanlines.
+
+### 5. Multi-Source High-Fidelity Audio Resolver
+- **Composite Stream Resolver**: Seamless fallback across JioSaavn 320 kbps High-Fidelity streams, YouTube Music Opus audio, and local storage caches.
+- **Hardware DSP Effects**: Native Android Kotlin 5-band parametric equalizer, bass boost, dynamic loudness enhancer, and virtualizer.
 - **Studio Master Modes**: Instant hardware presets for 3D Spatial Virtualizer, Concert Hall Reverb, and BassBoost Exciter.
 
-### 3. Synchronized Lyrics and Dynamic Discovery
-- **Millisecond-Accurate Synced Lyrics**: Time-coded LRC synchronization with Roman-to-Devanagari transliteration support.
-- **100% Dynamic Artist Discovery**: Direct Wikipedia REST API integration resolving high-resolution portraits and biographical summaries with zero static defaults.
-- **Spotify-Style Onboarding**: Multi-step first-run selector for Languages, Genres, and Artists to seed initial taste vectors.
 
 ### 4. Decentralized P2P SyncCast
 - Local-network party playback synchronization using a low-latency WebSocket protocol with automatic socket reconnection and zero cloud server dependencies.

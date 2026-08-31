@@ -51,6 +51,8 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 /android/.gradle
+/android/build/
+/android/.kotlin/
 .gradle/
 *.apk
 *.aab

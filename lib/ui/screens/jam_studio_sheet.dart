@@ -69,26 +69,30 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet> with SingleTick
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Noctra Jam Studio',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Noctra Jam Studio',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Serverless P2P Synchronized Audio & Live Chat Mesh',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary,
+                      const SizedBox(height: 2),
+                      Text(
+                        'Serverless P2P Synchronized Audio & Live Chat Mesh',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 IconButton(
                   icon: Icon(Icons.close_rounded, color: isDark ? Colors.white : Colors.black),
