@@ -55,9 +55,7 @@ class AudioPlayerService {
 
   AudioPlayerService._internal() {
     _initAudioSession();
-    _player.playerStateStream.listen((state) {
-      if (state.processingState == ProcessingState.completed) _onSongCompleted();
-    });
+    _player.playerStateStream.listen((s) { if (s.processingState == ProcessingState.completed) _onSongCompleted(); });
     _player.positionStream.listen((pos) {
       if (_currentSong != null && _loopMode != LoopMode.one && pos.inSeconds >= 5 && pos.inSeconds != _lastSavedSec && pos.inSeconds % 5 == 0) {
         _lastSavedSec = pos.inSeconds;
@@ -67,10 +65,7 @@ class AudioPlayerService {
   }
 
   Future<void> _initAudioSession() async {
-    try {
-      final s = await AudioSession.instance;
-      await s.configure(const AudioSessionConfiguration.music());
-    } catch (_) {}
+    try { final s = await AudioSession.instance; await s.configure(const AudioSessionConfiguration.music()); } catch (_) {}
   }
 
   void setAutoplayDelay(int sec) { _autoplayDelaySeconds = sec; _emitSettings(); }
@@ -111,13 +106,14 @@ class AudioPlayerService {
         _currentSongController.add(_currentSong); _queueController.add(_queue);
         final url = await CompositeStreamResolver.resolve(_currentSong!);
         if (url != null && url.isNotEmpty) {
-          final mediaItem = MediaItem(id: _currentSong!.id, album: _currentSong!.album, title: _currentSong!.title, artist: _currentSong!.artist, artUri: (_currentSong!.artworkUrl != null && _currentSong!.artworkUrl!.startsWith('http')) ? Uri.parse(_currentSong!.artworkUrl!) : null, duration: _currentSong!.duration);
-          final src = url.startsWith('http') ? AudioSource.uri(Uri.parse(url), tag: mediaItem) : AudioSource.file(url, tag: mediaItem);
+          final src = url.startsWith('http') ? AudioSource.uri(Uri.parse(url), tag: _createMediaItem(_currentSong!)) : AudioSource.file(url, tag: _createMediaItem(_currentSong!));
           await _player.setAudioSource(src, initialPosition: _lastSavedPosition);
         }
       }
     } catch (_) {}
   }
+
+  MediaItem _createMediaItem(Song s) => MediaItem(id: s.id, album: s.album, title: s.title, artist: s.artist, artUri: (s.artworkUrl != null && s.artworkUrl!.startsWith('http')) ? Uri.parse(s.artworkUrl!) : null, duration: s.duration, playable: true);
 
   Future<void> playSong(Song song, {List<Song>? newQueue, Duration? initialPosition}) async {
     final epoch = ++_playSessionEpoch;
@@ -164,11 +160,25 @@ class AudioPlayerService {
       if (url.isNotEmpty) {
         Duration startPos = initialPosition ?? ((_lastSavedPosition != null && _lastSavedSongId == song.id) ? _lastSavedPosition! : Duration.zero);
         _lastSavedPosition = null; _lastSavedSongId = null;
-        final mediaItem = MediaItem(id: song.id, album: song.album, title: song.title, artist: song.artist, artUri: (song.artworkUrl != null && song.artworkUrl!.startsWith('http')) ? Uri.parse(song.artworkUrl!) : null, duration: song.duration);
+        final currentMediaItem = _createMediaItem(song);
         bool loaded = false;
         try {
-          final src = url.startsWith('http') ? AudioSource.uri(Uri.parse(url), tag: mediaItem) : AudioSource.file(url, tag: mediaItem);
-          await _player.setAudioSource(src, initialPosition: startPos);
+          if (_queue.length > 1) {
+            final sources = <AudioSource>[];
+            for (int i = 0; i < _queue.length; i++) {
+              final qSong = _queue[i];
+              if (i == _currentIndex) {
+                sources.add(url.startsWith('http') ? AudioSource.uri(Uri.parse(url), tag: _createMediaItem(qSong)) : AudioSource.file(url, tag: _createMediaItem(qSong)));
+              } else {
+                final qUrl = (qSong.localFilePath != null && qSong.localFilePath!.isNotEmpty) ? qSong.localFilePath! : (qSong.streamUrl ?? url);
+                sources.add(qUrl.startsWith('http') ? AudioSource.uri(Uri.parse(qUrl), tag: _createMediaItem(qSong)) : AudioSource.file(qUrl, tag: _createMediaItem(qSong)));
+              }
+            }
+            await _player.setAudioSource(ConcatenatingAudioSource(children: sources), initialIndex: _currentIndex, initialPosition: startPos);
+          } else {
+            final src = url.startsWith('http') ? AudioSource.uri(Uri.parse(url), tag: currentMediaItem) : AudioSource.file(url, tag: currentMediaItem);
+            await _player.setAudioSource(src, initialPosition: startPos);
+          }
           loaded = true;
         } catch (_) {
           CompositeStreamResolver.invalidateCache(song.id);
@@ -177,7 +187,7 @@ class AudioPlayerService {
             try {
               final fallbackUrl = await CompositeStreamResolver.resolve(song, startTier: tier);
               if (fallbackUrl != null && fallbackUrl.isNotEmpty && fallbackUrl != url) {
-                await _player.setAudioSource(AudioSource.uri(Uri.parse(fallbackUrl), tag: mediaItem), initialPosition: startPos);
+                await _player.setAudioSource(AudioSource.uri(Uri.parse(fallbackUrl), tag: currentMediaItem), initialPosition: startPos);
                 loaded = true; break;
               }
             } catch (_) {}
@@ -189,14 +199,8 @@ class AudioPlayerService {
   }
 
   Future<void> resumeOrPlay() async {
-    if (_player.playing) {
-      await _player.pause();
-    } else {
-      if (_player.processingState == ProcessingState.idle && _currentSong != null) {
-        await playSong(_currentSong!);
-      } else {
-        await _player.play();
-      }
+    if (_player.playing) { await _player.pause(); } else {
+      if (_player.processingState == ProcessingState.idle && _currentSong != null) { await playSong(_currentSong!); } else { await _player.play(); }
     }
   }
 
@@ -222,9 +226,7 @@ class AudioPlayerService {
         _currentIndex = (_currentIndex + 1) % _queue.length;
         await playSong(_queue[_currentIndex]);
       }
-    } finally {
-      _skipInFlight = false;
-    }
+    } finally { _skipInFlight = false; }
   }
 
   Future<void> skipPrevious() async {
@@ -235,11 +237,7 @@ class AudioPlayerService {
   Future<void> seek(Duration pos) => _player.seek(pos);
   Future<void> setVolume(double vol) => _player.setVolume((vol.isNaN || vol.isInfinite) ? 1.0 : vol.clamp(0.0, 1.0));
 
-  Future<void> stopAndDismiss() async {
-    try { await _player.stop(); } catch (_) {}
-    _currentSong = null; _currentSongController.add(null);
-  }
-
+  Future<void> stopAndDismiss() async { try { await _player.stop(); } catch (_) {} _currentSong = null; _currentSongController.add(null); }
   Future<void> toggleShuffle() async { _isShuffleEnabled = !_isShuffleEnabled; await _player.setShuffleModeEnabled(_isShuffleEnabled); _emitSettings(); }
   void toggleAutoplay() { _isAutoplayEnabled = !_isAutoplayEnabled; _emitSettings(); }
   Future<void> toggleLoopMode() async { _loopMode = _loopMode == LoopMode.off ? LoopMode.all : (_loopMode == LoopMode.all ? LoopMode.one : LoopMode.off); await _player.setLoopMode(_loopMode); _emitSettings(); }
@@ -256,17 +254,11 @@ class AudioPlayerService {
   }
 
   void applyStudioMasterMode(String mode) {
-    try {
-      attachNativeEffectsSession();
-      _effectsChannel.invokeMethod('applyStudioMode', {'mode': mode});
-    } catch (_) {}
+    try { attachNativeEffectsSession(); _effectsChannel.invokeMethod('applyStudioMode', {'mode': mode}); } catch (_) {}
   }
 
   void applyEqualizer({List<double>? bands, double? bassBoost, double? virtualizer}) {
-    try {
-      attachNativeEffectsSession();
-      _effectsChannel.invokeMethod('applyEqualizer', {'bands': bands ?? [0.0, 0.0, 0.0, 0.0, 0.0], 'bassBoost': bassBoost ?? 0.0, 'virtualizer': virtualizer ?? 0.0});
-    } catch (_) {}
+    try { attachNativeEffectsSession(); _effectsChannel.invokeMethod('applyEqualizer', {'bands': bands ?? [0.0, 0.0, 0.0, 0.0, 0.0], 'bassBoost': bassBoost ?? 0.0, 'virtualizer': virtualizer ?? 0.0}); } catch (_) {}
   }
 
   void _emitSettings() {
