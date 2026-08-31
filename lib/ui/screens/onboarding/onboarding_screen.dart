@@ -18,13 +18,41 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final List<String> _selectedGenres = ['Bollywood', 'Lo-Fi', 'Synthwave'];
   final List<String> _selectedArtists = ['Arijit Singh', 'The Weeknd'];
 
-  static const List<String> availableLanguages = [
+  final List<String> _displayedLanguages = [
     'Hindi', 'English', 'Punjabi', 'Urdu', 'Spanish', 'Korean', 'Japanese', 'Tamil', 'Telugu', 'French'
   ];
 
-  static const List<String> availableGenres = [
+  final List<String> _displayedGenres = [
     'Bollywood', 'Lo-Fi', 'Hip-Hop', 'Synthwave', 'Acoustic', 'Pop', 'EDM', 'Sufi', 'Rock', 'R&B', 'Phonk', 'Indie'
   ];
+
+  static const Map<String, List<String>> _relatedLanguages = {
+    'Hindi': ['Urdu', 'Punjabi', 'Bhojpuri', 'Marathi', 'Gujarati', 'Bengali'],
+    'English': ['Spanish', 'French', 'German', 'Italian', 'Portuguese'],
+    'Punjabi': ['Hindi', 'Urdu', 'Haryanvi'],
+    'Urdu': ['Hindi', 'Punjabi', 'Arabic', 'Persian'],
+    'Spanish': ['Portuguese', 'Italian', 'French'],
+    'Korean': ['Japanese', 'Mandarin', 'Thai'],
+    'Japanese': ['Korean', 'Mandarin'],
+    'Tamil': ['Telugu', 'Malayalam', 'Kannada'],
+    'Telugu': ['Tamil', 'Kannada', 'Malayalam'],
+    'French': ['Spanish', 'Italian', 'German'],
+  };
+
+  static const Map<String, List<String>> _relatedGenres = {
+    'Bollywood': ['Sufi', 'Ghazal', 'Filmi', 'Desi Pop', 'Qawwali'],
+    'Lo-Fi': ['Chillhop', 'Ambient', 'Downtempo', 'Bedroom Pop'],
+    'Hip-Hop': ['Desi Hip-Hop', 'Trap', 'Boom Bap', 'Drill', 'Cloud Rap'],
+    'Synthwave': ['Retrowave', 'Cyberpunk', 'Darksynth', 'Vaporwave', 'City Pop'],
+    'Acoustic': ['Folk', 'Indie Acoustic', 'Singer-Songwriter', 'Unplugged'],
+    'Pop': ['Desi Pop', 'Dance Pop', 'Synth-Pop', 'K-Pop', 'Electropop'],
+    'EDM': ['House', 'Future Bass', 'Techno', 'Trance', 'Dubstep'],
+    'Sufi': ['Qawwali', 'Ghazal', 'Sufi Rock', 'Mystic'],
+    'Rock': ['Alt Rock', 'Indie Rock', 'Hard Rock', 'Grunge'],
+    'R&B': ['Neo-Soul', 'Contemporary R&B', 'Trap Soul'],
+    'Phonk': ['Drift Phonk', 'Wave Phonk', 'Memphis Rap'],
+    'Indie': ['Indie Pop', 'Indie Rock', 'Dream Pop', 'Shoegaze'],
+  };
 
   void _finishOnboarding() async {
     final db = NoctraLocalDatabase();
@@ -47,6 +75,42 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
   }
 
+  void _handleLanguageTapped(String lang) {
+    setState(() {
+      if (_selectedLanguages.contains(lang)) {
+        if (_selectedLanguages.length > 1) _selectedLanguages.remove(lang);
+      } else {
+        _selectedLanguages.add(lang);
+        final related = _relatedLanguages[lang];
+        if (related != null) {
+          for (final rel in related) {
+            if (!_displayedLanguages.contains(rel) && _displayedLanguages.length < 24) {
+              _displayedLanguages.add(rel);
+            }
+          }
+        }
+      }
+    });
+  }
+
+  void _handleGenreTapped(String genre) {
+    setState(() {
+      if (_selectedGenres.contains(genre)) {
+        if (_selectedGenres.length > 1) _selectedGenres.remove(genre);
+      } else {
+        _selectedGenres.add(genre);
+        final related = _relatedGenres[genre];
+        if (related != null) {
+          for (final rel in related) {
+            if (!_displayedGenres.contains(rel) && _displayedGenres.length < 36) {
+              _displayedGenres.add(rel);
+            }
+          }
+        }
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -60,35 +124,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'NOCTRA',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 3.5,
-                      color: Colors.white.withValues(alpha: 0.9),
-                    ),
-                  ),
-                  Text(
-                    'Step ${_currentStep + 1} of 3',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white54),
-                  ),
+                  Text('NOCTRA', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 3.5, color: Colors.white.withValues(alpha: 0.9))),
+                  Text('Step ${_currentStep + 1} of 3', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white54)),
                 ],
               ),
               const SizedBox(height: 20),
-              Text(
-                _getStepTitle(),
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, height: 1.2),
-              ),
+              Text(_getStepTitle(), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, height: 1.2)),
               const SizedBox(height: 6),
-              Text(
-                _getStepSubtitle(),
-                style: const TextStyle(fontSize: 13, color: Colors.white60),
-              ),
+              Text(_getStepSubtitle(), style: const TextStyle(fontSize: 13, color: Colors.white60)),
               const SizedBox(height: 20),
-              Expanded(
-                child: _buildStepContent(),
-              ),
+              Expanded(child: _buildStepContent()),
               const SizedBox(height: 16),
               _buildBottomControls(),
             ],
@@ -108,46 +153,36 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   String _getStepSubtitle() {
     switch (_currentStep) {
-      case 0: return 'We will curate real-time lossless tracks in these languages.';
-      case 1: return 'Shapes your 32-dimensional acoustic taste vector.';
-      default: return 'Noctra AI trains its neural recommendation graph on these.';
+      case 0: return 'Curates real-time high-fidelity tracks in these languages.';
+      case 1: return 'Shapes your 32-dimensional neural taste vector.';
+      default: return 'Explore dynamically. Tapping artists discovers similar musicians.';
     }
   }
 
   Widget _buildStepContent() {
     if (_currentStep == 0) {
-      return Wrap(
-        spacing: 10,
-        runSpacing: 12,
-        children: availableLanguages.map((lang) {
-          final isSelected = _selectedLanguages.contains(lang);
-          return _buildChoiceChip(lang, isSelected, () {
-            setState(() {
-              if (isSelected) {
-                if (_selectedLanguages.length > 1) _selectedLanguages.remove(lang);
-              } else {
-                _selectedLanguages.add(lang);
-              }
-            });
-          });
-        }).toList(),
+      return SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Wrap(
+          spacing: 10,
+          runSpacing: 12,
+          children: _displayedLanguages.map((lang) {
+            final isSelected = _selectedLanguages.contains(lang);
+            return _buildChoiceChip(lang, isSelected, () => _handleLanguageTapped(lang));
+          }).toList(),
+        ),
       );
     } else if (_currentStep == 1) {
-      return Wrap(
-        spacing: 10,
-        runSpacing: 12,
-        children: availableGenres.map((genre) {
-          final isSelected = _selectedGenres.contains(genre);
-          return _buildChoiceChip(genre, isSelected, () {
-            setState(() {
-              if (isSelected) {
-                if (_selectedGenres.length > 1) _selectedGenres.remove(genre);
-              } else {
-                _selectedGenres.add(genre);
-              }
-            });
-          });
-        }).toList(),
+      return SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Wrap(
+          spacing: 10,
+          runSpacing: 12,
+          children: _displayedGenres.map((genre) {
+            final isSelected = _selectedGenres.contains(genre);
+            return _buildChoiceChip(genre, isSelected, () => _handleGenreTapped(genre));
+          }).toList(),
+        ),
       );
     } else {
       return OnboardingArtistPicker(
@@ -174,10 +209,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         decoration: BoxDecoration(
           color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: isSelected ? Colors.white : Colors.white12,
-            width: 1.5,
-          ),
+          border: Border.all(color: isSelected ? Colors.white : Colors.white12, width: 1.5),
         ),
         child: Text(
           label,
@@ -196,10 +228,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         if (_currentStep > 0)
-          IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white70),
-            onPressed: () => setState(() => _currentStep--),
-          )
+          IconButton(icon: const Icon(Icons.arrow_back_rounded, color: Colors.white70), onPressed: () => setState(() => _currentStep--))
         else
           const SizedBox(width: 48),
         ElevatedButton(
@@ -211,19 +240,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             elevation: 8,
           ),
           onPressed: () {
-            if (_currentStep < 2) {
-              setState(() => _currentStep++);
-            } else {
-              _finishOnboarding();
-            }
+            if (_currentStep < 2) { setState(() => _currentStep++); } else { _finishOnboarding(); }
           },
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                _currentStep == 2 ? 'Start Listening' : 'Next',
-                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
-              ),
+              Text(_currentStep == 2 ? 'Start Listening' : 'Next', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
               const SizedBox(width: 6),
               const Icon(Icons.arrow_forward_rounded, size: 18),
             ],

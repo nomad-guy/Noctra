@@ -12,6 +12,8 @@ class OnboardingArtistPicker extends StatefulWidget {
     required this.onToggle,
   });
 
+  static const int maxArtistsLimit = 50;
+
   static const List<String> popularArtists = [
     'Arijit Singh', 'The Weeknd', 'Sidhu Moose Wala', 'Diljit Dosanjh',
     'Taylor Swift', 'Pritam', 'Karan Aujla', 'AP Dhillon',
@@ -20,22 +22,42 @@ class OnboardingArtistPicker extends StatefulWidget {
   ];
 
   static const Map<String, List<String>> similarArtistsMap = {
-    'Arijit Singh': ['Atif Aslam', 'Mohit Chauhan', 'Jubin Nautiyal', 'KK'],
-    'The Weeknd': ['Post Malone', 'Bruno Mars', 'Lana Del Rey', 'Daft Punk'],
-    'Sidhu Moose Wala': ['Amrit Maan', 'Shubh', 'Amrinder Gill', 'B Praak'],
-    'Diljit Dosanjh': ['Gippy Grewal', 'Guru Randhawa', 'Jassie Gill'],
-    'Taylor Swift': ['Olivia Rodrigo', 'Ariana Grande', 'Selena Gomez', 'Ed Sheeran'],
-    'Pritam': ['Vishal-Shekhar', 'Sachin-Jigar', 'Amit Trivedi'],
-    'Karan Aujla': ['Ikky', 'Deep Jandu', 'Jay Trak'],
+    'Arijit Singh': ['Atif Aslam', 'Mohit Chauhan', 'Jubin Nautiyal', 'KK', 'Darshan Raval'],
+    'Pritam': ['Vishal-Shekhar', 'Sachin-Jigar', 'Amit Trivedi', 'Shankar-Ehsaan-Loy', 'AR Rahman'],
+    'Shreya Ghoshal': ['Sunidhi Chauhan', 'Neeti Mohan', 'Monali Thakur', 'Jasleen Royal', 'Palak Muchhal'],
+    'Atif Aslam': ['Rahat Fateh Ali Khan', 'Ali Zafar', 'Mustafa Zahid', 'Jal', 'Shafqat Amanat Ali'],
+    'Mohit Chauhan': ['Lucky Ali', 'Papon', 'Kailash Kher', 'Sonu Nigam'],
+    'KK': ['Sonu Nigam', 'Shaan', 'Kunal Ganjawala', 'Javed Ali'],
+    'Jubin Nautiyal': ['Stebin Ben', 'B Praak', 'Akhil Sachdeva'],
+    'Darshan Raval': ['Armaan Malik', 'Asim Azhar', 'Anuv Jain'],
+    'AR Rahman': ['Harris Jayaraj', 'Anirudh Ravichander', 'Yuvan Shankar Raja'],
+    'Anirudh Ravichander': ['Santhosh Narayanan', 'G.V. Prakash Kumar', 'Devi Sri Prasad'],
+    'Sidhu Moose Wala': ['Amrit Maan', 'Shubh', 'Amrinder Gill', 'B Praak', 'Prem Dhillon'],
+    'Diljit Dosanjh': ['Gippy Grewal', 'Guru Randhawa', 'Jassie Gill', 'Maninder Buttar'],
+    'Karan Aujla': ['Ikky', 'Deep Jandu', 'Jay Trak', 'Avvy Sra'],
     'AP Dhillon': ['Gurinder Gill', 'Shinda Kahlon', 'Gminxr'],
+    'Shubh': ['Raf-Saperra', 'Wazir Patar', 'Hustinder'],
+    'Badshah': ['Raftaar', 'Yo Yo Honey Singh', 'DIVINE', 'Seedhe Maut', 'King'],
+    'DIVINE': ['MC Stan', 'Seedhe Maut', r'KR$NA', 'Raftaar', 'Talha Anjum'],
+    'Seedhe Maut': ['Prabh Deep', 'Ahmer', 'Sez on the Beat', 'Rawal'],
+    r'KR$NA': ['Karma', 'Talhah Yunus', 'Young Stunners'],
+    'Yo Yo Honey Singh': ['Alfaaz', 'Lil Golu', 'J-Star'],
+    'The Weeknd': ['Post Malone', 'Bruno Mars', 'Lana Del Rey', 'Daft Punk', 'Kavinsky'],
+    'Taylor Swift': ['Olivia Rodrigo', 'Ariana Grande', 'Selena Gomez', 'Ed Sheeran', 'Sabrina Carpenter'],
+    'Dua Lipa': ['Bebe Rexha', 'Rita Ora', 'Ava Max', 'Katy Perry', 'Charli XCX'],
+    'Drake': ['Travis Scott', 'Future', '21 Savage', 'Kendrick Lamar', 'J. Cole'],
+    'Travis Scott': ['Don Toliver', 'Playboi Carti', 'Gunna', 'Lil Uzi Vert'],
+    'Coldplay': ['Imagine Dragons', 'OneRepublic', 'The Chainsmokers', 'Maroon 5'],
+    'Billie Eilish': ['FINNEAS', 'Lorde', 'Melanie Martinez', 'Girl in Red', 'Clairo'],
+    'Post Malone': ['The Kid LAROI', 'Khalid', 'Juice WRLD'],
+    'Ariana Grande': ['Camila Cabello', 'Halsey', 'Doja Cat', 'ZAYN'],
+    'Daft Punk': ['Justice', 'Kavinsky', 'Gesaffelstein', 'M83'],
+    'Lana Del Rey': ['Marina', 'Mitski', 'Florence + The Machine'],
     'Fly By Midnight': ['Prateek Kuhad', 'Anuv Jain', 'Lauv', 'Jeremy Zucker'],
-    'Shreya Ghoshal': ['Sunidhi Chauhan', 'Neeti Mohan', 'Monali Thakur'],
-    'Dua Lipa': ['Bebe Rexha', 'Rita Ora', 'Ava Max'],
-    'Atif Aslam': ['Rahat Fateh Ali Khan', 'Ali Zafar', 'Mustafa Zahid'],
-    'Drake': ['Travis Scott', 'Future', 'Kendrick Lamar'],
-    'Coldplay': ['Imagine Dragons', 'OneRepublic', 'The Chainsmokers'],
-    'Billie Eilish': ['FINNEAS', 'Lorde', 'Girl in Red'],
-    'Badshah': ['Raftaar', 'Yo Yo Honey Singh', 'DIVINE', 'Seedhe Maut'],
+    'Anuv Jain': ['Prateek Kuhad', 'Jasleen Royal', 'Zaeden', 'When Chai Met Toast'],
+    'Prateek Kuhad': ['The Local Train', 'Twin Strings', 'Dream Note'],
+    'Lauv': ['Troye Sivan', 'Conan Gray', 'Bazzi', 'LANY'],
+    'The Local Train': ['Parvaaz', 'Indian Ocean', 'Agnee', 'Euphoria'],
   };
 
   @override
@@ -73,17 +95,19 @@ class _OnboardingArtistPickerState extends State<OnboardingArtistPicker> {
     widget.onToggle(artist);
     final willBeSelected = !widget.selectedArtists.contains(artist);
 
-    if (willBeSelected) {
+    if (willBeSelected && _displayedArtists.length < OnboardingArtistPicker.maxArtistsLimit) {
       final similar = OnboardingArtistPicker.similarArtistsMap[artist];
       if (similar != null) {
         final newToLoad = <String>[];
+        final insertIndex = (_displayedArtists.indexOf(artist) + 1).clamp(0, _displayedArtists.length);
+        int offset = 0;
+
         for (final sim in similar) {
+          if (_displayedArtists.length >= OnboardingArtistPicker.maxArtistsLimit) break;
           if (!_displayedArtists.contains(sim)) {
-            _displayedArtists.insert(
-              (_displayedArtists.indexOf(artist) + 1).clamp(0, _displayedArtists.length),
-              sim,
-            );
+            _displayedArtists.insert(insertIndex + offset, sim);
             newToLoad.add(sim);
+            offset++;
           }
         }
         if (newToLoad.isNotEmpty) {
