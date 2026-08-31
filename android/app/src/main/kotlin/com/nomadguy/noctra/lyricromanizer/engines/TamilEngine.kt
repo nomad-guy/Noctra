@@ -26,10 +26,13 @@ class TamilEngine {
     suspend fun romanize(line: String, context: RomanizeEngineContext): String {
         val buf = StringBuilder()
         for (ch in line) {
-            vowels[ch]?.let { buf.append(it); return@let }
-            consonants[ch]?.let { buf.append(it); return@let }
-            vowelSigns[ch]?.let { buf.append(it); return@let }
-            if (ch == '்') return@let  // virama — suppress inherent vowel
+            val v = vowels[ch]
+            if (v != null) { buf.append(v); continue }
+            val c = consonants[ch]
+            if (c != null) { buf.append(c); continue }
+            val vs = vowelSigns[ch]
+            if (vs != null) { buf.append(vs); continue }
+            if (ch == '்') continue  // virama — suppress inherent vowel
             buf.append(ch)
         }
         return buf.toString()

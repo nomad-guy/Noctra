@@ -82,7 +82,7 @@ private class DefaultRomanizer(
         script: ScriptType?,
         options: RomanizeOptions?
     ): Pair<String, Boolean> {
-        if (line.isBlank() || !hasLetterRe.containsMatchIn(line)) {
+        if (line.isBlank() || !line.any { it in 'a'..'z' || it in 'A'..'Z' }) {
             return line to false
         }
 
@@ -93,7 +93,9 @@ private class DefaultRomanizer(
             ?: throw UnsupportedRomanizationError(resolved)
 
         // Latin guard
-        if (asciiLetterRe.containsMatchIn(line) && !nonLatinRe.containsMatchIn(line)) {
+        val hasAscii = line.any { it in 'a'..'z' || it in 'A'..'Z' }
+        val hasNonLatin = nonLatinRe.containsMatchIn(line)
+        if (hasAscii && !hasNonLatin) {
             return line to false
         }
 
@@ -138,8 +140,6 @@ private class DefaultRomanizer(
     }
 
     companion object {
-        private val asciiLetterRe = Regex("[A-Za-z]")
-        private val hasLetterRe = Regex("\\p{L}", RegexOption.UNICODE_CLASSES)
         private val nonLatinRe = ScriptMetadata.nonLatinPattern
     }
 }

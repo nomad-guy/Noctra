@@ -75,13 +75,11 @@ object ScriptMetadata {
     }
 }
 
-private val letterRegex = Regex("\\p{L}", RegexOption.UNICODE_CLASSES)
-
 /** Returns true if text contains only Latin letters. */
 fun isLatinScript(lines: List<String>): Boolean {
     val text = lines.joinToString("")
     return !ScriptMetadata.nonLatinPattern.containsMatchIn(text) &&
-            letterRegex.containsMatchIn(text)
+            text.any { it in 'a'..'z' || it in 'A'..'Z' }
 }
 
 /** Detects the dominant script in the given text lines. */
@@ -121,7 +119,7 @@ fun detectScript(lines: List<String>): ScriptType {
     }
 
     if (bestScore > 0) return best
-    return if (letterRegex.containsMatchIn(text)) ScriptType.LATIN else ScriptType.OTHER
+    return if (text.any { it in 'a'..'z' || it in 'A'..'Z' }) ScriptType.LATIN else ScriptType.OTHER
 }
 
 /** Returns true for scripts that have no built-in engine. */

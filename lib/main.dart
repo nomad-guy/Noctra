@@ -43,9 +43,9 @@ void main() async {
         androidNotificationOngoing: true,
         androidNotificationIcon: 'drawable/ic_notification',
         androidShowNotificationBadge: true,
-        androidStopForegroundOnPause: false,
+        androidStopForegroundOnPause: true,
       );
-    } catch (_) {}
+    } catch (e, st) { NoctraLogger.e('JustAudioBackground.init failed', e, st); }
   }
 
   try { await NoctraLocalDatabase().init(); } catch (e) { NoctraLogger.e('Database init error', e); }

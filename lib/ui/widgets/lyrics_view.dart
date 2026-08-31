@@ -5,7 +5,7 @@ import '../../core/theme/noir_theme.dart';
 import '../../data/models/song_model.dart';
 import '../../providers/app_providers.dart';
 import '../../services/lyrics/lyrics_service.dart';
-import '../../services/lyrics/lyrics_romanization_service.dart';
+import '../../services/lyrics/universal_lyrics_transliteration_engine.dart';
 
 class LyricsView extends ConsumerStatefulWidget {
   final Song song;
@@ -107,8 +107,8 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
         }
 
         final rawData = snapshot.data ?? LyricsData.empty();
-        final options = LyricsRomanizationService.getAvailableScriptOptions(rawData);
-        final data = LyricsRomanizationService.transliterateLyrics(rawData, _selectedScript);
+        final options = UniversalLyricsTransliterationEngine.getAvailableScriptOptions(rawData);
+        final data = UniversalLyricsTransliterationEngine.transliterateLyrics(rawData, _selectedScript);
 
         return Stack(
           children: [

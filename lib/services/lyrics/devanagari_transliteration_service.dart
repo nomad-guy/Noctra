@@ -34,7 +34,7 @@ class DevanagariTransliterationEngine {
     ['ksh', 'क्ष'], ['tr', 'त्र'], ['gyn', 'ज्ञ'], ['shr', 'श्र'],
     ['chh', 'छ'], ['kh', 'ख'], ['gh', 'घ'], ['ch', 'च'], ['jh', 'झ'],
     ['th', 'थ'], ['dh', 'ध'], ['ph', 'फ'], ['bh', 'भ'], ['sh', 'श'],
-    ['ng', 'ङ'], ['ny', 'ञ'],
+    ['ny', 'ञ'],
   ];
 
   static final List<List<String>> _simpleConsonants = [
@@ -130,6 +130,12 @@ class DevanagariTransliterationEngine {
     int bestDist = 2; // allow up to 2-edit distance
     for (final key in lexicon.allKeys) {
       if ((key.length - word.length).abs() > bestDist) continue;
+      // Require length similarity: at least 60% overlap to avoid
+      // false matches like 'sang' → 'song' (different words entirely).
+      final lenRatio = word.length < key.length
+          ? word.length / key.length
+          : key.length / word.length;
+      if (lenRatio < 0.6) continue;
       final dist = _levenshtein(word, key, bestDist);
       if (dist < bestDist) {
         bestDist = dist;
@@ -169,13 +175,20 @@ class DevanagariTransliterationEngine {
     final buf = StringBuffer();
     int idx = 0;
     bool consonantPending = false;
+    bool lastWasNasal = false;
 
     while (idx < s.length) {
+      // ─── Vowel handling (only when no consonant is pending) ───
       if (!consonantPending) {
         bool matchedVowel = false;
         for (final v in _initialVowels) {
           if (_startsWithCI(s, v[0], idx, caseSensitive: hasRetroflexHint)) {
-            buf.write(v[1]);
+            // Word-final standalone 'a' after existing content → long आ
+            // (Hindi lyrics convention: a written final 'a' means 'gaya',
+            // 'hua', 'dekha' etc., not a short schwa)
+            final isStandaloneFinalA = idx + 1 >= s.length &&
+                v[0] == 'a' && buf.isNotEmpty;
+            buf.write(isStandaloneFinalA ? 'आ' : v[1]);
             idx += v[0].length;
             matchedVowel = true;
             break;
@@ -184,8 +197,10 @@ class DevanagariTransliterationEngine {
         if (matchedVowel) continue;
       }
 
+      // ─── Consonant matching ───
       bool foundConsonant = false;
 
+      // ITRANS retroflex capitals (checked first, case-sensitive)
       if (hasRetroflexHint) {
         for (final rc in _retroflexCapitals) {
           if (s.startsWith(rc[0], idx)) {
@@ -193,12 +208,14 @@ class DevanagariTransliterationEngine {
             buf.write(rc[1]);
             idx += rc[0].length;
             consonantPending = true;
+            lastWasNasal = false;
             foundConsonant = true;
             break;
           }
         }
       }
 
+      // Digraphs (ksh, tr, ch, sh, etc.)
       if (!foundConsonant) {
         final lowerFromHere = s.substring(idx).toLowerCase();
         for (final dg in _digraphs) {
@@ -207,36 +224,59 @@ class DevanagariTransliterationEngine {
             buf.write(dg[1]);
             idx += dg[0].length;
             consonantPending = true;
+            lastWasNasal = false;
             foundConsonant = true;
             break;
           }
         }
       }
+
+      // Simple consonants (k, g, n, m, etc.)
       if (!foundConsonant) {
         final lowerFromHere = s.substring(idx).toLowerCase();
         for (final sc in _simpleConsonants) {
           if (lowerFromHere.startsWith(sc[0])) {
+            final isNasal = sc[0] == 'n' || sc[0] == 'm';
+
+            // Nasalization: nasal before consonant → anusvara (ं)
+            // Replace the already-written nasal consonant in the buffer.
+            if (consonantPending && lastWasNasal && isNasal) {
+              // The pending consonant IS the nasal — skip it and write anusvara
+              // instead. The previous consonant before the nasal already had its
+              // halant written, so remove the pending nasal's Devanagari char.
+              final prev = buf.toString();
+              buf.clear();
+              buf.write(prev.substring(0, prev.length - 1));
+              buf.write('ं');
+              idx += sc[0].length;
+              consonantPending = true;
+              lastWasNasal = false;
+              foundConsonant = true;
+              break;
+            }
+
             if (consonantPending) buf.write('्');
             buf.write(sc[1]);
             idx += sc[0].length;
             consonantPending = true;
+            lastWasNasal = isNasal;
             foundConsonant = true;
             break;
           }
         }
       }
 
+      // ─── Post-consonant: try to consume a vowel matra ───
       if (foundConsonant) {
         final lowerFromHere = s.substring(idx).toLowerCase();
-        final isWordFinal = idx + 1 >= s.length; // exactly one char of vowel left, or none
 
-        // Lone word-final "a" is conventionally the long आ/ा sound
-        // in romanized lyrics (schwa is normally dropped, not spelled),
-        // so prefer the visible matra over the silent inherent vowel here.
-        if (isWordFinal && lowerFromHere.startsWith('a') && !lowerFromHere.startsWith('aa')) {
+        // Word-final 'a' → long आ/ा (Hindi lyrics convention)
+        if (idx + 1 >= s.length &&
+            lowerFromHere.startsWith('a') && !lowerFromHere.startsWith('aa')) {
           buf.write('ा');
           idx += 1;
           consonantPending = false;
+          lastWasNasal = false;
           continue;
         }
 
@@ -246,6 +286,7 @@ class DevanagariTransliterationEngine {
             buf.write(m[1]);
             idx += m[0].length;
             foundMatra = true;
+            lastWasNasal = false;
             break;
           }
         }
@@ -253,7 +294,41 @@ class DevanagariTransliterationEngine {
         continue;
       }
 
-      if (consonantPending) { buf.write('्'); consonantPending = false; }
+      // ─── Vowel after a pending consonant (matra for previous consonant) ───
+      if (consonantPending) {
+        final lowerFromHere = s.substring(idx).toLowerCase();
+
+        // Word-final standalone 'a' → long ा
+        if (idx + 1 >= s.length &&
+            lowerFromHere.startsWith('a') && !lowerFromHere.startsWith('aa')) {
+          buf.write('ा');
+          idx += 1;
+          consonantPending = false;
+          lastWasNasal = false;
+          continue;
+        }
+
+        // Try vowel matras for the pending consonant
+        bool foundMatra = false;
+        for (final m in _vowelMatras) {
+          if (lowerFromHere.startsWith(m[0])) {
+            buf.write(m[1]);
+            idx += m[0].length;
+            foundMatra = true;
+            consonantPending = false;
+            lastWasNasal = false;
+            break;
+          }
+        }
+        if (foundMatra) continue;
+
+        // Not a vowel — close pending consonant with halant
+        buf.write('्');
+        consonantPending = false;
+        lastWasNasal = false;
+      }
+
+      // ─── Fallback: write character as-is ───
       buf.write(s[idx]);
       idx++;
     }
