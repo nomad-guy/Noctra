@@ -9,6 +9,7 @@ import '../../core/utils/permission_helper.dart';
 import '../../data/models/song_model.dart';
 import '../../data/repositories/music_repository.dart';
 import '../resolvers/stream_resolver.dart';
+import '../metadata/spotify_oembed_service.dart';
 
 class ArtistDiscography {
   final List<Song> topTracks;
@@ -24,6 +25,28 @@ class MusicService {
   static Future<List<Song>> searchTracks(String query, {String source = 'ytmusic'}) async {
     final clean = query.trim();
     if (clean.isEmpty) return _getHardcodedCuratedTracks();
+
+    if (SpotifyOEmbedService.isSpotifyUrl(clean)) {
+      final spotifyMeta = await SpotifyOEmbedService.fetchMetadata(clean);
+      if (spotifyMeta != null) {
+        final matches = await searchTracks('${spotifyMeta.title} ${spotifyMeta.authorName}');
+        if (matches.isNotEmpty) {
+          final first = matches.first;
+          final sSong = Song(
+            id: first.id,
+            title: spotifyMeta.title,
+            artist: spotifyMeta.authorName,
+            album: 'Spotify Imported',
+            artworkUrl: spotifyMeta.thumbnailUrl ?? first.artworkUrl,
+            streamUrl: first.streamUrl,
+            duration: first.duration,
+            genre: first.genre,
+            featureVector: first.featureVector,
+          );
+          return [sSong, ...matches.skip(1)];
+        }
+      }
+    }
 
     if (source == 'ytmusic' && !kIsWeb) {
       try {
