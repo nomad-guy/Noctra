@@ -60,147 +60,61 @@ class PlayerSheet extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 4.5,
-                  decoration: BoxDecoration(color: isDark ? Colors.white24 : Colors.black26, borderRadius: BorderRadius.circular(3)),
-                ),
-              ),
+              Center(child: Container(width: 44, height: 4.5, decoration: BoxDecoration(color: isDark ? Colors.white24 : Colors.black26, borderRadius: BorderRadius.circular(3)))),
               const SizedBox(height: 12),
 
               // Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    icon: Icon(Icons.keyboard_arrow_down_rounded, size: 28, color: isDark ? Colors.white : Colors.black),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
+                  IconButton(visualDensity: VisualDensity.compact, padding: EdgeInsets.zero, icon: Icon(Icons.keyboard_arrow_down_rounded, size: 28, color: isDark ? Colors.white : Colors.black), onPressed: () => Navigator.of(context).pop()),
                   Text('NOW PLAYING', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.8, color: isDark ? Colors.white60 : Colors.black54)),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        tooltip: 'Sleep Timer',
-                        icon: Icon(
-                          audioPlayerService.sleepTimerRemainingMinutes != null ? Icons.bedtime_rounded : Icons.bedtime_outlined,
-                          size: 19,
-                          color: audioPlayerService.sleepTimerRemainingMinutes != null ? Colors.cyanAccent : (isDark ? Colors.white : Colors.black),
-                        ),
-                        onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const SleepTimerSheet()),
-                      ),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        tooltip: 'Audio Output Router',
-                        icon: Icon(Icons.speaker_group_rounded, size: 19, color: isDark ? Colors.white : Colors.black),
-                        onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => AudioOutputCastSheet(isDark: isDark)),
-                      ),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        tooltip: 'Noctra Jam Room',
-                        icon: Icon(Icons.podcasts_rounded, size: 19, color: isDark ? Colors.white : Colors.black),
-                        onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const JamStudioSheet()),
-                      ),
-                      IconButton(
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        tooltip: 'Equalizer',
-                        icon: Icon(Icons.equalizer_rounded, size: 19, color: isDark ? Colors.white : Colors.black),
-                        onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const EqualizerSheet()),
-                      ),
+                      IconButton(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 2), tooltip: 'Sleep Timer', icon: Icon(audioPlayerService.sleepTimerRemainingMinutes != null ? Icons.bedtime_rounded : Icons.bedtime_outlined, size: 19, color: audioPlayerService.sleepTimerRemainingMinutes != null ? Colors.cyanAccent : (isDark ? Colors.white : Colors.black)), onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const SleepTimerSheet())),
+                      IconButton(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 2), tooltip: 'Audio Output Router', icon: Icon(Icons.speaker_group_rounded, size: 19, color: isDark ? Colors.white : Colors.black), onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => AudioOutputCastSheet(isDark: isDark))),
+                      IconButton(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 2), tooltip: 'Noctra Jam Room', icon: Icon(Icons.podcasts_rounded, size: 19, color: isDark ? Colors.white : Colors.black), onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const JamStudioSheet())),
+                      IconButton(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 2), tooltip: 'Equalizer', icon: Icon(Icons.equalizer_rounded, size: 19, color: isDark ? Colors.white : Colors.black), onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const EqualizerSheet())),
                     ],
                   ),
                 ],
               ),
-
               const SizedBox(height: 10),
 
               // Mode Switcher: Artwork | Spectrum | Circle | Synthwave | Lyrics
               PlayerVisualizerSelector(isDark: isDark, currentMode: displayMode),
-
               const SizedBox(height: 12),
 
               // Live Screen Container
               Container(
                 height: displayMode == PlayerDisplayMode.lyrics ? 220 : 160,
                 width: double.infinity,
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0D0D0D) : const Color(0xFFEBEBEB),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: _buildVisualizerContent(displayMode, song, isPlaying, isDark),
-                ),
+                decoration: BoxDecoration(color: isDark ? const Color(0xFF0D0D0D) : const Color(0xFFEBEBEB), borderRadius: BorderRadius.circular(20), border: Border.all(color: isDark ? Colors.white12 : Colors.black12)),
+                child: ClipRRect(borderRadius: BorderRadius.circular(20), child: _buildVisualizerContent(displayMode, song, isPlaying, isDark)),
               ),
-
               const SizedBox(height: 14),
 
               // Track Title & Action Icons
               Row(
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      song.artworkUrl ?? '',
-                      width: 52,
-                      height: 52,
-                      fit: BoxFit.cover,
-                      cacheWidth: 160,
-                      cacheHeight: 160,
-                      errorBuilder: (c, e, st) => Container(width: 52, height: 52, color: isDark ? const Color(0xFF222222) : const Color(0xFFE5E5E5), child: Icon(Icons.music_note_rounded, color: isDark ? Colors.white54 : Colors.black54)),
-                    ),
-                  ),
+                  ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(song.artworkUrl ?? '', width: 52, height: 52, fit: BoxFit.cover, cacheWidth: 160, cacheHeight: 160, errorBuilder: (c, e, st) => Container(width: 52, height: 52, color: isDark ? const Color(0xFF222222) : const Color(0xFFE5E5E5), child: Icon(Icons.music_note_rounded, color: isDark ? Colors.white54 : Colors.black54)))),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          song.title,
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        Text(song.title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black), maxLines: 1, overflow: TextOverflow.ellipsis),
                         const SizedBox(height: 3),
-                        InkWell(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            Navigator.of(context).push(MaterialPageRoute(builder: (c) => ArtistScreen(artistName: song.artist, artistImageUrl: song.artworkUrl)));
-                          },
-                          child: Text(
-                            song.artist,
-                            style: TextStyle(fontSize: 13, decoration: TextDecoration.underline, decorationColor: isDark ? Colors.white24 : Colors.black26, color: isDark ? Colors.white60 : Colors.black54),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
+                        InkWell(onTap: () { Navigator.of(context).pop(); Navigator.of(context).push(MaterialPageRoute(builder: (c) => ArtistScreen(artistName: song.artist, artistImageUrl: song.artworkUrl))); }, child: Text(song.artist, style: TextStyle(fontSize: 13, decoration: TextDecoration.underline, decorationColor: isDark ? Colors.white24 : Colors.black26, color: isDark ? Colors.white60 : Colors.black54), maxLines: 1, overflow: TextOverflow.ellipsis)),
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(repo.isFavorite(song.id) ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: isDark ? Colors.white : Colors.black),
-                    onPressed: () => repo.toggleFavorite(song),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.playlist_add_rounded, color: isDark ? Colors.white : Colors.black),
-                    onPressed: () => showModalBottomSheet(context: context, backgroundColor: Colors.transparent, builder: (c) => AddToFolderSheet(song: song)),
-                  ),
-                  IconButton(
-                    icon: Icon(isDownloaded ? Icons.download_done_rounded : Icons.download_rounded, color: isDownloaded ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white38 : Colors.black38)),
-                    onPressed: () => _handleDownload(context, song, isDownloaded),
-                  ),
+                  IconButton(icon: Icon(repo.isFavorite(song.id) ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: isDark ? Colors.white : Colors.black), onPressed: () => repo.toggleFavorite(song)),
+                  IconButton(icon: Icon(Icons.playlist_add_rounded, color: isDark ? Colors.white : Colors.black), onPressed: () => showModalBottomSheet(context: context, backgroundColor: Colors.transparent, builder: (c) => AddToFolderSheet(song: song))),
+                  IconButton(icon: Icon(isDownloaded ? Icons.download_done_rounded : Icons.download_rounded, color: isDownloaded ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white38 : Colors.black38)), onPressed: () => _handleDownload(context, song, isDownloaded)),
                 ],
               ),
-
               const SizedBox(height: 12),
 
               // Studio Master Chips
@@ -218,7 +132,6 @@ class PlayerSheet extends ConsumerWidget {
                   ],
                 ),
               ),
-
               const SizedBox(height: 14),
 
               // Scrubber and Playback Controls
@@ -229,31 +142,50 @@ class PlayerSheet extends ConsumerWidget {
                 loopMode: audioPlayerService.player.loopMode,
                 audioPlayerService: audioPlayerService, masterMode: masterMode,
               ),
-
               const SizedBox(height: 10),
 
               // AI Radio Pill
               InkWell(
                 onTap: () => showModalBottomSheet(context: context, backgroundColor: Colors.transparent, builder: (c) => AIRadioSheet(seedSong: song)),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF141414) : const Color(0xFFEBEBEB),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(color: isDark ? const Color(0xFF141414) : const Color(0xFFEBEBEB), borderRadius: BorderRadius.circular(16), border: Border.all(color: isDark ? Colors.white12 : Colors.black12)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.auto_awesome, size: 14, color: isDark ? Colors.white : Colors.black), const SizedBox(width: 6), Text('Start Infinite AI Radio from this track', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black))]),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Artist Pane & Access to Discography
+              InkWell(
+                onTap: () { Navigator.of(context).pop(); Navigator.of(context).push(MaterialPageRoute(builder: (c) => ArtistScreen(artistName: song.artist, artistImageUrl: song.artworkUrl))); },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(color: isDark ? const Color(0xFF111111) : const Color(0xFFE5E5E5), borderRadius: BorderRadius.circular(14), border: Border.all(color: isDark ? Colors.white12 : Colors.black12)),
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.auto_awesome, size: 14, color: isDark ? Colors.white : Colors.black),
-                      const SizedBox(width: 6),
-                      Text('Start Infinite AI Radio from this track', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
+                      CircleAvatar(radius: 18, backgroundColor: isDark ? const Color(0xFF222222) : const Color(0xFFCCCCCC), backgroundImage: song.artworkUrl != null ? NetworkImage(song.artworkUrl!) : null, child: song.artworkUrl == null ? Icon(Icons.person_rounded, size: 18, color: isDark ? Colors.white70 : Colors.black87) : null),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(song.artist, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black)),
+                            Text('Explore discography & all creations', style: TextStyle(fontSize: 10.5, color: isDark ? Colors.white54 : Colors.black54)),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(color: isDark ? Colors.white : Colors.black, borderRadius: BorderRadius.circular(10)),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [Text('Creations', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: isDark ? Colors.black : Colors.white)), const SizedBox(width: 2), Icon(Icons.arrow_forward_rounded, size: 11, color: isDark ? Colors.black : Colors.white)]),
+                      ),
                     ],
                   ),
                 ),
               ),
-
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
             ],
           ),
         ),

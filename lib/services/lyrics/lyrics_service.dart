@@ -20,15 +20,17 @@ class LyricsData {
     required this.plainText,
   });
 
-  static LyricsData empty(String title) => LyricsData(
+  factory LyricsData.empty() => const LyricsData(
         isSynced: false,
-        lines: const [],
-        plainText: 'Lyrics currently unavailable for "$title".\nEnjoy the 320kbps CD lossless soundscape.',
+        lines: [],
+        plainText: 'No lyrics found for this track.\nEnjoy the pure acoustic flow.',
       );
 }
 
 class LyricsService {
   static final Map<String, LyricsData> _cache = {};
+
+  static bool _hasDevanagari(String text) => RegExp(r'[\u0900-\u097F]').hasMatch(text);
 
   static Future<LyricsData> fetchLyrics(Song song, {String preference = 'English / Global'}) async {
     final cacheKey = '${song.id}_$preference';
@@ -36,31 +38,66 @@ class LyricsService {
 
     final cleanTitle = _sanitizeTitle(song.title);
     final primaryArtist = _extractPrimaryArtist(song.artist);
+    final bool preferHindi = preference.toLowerCase().contains('hindi');
 
-    // If Hindi preference selected, prioritize JioSaavn official Hindi lyrics
-    if (preference.toLowerCase().contains('hindi')) {
+    // Tier 1 & 2: LRCLIB (Direct Match + Fuzzy Multi-Query Search)
+    final queries = [
+      if (cleanTitle.isNotEmpty && primaryArtist.isNotEmpty) '$cleanTitle $primaryArtist',
+      if (cleanTitle.isNotEmpty) cleanTitle,
+      if (song.title != cleanTitle) song.title,
+    ];
+
+    for (final q in queries) {
       try {
-        final searchUri = Uri.parse(
-          'https://www.jiosaavn.com/api.php?__call=search.getResults&_format=json&_marker=0&cc=in&p=1&n=5&q=${Uri.encodeComponent('$cleanTitle $primaryArtist')}',
-        );
-        final sRes = await http.get(searchUri, headers: {'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 4));
+        final searchUri = Uri.parse('https://lrclib.net/api/search?q=${Uri.encodeComponent(q)}');
+        final sRes = await http.get(searchUri, headers: {'User-Agent': 'Noctra/1.0.4 (https://noctra.app)'}).timeout(const Duration(seconds: 4));
         if (sRes.statusCode == 200) {
-          final sData = jsonDecode(sRes.body);
-          final songsList = (sData['results'] as List?) ?? [];
-          for (final songObj in songsList) {
-            final songId = songObj['id']?.toString() ?? '';
-            if (songId.isNotEmpty) {
-              final lyrUri = Uri.parse('https://www.jiosaavn.com/api.php?__call=lyrics.getLyrics&_format=json&_marker=0&cc=in&lyrics_id=$songId');
-              final lRes = await http.get(lyrUri, headers: {'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 4));
-              if (lRes.statusCode == 200) {
-                final lData = jsonDecode(lRes.body);
-                final rawLyr = lData['lyrics'] as String?;
-                if (rawLyr != null && rawLyr.isNotEmpty) {
-                  final clean = rawLyr.replaceAll('<br>', '\n').replaceAll('&quot;', '"').replaceAll('&amp;', '&').trim();
-                  final result = LyricsData(isSynced: false, lines: const [], plainText: clean);
-                  _cache[cacheKey] = result;
-                  return result;
+          final sList = jsonDecode(sRes.body) as List?;
+          if (sList != null && sList.isNotEmpty) {
+            if (preferHindi) {
+              final devItem = sList.firstWhere(
+                (it) => _hasDevanagari(it['syncedLyrics'] ?? '') || _hasDevanagari(it['plainLyrics'] ?? ''),
+                orElse: () => null,
+              );
+              if (devItem != null) {
+                final syncedLrc = devItem['syncedLyrics'] as String?;
+                if (syncedLrc != null && syncedLrc.isNotEmpty) {
+                  final lines = _parseLrc(syncedLrc);
+                  if (lines.isNotEmpty) {
+                    final res = LyricsData(isSynced: true, lines: lines, plainText: devItem['plainLyrics'] ?? syncedLrc);
+                    _cache[cacheKey] = res;
+                    return res;
+                  }
                 }
+                final plain = devItem['plainLyrics'] as String?;
+                if (plain != null && plain.isNotEmpty) {
+                  final res = LyricsData(isSynced: false, lines: const [], plainText: plain.trim());
+                  _cache[cacheKey] = res;
+                  return res;
+                }
+              }
+            }
+
+            // Standard synced match
+            for (final item in sList) {
+              final syncedLrc = item['syncedLyrics'] as String?;
+              if (syncedLrc != null && syncedLrc.isNotEmpty) {
+                final lines = _parseLrc(syncedLrc);
+                if (lines.isNotEmpty) {
+                  final res = LyricsData(isSynced: true, lines: lines, plainText: item['plainLyrics'] ?? syncedLrc);
+                  _cache[cacheKey] = res;
+                  return res;
+                }
+              }
+            }
+
+            // Plain text match
+            for (final item in sList) {
+              final plain = item['plainLyrics'] as String?;
+              if (plain != null && plain.trim().isNotEmpty) {
+                final res = LyricsData(isSynced: false, lines: const [], plainText: plain.trim());
+                _cache[cacheKey] = res;
+                return res;
               }
             }
           }
@@ -68,53 +105,7 @@ class LyricsService {
       } catch (_) {}
     }
 
-    // Tier 1: Lrclib (True Millisecond-Synced LRC Lyrics)
-    try {
-      final uri = Uri.parse('https://lrclib.net/api/get?artist_name=${Uri.encodeComponent(primaryArtist)}&track_name=${Uri.encodeComponent(cleanTitle)}');
-      final res = await http.get(uri, headers: {'User-Agent': 'Noctra/1.0.0 (https://noctra.app)'}).timeout(const Duration(seconds: 4));
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        final syncedLrc = data['syncedLyrics'] as String?;
-        if (syncedLrc != null && syncedLrc.isNotEmpty) {
-          final lines = _parseLrc(syncedLrc);
-          if (lines.isNotEmpty) {
-            final result = LyricsData(isSynced: true, lines: lines, plainText: data['plainLyrics'] ?? syncedLrc);
-            _cache[cacheKey] = result;
-            return result;
-          }
-        }
-        final plain = data['plainLyrics'] as String?;
-        if (plain != null && plain.isNotEmpty) {
-          final result = LyricsData(isSynced: false, lines: const [], plainText: plain.trim());
-          _cache[cacheKey] = result;
-          return result;
-        }
-      }
-    } catch (_) {}
-
-    // Tier 2: Lrclib Global Database Fuzzy Search
-    try {
-      final searchUri = Uri.parse('https://lrclib.net/api/search?q=${Uri.encodeComponent('$cleanTitle $primaryArtist')}');
-      final sRes = await http.get(searchUri, headers: {'User-Agent': 'Noctra/1.0.0'}).timeout(const Duration(seconds: 4));
-      if (sRes.statusCode == 200) {
-        final sList = jsonDecode(sRes.body) as List?;
-        if (sList != null && sList.isNotEmpty) {
-          for (final item in sList) {
-            final syncedLrc = item['syncedLyrics'] as String?;
-            if (syncedLrc != null && syncedLrc.isNotEmpty) {
-              final lines = _parseLrc(syncedLrc);
-              if (lines.isNotEmpty) {
-                final result = LyricsData(isSynced: true, lines: lines, plainText: item['plainLyrics'] ?? syncedLrc);
-                _cache[cacheKey] = result;
-                return result;
-              }
-            }
-          }
-        }
-      }
-    } catch (_) {}
-
-    // Tier 3: YouTube Music / InnerTube Official Musixmatch Extractor (Echo Music Engine)
+    // Tier 3: YouTube Music / InnerTube Musixmatch Extractor
     try {
       final ytLyrics = await _fetchInnerTubeLyrics(song.id, cleanTitle, primaryArtist);
       if (ytLyrics != null) {
@@ -123,7 +114,7 @@ class LyricsService {
       }
     } catch (_) {}
 
-    // Tier 4: JioSaavn Official Master Lyrics (Original Hindi & Regional Script)
+    // Tier 4: JioSaavn Autocomplete & PID Lyrics
     try {
       final searchUri = Uri.parse(
         'https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query=${Uri.encodeComponent('$cleanTitle $primaryArtist')}',
@@ -132,8 +123,8 @@ class LyricsService {
       if (sRes.statusCode == 200) {
         final sData = jsonDecode(sRes.body);
         final songsList = (sData['songs']?['data'] as List?) ?? [];
-        if (songsList.isNotEmpty) {
-          final songId = songsList[0]['id']?.toString() ?? '';
+        for (final item in songsList) {
+          final songId = item['id']?.toString() ?? '';
           if (songId.isNotEmpty) {
             final lyrUri = Uri.parse('https://www.jiosaavn.com/api.php?__call=lyrics.getLyrics&_format=json&_marker=0&cc=in&lyrics_id=$songId');
             final lRes = await http.get(lyrUri, headers: {'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 4));
@@ -142,9 +133,9 @@ class LyricsService {
               final rawLyr = lData['lyrics'] as String?;
               if (rawLyr != null && rawLyr.isNotEmpty) {
                 final clean = rawLyr.replaceAll('<br>', '\n').replaceAll('&quot;', '"').replaceAll('&amp;', '&').trim();
-                final result = LyricsData(isSynced: false, lines: const [], plainText: clean);
-                _cache[cacheKey] = result;
-                return result;
+                final res = LyricsData(isSynced: false, lines: const [], plainText: clean);
+                _cache[cacheKey] = res;
+                return res;
               }
             }
           }
@@ -152,51 +143,17 @@ class LyricsService {
       }
     } catch (_) {}
 
-    // Tier 5: Lyrics.ovh Global REST API
-    try {
-      final uri = Uri.parse('https://api.lyrics.ovh/v1/${Uri.encodeComponent(primaryArtist)}/${Uri.encodeComponent(cleanTitle)}');
-      final res = await http.get(uri).timeout(const Duration(seconds: 4));
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        final rawLyrics = data['lyrics'] as String?;
-        if (rawLyrics != null && rawLyrics.trim().isNotEmpty) {
-          final result = LyricsData(isSynced: false, lines: const [], plainText: rawLyrics.trim());
-          _cache[cacheKey] = result;
-          return result;
-        }
-      }
-    } catch (_) {}
-
-    final empty = LyricsData.empty(song.title);
+    final empty = LyricsData.empty();
     _cache[cacheKey] = empty;
     return empty;
   }
 
-  static Future<LyricsData?> _fetchInnerTubeLyrics(String songId, String title, String artist) async {
+  static Future<LyricsData?> _fetchInnerTubeLyrics(String rawSongId, String title, String artist) async {
     try {
-      String videoId = songId;
-      if (videoId.length != 11 || videoId.contains('_')) {
-        final sUri = Uri.parse('https://music.youtube.com/youtubei/v1/search');
-        final sBody = jsonEncode({
-          'query': '$title $artist',
-          'context': {'client': {'clientName': 'WEB_REMIX', 'clientVersion': '1.20240820.01.00', 'hl': 'en', 'gl': 'US'}}
-        });
-        final sRes = await http.post(sUri, body: sBody, headers: {'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 4));
-        if (sRes.statusCode == 200) {
-          final sData = jsonDecode(sRes.body);
-          final contents = sData['contents']?['tabbedSearchResultsRenderer']?['tabs']?[0]?['tabRenderer']?['content']?['sectionListRenderer']?['contents'];
-          if (contents != null && contents is List) {
-            for (final section in contents) {
-              final items = section['musicShelfRenderer']?['contents'] ?? section['musicCardShelfRenderer']?['contents'];
-              if (items is List && items.isNotEmpty) {
-                final top = items[0]['musicResponsiveListItemRenderer']?['playlistItemData']?['videoId'];
-                if (top != null) { videoId = top.toString(); break; }
-              }
-            }
-          }
-        }
+      String videoId = rawSongId;
+      if (videoId.startsWith('ytdlp_') || videoId.startsWith('yt_')) {
+        videoId = videoId.replaceFirst('ytdlp_', '').replaceFirst('yt_', '');
       }
-
       if (videoId.length == 11) {
         final nextUri = Uri.parse('https://music.youtube.com/youtubei/v1/next');
         final nextBody = jsonEncode({
@@ -237,10 +194,13 @@ class LyricsService {
     return title
         .replaceAll(RegExp(r'\(.*?\)', caseSensitive: false), '')
         .replaceAll(RegExp(r'\[.*?\]', caseSensitive: false), '')
+        .replaceAll(RegExp(r'\|.*'), '')
         .replaceAll(RegExp(r'feat\..*', caseSensitive: false), '')
         .replaceAll(RegExp(r'ft\..*', caseSensitive: false), '')
         .replaceAll(RegExp(r'official.*', caseSensitive: false), '')
         .replaceAll(RegExp(r'video.*', caseSensitive: false), '')
+        .replaceAll(RegExp(r'audio.*', caseSensitive: false), '')
+        .replaceAll(RegExp(r'lyrics?.*', caseSensitive: false), '')
         .trim();
   }
 

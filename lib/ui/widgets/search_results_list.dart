@@ -4,6 +4,7 @@ import '../../core/theme/noir_theme.dart';
 import '../../data/models/song_model.dart';
 import '../../providers/app_providers.dart';
 import '../../services/ytdlp/music_service.dart';
+import '../screens/artist_screen.dart';
 import 'glass_card.dart';
 import 'add_to_folder_sheet.dart';
 import 'ai_radio_sheet.dart';
@@ -61,12 +62,73 @@ class SearchResultsList extends ConsumerWidget {
       );
     }
 
+    final topArtist = searchResults.first.artist;
+    final topArtistImg = searchResults.first.artworkUrl;
+
     return ListView.builder(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 160),
-      itemCount: searchResults.length,
+      itemCount: searchResults.length + 1,
       itemBuilder: (context, i) {
-        final song = searchResults[i];
+        if (i == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: GlassCard(
+              radius: 16,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (c) => ArtistScreen(
+                      artistName: topArtist,
+                      artistImageUrl: topArtistImg,
+                    ),
+                  ),
+                );
+              },
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor: isDark ? const Color(0xFF222222) : const Color(0xFFDCDCDC),
+                    backgroundImage: topArtistImg != null ? NetworkImage(topArtistImg) : null,
+                    child: topArtistImg == null ? Icon(Icons.person_rounded, color: isDark ? Colors.white70 : Colors.black87) : null,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                topArtist,
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.verified_rounded, size: 14, color: isDark ? Colors.white70 : Colors.black87),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Artist Profile • Explore discography & creations',
+                          style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 14, color: isDark ? Colors.white54 : Colors.black54),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final song = searchResults[i - 1];
         final isDownloaded = song.isDownloaded || repo.downloads.any((d) => d.id == song.id);
         final isDownloadingThis = downloading.contains(song.id);
         final isCurrent = currentSong?.id == song.id;
