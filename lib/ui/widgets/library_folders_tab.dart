@@ -178,20 +178,19 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
     final ctrl = TextEditingController();
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: widget.isDark ? const Color(0xFF141414) : Colors.white,
         title: Text('Create Folder', style: TextStyle(color: widget.isDark ? Colors.white : Colors.black)),
         content: TextField(controller: ctrl, autofocus: true, decoration: const InputDecoration(hintText: 'Folder Name')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
               final val = ctrl.text.trim();
+              Navigator.of(ctx).pop();
               if (val.isNotEmpty) {
                 widget.repo.createFolder(val);
-                setState(() {});
               }
-              Navigator.pop(context);
             },
             child: const Text('Create'),
           ),

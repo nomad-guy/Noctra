@@ -35,20 +35,10 @@ class MusicRepository extends ChangeNotifier {
   List<double> get userTasteVector => List.unmodifiable(_userTasteVector);
 
   MusicRepository._internal() {
-    _initDefaults();
     _loadFromDatabase();
   }
 
   Future<void> init() async => _loadFromDatabase();
-
-  void _initDefaults() {
-    _localLibrary.addAll([
-      Song(id: 'loc_1', title: 'Starboy', artist: 'The Weeknd, Daft Punk', album: 'Starboy', artworkUrl: 'https://c.saavncdn.com/712/Starboy-English-2016-500x500.jpg', streamUrl: 'https://aac.saavncdn.com/712/82aa1dcabcbddfa969e6bcf1231f6d3f_320.mp4', duration: const Duration(seconds: 230), genre: 'Synthwave', featureVector: [0.90, 0.2, 0.9, 0.4, 0.8, 0.1, 0.9, 0.3, 0.4, 0.95, 0.88, 0.2, 0.1, 0.3, 0.5, 0.9]),
-      Song(id: 'loc_2', title: 'Blinding Lights', artist: 'The Weeknd', album: 'After Hours', artworkUrl: 'https://c.saavncdn.com/978/After-Hours-English-2020-20200319234012-500x500.jpg', streamUrl: 'https://aac.saavncdn.com/978/db1a7c5c0caad1ea3f524bc0ae16cb6e_320.mp4', duration: const Duration(seconds: 200), genre: 'Synthwave', featureVector: [0.95, 0.1, 0.95, 0.3, 0.9, 0.1, 0.95, 0.4, 0.5, 0.98, 0.90, 0.2, 0.1, 0.4, 0.6, 0.95]),
-      Song(id: 'loc_3', title: 'Midnight City', artist: 'M83', album: 'Hurry Up, We\'re Dreaming', artworkUrl: 'https://c.saavncdn.com/264/Hurry-Up-We-re-Dreaming-English-2011-500x500.jpg', streamUrl: 'https://aac.saavncdn.com/264/0ce2a912bb0ef5d6ea72477c7f466b03_320.mp4', duration: const Duration(seconds: 243), genre: 'Indie Electro', featureVector: [0.85, 0.5, 0.8, 0.6, 0.85, 0.2, 0.75, 0.6, 0.4, 0.88, 0.80, 0.4, 0.2, 0.5, 0.7, 0.85]),
-      Song(id: 'loc_4', title: 'Nightcall', artist: 'Kavinsky', album: 'OutRun', artworkUrl: 'https://c.saavncdn.com/580/Outrun-English-2013-500x500.jpg', streamUrl: 'https://aac.saavncdn.com/580/28f645ea986b6a67f08ae2361661605f_320.mp4', duration: const Duration(seconds: 259), genre: 'Outrun Synth', featureVector: [0.99, 0.1, 0.7, 0.8, 0.95, 0.1, 0.6, 0.3, 0.2, 0.99, 0.95, 0.1, 0.1, 0.2, 0.4, 0.99]),
-    ]);
-  }
 
   Future<void> _loadFromDatabase() async {
     try {

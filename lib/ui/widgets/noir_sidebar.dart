@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
 import '../../providers/app_providers.dart';
+import '../../services/updater/app_update_service.dart';
 import '../screens/settings_sheet.dart';
 import 'developer_panel_sheet.dart';
 import 'equalizer_sheet.dart';
@@ -160,6 +161,16 @@ class NoirSidebar extends ConsumerWidget {
               onTap: () {
                 onClose?.call();
                 showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const SettingsSheet());
+              },
+            ),
+            _sidebarItem(
+              icon: Icons.system_update_rounded,
+              label: 'Check for Updates',
+              isSelected: false,
+              isDark: isDark,
+              onTap: () {
+                onClose?.call();
+                AppUpdateService.checkForUpdateManually(context);
               },
             ),
 

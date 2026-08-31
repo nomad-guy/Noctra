@@ -83,14 +83,32 @@ class LibraryAllSongsTab extends ConsumerWidget {
 
         const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
-        // Track List
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          sliver: SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, i) {
-                final s = displaySongs[i];
-                final isCurrent = currentSong?.id == s.id;
+        if (displaySongs.isEmpty)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.download_for_offline_outlined, size: 48, color: isDark ? Colors.white24 : Colors.black26),
+                    const SizedBox(height: 14),
+                    Text('No Offline Tracks Yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: isDark ? Colors.white70 : Colors.black87)),
+                    const SizedBox(height: 6),
+                    Text('Songs you download will appear here for instant offline 320kbps playback.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: isDark ? Colors.white38 : Colors.black38)),
+                  ],
+                ),
+              ),
+            ),
+          )
+        else
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, i) {
+                  final s = displaySongs[i];
+                  final isCurrent = currentSong?.id == s.id;
 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),

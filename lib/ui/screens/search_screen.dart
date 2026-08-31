@@ -188,6 +188,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 isDark: isDark,
                 searchResults: searchResults,
                 isSearching: isSearching,
+                onGenreTap: (query) {
+                  _searchController.text = query;
+                  _performSearch(query);
+                },
               ),
             ),
           ],

@@ -184,31 +184,33 @@ class SettingsSheet extends ConsumerWidget {
 
               const SizedBox(height: 18),
 
-              // In-App Updates Tile
+              // Download Storage Location Tile
               GlassCard(
                 radius: 16,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: InkWell(
-                  onTap: () async {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Checking for new releases...'), duration: Duration(seconds: 1)));
-                    final info = await AppUpdateService.checkForUpdate();
-                    if (context.mounted) {
-                      AppUpdateService.showUpdateModal(context, info, isDark);
-                    }
-                  },
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.system_update_rounded, size: 18, color: isDark ? Colors.white70 : Colors.black87),
-                          const SizedBox(width: 10),
-                          Text('Check for Updates (${AppUpdateService.currentVersion})', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
-                        ],
-                      ),
-                      Icon(Icons.chevron_right_rounded, color: isDark ? Colors.white38 : Colors.black38),
-                    ],
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.folder_special_rounded, size: 18, color: isDark ? Colors.white70 : Colors.black87),
+                            const SizedBox(width: 10),
+                            Text('Download Storage Location', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(color: isDark ? Colors.white12 : Colors.black12, borderRadius: BorderRadius.circular(8)),
+                          child: Text('320k FLAC/AAC', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: isDark ? Colors.white70 : Colors.black87)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text('/storage/emulated/0/Music/Noctra (Lossless)', style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white54 : Colors.black54)),
+                  ],
                 ),
               ),
               const SizedBox(height: 12),
