@@ -1,6 +1,7 @@
 import 'devanagari_transliteration_service.dart';
 import 'sanscript_engine.dart';
 import 'lyrics_service.dart';
+import 'romanized_translation_engine.dart';
 
 enum LyricScript {
   latin,
@@ -32,6 +33,7 @@ class ScriptOption {
 class UniversalLyricsTransliterationEngine {
   static final Map<String, String> _cache = {};
   static const int _maxCacheSize = 500;
+  static final RomanizedTranslationEngine _romanizer = RomanizedTranslationEngine();
 
   /// Detects the primary script of a given piece of lyric text.
   static LyricScript detectScript(String text) {
@@ -265,28 +267,35 @@ class UniversalLyricsTransliterationEngine {
         romanText = _hebrewToLatin(clean);
         break;
       case LyricScript.devanagari:
-        romanText = SanscriptEngine.t(clean, SanscriptEngine.devanagari, SanscriptEngine.itrans);
+        romanText = _romanizer.toRomanized(clean);
         break;
       case LyricScript.gurmukhi:
-        romanText = SanscriptEngine.t(clean, SanscriptEngine.gurmukhi, SanscriptEngine.itrans);
+        final deva = SanscriptEngine.t(clean, SanscriptEngine.gurmukhi, SanscriptEngine.devanagari);
+        romanText = _romanizer.toRomanized(deva);
         break;
       case LyricScript.bengali:
-        romanText = SanscriptEngine.t(clean, SanscriptEngine.bengali, SanscriptEngine.itrans);
+        final deva = SanscriptEngine.t(clean, SanscriptEngine.bengali, SanscriptEngine.devanagari);
+        romanText = _romanizer.toRomanized(deva);
         break;
       case LyricScript.gujarati:
-        romanText = SanscriptEngine.t(clean, SanscriptEngine.gujarati, SanscriptEngine.itrans);
+        final deva = SanscriptEngine.t(clean, SanscriptEngine.gujarati, SanscriptEngine.devanagari);
+        romanText = _romanizer.toRomanized(deva);
         break;
       case LyricScript.telugu:
-        romanText = SanscriptEngine.t(clean, SanscriptEngine.telugu, SanscriptEngine.itrans);
+        final deva = SanscriptEngine.t(clean, SanscriptEngine.telugu, SanscriptEngine.devanagari);
+        romanText = _romanizer.toRomanized(deva);
         break;
       case LyricScript.tamil:
-        romanText = SanscriptEngine.t(clean, SanscriptEngine.tamil, SanscriptEngine.itrans);
+        final deva = SanscriptEngine.t(clean, SanscriptEngine.tamil, SanscriptEngine.devanagari);
+        romanText = _romanizer.toRomanized(deva);
         break;
       case LyricScript.kannada:
-        romanText = SanscriptEngine.t(clean, SanscriptEngine.kannada, SanscriptEngine.itrans);
+        final deva = SanscriptEngine.t(clean, SanscriptEngine.kannada, SanscriptEngine.devanagari);
+        romanText = _romanizer.toRomanized(deva);
         break;
       case LyricScript.malayalam:
-        romanText = SanscriptEngine.t(clean, SanscriptEngine.malayalam, SanscriptEngine.itrans);
+        final deva = SanscriptEngine.t(clean, SanscriptEngine.malayalam, SanscriptEngine.devanagari);
+        romanText = _romanizer.toRomanized(deva);
         break;
       case LyricScript.odia:
       case LyricScript.latin:

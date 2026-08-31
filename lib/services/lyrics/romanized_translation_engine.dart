@@ -81,6 +81,7 @@ class RomanizedTranslationEngine {
   };
 
   /// Convert Devanagari text into natural Romanized English script.
+  String toRomanized(String text) => toRoman(text);
   String toRoman(String text) {
     if (text.trim().isEmpty) return text;
     final buffer = StringBuffer();

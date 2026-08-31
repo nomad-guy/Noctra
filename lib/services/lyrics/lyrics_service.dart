@@ -84,6 +84,23 @@ class LyricsService {
                   return res;
                 }
               }
+            } else {
+              // Prioritize Roman/English synced lyrics if available
+              final latinItem = sList.firstWhere(
+                (it) => !_hasDevanagari(it['syncedLyrics'] ?? '') && (it['syncedLyrics'] as String? ?? '').isNotEmpty,
+                orElse: () => null,
+              );
+              if (latinItem != null) {
+                final syncedLrc = latinItem['syncedLyrics'] as String?;
+                if (syncedLrc != null && syncedLrc.isNotEmpty) {
+                  final lines = _parseLrc(syncedLrc);
+                  if (lines.isNotEmpty) {
+                    final res = LyricsData(isSynced: true, lines: lines, plainText: latinItem['plainLyrics'] ?? syncedLrc);
+                    _setCache(cacheKey, res);
+                    return res;
+                  }
+                }
+              }
             }
 
             // Standard synced match
