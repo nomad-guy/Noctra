@@ -8,6 +8,7 @@ class GlassCard extends ConsumerStatefulWidget {
   final double radius;
   final EdgeInsetsGeometry? padding;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final bool isHighlighted;
 
   const GlassCard({
@@ -16,6 +17,7 @@ class GlassCard extends ConsumerStatefulWidget {
     this.radius = 18,
     this.padding,
     this.onTap,
+    this.onLongPress,
     this.isHighlighted = false,
   });
 
@@ -99,9 +101,10 @@ class _GlassCardState extends ConsumerState<GlassCard> {
       ),
     );
 
-    if (widget.onTap != null) {
+    if (widget.onTap != null || widget.onLongPress != null) {
       return GestureDetector(
         onTap: widget.onTap,
+        onLongPress: widget.onLongPress,
         child: content,
       );
     }

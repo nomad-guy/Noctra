@@ -5,6 +5,7 @@ import '../../core/theme/noir_theme.dart';
 import '../../data/models/song_model.dart';
 import '../../providers/app_providers.dart';
 import '../../services/lyrics/lyrics_service.dart';
+import '../../services/lyrics/devanagari_transliteration_service.dart';
 
 class LyricsView extends ConsumerStatefulWidget {
   final Song song;
@@ -21,7 +22,7 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
   int _lastActiveIndex = -2;
   bool _userIsScrolling = false;
   Timer? _resumeAutoScrollTimer;
-  String _selectedLang = 'auto';
+  String _selectedScript = 'english';
 
   @override
   void initState() {
@@ -30,8 +31,7 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
   }
 
   void _loadLyrics() {
-    final pref = _selectedLang == 'hindi' ? 'Hindi / हिन्दी' : 'English / Global';
-    _lyricsFuture = LyricsService.fetchLyrics(widget.song, preference: pref);
+    _lyricsFuture = LyricsService.fetchLyrics(widget.song, preference: 'English / Global');
   }
 
   @override
@@ -98,43 +98,50 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: isDark ? Colors.white70 : Colors.black87)),
-                      const SizedBox(height: 10),
-                      Text('Synchronizing lyrics...', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isDark ? Colors.white54 : Colors.black54)),
+                      CircularProgressIndicator(strokeWidth: 2, color: isDark ? Colors.white70 : Colors.black87),
+                      const SizedBox(height: 14),
+                      Text('Syncing Studio Lyrics...', style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.black54)),
                     ],
                   ),
                 );
               }
 
-              final data = snapshot.data;
-              if (data == null || (!data.isSynced && data.plainText.isEmpty)) {
-                return Center(child: Text('No lyrics found for this track', style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.black54)));
-              }
+              final rawData = snapshot.data ?? LyricsData.empty();
+              final data = _selectedScript == 'devanagari'
+                  ? DevanagariTransliterationService.transliterateLyrics(rawData, 'devanagari')
+                  : rawData;
 
               if (data.isSynced && data.lines.isNotEmpty) {
                 final activeIndex = _findActiveIndex(data.lines, currentPos);
-                if (activeIndex != _lastActiveIndex) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToIndex(activeIndex));
-                }
+                WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToIndex(activeIndex));
 
                 return NotificationListener<ScrollNotification>(
-                  onNotification: (n) {
-                    if (n is ScrollStartNotification && n.dragDetails != null) {
+                  onNotification: (notification) {
+                    if (notification is ScrollStartNotification && notification.dragDetails != null) {
                       _userIsScrolling = true;
                       _resumeAutoScrollTimer?.cancel();
-                    } else if (n is ScrollEndNotification) {
+                    } else if (notification is ScrollEndNotification) {
                       _resumeAutoScrollTimer?.cancel();
-                      _resumeAutoScrollTimer = Timer(const Duration(seconds: 4), () { if (mounted) setState(() => _userIsScrolling = false); });
+                      _resumeAutoScrollTimer = Timer(const Duration(seconds: 4), () {
+                        if (mounted) setState(() => _userIsScrolling = false);
+                      });
                     }
                     return false;
                   },
                   child: ShaderMask(
-                    shaderCallback: (r) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.white, Colors.white, Colors.transparent], stops: [0.0, 0.12, 0.88, 1.0]).createShader(r),
+                    shaderCallback: (Rect bounds) {
+                      return const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.white, Colors.white, Colors.transparent],
+                        stops: [0.0, 0.08, 0.90, 1.0],
+                      ).createShader(bounds);
+                    },
                     blendMode: BlendMode.dstIn,
                     child: ListView.builder(
                       controller: _scrollController,
                       physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 48, 20, 60),
+                      padding: const EdgeInsets.fromLTRB(20, 60, 20, 60),
                       itemCount: data.lines.length,
                       itemBuilder: (context, index) {
                         final line = data.lines[index];
@@ -167,21 +174,21 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
 
               return SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(24, 48, 24, 40),
+                padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
                 child: Text(data.plainText, textAlign: TextAlign.center, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w500, height: 1.8, color: isDark ? Colors.white70 : Colors.black87)),
               );
             },
           ),
         ),
         Positioned(
-          top: 8,
-          right: 12,
+          top: 10,
+          right: 14,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _langChip('Auto', 'auto', isDark),
+              _scriptChip('English', 'english', isDark),
               const SizedBox(width: 6),
-              _langChip('हिन्दी', 'hindi', isDark),
+              _scriptChip('देवनागरी', 'devanagari', isDark),
             ],
           ),
         ),
@@ -189,21 +196,21 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
     );
   }
 
-  Widget _langChip(String label, String code, bool isDark) {
-    final sel = _selectedLang == code;
+  Widget _scriptChip(String label, String code, bool isDark) {
+    final sel = _selectedScript == code;
     return GestureDetector(
       onTap: () {
-        if (_selectedLang != code) {
-          setState(() { _selectedLang = code; _loadLyrics(); });
+        if (_selectedScript != code) {
+          setState(() => _selectedScript = code);
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
           color: sel ? (isDark ? Colors.white : Colors.black) : (isDark ? const Color(0x33FFFFFF) : const Color(0x1F000000)),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: sel ? (isDark ? Colors.black : Colors.white) : (isDark ? Colors.white70 : Colors.black87))),
+        child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: sel ? (isDark ? Colors.black : Colors.white) : (isDark ? Colors.white70 : Colors.black87))),
       ),
     );
   }

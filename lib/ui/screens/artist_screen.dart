@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
 import '../../data/models/song_model.dart';
 import '../../providers/app_providers.dart';
+import '../../services/metadata/artist_metadata_service.dart';
 import '../../services/ytdlp/music_service.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/ai_radio_sheet.dart';
@@ -20,6 +21,7 @@ class ArtistScreen extends ConsumerStatefulWidget {
 class _ArtistScreenState extends ConsumerState<ArtistScreen> {
   bool _isLoading = true;
   ArtistDiscography? _discography;
+  ArtistMetadata? _artistMetadata;
 
   @override
   void initState() {
@@ -29,8 +31,16 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
 
   Future<void> _fetchDiscography() async {
     try {
-      final disco = await MusicService.fetchArtistCatalog(widget.artistName);
-      if (mounted) setState(() { _discography = disco; _isLoading = false; });
+      final discoFuture = MusicService.fetchArtistCatalog(widget.artistName);
+      final metaFuture = ArtistMetadataService.fetchArtistInfo(widget.artistName);
+      final results = await Future.wait([discoFuture, metaFuture]);
+      if (mounted) {
+        setState(() {
+          _discography = results[0] as ArtistDiscography?;
+          _artistMetadata = results[1] as ArtistMetadata?;
+          _isLoading = false;
+        });
+      }
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -43,7 +53,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
     final currentSong = ref.watch(currentSongStreamProvider).value;
     final audioPlayer = ref.watch(audioPlayerServiceProvider);
     final tracks = _discography?.topTracks ?? [];
-    final avatarUrl = widget.artistImageUrl ?? (tracks.isNotEmpty ? tracks.first.artworkUrl : null);
+    final avatarUrl = _artistMetadata?.imageUrl ?? widget.artistImageUrl ?? (tracks.isNotEmpty ? tracks.first.artworkUrl : null);
 
     return Scaffold(
       backgroundColor: isDark ? (themeMode.isAmoled ? const Color(0xFF000000) : const Color(0xFF070709)) : const Color(0xFFFFFFFF),
@@ -83,7 +93,27 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
                       const SizedBox(height: 12),
                       Text(widget.artistName, textAlign: TextAlign.center, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: isDark ? Colors.white : Colors.black)),
                       const SizedBox(height: 4),
-                      Text('${tracks.length} Master Releases • Lossless 320k', style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.black54)),
+                      Text(_artistMetadata?.shortDescription ?? '${tracks.length} Master Releases • Lossless 320k', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.black54)),
+                      if (_artistMetadata?.bio != null && _artistMetadata!.bio!.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.04),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            _artistMetadata!.bio!,
+                            maxLines: 4,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              height: 1.4,
+                              color: isDark ? Colors.white70 : Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 14),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,

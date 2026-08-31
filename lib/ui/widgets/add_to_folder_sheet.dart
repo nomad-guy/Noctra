@@ -28,11 +28,11 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
     final name = _folderNameCtrl.text.trim();
     if (name.isNotEmpty) {
       final repo = ref.read(musicRepositoryProvider);
-      repo.createFolder(name);
-      repo.addSongToFolder(name, widget.song);
-      setState(() {
-        _folderNameCtrl.clear();
-        _isCreatingNew = false;
+      _folderNameCtrl.clear();
+      setState(() => _isCreatingNew = false);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        repo.createFolder(name);
+        repo.addSongToFolder(name, widget.song);
       });
     }
   }

@@ -113,7 +113,7 @@ class P2PSyncService extends ChangeNotifier {
               onDone: () { _connectedPeers.remove(socket); notifyListeners(); },
               onError: (_) { _connectedPeers.remove(socket); notifyListeners(); },
             );
-          });
+          }).catchError((_) {});
         }
       });
 
@@ -126,13 +126,15 @@ class P2PSyncService extends ChangeNotifier {
 
   void _handleHostIncomingMessage(dynamic socket, dynamic rawData) {
     try {
-      final data = jsonDecode(rawData.toString()) as Map<String, dynamic>;
+      final str = rawData.toString();
+      if (str.length > 65536) return;
+      final data = jsonDecode(str) as Map<String, dynamic>;
       final type = data['type'];
 
       if (type == 'chat') {
         final msg = JamChatMessage.fromMap(data['message']);
         _chatMessages.add(msg);
-        _broadcastToPeers(rawData.toString());
+        _broadcastToPeers(str);
         notifyListeners();
       } else if (type == 'add_to_queue') {
         addToCollaborativeQueue(Song.fromMap(data['song']));
@@ -143,8 +145,12 @@ class P2PSyncService extends ChangeNotifier {
   }
 
   Future<bool> joinParty(String hostIp, {int port = 8099}) async {
+    final cleanIp = hostIp.trim();
+    final ipRegex = RegExp(r'^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$');
+    if (!ipRegex.hasMatch(cleanIp) && cleanIp != 'localhost') return false;
+
     await stopParty();
-    _connectedHostIp = hostIp.trim();
+    _connectedHostIp = cleanIp;
     _userName = 'Listener';
 
     if (kIsWeb) {
@@ -154,13 +160,21 @@ class P2PSyncService extends ChangeNotifier {
     }
 
     try {
-      _clientSocket = await P2PSocketEngine.connectClient(hostIp.trim(), port);
+      _clientSocket = await P2PSocketEngine.connectClient(cleanIp, port);
       if (_clientSocket == null) return false;
 
       _role = SyncCastRole.client;
+      int retryCount = 0;
       _clientSocket.listen(
         (data) => _handleClientIncomingMessage(data),
-        onDone: () => stopParty(),
+        onDone: () {
+          if (_role == SyncCastRole.client && _connectedHostIp != null && retryCount < 3) {
+            retryCount++;
+            Future.delayed(Duration(milliseconds: 1200 * retryCount), () => joinParty(cleanIp, port: port));
+          } else {
+            stopParty();
+          }
+        },
         onError: (_) => stopParty(),
       );
 

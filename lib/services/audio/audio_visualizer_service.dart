@@ -13,6 +13,7 @@ class AudioVisualizerService {
   Timer? _fallbackTicker;
   int? _currentSessionId;
   int _lastHardwarePacketMs = 0;
+  int _subscriberCount = 0;
 
   final _fftController = StreamController<List<double>>.broadcast();
   Stream<List<double>> get fftStream => _fftController.stream;
@@ -40,7 +41,19 @@ class AudioVisualizerService {
         });
       } catch (_) {}
     }
-    _startFallbackLoop();
+  }
+
+  void subscribe() {
+    _subscriberCount++;
+    if (_subscriberCount == 1) _startFallbackLoop();
+  }
+
+  void unsubscribe() {
+    _subscriberCount = max(0, _subscriberCount - 1);
+    if (_subscriberCount == 0) {
+      _fallbackTicker?.cancel();
+      _fallbackTicker = null;
+    }
   }
 
   void _startListening(int sessionId) {
@@ -95,6 +108,7 @@ class AudioVisualizerService {
   void dispose() {
     _fallbackTicker?.cancel();
     _subscription?.cancel();
+    _sessionSub?.cancel();
     _fftController.close();
   }
 }

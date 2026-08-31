@@ -1,219 +1,194 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/utils/noctra_logger.dart';
 import '../models/song_model.dart';
-
-class SongManifest {
-  final String songId;
-  final String title;
-  final String artist;
-  final String album;
-  final String genre;
-  final String language;
-  final int playCount;
-  final int skipCount;
-  final int totalListenSeconds;
-  final double completionRate;
-  final int lastPlayedTimestamp;
-  final List<double> featureVector;
-
-  const SongManifest({
-    required this.songId,
-    required this.title,
-    required this.artist,
-    required this.album,
-    required this.genre,
-    required this.language,
-    required this.playCount,
-    required this.skipCount,
-    required this.totalListenSeconds,
-    required this.completionRate,
-    required this.lastPlayedTimestamp,
-    required this.featureVector,
-  });
-
-  Map<String, dynamic> toMap() => {
-        'songId': songId,
-        'title': title,
-        'artist': artist,
-        'album': album,
-        'genre': genre,
-        'language': language,
-        'playCount': playCount,
-        'skipCount': skipCount,
-        'totalListenSeconds': totalListenSeconds,
-        'completionRate': completionRate,
-        'lastPlayedTimestamp': lastPlayedTimestamp,
-        'featureVector': featureVector,
-      };
-
-  factory SongManifest.fromMap(Map<String, dynamic> map) => SongManifest(
-        songId: map['songId'] ?? '',
-        title: map['title'] ?? '',
-        artist: map['artist'] ?? '',
-        album: map['album'] ?? '',
-        genre: map['genre'] ?? 'Music',
-        language: map['language'] ?? 'English',
-        playCount: (map['playCount'] as num?)?.toInt() ?? 0,
-        skipCount: (map['skipCount'] as num?)?.toInt() ?? 0,
-        totalListenSeconds: (map['totalListenSeconds'] as num?)?.toInt() ?? 0,
-        completionRate: (map['completionRate'] as num?)?.toDouble() ?? 1.0,
-        lastPlayedTimestamp: (map['lastPlayedTimestamp'] as num?)?.toInt() ?? 0,
-        featureVector: (map['featureVector'] as List?)?.map((e) => (e as num).toDouble()).toList() ?? List.filled(16, 0.5),
-      );
-}
+import '../repositories/taste_vector_engine.dart';
+import 'noctra_manifest_store.dart';
 
 class NoctraLocalDatabase {
   static final NoctraLocalDatabase _instance = NoctraLocalDatabase._internal();
   factory NoctraLocalDatabase() => _instance;
   NoctraLocalDatabase._internal();
 
-  final Map<String, SongManifest> _manifests = {};
-  final Map<String, int> _artistWeights = {};
-  final Map<String, int> _genreWeights = {};
-  final Map<String, int> _languageWeights = {};
+  final NoctraManifestStore _manifestStore = NoctraManifestStore();
   final List<Song> _favorites = [];
   final List<Song> _downloads = [];
   final List<Song> _recent = [];
   final Map<String, List<Song>> _customFolders = {};
-  List<double> _cachedTasteVector = List.filled(16, 0.5);
-  String _cachedThemeMode = 'noirBlack';
+  List<double>? _cachedTasteVector;
+  String _cachedThemeMode = 'dark';
+  bool _hasCompletedOnboarding = false;
+  List<String> _onboardedArtists = [];
+  List<String> _onboardedGenres = [];
+  List<String> _onboardedLanguages = [];
   bool _isLoaded = false;
 
+  bool get hasCompletedOnboarding => _hasCompletedOnboarding;
+  List<String> get onboardedArtists => List.unmodifiable(_onboardedArtists);
+  List<String> get onboardedGenres => List.unmodifiable(_onboardedGenres);
+  List<String> get onboardedLanguages => List.unmodifiable(_onboardedLanguages);
   String getCachedThemeMode() => _cachedThemeMode;
 
   Future<void> init() async {
     if (_isLoaded) return;
     try {
       final prefs = await SharedPreferences.getInstance();
-      _cachedThemeMode = prefs.getString('noctra_theme_mode') ?? 'noirBlack';
+      _hasCompletedOnboarding = prefs.getBool('noctra_onboarded') ?? false;
+      _onboardedArtists = prefs.getStringList('noctra_onboarded_artists') ?? [];
+      _onboardedGenres = prefs.getStringList('noctra_onboarded_genres') ?? [];
+      _onboardedLanguages = prefs.getStringList('noctra_onboarded_languages') ?? [];
 
-      final rawManifests = prefs.getString('noctra_kg_manifests');
-      if (rawManifests != null) {
-        final decoded = jsonDecode(rawManifests) as Map<String, dynamic>?;
-        decoded?.forEach((k, v) {
-          final m = SongManifest.fromMap(Map<String, dynamic>.from(v));
-          _manifests[k] = m;
-          _artistWeights[m.artist] = (_artistWeights[m.artist] ?? 0) + m.playCount;
-          _genreWeights[m.genre] = (_genreWeights[m.genre] ?? 0) + m.playCount;
-          _languageWeights[m.language] = (_languageWeights[m.language] ?? 0) + m.playCount;
-        });
-      }
+      _favorites.clear();
+      _favorites.addAll(_safeDecodeSongList(prefs.getString('noctra_favs'), 'noctra_favs', prefs));
 
-      final rawFavs = prefs.getString('noctra_favs');
-      if (rawFavs != null) {
-        final list = jsonDecode(rawFavs) as List?;
-        _favorites.clear();
-        list?.forEach((item) => _favorites.add(Song.fromMap(Map<String, dynamic>.from(item))));
-      }
+      _downloads.clear();
+      _downloads.addAll(_safeDecodeSongList(prefs.getString('noctra_downloads'), 'noctra_downloads', prefs));
 
-      final rawDowns = prefs.getString('noctra_downloads');
-      if (rawDowns != null) {
-        final list = jsonDecode(rawDowns) as List?;
-        _downloads.clear();
-        list?.forEach((item) => _downloads.add(Song.fromMap(Map<String, dynamic>.from(item))));
-      }
+      _recent.clear();
+      _recent.addAll(_safeDecodeSongList(prefs.getString('noctra_recent'), 'noctra_recent', prefs));
 
-      final rawRecent = prefs.getString('noctra_recent');
-      if (rawRecent != null) {
-        final list = jsonDecode(rawRecent) as List?;
-        _recent.clear();
-        list?.forEach((item) => _recent.add(Song.fromMap(Map<String, dynamic>.from(item))));
-      }
+      _customFolders.clear();
+      _customFolders.addAll(_safeDecodeCustomFolders(prefs.getString('noctra_custom_folders'), prefs));
 
-      final rawFolders = prefs.getString('noctra_custom_folders');
-      if (rawFolders != null) {
-        final map = jsonDecode(rawFolders) as Map<String, dynamic>?;
-        _customFolders.clear();
-        map?.forEach((k, v) {
-          final sList = (v as List).map((s) => Song.fromMap(Map<String, dynamic>.from(s))).toList();
-          _customFolders[k] = sList;
-        });
-      }
+      _cachedTasteVector = _safeDecodeTasteVector(prefs.getString('noctra_taste_vector'), prefs);
 
-      final rawTv = prefs.getString('noctra_taste_vector');
-      if (rawTv != null) {
-        final list = jsonDecode(rawTv) as List?;
-        if (list != null && list.length == 16) {
-          _cachedTasteVector = list.map((e) => (e as num).toDouble()).toList();
+      final kgStr = prefs.getString('noctra_kg_manifests');
+      if (kgStr != null) {
+        try {
+          final map = jsonDecode(kgStr) as Map<String, dynamic>;
+          _manifestStore.loadFromRawMap(map);
+        } catch (e) {
+          NoctraLogger.w('Self-healing manifests knowledge graph', e);
+          prefs.remove('noctra_kg_manifests');
         }
       }
 
       _isLoaded = true;
-    } catch (_) {}
+    } catch (e) {
+      NoctraLogger.e('Database initialization self-healed', e);
+      _isLoaded = true;
+    }
+  }
+
+  List<Song> _safeDecodeSongList(String? jsonStr, String key, SharedPreferences prefs) {
+    if (jsonStr == null || jsonStr.trim().isEmpty) return [];
+    try {
+      final decoded = jsonDecode(jsonStr);
+      if (decoded is! List) throw const FormatException('Expected List');
+      final seen = <String>{};
+      final list = <Song>[];
+      for (final item in decoded) {
+        if (item is Map) {
+          final song = Song.fromMap(Map<String, dynamic>.from(item));
+          if (song.id.isNotEmpty && song.title.isNotEmpty && seen.add(song.id)) {
+            list.add(song);
+          }
+        }
+      }
+      return list;
+    } catch (e) {
+      NoctraLogger.w('Self-healing corrupted list for key $key', e);
+      prefs.remove(key);
+      return [];
+    }
+  }
+
+  Map<String, List<Song>> _safeDecodeCustomFolders(String? jsonStr, SharedPreferences prefs) {
+    if (jsonStr == null || jsonStr.trim().isEmpty) return {};
+    try {
+      final decoded = jsonDecode(jsonStr);
+      if (decoded is! Map) throw const FormatException('Expected Map');
+      final res = <String, List<Song>>{};
+      decoded.forEach((k, v) {
+        if (k is String && v is List) {
+          final songs = <Song>[];
+          for (final item in v) {
+            if (item is Map) songs.add(Song.fromMap(Map<String, dynamic>.from(item)));
+          }
+          res[k] = songs;
+        }
+      });
+      return res;
+    } catch (e) {
+      NoctraLogger.w('Self-healing corrupted custom folders', e);
+      prefs.remove('noctra_custom_folders');
+      return {};
+    }
+  }
+
+  List<double> _safeDecodeTasteVector(String? jsonStr, SharedPreferences prefs) {
+    final def = TasteVectorEngine.getDefaultVector();
+    if (jsonStr == null || jsonStr.trim().isEmpty) return def;
+    try {
+      final decoded = jsonDecode(jsonStr);
+      if (decoded is! List) throw const FormatException('Expected List');
+      final list = <double>[];
+      for (final e in decoded) {
+        final val = (e as num).toDouble();
+        list.add(val.isNaN || val.isInfinite ? 0.5 : val.clamp(0.05, 0.95));
+      }
+      while (list.length < TasteVectorEngine.vectorDimension) { list.add(0.5); }
+      return list.take(TasteVectorEngine.vectorDimension).toList();
+    } catch (e) {
+      NoctraLogger.w('Self-healing corrupted taste vector', e);
+      prefs.remove('noctra_taste_vector');
+      return def;
+    }
+  }
+
+  Future<void> completeOnboarding({
+    required List<String> languages,
+    required List<String> genres,
+    required List<String> artists,
+  }) async {
+    _hasCompletedOnboarding = true;
+    _onboardedLanguages = languages;
+    _onboardedGenres = genres;
+    _onboardedArtists = artists;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('noctra_onboarded', true);
+    await prefs.setStringList('noctra_onboarded_languages', languages);
+    await prefs.setStringList('noctra_onboarded_genres', genres);
+    await prefs.setStringList('noctra_onboarded_artists', artists);
   }
 
   Future<void> recordManifest(Song song, {String action = 'play', int listenedSeconds = 0, double completionRate = 1.0}) async {
     await init();
-    final existing = _manifests[song.id];
-    final plays = (existing?.playCount ?? 0) + (action == 'skip' ? 0 : 1);
-    final skips = (existing?.skipCount ?? 0) + (action == 'skip' ? 1 : 0);
-    final totalSec = (existing?.totalListenSeconds ?? 0) + listenedSeconds;
-
-    String inferredLang = 'English';
-    final lTitle = song.title.toLowerCase();
-    final lArtist = song.artist.toLowerCase();
-    if (lTitle.contains('tum') || lTitle.contains('dil') || lArtist.contains('arijit') || lArtist.contains('pritam') || lTitle.contains('pyaar')) {
-      inferredLang = 'Hindi';
-    } else if (lTitle.contains('jatt') || lArtist.contains('sidhu') || lArtist.contains('diljit') || lTitle.contains('punjabi')) {
-      inferredLang = 'Punjabi';
-    }
-
-    final updated = SongManifest(
-      songId: song.id,
-      title: song.title,
-      artist: song.artist,
-      album: song.album,
-      genre: song.genre ?? 'Music',
-      language: inferredLang,
-      playCount: plays,
-      skipCount: skips,
-      totalListenSeconds: totalSec,
-      completionRate: completionRate,
-      lastPlayedTimestamp: DateTime.now().millisecondsSinceEpoch,
-      featureVector: song.featureVector,
-    );
-
-    _manifests[song.id] = updated;
-    _artistWeights[song.artist] = (_artistWeights[song.artist] ?? 0) + 1;
-    _genreWeights[updated.genre] = (_genreWeights[updated.genre] ?? 0) + 1;
-    _languageWeights[inferredLang] = (_languageWeights[inferredLang] ?? 0) + 1;
-
-    _persistManifests();
-  }
-
-  void _persistManifests() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final map = <String, dynamic>{};
-      _manifests.forEach((k, v) => map[k] = v.toMap());
-      await prefs.setString('noctra_kg_manifests', jsonEncode(map));
-    } catch (_) {}
+    _manifestStore.recordManifest(song, action: action, listenedSeconds: listenedSeconds, completionRate: completionRate);
+    _manifestStore.persist();
   }
 
   List<String> getTopArtists({int limit = 6}) {
-    final sorted = _artistWeights.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    return sorted.take(limit).map((e) => e.key).where((a) => a.isNotEmpty).toList();
+    final sorted = _manifestStore.artistWeights.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final historyList = sorted.take(limit).map((e) => e.key).where((a) => a.isNotEmpty).toList();
+    final combined = <String>{..._onboardedArtists, ...historyList}.toList();
+    return combined.take(limit).toList();
   }
 
   double getArtistAffinity(String artist) {
-    if (artist.isEmpty || _artistWeights.isEmpty) return 0.0;
-    final w = _artistWeights[artist] ?? 0;
+    if (artist.isEmpty || _manifestStore.artistWeights.isEmpty) return 0.0;
+    final w = _manifestStore.artistWeights[artist] ?? 0;
     return (w / 10.0).clamp(0.0, 1.0);
   }
 
   List<String> getTopGenres({int limit = 4}) {
-    final sorted = _genreWeights.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    return sorted.take(limit).map((e) => e.key).where((g) => g.isNotEmpty).toList();
+    final sorted = _manifestStore.genreWeights.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final history = sorted.take(limit).map((e) => e.key).where((g) => g.isNotEmpty).toList();
+    final combined = <String>{..._onboardedGenres, ...history}.toList();
+    return combined.take(limit).toList();
   }
 
   List<String> getTopLanguages({int limit = 3}) {
-    final sorted = _languageWeights.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    return sorted.take(limit).map((e) => e.key).where((l) => l.isNotEmpty).toList();
+    final sorted = _manifestStore.languageWeights.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final history = sorted.take(limit).map((e) => e.key).where((l) => l.isNotEmpty).toList();
+    final combined = <String>{..._onboardedLanguages, ...history}.toList();
+    return combined.take(limit).toList();
   }
 
   Map<String, dynamic> getKnowledgeGraphSummary() {
     return {
-      'totalTracksLearned': _manifests.length,
+      'totalTracksLearned': _manifestStore.manifests.length,
       'topArtists': getTopArtists(limit: 4),
       'topGenres': getTopGenres(limit: 3),
       'topLanguages': getTopLanguages(limit: 2),

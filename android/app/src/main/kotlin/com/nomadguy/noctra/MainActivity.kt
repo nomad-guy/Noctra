@@ -27,10 +27,13 @@ class MainActivity : AudioServiceActivity() {
             override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
                 try {
                     val sessionId = (arguments as? Map<*, *>)?.get("sessionId") as? Int ?: 0
+                    if (sessionId <= 0) return
                     effectsEngine.attachSession(sessionId)
                     visualizer?.release()
+                    val ranges = Visualizer.getCaptureSizeRange()
+                    val capSize = if (ranges.size > 1) ranges[1] else ranges[0]
                     visualizer = Visualizer(sessionId).apply {
-                        captureSize = Visualizer.getCaptureSizeRange()[0]
+                        captureSize = capSize
                         setDataCaptureListener(object : Visualizer.OnDataCaptureListener {
                             override fun onWaveFormDataCapture(vis: Visualizer?, waveform: ByteArray?, samplingRate: Int) {
                                 if (waveform != null && events != null) {
@@ -126,40 +129,20 @@ class MainActivity : AudioServiceActivity() {
                 "resolve320k" -> {
                     val title = call.argument<String>("title") ?: ""
                     val artist = call.argument<String>("artist") ?: ""
-                    thread {
-                        try {
-                            val streamUrl = JioSaavnNativeEngine.resolveTrackStream(title, artist)
-                            runOnUiThread { result.success(streamUrl) }
-                        } catch (_: Throwable) { runOnUiThread { result.success(null) } }
-                    }
+                    safeResult(result) { JioSaavnNativeEngine.resolveTrackStream(title, artist) }
                 }
                 "extractInnerTube" -> {
                     val videoId = call.argument<String>("videoId") ?: ""
-                    thread {
-                        try {
-                            val url = NoctraNativeStreamEngine.extractInnerTubeStream(videoId)
-                            runOnUiThread { result.success(url) }
-                        } catch (_: Throwable) { runOnUiThread { result.success(null) } }
-                    }
+                    safeResult(result) { NoctraNativeStreamEngine.extractInnerTubeStream(videoId) }
                 }
                 "fetchRadio" -> {
                     val videoId = call.argument<String>("videoId") ?: ""
-                    thread {
-                        try {
-                            val list = NoctraNativeStreamEngine.fetchRadioTracks(videoId)
-                            runOnUiThread { result.success(list) }
-                        } catch (_: Throwable) { runOnUiThread { result.success(emptyList<Map<String, Any>>()) } }
-                    }
+                    safeResult(result) { NoctraNativeStreamEngine.fetchRadioTracks(videoId) ?: emptyList<Map<String, Any>>() }
                 }
                 "searchJioSaavn" -> {
                     val query = call.argument<String>("query") ?: ""
                     val limit = call.argument<Int>("limit") ?: 20
-                    thread {
-                        try {
-                            val list = JioSaavnNativeEngine.searchSongs(query, limit)
-                            runOnUiThread { result.success(list) }
-                        } catch (_: Throwable) { runOnUiThread { result.success(emptyList<Map<String, Any>>()) } }
-                    }
+                    safeResult(result) { JioSaavnNativeEngine.searchSongs(query, limit) ?: emptyList<Map<String, Any>>() }
                 }
                 "decryptUrl" -> {
                     val encUrl = call.argument<String>("encryptedUrl") ?: ""
@@ -171,6 +154,25 @@ class MainActivity : AudioServiceActivity() {
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ICON_CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "setLauncherIcon") result.success(true) else result.notImplemented()
+        }
+    }
+
+    private fun safeResult(result: MethodChannel.Result, block: () -> Any?) {
+        thread {
+            try {
+                val data = block()
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) {
+                        try { result.success(data) } catch (_: Throwable) {}
+                    }
+                }
+            } catch (_: Throwable) {
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed) {
+                        try { result.success(null) } catch (_: Throwable) {}
+                    }
+                }
+            }
         }
     }
 }

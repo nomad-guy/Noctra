@@ -41,19 +41,21 @@ class NoctraAudioEffectsEngine {
                 val minLevel = eq.bandLevelRange[0]
                 val maxLevel = eq.bandLevelRange[1]
                 for (i in 0 until minOf(numBands, bands.size)) {
-                    val normalized = bands[i].coerceIn(0.0, 1.0)
-                    val level = (minLevel + normalized * (maxLevel - minLevel)).toInt().toShort()
-                    eq.setBandLevel(i.toShort(), level)
+                    val rawDb = bands[i]
+                    val mB = (rawDb * 100).toInt().coerceIn(minLevel.toInt(), maxLevel.toInt()).toShort()
+                    eq.setBandLevel(i.toShort(), mB)
                 }
             }
             bassBoost?.let { bb ->
                 if (bb.strengthSupported) {
-                    bb.setStrength((bassStrength.coerceIn(0.0, 1.0) * 1000).toInt().toShort())
+                    val strength = ((bassStrength / 10.0).coerceIn(0.0, 1.0) * 1000).toInt().toShort()
+                    bb.setStrength(strength)
                 }
             }
             virtualizer?.let { v ->
                 if (v.strengthSupported) {
-                    v.setStrength((virtualizerStrength.coerceIn(0.0, 1.0) * 1000).toInt().toShort())
+                    val strength = ((virtualizerStrength / 10.0).coerceIn(0.0, 1.0) * 1000).toInt().toShort()
+                    v.setStrength(strength)
                 }
             }
             true

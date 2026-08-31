@@ -79,6 +79,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                     onPressed: () {
                       showModalBottomSheet(
                         context: context,
+                        useRootNavigator: true,
                         isScrollControlled: true,
                         backgroundColor: Colors.transparent,
                         builder: (context) => const SyncCastSheet(),

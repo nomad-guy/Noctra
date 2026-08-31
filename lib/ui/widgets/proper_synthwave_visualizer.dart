@@ -46,6 +46,24 @@ class _ProperSynthwaveVisualizerState extends State<ProperSynthwaveVisualizer> w
         }
       }
     });
+    AudioVisualizerService().subscribe();
+    if (!widget.isPlaying) _controller.stop();
+  }
+
+  @override
+  void didUpdateWidget(ProperSynthwaveVisualizer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isPlaying != oldWidget.isPlaying) {
+      if (widget.isPlaying) {
+        if (!_controller.isAnimating) _controller.repeat();
+      } else {
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (mounted && !widget.isPlaying && _controller.isAnimating) {
+            _controller.stop();
+          }
+        });
+      }
+    }
   }
 
   void _applyTick() {
@@ -67,6 +85,7 @@ class _ProperSynthwaveVisualizerState extends State<ProperSynthwaveVisualizer> w
 
   @override
   void dispose() {
+    AudioVisualizerService().unsubscribe();
     _fftSub?.cancel();
     _controller.dispose();
     super.dispose();

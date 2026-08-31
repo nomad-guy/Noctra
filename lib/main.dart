@@ -12,6 +12,7 @@ import 'services/audio/audio_player_service.dart';
 import 'ui/screens/ai_studio_screen.dart';
 import 'ui/screens/home_screen.dart';
 import 'ui/screens/library_screen.dart';
+import 'ui/screens/onboarding/onboarding_screen.dart';
 import 'ui/screens/search_screen.dart';
 import 'ui/screens/splash_screen.dart';
 import 'ui/widgets/noir_mini_player.dart';
@@ -65,7 +66,7 @@ class NoctraApp extends ConsumerWidget {
         switchInCurve: Curves.easeOutCubic,
         switchOutCurve: Curves.easeInCubic,
         child: isInitialized
-            ? const MainNavigationShell()
+            ? (NoctraLocalDatabase().hasCompletedOnboarding ? const MainNavigationShell() : const OnboardingScreen())
             : SplashScreen(
                 onInitialized: () {
                   PermissionHelper.requestStoragePermissions();
@@ -77,9 +78,14 @@ class NoctraApp extends ConsumerWidget {
   }
 }
 
-class MainNavigationShell extends ConsumerWidget {
+class MainNavigationShell extends ConsumerStatefulWidget {
   const MainNavigationShell({super.key});
 
+  @override
+  ConsumerState<MainNavigationShell> createState() => _MainNavigationShellState();
+}
+
+class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   static final List<Widget> _screens = [
     const HomeScreen(),
     const SearchScreen(),
@@ -88,7 +94,15 @@ class MainNavigationShell extends ConsumerWidget {
   ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PermissionHelper.requestStoragePermissions();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentIndex = ref.watch(bottomNavIndexProvider);
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;

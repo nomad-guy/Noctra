@@ -8,6 +8,8 @@ import '../services/audio/audio_player_service.dart';
 import '../services/audio/audio_router_service.dart';
 import '../services/p2p/p2p_sync_service.dart';
 import '../services/ytdlp/music_service.dart';
+import '../services/ai/candidate_retrieval_service.dart';
+import '../data/models/stream_metadata_model.dart';
 
 // Navigation & App State
 final currentNavigationIndexProvider = StateProvider<int>((ref) => 0);
@@ -137,18 +139,12 @@ final curatedRecommendationsProvider = Provider<List<Map<String, dynamic>>>((ref
   final repo = ref.watch(musicRepositoryProvider);
   final vibe = ref.watch(selectedVibeKeyProvider);
   final prompt = ref.watch(aiPromptProvider);
-  ref.watch(tasteVectorStateProvider);
   return repo.curateByVibe(vibeKey: vibe, naturalPrompt: prompt);
 });
 
-// AI Agent Dynamic Recommendations Future Provider
+// AI Agent Dynamic Recommendations Future Provider (Two-Stage Neural MLP + MMR)
 final aiAgentMixProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
-  final repo = ref.watch(musicRepositoryProvider);
   final prompt = ref.watch(aiPromptProvider);
   final vibe = ref.watch(selectedVibeKeyProvider);
-  ref.watch(tasteVectorStateProvider);
-  if (prompt.trim().isEmpty) {
-    return repo.curateByVibe(vibeKey: vibe);
-  }
-  return repo.curateWithAIAgent(prompt: prompt, vibeKey: vibe);
+  return CandidateRetrievalService.curatePersonalizedFeed(vibeKey: vibe, naturalPrompt: prompt);
 });

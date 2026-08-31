@@ -26,17 +26,16 @@ class MusicRepository extends ChangeNotifier {
   final List<Song> _recentlyPlayed = [];
   final Map<String, List<Song>> _customFolders = {};
   List<double> _userTasteVector = TasteVectorEngine.getDefaultVector();
+  List<double> _cachedTasteVector = List.unmodifiable(TasteVectorEngine.getDefaultVector());
 
   List<Song> get localLibrary => List.unmodifiable(_localLibrary);
   List<Song> get downloads => List.unmodifiable(_downloads);
   List<Song> get favorites => List.unmodifiable(_favorites);
   List<Song> get recentlyPlayed => List.unmodifiable(_recentlyPlayed);
   Map<String, List<Song>> get customFolders => Map.unmodifiable(_customFolders);
-  List<double> get userTasteVector => List.unmodifiable(_userTasteVector);
+  List<double> get userTasteVector => _cachedTasteVector;
 
-  MusicRepository._internal() {
-    _loadFromDatabase();
-  }
+  MusicRepository._internal();
 
   Future<void> init() async => _loadFromDatabase();
 
@@ -52,9 +51,22 @@ class MusicRepository extends ChangeNotifier {
       final folders = await db.loadCustomFolders();
       _customFolders.clear(); _customFolders.addAll(folders);
       final tv = await db.loadTasteVector();
-      if (tv != null && tv.length == 16) _userTasteVector = tv;
+      if (tv != null && tv.length == TasteVectorEngine.vectorDimension) {
+        _userTasteVector = tv;
+        _cachedTasteVector = List.unmodifiable(_userTasteVector);
+      }
       notifyListeners();
     } catch (_) {}
+  }
+
+  void initOnboardingTaste({required List<String> languages, required List<String> genres, required List<String> artists}) {
+    final text = '${languages.join(' ')} ${genres.join(' ')} ${artists.join(' ')}';
+    final customSeed = Song(id: 'onboarding', title: text, artist: artists.join(' '), album: '', artworkUrl: '', streamUrl: '', duration: Duration.zero);
+    final vec = TasteVectorEngine.extractSongEmbedding(customSeed);
+    _userTasteVector = vec;
+    _cachedTasteVector = List.unmodifiable(_userTasteVector);
+    _persistState();
+    notifyListeners();
   }
 
   void _persistState() {
@@ -110,6 +122,7 @@ class MusicRepository extends ChangeNotifier {
       songVector: song.featureVector,
       action: action,
     );
+    _cachedTasteVector = List.unmodifiable(_userTasteVector);
     NoctraLocalDatabase().saveTasteVector(_userTasteVector);
     notifyListeners();
   }
@@ -227,6 +240,14 @@ class MusicRepository extends ChangeNotifier {
     if (_customFolders.containsKey(folderName)) {
       _customFolders[folderName]!.removeWhere((s) => s.id == songId);
       _persistState(); notifyListeners();
+    }
+  }
+
+  void deleteFolder(String folderName) {
+    if (folderName != 'Favorites' && _customFolders.containsKey(folderName)) {
+      _customFolders.remove(folderName);
+      _persistState();
+      notifyListeners();
     }
   }
 }

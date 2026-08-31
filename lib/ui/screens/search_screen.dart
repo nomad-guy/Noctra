@@ -20,6 +20,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Timer? _debounceTimer;
   String _selectedSource = 'all';
 
+  int _searchSequence = 0;
+
   @override
   void dispose() {
     _debounceTimer?.cancel();
@@ -32,6 +34,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     _debounceTimer?.cancel();
     final clean = query.trim();
     if (clean.isEmpty) {
+      _searchSequence++;
       ref.read(searchResultsProvider.notifier).state = [];
       ref.read(isSearchingProvider.notifier).state = false;
       return;
@@ -45,14 +48,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Future<void> _performSearch(String query) async {
     final clean = query.trim();
     if (clean.isEmpty) return;
+    final seq = ++_searchSequence;
     ref.read(isSearchingProvider.notifier).state = true;
     ref.read(searchQueryProvider.notifier).state = clean;
 
     try {
       final results = await MusicService.search(clean, source: _selectedSource);
-      ref.read(searchResultsProvider.notifier).state = results;
+      if (_searchSequence == seq && mounted) {
+        ref.read(searchResultsProvider.notifier).state = results;
+      }
     } finally {
-      ref.read(isSearchingProvider.notifier).state = false;
+      if (_searchSequence == seq && mounted) {
+        ref.read(isSearchingProvider.notifier).state = false;
+      }
     }
   }
 

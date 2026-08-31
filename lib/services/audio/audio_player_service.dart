@@ -6,19 +6,13 @@ import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import '../../data/models/song_model.dart';
+import '../../data/models/stream_metadata_model.dart';
 import '../../data/repositories/music_repository.dart';
 import '../../data/sources/noctra_local_database.dart';
+import '../ai/implicit_signal_tracker.dart';
 import '../ytdlp/music_service.dart';
 import '../resolvers/stream_resolver.dart';
 import '../../ui/screens/player_sheet.dart';
-
-class StreamResolutionMetadata {
-  final String songId, songTitle, resolverUsed;
-  final String? resolvedUrl;
-  final int resolutionMs;
-  final DateTime timestamp;
-  StreamResolutionMetadata({required this.songId, required this.songTitle, required this.resolvedUrl, required this.resolverUsed, required this.resolutionMs, required this.timestamp});
-}
 
 class AudioPlayerService {
   static final AudioPlayerService _instance = AudioPlayerService._internal();
@@ -50,7 +44,6 @@ class AudioPlayerService {
   String? _lastSavedSongId;
   StreamResolutionMetadata? _lastResolution;
   StreamResolutionMetadata? get lastResolution => _lastResolution;
-
   int _lastSavedSec = 0;
 
   AudioPlayerService._internal() {
@@ -95,11 +88,7 @@ class AudioPlayerService {
           await _player.setVolume(i / 10.0);
           await Future.delayed(const Duration(milliseconds: 100));
         }
-        if (_isFading) {
-          await _player.pause();
-          await _player.setVolume(1.0);
-          _isFading = false;
-        }
+        if (_isFading) { await _player.pause(); await _player.setVolume(1.0); _isFading = false; }
       }
     });
   }
@@ -113,12 +102,19 @@ class AudioPlayerService {
         _lastSavedPosition = Duration(milliseconds: saved['positionMs'] ?? 0);
         _queue.clear(); _queue.add(_currentSong!); _currentIndex = 0;
         _currentSongController.add(_currentSong); _queueController.add(_queue);
+        final url = await CompositeStreamResolver.resolve(_currentSong!);
+        if (url != null && url.isNotEmpty) {
+          final mediaItem = MediaItem(id: _currentSong!.id, album: _currentSong!.album, title: _currentSong!.title, artist: _currentSong!.artist, artUri: (_currentSong!.artworkUrl != null && _currentSong!.artworkUrl!.startsWith('http')) ? Uri.parse(_currentSong!.artworkUrl!) : null, duration: _currentSong!.duration);
+          final src = url.startsWith('http') ? AudioSource.uri(Uri.parse(url), tag: mediaItem) : AudioSource.file(url, tag: mediaItem);
+          await _player.setAudioSource(src, initialPosition: _lastSavedPosition);
+        }
       }
     } catch (_) {}
   }
 
   Future<void> playSong(Song song, {List<Song>? newQueue, Duration? initialPosition}) async {
     final epoch = ++_playSessionEpoch;
+    _lastSavedSec = -1;
     if (newQueue != null && newQueue.isNotEmpty) {
       _queue.clear(); _queue.addAll(newQueue);
       _currentIndex = _queue.indexWhere((s) => s.id == song.id);
@@ -128,18 +124,16 @@ class AudioPlayerService {
     } else {
       _currentIndex = _queue.indexWhere((s) => s.id == song.id);
     }
-
     _currentSong = song; _songStartTime = DateTime.now();
     _currentSongController.add(song); _queueController.add(_queue);
     NoctraLocalDatabase().recordManifest(song, action: 'play');
-
+    MusicRepository().recordSongPlayed(song);
     try { await _player.stop(); } catch (_) {}
     if (epoch != _playSessionEpoch) return;
 
     final sw = Stopwatch()..start();
     String resolverName = 'Local';
     String? url;
-
     try {
       if (song.localFilePath != null && song.localFilePath!.isNotEmpty && !kIsWeb) {
         try {
@@ -157,21 +151,12 @@ class AudioPlayerService {
       sw.stop();
       _lastResolution = StreamResolutionMetadata(songId: song.id, songTitle: song.title, resolvedUrl: url, resolverUsed: resolverName, resolutionMs: sw.elapsedMilliseconds, timestamp: DateTime.now());
       if (_lastResolution != null) _resolutionController.add(_lastResolution!);
-
       if (url == null || url.isEmpty) url = await CompositeStreamResolver.resolve(song);
 
       if (url != null && url.isNotEmpty) {
-        Duration startPos = Duration.zero;
-        if (initialPosition != null) {
-          startPos = initialPosition;
-        } else if (_lastSavedPosition != null && _lastSavedSongId == song.id) {
-          startPos = _lastSavedPosition!;
-        }
-        _lastSavedPosition = null;
-        _lastSavedSongId = null;
-
+        Duration startPos = initialPosition ?? ((_lastSavedPosition != null && _lastSavedSongId == song.id) ? _lastSavedPosition! : Duration.zero);
+        _lastSavedPosition = null; _lastSavedSongId = null;
         final mediaItem = MediaItem(id: song.id, album: song.album, title: song.title, artist: song.artist, artUri: (song.artworkUrl != null && song.artworkUrl!.startsWith('http')) ? Uri.parse(song.artworkUrl!) : null, duration: song.duration);
-
         bool loaded = false;
         try {
           final src = url.startsWith('http') ? AudioSource.uri(Uri.parse(url), tag: mediaItem) : AudioSource.file(url, tag: mediaItem);
@@ -184,17 +169,12 @@ class AudioPlayerService {
               final fallbackUrl = await CompositeStreamResolver.resolve(song, startTier: tier);
               if (fallbackUrl != null && fallbackUrl.isNotEmpty && fallbackUrl != url) {
                 await _player.setAudioSource(AudioSource.uri(Uri.parse(fallbackUrl), tag: mediaItem), initialPosition: startPos);
-                loaded = true;
-                break;
+                loaded = true; break;
               }
             } catch (_) {}
           }
         }
-
-        if (loaded && epoch == _playSessionEpoch) {
-          await _player.setVolume(1.0);
-          await _player.play();
-        }
+        if (loaded && epoch == _playSessionEpoch) { await _player.setVolume(1.0); await _player.play(); }
       }
     } catch (e) {
       if (kDebugMode) print('Playback error: $e');
@@ -203,13 +183,27 @@ class AudioPlayerService {
 
   Future<void> togglePlayPause() async {
     if (_player.playing) {
-      await _player.pause();
+      if (_isFadeEnabled) {
+        for (int i = 10; i >= 0; i--) {
+          await _player.setVolume(i / 10.0);
+          await Future.delayed(const Duration(milliseconds: 15));
+        }
+      }
+      await _player.pause(); await _player.setVolume(1.0);
     } else {
-      await _player.setVolume(1.0);
-      if (_player.audioSource == null && _currentSong != null) {
-        await playSong(_currentSong!, initialPosition: _lastSavedPosition);
-      } else {
-        await _player.play();
+      if (_currentSong != null) {
+        if (_player.audioSource == null) { await playSong(_currentSong!, initialPosition: _lastSavedPosition); return; }
+        if (_isFadeEnabled) {
+          await _player.setVolume(0.0); _player.play();
+          for (int i = 0; i <= 10; i++) {
+            await _player.setVolume(i / 10.0);
+            await Future.delayed(const Duration(milliseconds: 15));
+          }
+        } else {
+          await _player.play();
+        }
+      } else if (_queue.isNotEmpty) {
+        await playSong(_queue.first);
       }
     }
   }
@@ -217,8 +211,8 @@ class AudioPlayerService {
   Future<void> skipNext() async {
     if (_songStartTime != null && _currentSong != null) {
       final playedSec = DateTime.now().difference(_songStartTime!).inSeconds;
-      if (playedSec < 15) MusicRepository().updateTasteVector(_currentSong!, 'fast_skip');
-      NoctraLocalDatabase().recordManifest(_currentSong!, action: 'skip', listenedSeconds: playedSec);
+      ImplicitSignalTracker().trackPlaybackEnd(song: _currentSong!, listenedSeconds: playedSec, totalDuration: _currentSong!.duration);
+      NoctraLocalDatabase().recordManifest(_currentSong!, action: playedSec < 15 ? 'skip' : 'play', listenedSeconds: playedSec);
     }
     if (_queue.isNotEmpty) {
       if (_currentIndex >= _queue.length - 1 && _isAutoplayEnabled && _currentSong != null) {
@@ -252,8 +246,18 @@ class AudioPlayerService {
 
   static const _effectsChannel = MethodChannel('com.noctra.app/audio_effects');
 
+  void attachNativeEffectsSession() {
+    if (!kIsWeb) {
+      try {
+        final sid = _player.androidAudioSessionId;
+        if (sid != null && sid > 0) _effectsChannel.invokeMethod('attachSession', {'sessionId': sid});
+      } catch (_) {}
+    }
+  }
+
   void applyStudioMasterMode(StudioMasterMode mode) {
     try {
+      attachNativeEffectsSession();
       final name = mode == StudioMasterMode.spatial3d ? 'spatial3d' : (mode == StudioMasterMode.concertReverb ? 'concertReverb' : 'studioMaster');
       _effectsChannel.invokeMethod('applyStudioMode', {'mode': name});
     } catch (_) {}
@@ -261,7 +265,8 @@ class AudioPlayerService {
 
   void applyEqualizer({List<double>? bands, double? bassBoost, double? virtualizer}) {
     try {
-      _effectsChannel.invokeMethod('applyEqualizer', {'bands': bands ?? [0.5, 0.5, 0.5, 0.5, 0.5], 'bassBoost': bassBoost ?? 0.0, 'virtualizer': virtualizer ?? 0.0});
+      attachNativeEffectsSession();
+      _effectsChannel.invokeMethod('applyEqualizer', {'bands': bands ?? [0.0, 0.0, 0.0, 0.0, 0.0], 'bassBoost': bassBoost ?? 0.0, 'virtualizer': virtualizer ?? 0.0});
     } catch (_) {}
   }
 
@@ -272,12 +277,11 @@ class AudioPlayerService {
   void _onSongCompleted() async {
     final playedSec = _songStartTime != null ? DateTime.now().difference(_songStartTime!).inSeconds : 210;
     if (_currentSong != null) {
-      MusicRepository().updateTasteVector(_currentSong!, 'complete_listen');
+      ImplicitSignalTracker().trackPlaybackEnd(song: _currentSong!, listenedSeconds: playedSec, totalDuration: _currentSong!.duration);
       NoctraLocalDatabase().recordManifest(_currentSong!, action: 'complete', listenedSeconds: playedSec);
     }
     if (_loopMode == LoopMode.one && _currentSong != null) {
-      await _player.seek(Duration.zero);
-      await _player.play();
+      await _player.seek(Duration.zero); await _player.play();
     } else {
       if (_isAutoplayEnabled && _autoplayDelaySeconds > 0) await Future.delayed(Duration(seconds: _autoplayDelaySeconds));
       skipNext();

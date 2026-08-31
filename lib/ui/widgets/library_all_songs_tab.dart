@@ -29,14 +29,22 @@ class LibraryAllSongsTab extends ConsumerWidget {
     final currentSong = ref.watch(currentSongStreamProvider).value;
     final isPlaying = ref.watch(isPlayingStreamProvider).value ?? false;
 
-    final Map<String, Song> uniqueSongs = {};
-    for (final d in downloads) {
-      uniqueSongs[d.id] = d;
+    final List<Song> displaySongs;
+    if (downloads.isEmpty) {
+      displaySongs = allSongs;
+    } else if (allSongs.isEmpty) {
+      displaySongs = downloads;
+    } else {
+      final seen = <String>{};
+      final list = <Song>[];
+      for (final s in downloads) {
+        if (seen.add(s.id)) list.add(s);
+      }
+      for (final s in allSongs) {
+        if (seen.add(s.id)) list.add(s);
+      }
+      displaySongs = list;
     }
-    for (final s in allSongs) {
-      if (!uniqueSongs.containsKey(s.id)) uniqueSongs[s.id] = s;
-    }
-    final displaySongs = uniqueSongs.values.toList();
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -192,7 +200,7 @@ class LibraryAllSongsTab extends ConsumerWidget {
                         IconButton(
                           icon: Icon(Icons.playlist_add_rounded, size: 20, color: isDark ? Colors.white70 : Colors.black87),
                           tooltip: 'Add to Folder',
-                          onPressed: () => showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (context) => AddToFolderSheet(song: s)),
+                          onPressed: () => showModalBottomSheet(context: context, useRootNavigator: true, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (context) => AddToFolderSheet(song: s)),
                         ),
                         if (isCurrent && isPlaying)
                           Container(width: 8, height: 8, margin: const EdgeInsets.only(left: 4), decoration: BoxDecoration(shape: BoxShape.circle, color: isDark ? Colors.white : Colors.black)),

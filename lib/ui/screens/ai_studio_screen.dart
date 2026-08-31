@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../data/models/song_model.dart';
 import '../../providers/app_providers.dart';
 import '../widgets/developer_panel_sheet.dart';
 import '../widgets/ai_archetype_card.dart';
@@ -184,7 +185,8 @@ class _AIStudioScreenState extends ConsumerState<AIStudioScreen> {
                         radius: 16,
                         padding: const EdgeInsets.all(12),
                         onTap: () {
-                          ref.read(audioPlayerServiceProvider).playSong(song);
+                          final queue = _curatedResults.map((m) => m['song'] as Song).toList();
+                          ref.read(audioPlayerServiceProvider).playSong(song, newQueue: queue);
                         },
                         child: Row(
                           children: [
