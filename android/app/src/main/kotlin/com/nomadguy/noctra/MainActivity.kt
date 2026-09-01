@@ -32,6 +32,8 @@ class MainActivity : AudioServiceActivity() {
     /** Delegates icon changes — serialized, no race conditions. */
     private lateinit var launcherIconManager: LauncherIconManager
     private val iconExecutor = Executors.newSingleThreadExecutor()
+    /** Shared executor for native resolver operations (replaces raw Thread). */
+    private val nativeExecutor = Executors.newCachedThreadPool()
 
     private var visualizer: Visualizer? = null
     private var audioRouter: NoctraAudioRouter? = null
@@ -265,13 +267,16 @@ class MainActivity : AudioServiceActivity() {
                     iconExecutor.execute {
                         val operation = launcherIconManager.setIcon(iconKey)
                         runOnUiThread {
-                            operation.fold(
-                                onSuccess = { result.success(true) },
-                                onFailure = { error ->
-                                    Log.e(TAG, "Icon switch failed", error)
-                                    result.error("ICON_CHANGE_FAILED", error.message, null)
-                                }
-                            )
+                            // Protect against Activity destruction during async operation
+                            if (!isFinishing && !isDestroyed) {
+                                operation.fold(
+                                    onSuccess = { result.success(true) },
+                                    onFailure = { error ->
+                                        Log.e(TAG, "Icon switch failed", error)
+                                        result.error("ICON_CHANGE_FAILED", error.message, null)
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -318,11 +323,12 @@ class MainActivity : AudioServiceActivity() {
 
     override fun onDestroy() {
         iconExecutor.shutdownNow()
+        nativeExecutor.shutdownNow()
         super.onDestroy()
     }
 
     private fun safeResult(result: MethodChannel.Result, block: () -> Any?) {
-        Thread {
+        nativeExecutor.execute {
             try {
                 val data = block()
                 runOnUiThread {
@@ -342,6 +348,6 @@ class MainActivity : AudioServiceActivity() {
                     }
                 }
             }
-        }.start()
+        }
     }
 }

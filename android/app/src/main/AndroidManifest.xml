@@ -42,7 +42,10 @@
              They represent actual icon variants, NOT themes.
              At install: .default is enabled, others are disabled. -->
 
-        <!-- Default icon — always enabled at install, the fallback entry -->
+        <!-- Default icon — manifest-disabled. LauncherIconManager explicitly
+             enables the correct alias on first startup via reconcileOnStartup().
+             All aliases start disabled so COMPONENT_ENABLED_STATE_DEFAULT
+             genuinely means disabled for every non-target alias. -->
         <activity-alias
             android:name=".MainActivity.default"
             android:targetActivity=".MainActivity"
@@ -50,7 +53,7 @@
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher"
             android:label="Noctra"
-            android:enabled="true">
+            android:enabled="false">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
