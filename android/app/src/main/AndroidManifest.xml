@@ -20,6 +20,7 @@
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
         
+        <!-- Main Activity — NO LAUNCHER filter; aliases own the launcher entry -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -28,42 +29,82 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
             <meta-data
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
         </activity>
 
+        <!-- Default alias — the sole LAUNCHER entry point, always enabled -->
         <activity-alias
-            android:name=".MainActivityDark"
-            android:enabled="false"
+            android:name=".MainActivity.default"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
+            android:label="Noctra"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".MainActivity.noir_black"
+            android:targetActivity=".MainActivity"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_dark"
             android:roundIcon="@mipmap/ic_launcher_dark"
             android:label="Noctra"
-            android:targetActivity=".MainActivity" />
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <activity-alias
-            android:name=".MainActivityLight"
-            android:enabled="false"
+            android:name=".MainActivity.noir_white"
+            android:targetActivity=".MainActivity"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_light"
             android:roundIcon="@mipmap/ic_launcher_light"
             android:label="Noctra"
-            android:targetActivity=".MainActivity" />
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <activity-alias
-            android:name=".MainActivityAmoled"
-            android:enabled="false"
+            android:name=".MainActivity.amoled"
+            android:targetActivity=".MainActivity"
             android:exported="true"
             android:icon="@mipmap/ic_launcher_dark"
             android:roundIcon="@mipmap/ic_launcher_dark"
             android:label="Noctra"
-            android:targetActivity=".MainActivity" />
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".MainActivity.liquid_glass"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_liquid"
+            android:roundIcon="@mipmap/ic_launcher_liquid"
+            android:label="Noctra"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <service android:name="com.ryanheise.audioservice.AudioService"
             android:foregroundServiceType="mediaPlayback"

@@ -21,6 +21,7 @@ class NoirSidebar extends ConsumerWidget {
     ref.watch(appLanguageProvider);
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
+    final tokens = context.noctraTokens;
     final currentIndex = ref.watch(currentNavigationIndexProvider);
     final repo = ref.watch(musicRepositoryProvider);
 
@@ -28,8 +29,10 @@ class NoirSidebar extends ConsumerWidget {
       width: 280,
       height: double.infinity,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xF80A0A0A) : const Color(0xF8F9F9F9),
-        border: Border(right: BorderSide(color: isDark ? Colors.white12 : Colors.black12, width: 1)),
+        color: themeMode.isLiquidGlass
+            ? tokens.surface.withValues(alpha: .72)
+            : (isDark ? const Color(0xF80A0A0A) : const Color(0xF8F9F9F9)),
+        border: Border(right: BorderSide(color: tokens.subtleBorder, width: 1)),
       ),
       child: SafeArea(
         child: Column(
@@ -51,14 +54,18 @@ class NoirSidebar extends ConsumerWidget {
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 2.0,
-                          color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
+                          color: isDark
+                              ? NoirColors.blackTextPrimary
+                              : NoirColors.whiteTextPrimary,
                         ),
                       ),
                     ],
                   ),
                   if (onClose != null)
                     IconButton(
-                      icon: Icon(Icons.chevron_left_rounded, size: 26, color: isDark ? Colors.white70 : Colors.black87),
+                      icon: Icon(Icons.chevron_left_rounded,
+                          size: 26,
+                          color: isDark ? Colors.white70 : Colors.black87),
                       tooltip: 'Close Sidebar',
                       onPressed: onClose,
                     ),
@@ -82,7 +89,9 @@ class NoirSidebar extends ConsumerWidget {
                       isSelected: currentIndex == 0,
                       isDark: isDark,
                       onTap: () {
-                        ref.read(currentNavigationIndexProvider.notifier).state = 0;
+                        ref
+                            .read(currentNavigationIndexProvider.notifier)
+                            .state = 0;
                         onClose?.call();
                       },
                     ),
@@ -92,7 +101,9 @@ class NoirSidebar extends ConsumerWidget {
                       isSelected: currentIndex == 1,
                       isDark: isDark,
                       onTap: () {
-                        ref.read(currentNavigationIndexProvider.notifier).state = 1;
+                        ref
+                            .read(currentNavigationIndexProvider.notifier)
+                            .state = 1;
                         onClose?.call();
                       },
                     ),
@@ -102,7 +113,9 @@ class NoirSidebar extends ConsumerWidget {
                       isSelected: currentIndex == 2,
                       isDark: isDark,
                       onTap: () {
-                        ref.read(currentNavigationIndexProvider.notifier).state = 2;
+                        ref
+                            .read(currentNavigationIndexProvider.notifier)
+                            .state = 2;
                         onClose?.call();
                       },
                     ),
@@ -112,15 +125,17 @@ class NoirSidebar extends ConsumerWidget {
                       isSelected: currentIndex == 3,
                       isDark: isDark,
                       onTap: () {
-                        ref.read(currentNavigationIndexProvider.notifier).state = 3;
+                        ref
+                            .read(currentNavigationIndexProvider.notifier)
+                            .state = 3;
                         onClose?.call();
                       },
                     ),
-
                     const SizedBox(height: 8),
-                    Divider(color: isDark ? Colors.white10 : Colors.black12, height: 1),
+                    Divider(
+                        color: isDark ? Colors.white10 : Colors.black12,
+                        height: 1),
                     const SizedBox(height: 8),
-
                     _sidebarItem(
                       icon: Icons.history_rounded,
                       label: 'Recently Played',
@@ -128,7 +143,11 @@ class NoirSidebar extends ConsumerWidget {
                       isDark: isDark,
                       onTap: () {
                         onClose?.call();
-                        showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const RecentlyPlayedSheet());
+                        showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (c) => const RecentlyPlayedSheet());
                       },
                     ),
                     _sidebarItem(
@@ -138,7 +157,11 @@ class NoirSidebar extends ConsumerWidget {
                       isDark: isDark,
                       onTap: () {
                         onClose?.call();
-                        showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const SyncCastSheet());
+                        showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (c) => const SyncCastSheet());
                       },
                     ),
                     _sidebarItem(
@@ -148,7 +171,10 @@ class NoirSidebar extends ConsumerWidget {
                       isDark: isDark,
                       onTap: () {
                         onClose?.call();
-                        showModalBottomSheet(context: context, backgroundColor: Colors.transparent, builder: (c) => const EqualizerSheet());
+                        showModalBottomSheet(
+                            context: context,
+                            backgroundColor: Colors.transparent,
+                            builder: (c) => const EqualizerSheet());
                       },
                     ),
                     _sidebarItem(
@@ -158,7 +184,11 @@ class NoirSidebar extends ConsumerWidget {
                       isDark: isDark,
                       onTap: () {
                         onClose?.call();
-                        showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const DeveloperPanelSheet());
+                        showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (c) => const DeveloperPanelSheet());
                       },
                     ),
                     _sidebarItem(
@@ -168,7 +198,11 @@ class NoirSidebar extends ConsumerWidget {
                       isDark: isDark,
                       onTap: () {
                         onClose?.call();
-                        showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const SettingsSheet());
+                        showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (c) => const SettingsSheet());
                       },
                     ),
                     _sidebarItem(
@@ -190,17 +224,30 @@ class NoirSidebar extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: GlassCard(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 radius: 14,
-                child: Row(
-                  children: [
-                    _themeChip(ref, 'Noir', NoirThemeMode.noirBlack, themeMode, isDark),
-                    const SizedBox(width: 6),
-                    _themeChip(ref, 'AMOLED', NoirThemeMode.noirAmoled, themeMode, isDark),
-                    const SizedBox(width: 6),
-                    _themeChip(ref, 'White', NoirThemeMode.noirWhite, themeMode, isDark),
-                  ],
-                ),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('THEME',
+                          style: TextStyle(
+                              fontSize: 10,
+                              letterSpacing: 1.1,
+                              fontWeight: FontWeight.w800,
+                              color: tokens.secondaryText)),
+                      const SizedBox(height: 8),
+                      Wrap(spacing: 6, runSpacing: 6, children: [
+                        _themeChip(context, ref, 'Noir',
+                            NoirThemeMode.noirBlack, themeMode),
+                        _themeChip(context, ref, 'AMOLED',
+                            NoirThemeMode.noirAmoled, themeMode),
+                        _themeChip(context, ref, 'White',
+                            NoirThemeMode.noirWhite, themeMode),
+                        _themeChip(context, ref, 'Glass',
+                            NoirThemeMode.liquidGlass, themeMode),
+                      ]),
+                    ]),
               ),
             ),
 
@@ -208,7 +255,9 @@ class NoirSidebar extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
               child: Text(
                 'On-Device Knowledge Graph • ${repo.downloads.length + repo.favorites.length + repo.recentlyPlayed.length} tracks',
-                style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.black38),
+                style: TextStyle(
+                    fontSize: 10,
+                    color: isDark ? Colors.white38 : Colors.black38),
               ),
             ),
           ],
@@ -232,12 +281,18 @@ class NoirSidebar extends ConsumerWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9.5),
           decoration: BoxDecoration(
-            color: isSelected ? (isDark ? Colors.white : Colors.black) : Colors.transparent,
+            color: isSelected
+                ? (isDark ? Colors.white : Colors.black)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             children: [
-              Icon(icon, size: 19, color: isSelected ? (isDark ? Colors.black : Colors.white) : (isDark ? Colors.white70 : Colors.black87)),
+              Icon(icon,
+                  size: 19,
+                  color: isSelected
+                      ? (isDark ? Colors.black : Colors.white)
+                      : (isDark ? Colors.white70 : Colors.black87)),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -247,7 +302,11 @@ class NoirSidebar extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected ? (isDark ? Colors.black : Colors.white) : (isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary),
+                    color: isSelected
+                        ? (isDark ? Colors.black : Colors.white)
+                        : (isDark
+                            ? NoirColors.blackTextPrimary
+                            : NoirColors.whiteTextPrimary),
                   ),
                 ),
               ),
@@ -258,30 +317,30 @@ class NoirSidebar extends ConsumerWidget {
     );
   }
 
-  Widget _themeChip(WidgetRef ref, String label, NoirThemeMode mode, NoirThemeMode current, bool isDark) {
+  Widget _themeChip(BuildContext context, WidgetRef ref, String label,
+      NoirThemeMode mode, NoirThemeMode current) {
     final isSelected = current == mode;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          ref.read(themeModeProvider.notifier).state = mode;
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 7),
-          decoration: BoxDecoration(
-            color: isSelected ? (isDark ? Colors.white : Colors.black) : (isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE8E8E8)),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected ? (isDark ? Colors.black : Colors.white) : (isDark ? Colors.white54 : Colors.black54),
-              ),
+    final tokens = context.noctraTokens;
+    return GestureDetector(
+      onTap: () {
+        ref.read(themeModeProvider.notifier).state = mode;
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? tokens.accent : tokens.surfaceVariant,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: isSelected ? tokens.canvas : tokens.secondaryText,
             ),
           ),
-        ),
+        ]),
       ),
     );
   }

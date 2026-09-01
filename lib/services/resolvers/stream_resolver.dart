@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 // youtube_explode_dart removed: NativeKotlinResolver + InnerTubeMusicResolver
 // handle YouTube resolution via the Kotlin engine — no Dart-side library needed.
 import '../../data/models/song_model.dart';
+import '../audio/stream_quality_service.dart';
 
 abstract class StreamResolver {
   String get sourceId;
@@ -99,7 +100,7 @@ class NativeKotlinResolver implements StreamResolver {
       final String? streamUrl = await _channel.invokeMethod<String>('resolve320k', {
         'title': cleanTitle.isNotEmpty ? cleanTitle : song.title,
         'artist': cleanArtist.isNotEmpty ? cleanArtist : song.artist,
-      }).timeout(const Duration(seconds: 4));
+      }).timeout(const Duration(seconds: 6));
       if (streamUrl != null && streamUrl.isNotEmpty && !streamUrl.contains('preview')) {
         return streamUrl;
       }
@@ -114,12 +115,58 @@ class InnerTubeMusicResolver implements StreamResolver {
   @override
   Future<bool> canResolve(Song song) async => !song.id.startsWith('jam_');
 
-  static const List<Map<String, dynamic>> _innerTubeClients = [
+  static final List<Map<String, dynamic>> innerTubeClients = [
     {'clientName': 'ANDROID_TESTSUITE', 'clientVersion': '1.9', 'androidSdkVersion': 30},
     {'clientName': 'ANDROID_MUSIC', 'clientVersion': '6.42.52', 'androidSdkVersion': 34},
     {'clientName': 'WEB_REMIX', 'clientVersion': '1.20240820.01.00', 'hl': 'en', 'gl': 'US'},
     {'clientName': 'TVHTML5', 'clientVersion': '7.20240801.12.00', 'theme': 'TVHTML5'}
   ];
+
+  /// Deep extraction of videoId from any YTMusic result format.
+  static String? _extractVideoId(dynamic item) {
+    if (item == null || item is! Map) return null;
+    // 1. musicResponsiveListItemRenderer (songs, top result)
+    final responsive = item['musicResponsiveListItemRenderer'] as Map?;
+    if (responsive != null) {
+      final vid = responsive['playlistItemData']?['videoId']?.toString() ??
+          responsive['navigationEndpoint']?['watchEndpoint']?['videoId']?.toString();
+      if (vid != null && vid.length == 11) return vid;
+    }
+    // 2. musicTwoRowItemRenderer (artist cards, album cards, playlists)
+    final twoRow = item['musicTwoRowItemRenderer'] as Map?;
+    if (twoRow != null) {
+      final vid = twoRow['navigationEndpoint']?['watchEndpoint']?['videoId']?.toString() ??
+          twoRow['navigationEndpoint']?['browseEndpoint']?['browseId']?.toString();
+      // For watchEndpoint, videoId should be 11 chars; browseEndpoint is longer
+      if (vid != null && vid.length == 11) return vid;
+    }
+    // 3. musicShelfRenderer contents (search shelves)
+    final shelf = item['musicShelfRenderer'] as Map?;
+    if (shelf != null) {
+      final shelfItems = shelf['contents'] as List?;
+      if (shelfItems != null && shelfItems.isNotEmpty) {
+        final nestedVid = _extractVideoId(shelfItems[0]);
+        if (nestedVid != null) return nestedVid;
+      }
+    }
+    // 4. musicResponsiveListItemRenderer flexColumn fallback (some formats)
+    if (responsive != null) {
+      final flexCols = responsive['flexColumns'] as List?;
+      if (flexCols != null) {
+        for (final col in flexCols) {
+          final runs = (col as Map?)?['musicResponsiveListItemFlexColumnRenderer']?['text']?['runs'] as List?;
+          if (runs != null) {
+            for (final run in runs) {
+              final navEndpoint = (run as Map?)?['navigationEndpoint']?['watchEndpoint'];
+              final vid = navEndpoint?['videoId']?.toString();
+              if (vid != null && vid.length == 11) return vid;
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
 
   @override
   Future<String?> resolveStreamUrl(Song song) async {
@@ -130,21 +177,27 @@ class InnerTubeMusicResolver implements StreamResolver {
         final cleanArtist = song.artist.split(RegExp(r'[,&/]')).first.trim();
         final sUri = Uri.parse('https://music.youtube.com/youtubei/v1/search');
         final sBody = jsonEncode({
-          'query': '$cleanTitle $cleanArtist audio',
+          'query': '$cleanTitle $cleanArtist',
           'context': {'client': {'clientName': 'WEB_REMIX', 'clientVersion': '1.20240820.01.00', 'hl': 'en', 'gl': 'US'}}
         });
-        final sRes = await http.post(sUri, body: sBody, headers: {'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 4));
+        final sRes = await http.post(sUri, body: sBody, headers: {'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 6));
         if (sRes.statusCode == 200) {
           final sData = jsonDecode(sRes.body);
           final contents = sData['contents']?['tabbedSearchResultsRenderer']?['tabs']?[0]?['tabRenderer']?['content']?['sectionListRenderer']?['contents'] as List?;
           if (contents != null) {
             for (final sec in contents) {
-              final items = (sec as Map)['itemSectionRenderer']?['contents'] as List? ?? (sec)['musicShelfRenderer']?['contents'] as List?;
-              if (items != null && items.isNotEmpty) {
-                final r = (items[0] as Map)['musicResponsiveListItemRenderer'] as Map?;
-                final vid = r?['playlistItemData']?['videoId']?.toString() ?? r?['navigationEndpoint']?['watchEndpoint']?['videoId']?.toString();
-                if (vid != null && vid.length == 11) { videoId = vid; break; }
+              final secMap = sec as Map;
+              final itemSections = secMap['itemSectionRenderer']?['contents'] as List?;
+              final shelfItems = secMap['musicShelfRenderer']?['contents'] as List?;
+              final allItems = [...?itemSections, ...?shelfItems];
+              for (final item in allItems) {
+                final vid = _extractVideoId(item);
+                if (vid != null) {
+                  videoId = vid;
+                  break;
+                }
               }
+              if (videoId.length == 11) break;
             }
           }
         }
@@ -158,7 +211,7 @@ class InnerTubeMusicResolver implements StreamResolver {
           } catch (_) {}
         }
 
-        for (final client in _innerTubeClients) {
+        for (final client in innerTubeClients) {
           try {
             final pUri = Uri.parse('https://music.youtube.com/youtubei/v1/player');
             final pBody = jsonEncode({'videoId': videoId, 'context': {'client': client}});
@@ -169,6 +222,18 @@ class InnerTubeMusicResolver implements StreamResolver {
               if (formats != null && formats.isNotEmpty) {
                 final audioStreams = formats.where((f) => (f['mimeType'] as String?)?.contains('audio') == true).toList();
                 if (audioStreams.isNotEmpty) {
+                  final qualityService = StreamQualityService();
+                  // Use StreamQualityService to pick the best bitrate
+                  final List<Map<String, dynamic>> formatMaps = audioStreams
+                      .map((f) => {
+                            'mimeType': f['mimeType'] ?? '',
+                            'bitrate': f['bitrate'] ?? 0,
+                            'url': f['url'] ?? '',
+                          })
+                      .toList();
+                  final bestUrl = qualityService.selectBestQuality(formatMaps);
+                  if (bestUrl.isNotEmpty) return bestUrl;
+                  // Fallback: highest bitrate
                   audioStreams.sort((a, b) => ((b['bitrate'] as num?) ?? 0).compareTo((a['bitrate'] as num?) ?? 0));
                   final url = audioStreams[0]['url'] as String?;
                   if (url != null && url.isNotEmpty) return url;
@@ -183,16 +248,83 @@ class InnerTubeMusicResolver implements StreamResolver {
   }
 }
 
-// YoutubeExplodeResolver is retained as a named stub so CompositeStreamResolver
-// compiles without changes. It always returns null — resolution falls back to
-// the cached streamUrl on the Song model.
-class YoutubeExplodeResolver implements StreamResolver {
+/// Last-resort resolver: searches YouTube (non-music InnerTube) for a video
+/// and extracts audio. Falls back to the regular InnerTube player endpoints.
+class YoutubeWebSearchResolver implements StreamResolver {
   @override
-  String get sourceId => 'youtube_explode_stub';
+  String get sourceId => 'youtube_web_search';
   @override
-  Future<bool> canResolve(Song song) async => false; // disabled: use NativeKotlinResolver
+  Future<bool> canResolve(Song song) async => !kIsWeb && !song.id.startsWith('jam_');
+
   @override
-  Future<String?> resolveStreamUrl(Song song) async => null;
+  Future<String?> resolveStreamUrl(Song song) async {
+    try {
+      final cleanTitle = song.title.replaceAll(RegExp(r'\(.*?\)'), '').replaceAll(RegExp(r'\[.*?\]'), '').trim();
+      final cleanArtist = song.artist.split(RegExp(r'[,&/]')).first.trim();
+      // Use regular YouTube search (non-music) as fallback
+      final sUri = Uri.parse('https://www.youtube.com/youtubei/v1/search');
+      final sBody = jsonEncode({
+        'query': '$cleanTitle $cleanArtist audio',
+        'context': {
+          'client': {
+            'clientName': 'WEB',
+            'clientVersion': '2.20240801.00.00',
+            'hl': 'en',
+            'gl': 'US',
+          }
+        }
+      });
+      final sRes = await http.post(sUri, body: sBody, headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }).timeout(const Duration(seconds: 5));
+      if (sRes.statusCode != 200) return null;
+      final sData = jsonDecode(sRes.body);
+      // Parse videoRenderer items from the standard YouTube search
+      String? videoId;
+      final contents = sData['contents']?['twoColumnSearchResultsRenderer']?['primaryContents']?['sectionListRenderer']?['contents'] as List?;
+      if (contents != null) {
+        for (final sec in contents) {
+          final items = (sec as Map)['itemSectionRenderer']?['contents'] as List?;
+          if (items != null) {
+            for (final item in items) {
+              final vr = (item as Map?)?['videoRenderer'] as Map?;
+              final vid = vr?['videoId']?.toString();
+              if (vid != null && vid.length == 11) {
+                videoId = vid;
+                break;
+              }
+            }
+          }
+          if (videoId != null) break;
+        }
+      }
+      if (videoId == null || videoId.length != 11) return null;
+      // Now extract stream from this videoId using regular YouTube player
+      for (final client in InnerTubeMusicResolver.innerTubeClients) {
+        try {
+          final pUri = Uri.parse('https://www.youtube.com/youtubei/v1/player');
+          final pBody = jsonEncode({'videoId': videoId, 'context': {'client': client}});
+          final pRes = await http.post(pUri, body: pBody, headers: {
+            'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'
+          }).timeout(const Duration(seconds: 4));
+          if (pRes.statusCode == 200) {
+            final pData = jsonDecode(pRes.body);
+            final formats = pData['streamingData']?['adaptiveFormats'] as List?;
+            if (formats != null && formats.isNotEmpty) {
+              final audioStreams = formats.where((f) => (f['mimeType'] as String?)?.contains('audio') == true).toList();
+              if (audioStreams.isNotEmpty) {
+                audioStreams.sort((a, b) => ((b['bitrate'] as num?) ?? 0).compareTo((a['bitrate'] as num?) ?? 0));
+                final url = audioStreams[0]['url'] as String?;
+                if (url != null && url.isNotEmpty) return url;
+              }
+            }
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+    return null;
+  }
 }
 
 class _CacheEntry {
@@ -211,7 +343,7 @@ class CompositeStreamResolver {
     JioSaavnDirectResolver(),
     NativeKotlinResolver(),
     InnerTubeMusicResolver(),
-    YoutubeExplodeResolver(),
+    YoutubeWebSearchResolver(),
   ];
 
   static void invalidateCache(String songId) {

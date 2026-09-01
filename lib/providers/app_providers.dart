@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../core/theme/noir_theme.dart';
 import '../core/utils/noctra_localization.dart';
 import '../data/models/song_model.dart';
+import '../data/models/catalog_topic.dart';
 import '../data/repositories/music_repository.dart';
 import '../data/sources/noctra_local_database.dart';
 import '../services/audio/audio_player_service.dart';
@@ -13,45 +14,65 @@ import '../services/audio/audio_router_service.dart';
 import '../services/p2p/p2p_sync_service.dart';
 import '../services/ytdlp/music_service.dart';
 import '../services/ai/candidate_retrieval_service.dart';
+import '../services/discovery/catalog_discovery_service.dart';
 import '../data/models/stream_metadata_model.dart';
 
 // Navigation & App State
 final currentNavigationIndexProvider = StateProvider<int>((ref) => 0);
 final bottomNavIndexProvider = currentNavigationIndexProvider;
 final appInitializedProvider = StateProvider<bool>((ref) => false);
-final onboardingCompletedProvider = StateProvider<bool>((ref) => NoctraLocalDatabase().hasCompletedOnboarding);
-final rootScaffoldKeyProvider = Provider<GlobalKey<ScaffoldState>>((ref) => GlobalKey<ScaffoldState>());
+final onboardingCompletedProvider =
+    StateProvider<bool>((ref) => NoctraLocalDatabase().hasCompletedOnboarding);
+final rootScaffoldKeyProvider =
+    Provider<GlobalKey<ScaffoldState>>((ref) => GlobalKey<ScaffoldState>());
 
 // App Language state
-final appLanguageProvider = StateProvider<String>((ref) => NoctraLocalization.currentLanguage);
+final appLanguageProvider =
+    StateProvider<String>((ref) => NoctraLocalization.currentLanguage);
 
 // Theme state with persistent storage
 final themeModeProvider = StateProvider<NoirThemeMode>((ref) {
   final saved = NoctraLocalDatabase().getCachedThemeMode();
-  if (saved == 'noirWhite' || saved == 'light') return NoirThemeMode.noirWhite;
-  if (saved == 'noirAmoled' || saved == 'amoled') return NoirThemeMode.noirAmoled;
+  if (saved == 'noirWhite' || saved == 'light') {
+    return NoirThemeMode.noirWhite;
+  }
+  if (saved == 'noirAmoled' || saved == 'amoled') {
+    return NoirThemeMode.noirAmoled;
+  }
+  if (saved == 'liquidGlass' || saved == 'liquid_glass') {
+    return NoirThemeMode.liquidGlass;
+  }
   return NoirThemeMode.noirBlack;
 });
 
 // Settings state
-final audioQualityProvider = StateProvider<String>((ref) => 'Master (320 kbps High-Fidelity)');
-final lyricsPreferenceProvider = StateProvider<String>((ref) => 'English / Global (Standard)');
+final audioQualityProvider =
+    StateProvider<String>((ref) => 'Master (320 kbps High-Fidelity)');
+final lyricsPreferenceProvider =
+    StateProvider<String>((ref) => 'English / Global (Standard)');
 final autoplayDelayProvider = StateProvider<int>((ref) => 3);
 final audioFadeTransitionProvider = StateProvider<bool>((ref) => true);
+final downloadLocationProvider = StateProvider<String>(
+    (ref) => NoctraLocalDatabase().getCachedDownloadLocation());
 
 // Repository
-final musicRepositoryProvider = ChangeNotifierProvider<MusicRepository>((ref) => MusicRepository.instance);
+final musicRepositoryProvider =
+    ChangeNotifierProvider<MusicRepository>((ref) => MusicRepository.instance);
 
 // Audio Player Service & Router
-final audioPlayerServiceProvider = Provider<AudioPlayerService>((ref) => AudioPlayerService.instance);
-final audioRouterServiceProvider = Provider<AudioRouterService>((ref) => AudioRouterService());
+final audioPlayerServiceProvider =
+    Provider<AudioPlayerService>((ref) => AudioPlayerService.instance);
+final audioRouterServiceProvider =
+    Provider<AudioRouterService>((ref) => AudioRouterService());
 
 // Audio Output Devices Stream
-final connectedAudioDevicesProvider = StreamProvider<List<AudioDeviceEndpoint>>((ref) {
+final connectedAudioDevicesProvider =
+    StreamProvider<List<AudioDeviceEndpoint>>((ref) {
   final router = ref.watch(audioRouterServiceProvider);
   return router.devicesStream;
 });
-final initialAudioDevicesProvider = FutureProvider<List<AudioDeviceEndpoint>>((ref) async {
+final initialAudioDevicesProvider =
+    FutureProvider<List<AudioDeviceEndpoint>>((ref) async {
   final router = ref.watch(audioRouterServiceProvider);
   return router.getConnectedDevices();
 });
@@ -93,13 +114,15 @@ final queueStreamProvider = StreamProvider<List<Song>>((ref) {
 });
 
 // Resolution Telemetry Stream Provider
-final streamResolutionStreamProvider = StreamProvider<StreamResolutionMetadata?>((ref) {
+final streamResolutionStreamProvider =
+    StreamProvider<StreamResolutionMetadata?>((ref) {
   final player = ref.watch(audioPlayerServiceProvider);
   return player.resolutionStream;
 });
 
 // Playback Settings (Shuffle & Loop) Stream Provider
-final playbackSettingsStreamProvider = StreamProvider<Map<String, dynamic>>((ref) {
+final playbackSettingsStreamProvider =
+    StreamProvider<Map<String, dynamic>>((ref) {
   final player = ref.watch(audioPlayerServiceProvider);
   return player.playbackSettingsStream;
 });
@@ -111,6 +134,8 @@ final downloadingSongsProvider = StateProvider<Set<String>>((ref) => {});
 final searchResultsProvider = StateProvider<List<Song>>((ref) => []);
 final isSearchingProvider = StateProvider<bool>((ref) => false);
 final searchQueryProvider = StateProvider<String>((ref) => '');
+final dynamicCatalogTopicsProvider = FutureProvider<List<CatalogTopic>>(
+    (ref) => CatalogDiscoveryService.fetchTopics());
 
 // Active Vibe Filter
 final selectedVibeKeyProvider = StateProvider<String?>((ref) => 'late_night');
@@ -136,7 +161,8 @@ final dynamicTrendingFeedProvider = FutureProvider<List<Song>>((ref) async {
 });
 
 // Dynamic Spotify Charts Future Provider
-final selectedSpotifyChartKeyProvider = StateProvider<String>((ref) => 'top_hits');
+final selectedSpotifyChartKeyProvider =
+    StateProvider<String>((ref) => 'top_hits');
 final dynamicSpotifyChartsProvider = FutureProvider<List<Song>>((ref) async {
   final chart = ref.watch(selectedSpotifyChartKeyProvider);
   return MusicService.fetchSpotifyCharts(chartKey: chart);
@@ -149,7 +175,8 @@ final dynamicVibeTracksProvider = FutureProvider<List<Song>>((ref) async {
 });
 
 // Curated songs provider (Synchronous Fast Knowledge Graph)
-final curatedRecommendationsProvider = Provider<List<Map<String, dynamic>>>((ref) {
+final curatedRecommendationsProvider =
+    Provider<List<Map<String, dynamic>>>((ref) {
   final repo = ref.watch(musicRepositoryProvider);
   final vibe = ref.watch(selectedVibeKeyProvider);
   final prompt = ref.watch(aiPromptProvider);
@@ -157,8 +184,10 @@ final curatedRecommendationsProvider = Provider<List<Map<String, dynamic>>>((ref
 });
 
 // AI Agent Dynamic Recommendations Future Provider (Two-Stage Neural MLP + MMR)
-final aiAgentMixProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+final aiAgentMixProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final prompt = ref.watch(aiPromptProvider);
   final vibe = ref.watch(selectedVibeKeyProvider);
-  return CandidateRetrievalService.curatePersonalizedFeed(vibeKey: vibe, naturalPrompt: prompt);
+  return CandidateRetrievalService.curatePersonalizedFeed(
+      vibeKey: vibe, naturalPrompt: prompt);
 });

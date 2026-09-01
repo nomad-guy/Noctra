@@ -23,7 +23,8 @@ class LyricsData {
   factory LyricsData.empty() => const LyricsData(
         isSynced: false,
         lines: [],
-        plainText: 'No lyrics found for this track.\nEnjoy the pure acoustic flow.',
+        plainText:
+            'No lyrics found for this track.\nEnjoy the pure acoustic flow.',
       );
 }
 
@@ -38,13 +39,19 @@ class LyricsService {
     _cache[key] = data;
   }
 
-  static bool _hasDevanagari(String text) => RegExp(r'[\u0900-\u097F]').hasMatch(text);
+  static bool _hasDevanagari(String text) =>
+      RegExp(r'[\u0900-\u097F]').hasMatch(text);
+  static bool _hasNonLatinScript(String text) => RegExp(
+          r'[\u0600-\u06FF\u0750-\u077F\u0900-\u0D7F\u0E00-\u0E7F\u3040-\u30FF\u3400-\u9FFF\uAC00-\uD7AF\u0400-\u04FF]')
+      .hasMatch(text);
 
   /// Validate that lyrics text is plausible — not too short, not corrupted.
   static bool _isValidLyrics(String text) {
     if (text.trim().length < 20) return false; // Too short to be real lyrics
     // Check for excessive garbage characters (mojibake / encoding errors)
-    final printableRatio = text.replaceAll(RegExp(r'[\x00-\x08\x0E-\x1F]'), '').length / text.length;
+    final printableRatio =
+        text.replaceAll(RegExp(r'[\x00-\x08\x0E-\x1F]'), '').length /
+            text.length;
     if (printableRatio < 0.85) return false;
     // Reject if more than 30% of lines are just 1-2 chars (fragmented/corrupted)
     final lines = text.split('\n').where((l) => l.trim().isNotEmpty).toList();
@@ -55,18 +62,24 @@ class LyricsService {
     return true;
   }
 
-  static Future<LyricsData> fetchLyrics(Song song, {String preference = 'English / Global'}) async {
+  static Future<LyricsData> fetchLyrics(Song song,
+      {String preference = 'English / Global'}) async {
     final cacheKey = '${song.id}_$preference';
     if (_cache.containsKey(cacheKey)) return _cache[cacheKey]!;
 
     final cleanTitle = _sanitizeTitle(song.title);
     final primaryArtist = _extractPrimaryArtist(song.artist);
-    final bool preferHindi = preference.toLowerCase().contains('hindi');
+    final preferenceKey = preference.toLowerCase();
+    // Only the Romanized Hindi/Punjabi mode should request the Hindi source.
+    // The Devanagari mode is a transliteration of the normal source lyrics.
+    final bool preferHindi =
+        preferenceKey.contains('romanized') || preferenceKey == 'hi';
 
     // Tier 1 & 2: LRCLIB (Direct Match + Fuzzy Multi-Query Search)
     // Build queries: prefer title+artist first, then title only, then raw title.
     final queries = [
-      if (cleanTitle.isNotEmpty && primaryArtist.isNotEmpty) '$cleanTitle $primaryArtist',
+      if (cleanTitle.isNotEmpty && primaryArtist.isNotEmpty)
+        '$cleanTitle $primaryArtist',
       if (cleanTitle.isNotEmpty) cleanTitle,
       if (song.title != cleanTitle) song.title,
     ];
@@ -76,8 +89,11 @@ class LyricsService {
 
     for (final q in queries) {
       try {
-        final searchUri = Uri.parse('https://lrclib.net/api/search?q=${Uri.encodeComponent(q)}$langHint');
-        final sRes = await http.get(searchUri, headers: {'User-Agent': 'Noctra/1.0.4 (https://noctra.app)'}).timeout(const Duration(seconds: 4));
+        final searchUri = Uri.parse(
+            'https://lrclib.net/api/search?q=${Uri.encodeComponent(q)}$langHint');
+        final sRes = await http.get(searchUri, headers: {
+          'User-Agent': 'Noctra/1.0.4 (https://noctra.app)'
+        }).timeout(const Duration(seconds: 4));
         if (sRes.statusCode == 200) {
           final sList = jsonDecode(sRes.body) as List?;
           if (sList != null && sList.isNotEmpty) {
@@ -85,7 +101,8 @@ class LyricsService {
             final verified = sList.where((it) {
               final lrclibTitle = (it['trackName'] as String?) ?? '';
               final lrclibArtist = (it['artistName'] as String?) ?? '';
-              return _titlesMatch(song.title, lrclibTitle) && _artistMatches(primaryArtist, lrclibArtist);
+              return _titlesMatch(song.title, lrclibTitle) &&
+                  _artistMatches(primaryArtist, lrclibArtist);
             }).toList();
             // Unverified results as fallback when no verified match exists
             final candidates = verified.isNotEmpty ? verified : [];
@@ -93,38 +110,60 @@ class LyricsService {
             if (preferHindi) {
               // Find a result with Devanagari lyrics (Hindi/Urdu)
               final devItem = candidates.firstWhere(
-                (it) => _hasDevanagari(it['syncedLyrics'] ?? '') || _hasDevanagari(it['plainLyrics'] ?? ''),
+                (it) =>
+                    _hasDevanagari(it['syncedLyrics'] ?? '') ||
+                    _hasDevanagari(it['plainLyrics'] ?? ''),
                 orElse: () => null,
               );
               if (devItem != null) {
                 final syncedLrc = devItem['syncedLyrics'] as String?;
-                if (syncedLrc != null && syncedLrc.isNotEmpty && _isValidLyrics(syncedLrc)) {
+                if (syncedLrc != null &&
+                    syncedLrc.isNotEmpty &&
+                    _isValidLyrics(syncedLrc)) {
                   final lines = _parseLrc(syncedLrc);
                   if (lines.isNotEmpty) {
-                    final res = LyricsData(isSynced: true, lines: lines, plainText: devItem['plainLyrics'] ?? syncedLrc);
+                    final res = LyricsData(
+                        isSynced: true,
+                        lines: lines,
+                        plainText: devItem['plainLyrics'] ?? syncedLrc);
                     _setCache(cacheKey, res);
                     return res;
                   }
                 }
                 final plain = devItem['plainLyrics'] as String?;
-                if (plain != null && plain.isNotEmpty && _isValidLyrics(plain)) {
-                  final res = LyricsData(isSynced: false, lines: const [], plainText: plain.trim());
+                if (plain != null &&
+                    plain.isNotEmpty &&
+                    _isValidLyrics(plain)) {
+                  final res = LyricsData(
+                      isSynced: false,
+                      lines: const [],
+                      plainText: plain.trim());
                   _setCache(cacheKey, res);
                   return res;
                 }
               }
             } else {
-              // Prioritize Latin synced lyrics from verified matches
+              // English/global mode must not treat Punjabi/Gurmukhi or any
+              // other native-script lyric as a Latin lyric merely because it
+              // is not Devanagari.
               final latinItem = candidates.firstWhere(
-                (it) => !_hasDevanagari(it['syncedLyrics'] ?? '') && (it['syncedLyrics'] as String? ?? '').isNotEmpty,
+                (it) {
+                  final lyrics = it['syncedLyrics'] as String? ?? '';
+                  return lyrics.isNotEmpty && !_hasNonLatinScript(lyrics);
+                },
                 orElse: () => null,
               );
               if (latinItem != null) {
                 final syncedLrc = latinItem['syncedLyrics'] as String?;
-                if (syncedLrc != null && syncedLrc.isNotEmpty && _isValidLyrics(syncedLrc)) {
+                if (syncedLrc != null &&
+                    syncedLrc.isNotEmpty &&
+                    _isValidLyrics(syncedLrc)) {
                   final lines = _parseLrc(syncedLrc);
                   if (lines.isNotEmpty) {
-                    final res = LyricsData(isSynced: true, lines: lines, plainText: latinItem['plainLyrics'] ?? syncedLrc);
+                    final res = LyricsData(
+                        isSynced: true,
+                        lines: lines,
+                        plainText: latinItem['plainLyrics'] ?? syncedLrc);
                     _setCache(cacheKey, res);
                     return res;
                   }
@@ -135,10 +174,15 @@ class LyricsService {
             // Fallback: any synced lyrics from verified matches
             for (final item in candidates) {
               final syncedLrc = item['syncedLyrics'] as String?;
-              if (syncedLrc != null && syncedLrc.isNotEmpty && _isValidLyrics(syncedLrc)) {
+              if (syncedLrc != null &&
+                  syncedLrc.isNotEmpty &&
+                  _isValidLyrics(syncedLrc)) {
                 final lines = _parseLrc(syncedLrc);
                 if (lines.isNotEmpty) {
-                  final res = LyricsData(isSynced: true, lines: lines, plainText: item['plainLyrics'] ?? syncedLrc);
+                  final res = LyricsData(
+                      isSynced: true,
+                      lines: lines,
+                      plainText: item['plainLyrics'] ?? syncedLrc);
                   _setCache(cacheKey, res);
                   return res;
                 }
@@ -148,8 +192,11 @@ class LyricsService {
             // Last resort: any plain text from verified matches
             for (final item in candidates) {
               final plain = item['plainLyrics'] as String?;
-              if (plain != null && plain.trim().isNotEmpty && _isValidLyrics(plain)) {
-                final res = LyricsData(isSynced: false, lines: const [], plainText: plain.trim());
+              if (plain != null &&
+                  plain.trim().isNotEmpty &&
+                  _isValidLyrics(plain)) {
+                final res = LyricsData(
+                    isSynced: false, lines: const [], plainText: plain.trim());
                 _setCache(cacheKey, res);
                 return res;
               }
@@ -161,7 +208,8 @@ class LyricsService {
 
     // Tier 3: Musixmatch (via lrclib proxy + direct search)
     try {
-      final mmLyrics = await _fetchMusixmatchLyrics(cleanTitle, primaryArtist, song.title);
+      final mmLyrics =
+          await _fetchMusixmatchLyrics(cleanTitle, primaryArtist, song.title);
       if (mmLyrics != null) {
         _setCache(cacheKey, mmLyrics);
         return mmLyrics;
@@ -170,7 +218,8 @@ class LyricsService {
 
     // Tier 4: YouTube Music / InnerTube Musixmatch Extractor
     try {
-      final ytLyrics = await _fetchInnerTubeLyrics(song.id, cleanTitle, primaryArtist);
+      final ytLyrics =
+          await _fetchInnerTubeLyrics(song.id, cleanTitle, primaryArtist);
       if (ytLyrics != null) {
         _setCache(cacheKey, ytLyrics);
         return ytLyrics;
@@ -182,7 +231,9 @@ class LyricsService {
       final searchUri = Uri.parse(
         'https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query=${Uri.encodeComponent('$cleanTitle $primaryArtist')}',
       );
-      final sRes = await http.get(searchUri, headers: {'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 4));
+      final sRes = await http.get(searchUri, headers: {
+        'User-Agent': 'Mozilla/5.0'
+      }).timeout(const Duration(seconds: 4));
       if (sRes.statusCode == 200) {
         final sData = jsonDecode(sRes.body);
         final songsList = (sData['songs']?['data'] as List?) ?? [];
@@ -190,18 +241,39 @@ class LyricsService {
           final songId = item['id']?.toString() ?? '';
           final jiosaavnTitle = (item['title'] as String?) ?? '';
           // Verify JioSaavn title matches our song, or take first result as last resort
-          final titleMatch = songId.isNotEmpty && (jiosaavnTitle.isEmpty || _titlesMatch(song.title, jiosaavnTitle));
+          final titleMatch = songId.isNotEmpty &&
+              (jiosaavnTitle.isEmpty ||
+                  _titlesMatch(song.title, jiosaavnTitle));
           final isLastResult = songsList.last == item;
           if (songId.isNotEmpty && (titleMatch || isLastResult)) {
-            final lyrUri = Uri.parse('https://www.jiosaavn.com/api.php?__call=lyrics.getLyrics&_format=json&_marker=0&cc=in&lyrics_id=$songId');
-            final lRes = await http.get(lyrUri, headers: {'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 4));
+            final lyrUri = Uri.parse(
+                'https://www.jiosaavn.com/api.php?__call=lyrics.getLyrics&_format=json&_marker=0&cc=in&lyrics_id=$songId');
+            final lRes = await http.get(lyrUri, headers: {
+              'User-Agent': 'Mozilla/5.0'
+            }).timeout(const Duration(seconds: 4));
             if (lRes.statusCode == 200) {
               final lData = jsonDecode(lRes.body);
               final rawLyr = lData['lyrics'] as String?;
               if (rawLyr != null && rawLyr.isNotEmpty) {
-                final clean = rawLyr.replaceAll('<br>', '\n').replaceAll('&quot;', '"').replaceAll('&amp;', '&').replaceAll('<p>', '').replaceAll('</p>', '').replaceAll('<strong>', '').replaceAll('</strong>', '').replaceAll('<i>', '').replaceAll('</i>', '').replaceAll('<br/>', '\n').replaceAll('<BR/>', '\n').replaceAll('<BR>', '\n').replaceAll('<br />', '\n').replaceAll(RegExp(r'<[^>]+>'), '').trim();
+                final clean = rawLyr
+                    .replaceAll('<br>', '\n')
+                    .replaceAll('&quot;', '"')
+                    .replaceAll('&amp;', '&')
+                    .replaceAll('<p>', '')
+                    .replaceAll('</p>', '')
+                    .replaceAll('<strong>', '')
+                    .replaceAll('</strong>', '')
+                    .replaceAll('<i>', '')
+                    .replaceAll('</i>', '')
+                    .replaceAll('<br/>', '\n')
+                    .replaceAll('<BR/>', '\n')
+                    .replaceAll('<BR>', '\n')
+                    .replaceAll('<br />', '\n')
+                    .replaceAll(RegExp(r'<[^>]+>'), '')
+                    .trim();
                 if (clean.isNotEmpty && _isValidLyrics(clean)) {
-                  final res = LyricsData(isSynced: false, lines: const [], plainText: clean);
+                  final res = LyricsData(
+                      isSynced: false, lines: const [], plainText: clean);
                   _setCache(cacheKey, res);
                   return res;
                 }
@@ -221,8 +293,11 @@ class LyricsService {
       ];
       for (final fq in fallbackQueries) {
         if (fq.isEmpty) continue;
-        final uri = Uri.parse('https://lrclib.net/api/search?q=${Uri.encodeComponent(fq)}');
-        final res = await http.get(uri, headers: {'User-Agent': 'Noctra/1.0.4 (https://noctra.app)'}).timeout(const Duration(seconds: 4));
+        final uri = Uri.parse(
+            'https://lrclib.net/api/search?q=${Uri.encodeComponent(fq)}');
+        final res = await http.get(uri, headers: {
+          'User-Agent': 'Noctra/1.0.4 (https://noctra.app)'
+        }).timeout(const Duration(seconds: 4));
         if (res.statusCode == 200) {
           final list = jsonDecode(res.body) as List?;
           if (list != null && list.isNotEmpty) {
@@ -230,20 +305,33 @@ class LyricsService {
             for (final item in list) {
               final lrclibTitle = (item['trackName'] as String?) ?? '';
               final lrclibArtist = (item['artistName'] as String?) ?? '';
-              if (!_titlesMatch(song.title, lrclibTitle)) continue;
-              if (primaryArtist.isNotEmpty && !_artistMatches(primaryArtist, lrclibArtist)) continue;
+              if (!_titlesMatch(song.title, lrclibTitle)) {
+                continue;
+              }
+              if (primaryArtist.isNotEmpty &&
+                  !_artistMatches(primaryArtist, lrclibArtist)) {
+                continue;
+              }
               final syncedLrc = item['syncedLyrics'] as String?;
-              if (syncedLrc != null && syncedLrc.isNotEmpty && _isValidLyrics(syncedLrc)) {
+              if (syncedLrc != null &&
+                  syncedLrc.isNotEmpty &&
+                  _isValidLyrics(syncedLrc)) {
                 final lines = _parseLrc(syncedLrc);
                 if (lines.isNotEmpty) {
-                  final res2 = LyricsData(isSynced: true, lines: lines, plainText: item['plainLyrics'] ?? syncedLrc);
+                  final res2 = LyricsData(
+                      isSynced: true,
+                      lines: lines,
+                      plainText: item['plainLyrics'] ?? syncedLrc);
                   _setCache(cacheKey, res2);
                   return res2;
                 }
               }
               final plain = item['plainLyrics'] as String?;
-              if (plain != null && plain.trim().isNotEmpty && _isValidLyrics(plain)) {
-                final res2 = LyricsData(isSynced: false, lines: const [], plainText: plain.trim());
+              if (plain != null &&
+                  plain.trim().isNotEmpty &&
+                  _isValidLyrics(plain)) {
+                final res2 = LyricsData(
+                    isSynced: false, lines: const [], plainText: plain.trim());
                 _setCache(cacheKey, res2);
                 return res2;
               }
@@ -257,7 +345,8 @@ class LyricsService {
   }
 
   /// Tier 3: Musixmatch lyrics via their public web search.
-  static Future<LyricsData?> _fetchMusixmatchLyrics(String cleanTitle, String primaryArtist, String rawTitle) async {
+  static Future<LyricsData?> _fetchMusixmatchLyrics(
+      String cleanTitle, String primaryArtist, String rawTitle) async {
     // Musixmatch doesn't have a free API, but their lyrics are indexed by
     // LRCLIB under the 'mus' provider. We already get those from Tier 1.
     // This tier tries a broader LRCLIB search using the raw (unsanitized)
@@ -265,7 +354,9 @@ class LyricsService {
     try {
       final query = Uri.encodeComponent('$rawTitle $primaryArtist');
       final uri = Uri.parse('https://lrclib.net/api/search?q=$query');
-      final res = await http.get(uri, headers: {'User-Agent': 'Noctra/1.0.4 (https://noctra.app)'}).timeout(const Duration(seconds: 4));
+      final res = await http.get(uri, headers: {
+        'User-Agent': 'Noctra/1.0.4 (https://noctra.app)'
+      }).timeout(const Duration(seconds: 4));
       if (res.statusCode == 200) {
         final list = jsonDecode(res.body) as List?;
         if (list != null && list.isNotEmpty) {
@@ -280,12 +371,16 @@ class LyricsService {
             if (synced != null && synced.isNotEmpty) {
               final lines = _parseLrc(synced);
               if (lines.isNotEmpty) {
-                return LyricsData(isSynced: true, lines: lines, plainText: item['plainLyrics'] ?? synced);
+                return LyricsData(
+                    isSynced: true,
+                    lines: lines,
+                    plainText: item['plainLyrics'] ?? synced);
               }
             }
             final plain = item['plainLyrics'] as String?;
             if (plain != null && plain.trim().isNotEmpty) {
-              return LyricsData(isSynced: false, lines: const [], plainText: plain.trim());
+              return LyricsData(
+                  isSynced: false, lines: const [], plainText: plain.trim());
             }
           }
         }
@@ -294,7 +389,8 @@ class LyricsService {
     return null;
   }
 
-  static Future<LyricsData?> _fetchInnerTubeLyrics(String rawSongId, String title, String artist) async {
+  static Future<LyricsData?> _fetchInnerTubeLyrics(
+      String rawSongId, String title, String artist) async {
     try {
       String videoId = rawSongId;
       if (videoId.startsWith('ytdlp_') || videoId.startsWith('yt_')) {
@@ -304,28 +400,64 @@ class LyricsService {
         final nextUri = Uri.parse('https://music.youtube.com/youtubei/v1/next');
         final nextBody = jsonEncode({
           'videoId': videoId,
-          'context': {'client': {'clientName': 'WEB_REMIX', 'clientVersion': '1.20240820.01.00', 'hl': 'en', 'gl': 'US'}}
+          'context': {
+            'client': {
+              'clientName': 'WEB_REMIX',
+              'clientVersion': '1.20240820.01.00',
+              'hl': 'en',
+              'gl': 'US'
+            }
+          }
         });
-        final nextRes = await http.post(nextUri, body: nextBody, headers: {'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 4));
+        final nextRes = await http.post(nextUri, body: nextBody, headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0'
+        }).timeout(const Duration(seconds: 4));
         if (nextRes.statusCode == 200) {
           final nextData = jsonDecode(nextRes.body);
-          final tabs = nextData['contents']?['singleColumnMusicWatchNextResultsRenderer']?['tabbedRenderer']?['watchNextTabbedResultsRenderer']?['tabs'] as List?;
-          final lyricsTab = tabs?.firstWhere((t) => t['tabRenderer']?['title'] == 'Lyrics' || t['tabRenderer']?['endpoint']?['browseEndpoint']?['browseId']?.toString().startsWith('FE') == true, orElse: () => null);
-          final browseId = lyricsTab?['tabRenderer']?['endpoint']?['browseEndpoint']?['browseId'];
+          final tabs = nextData['contents']
+                      ?['singleColumnMusicWatchNextResultsRenderer']
+                  ?['tabbedRenderer']?['watchNextTabbedResultsRenderer']
+              ?['tabs'] as List?;
+          final lyricsTab = tabs?.firstWhere(
+              (t) =>
+                  t['tabRenderer']?['title'] == 'Lyrics' ||
+                  t['tabRenderer']?['endpoint']?['browseEndpoint']?['browseId']
+                          ?.toString()
+                          .startsWith('FE') ==
+                      true,
+              orElse: () => null);
+          final browseId = lyricsTab?['tabRenderer']?['endpoint']
+              ?['browseEndpoint']?['browseId'];
           if (browseId != null) {
-            final bUri = Uri.parse('https://music.youtube.com/youtubei/v1/browse');
+            final bUri =
+                Uri.parse('https://music.youtube.com/youtubei/v1/browse');
             final bBody = jsonEncode({
               'browseId': browseId,
-              'context': {'client': {'clientName': 'WEB_REMIX', 'clientVersion': '1.20240820.01.00', 'hl': 'en', 'gl': 'US'}}
+              'context': {
+                'client': {
+                  'clientName': 'WEB_REMIX',
+                  'clientVersion': '1.20240820.01.00',
+                  'hl': 'en',
+                  'gl': 'US'
+                }
+              }
             });
-            final bRes = await http.post(bUri, body: bBody, headers: {'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 4));
+            final bRes = await http.post(bUri, body: bBody, headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': 'Mozilla/5.0'
+            }).timeout(const Duration(seconds: 4));
             if (bRes.statusCode == 200) {
               final bData = jsonDecode(bRes.body);
-              final desc = bData['contents']?['sectionListRenderer']?['contents']?[0]?['musicDescriptionShelfRenderer']?['description']?['runs'] as List?;
+              final desc = bData['contents']?['sectionListRenderer']
+                      ?['contents']?[0]?['musicDescriptionShelfRenderer']
+                  ?['description']?['runs'] as List?;
               if (desc != null && desc.isNotEmpty) {
-                final fullText = desc.map((r) => r['text'] ?? '').join('').trim();
+                final fullText =
+                    desc.map((r) => r['text'] ?? '').join('').trim();
                 if (fullText.isNotEmpty) {
-                  return LyricsData(isSynced: false, lines: const [], plainText: fullText);
+                  return LyricsData(
+                      isSynced: false, lines: const [], plainText: fullText);
                 }
               }
             }
@@ -341,15 +473,21 @@ class LyricsService {
         .replaceAll(RegExp(r'\(.*?\)', caseSensitive: false), '')
         .replaceAll(RegExp(r'\[.*?\]', caseSensitive: false), '')
         .replaceAll(RegExp(r'\|.*'), '')
-        .replaceAll(RegExp(r'\b(feat|ft|featuring)\.?\s+.*', caseSensitive: false), '')
-        .replaceAll(RegExp(r'\b(official\s+)?(music\s+)?(video|audio|lyrics?|track|hd|hq|4k)\b.*', caseSensitive: false), '')
+        .replaceAll(
+            RegExp(r'\b(feat|ft|featuring)\.?\s+.*', caseSensitive: false), '')
+        .replaceAll(
+            RegExp(
+                r'\b(official\s+)?(music\s+)?(video|audio|lyrics?|track|hd|hq|4k)\b.*',
+                caseSensitive: false),
+            '')
         .replaceAll(RegExp(r'\s+-\s+.*'), '')
         .trim();
   }
 
   /// Simple title similarity check — returns true if two titles are likely
   /// the same song (ignores case, punctuation, extra whitespace).
-  static String _normalizeForMatch(String s) => s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9\u0900-\u097F]'), '').trim();
+  static String _normalizeForMatch(String s) =>
+      s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9\u0900-\u097F]'), '').trim();
 
   static bool _titlesMatch(String a, String b) {
     final na = _normalizeForMatch(a), nb = _normalizeForMatch(b);
@@ -392,7 +530,8 @@ class LyricsService {
       curr[0] = i;
       for (int j = 1; j <= lb; j++) {
         final cost = a[i - 1] == b[j - 1] ? 0 : 1;
-        curr[j] = [curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost].reduce((x, y) => x < y ? x : y);
+        curr[j] = [curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost]
+            .reduce((x, y) => x < y ? x : y);
       }
       prev = curr;
     }
@@ -430,6 +569,7 @@ class LyricsService {
 
   // ── Test-only public wrappers for private helpers ──
   static bool titlesMatchForTest(String a, String b) => _titlesMatch(a, b);
+  static bool hasNonLatinScriptForTest(String text) => _hasNonLatinScript(text);
   static List<LyricLine> parseLrcForTest(String lrc) => _parseLrc(lrc);
   static String sanitizeTitleForTest(String title) => _sanitizeTitle(title);
 }

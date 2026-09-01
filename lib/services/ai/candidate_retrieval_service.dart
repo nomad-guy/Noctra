@@ -2,6 +2,7 @@ import '../../data/models/song_model.dart';
 import '../../data/repositories/music_repository.dart';
 import '../../data/repositories/neural_recommender_engine.dart';
 import '../../data/repositories/taste_vector_engine.dart';
+import '../../services/metadata/deezer_audio_features_service.dart';
 import '../../services/ytdlp/music_service.dart';
 import 'mmr_diversity_filter.dart';
 import 'session_context_tracker.dart';
@@ -65,6 +66,14 @@ class CandidateRetrievalService {
       }
     } catch (_) {}
 
+    // Keep the AI surface useful during network outages or a first-run cold
+    // start. Local recommendations are still ranked by the same model.
+    if (pool.isEmpty) {
+      for (final item in repo.curateByVibe(vibeKey: vibeKey, naturalPrompt: naturalPrompt)) {
+        final song = item['song'];
+        if (song is Song && song.id.isNotEmpty && seenIds.add(song.id)) pool.add(song);
+      }
+    }
     if (pool.isEmpty) return [];
 
     // Stage 2: Build target vector applying prompt modifiers + vibe
@@ -95,13 +104,23 @@ class CandidateRetrievalService {
             (naturalPrompt.contains('deep cut') || naturalPrompt.contains('less popular') ||
              naturalPrompt.contains('underground') || naturalPrompt.contains('hidden gem')));
 
-    // Stage 3: Neural MLP scoring
+    // Stage 3: Neural MLP scoring (with audio features from Deezer)
     final List<ScoredCandidate> scored = [];
     for (final song in pool) {
+      // Fetch audio features for this song (cached after first lookup)
+      AudioFeatures audioFeats;
+      try {
+        audioFeats = await DeezerAudioFeaturesService.fetchFeatures(
+            song.title, song.artist);
+      } catch (_) {
+        audioFeats = AudioFeatures.defaults;
+      }
+
       double mlpProb = NeuralRecommenderEngine.predictScore(
         userVector: targetVector,
         song: song,
         contextFeatures: contextFeatures,
+        audioFeatures: audioFeats.toFeatureVector(),
       );
 
       // Deep cuts: penalize songs from frequently played artists

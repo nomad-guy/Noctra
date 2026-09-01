@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../screens/player_sheet.dart';
+import '../../core/theme/noir_theme.dart';
 
 class PlayerVisualizerSelector extends ConsumerWidget {
   final bool isDark;
@@ -21,6 +22,7 @@ class PlayerVisualizerSelector extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _pillButton(
+            context: context,
             label: 'Artwork',
             icon: Icons.album_rounded,
             isActive: currentMode == PlayerDisplayMode.artwork,
@@ -28,6 +30,7 @@ class PlayerVisualizerSelector extends ConsumerWidget {
           ),
           const SizedBox(width: 6),
           _pillButton(
+            context: context,
             label: 'Spectrum',
             icon: Icons.bar_chart_rounded,
             isActive: currentMode == PlayerDisplayMode.spectrumBars,
@@ -35,6 +38,7 @@ class PlayerVisualizerSelector extends ConsumerWidget {
           ),
           const SizedBox(width: 6),
           _pillButton(
+            context: context,
             label: 'Circle',
             icon: Icons.circle_outlined,
             isActive: currentMode == PlayerDisplayMode.radialCircle,
@@ -42,6 +46,7 @@ class PlayerVisualizerSelector extends ConsumerWidget {
           ),
           const SizedBox(width: 6),
           _pillButton(
+            context: context,
             label: 'Synthwave',
             icon: Icons.grid_goldenratio_rounded,
             isActive: currentMode == PlayerDisplayMode.synthwaveGrid,
@@ -49,6 +54,7 @@ class PlayerVisualizerSelector extends ConsumerWidget {
           ),
           const SizedBox(width: 6),
           _pillButton(
+            context: context,
             label: 'Lyrics',
             icon: Icons.lyrics_rounded,
             isActive: currentMode == PlayerDisplayMode.lyrics,
@@ -60,25 +66,23 @@ class PlayerVisualizerSelector extends ConsumerWidget {
   }
 
   Widget _pillButton({
+    required BuildContext context,
     required String label,
     required IconData icon,
     required bool isActive,
     required VoidCallback onTap,
   }) {
+    final tokens = context.noctraTokens;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
         decoration: BoxDecoration(
-          color: isActive
-              ? (isDark ? Colors.white : Colors.black)
-              : (isDark ? const Color(0xFF141414) : const Color(0xFFEEEEEE)),
+          color: isActive ? tokens.accent : tokens.surfaceVariant,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isActive
-                ? (isDark ? Colors.white : Colors.black)
-                : (isDark ? Colors.white12 : Colors.black12),
+            color: isActive ? tokens.accent : tokens.subtleBorder,
           ),
         ),
         child: Row(
@@ -87,7 +91,7 @@ class PlayerVisualizerSelector extends ConsumerWidget {
             Icon(
               icon,
               size: 13,
-              color: isActive ? (isDark ? Colors.black : Colors.white) : (isDark ? Colors.white70 : Colors.black87),
+              color: isActive ? tokens.canvas : tokens.secondaryText,
             ),
             const SizedBox(width: 4.5),
             Text(
@@ -95,7 +99,7 @@ class PlayerVisualizerSelector extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                color: isActive ? (isDark ? Colors.black : Colors.white) : (isDark ? Colors.white70 : Colors.black87),
+                color: isActive ? tokens.canvas : tokens.secondaryText,
               ),
             ),
           ],

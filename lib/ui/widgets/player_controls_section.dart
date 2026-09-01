@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import '../../services/audio/audio_player_service.dart';
 import '../screens/player_sheet.dart';
+import '../../core/theme/noir_theme.dart';
 
 class PlayerControlsSection extends ConsumerStatefulWidget {
   final bool isDark;
@@ -46,7 +47,7 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
   Widget build(BuildContext context) {
     final currentPos = _dragValue != null ? Duration(milliseconds: _dragValue!.toInt()) : widget.position;
     final remaining = widget.duration - currentPos;
-    final isDark = widget.isDark;
+    final tokens = context.noctraTokens;
 
     return Column(
       children: [
@@ -55,9 +56,9 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
             trackHeight: 3.5,
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
-            activeTrackColor: isDark ? Colors.white : Colors.black,
-            inactiveTrackColor: isDark ? Colors.white12 : Colors.black12,
-            thumbColor: isDark ? Colors.white : Colors.black,
+            activeTrackColor: tokens.accent,
+            inactiveTrackColor: tokens.subtleBorder,
+            thumbColor: tokens.accent,
           ),
           child: Slider(
             value: (_dragValue ?? widget.position.inMilliseconds.toDouble()).clamp(0.0, widget.duration.inMilliseconds.toDouble()),
@@ -77,11 +78,11 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
             children: [
               Text(
                 _formatDuration(currentPos),
-                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white70 : Colors.black87),
+                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: tokens.secondaryText),
               ),
               Text(
                 '-${_formatDuration(remaining.isNegative ? Duration.zero : remaining)}',
-                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white54 : Colors.black54),
+                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: tokens.tertiaryText),
               ),
             ],
           ),
@@ -100,7 +101,7 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
                 icon: Icon(
                   Icons.shuffle_rounded,
                   size: 22,
-                  color: widget.isShuffle ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white30 : Colors.black26),
+                  color: widget.isShuffle ? tokens.accent : tokens.tertiaryText,
                 ),
                 onPressed: () {
                   HapticFeedback.selectionClick();
@@ -113,7 +114,7 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
               button: true,
               child: IconButton(
                 tooltip: 'Previous Track',
-                icon: Icon(Icons.skip_previous_rounded, size: 34, color: isDark ? Colors.white : Colors.black),
+                icon: Icon(Icons.skip_previous_rounded, size: 34, color: tokens.primaryText),
                 onPressed: () {
                   HapticFeedback.lightImpact();
                   widget.audioPlayerService.skipPrevious();
@@ -133,10 +134,10 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
                   height: 58,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: tokens.accent,
                     boxShadow: [
                       BoxShadow(
-                        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.25),
+                        color: tokens.accent.withValues(alpha: 0.32),
                         blurRadius: 18,
                         offset: const Offset(0, 4),
                       ),
@@ -145,7 +146,7 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
                   child: Icon(
                     widget.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                     size: 32,
-                    color: isDark ? Colors.black : Colors.white,
+                    color: tokens.canvas,
                   ),
                 ),
               ),
@@ -155,7 +156,7 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
               button: true,
               child: IconButton(
                 tooltip: 'Next Track',
-                icon: Icon(Icons.skip_next_rounded, size: 34, color: isDark ? Colors.white : Colors.black),
+                icon: Icon(Icons.skip_next_rounded, size: 34, color: tokens.primaryText),
                 onPressed: () {
                   HapticFeedback.lightImpact();
                   widget.audioPlayerService.skipNext();
@@ -170,7 +171,7 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
                 icon: Icon(
                   widget.loopMode == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
                   size: 22,
-                  color: widget.loopMode != LoopMode.off ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white30 : Colors.black26),
+                  color: widget.loopMode != LoopMode.off ? tokens.secondaryAccent : tokens.tertiaryText,
                 ),
                 onPressed: () {
                   HapticFeedback.selectionClick();
@@ -188,7 +189,7 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
             Icon(
               widget.volume == 0 ? Icons.volume_off_rounded : (widget.volume < 0.5 ? Icons.volume_down_rounded : Icons.volume_up_rounded),
               size: 20,
-              color: isDark ? Colors.white60 : Colors.black54,
+              color: tokens.secondaryText,
             ),
             Expanded(
               child: SliderTheme(
@@ -196,9 +197,9 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
                   trackHeight: 3.0,
                   thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
                   overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                  activeTrackColor: isDark ? Colors.white70 : Colors.black87,
-                  inactiveTrackColor: isDark ? Colors.white12 : Colors.black12,
-                  thumbColor: isDark ? Colors.white : Colors.black,
+                  activeTrackColor: tokens.secondaryAccent,
+                  inactiveTrackColor: tokens.subtleBorder,
+                  thumbColor: tokens.accent,
                 ),
                 child: Slider(
                   value: (widget.volume.isNaN || widget.volume.isInfinite) ? 1.0 : widget.volume.clamp(0.0, 1.0),
@@ -210,7 +211,7 @@ class _PlayerControlsSectionState extends ConsumerState<PlayerControlsSection> {
             ),
             Text(
               '${(((widget.volume.isNaN || widget.volume.isInfinite) ? 1.0 : widget.volume.clamp(0.0, 1.0)) * 100).toInt()}%',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isDark ? Colors.white60 : Colors.black54),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: tokens.secondaryText),
             ),
           ],
         ),

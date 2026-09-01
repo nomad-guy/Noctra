@@ -51,17 +51,19 @@ class SanscriptEngine {
     final from = fromScript.toLowerCase();
     final to = toScript.toLowerCase();
 
-    // 1. Direct Brahmic <-> Brahmic conversion
-    if (_scriptOffsets.containsKey(from) && _scriptOffsets.containsKey(to)) {
-      return _brahmicToBrahmic(input, from, to);
-    }
-
-    // 2. Special Devanagari <-> Gurmukhi mapping
+    // Gurmukhi has several non-offset Unicode mappings. Handle it before the
+    // generic Brahmic conversion so Punjabi matras and consonants are not
+    // silently mapped to the wrong Devanagari character.
     if (from == devanagari && to == gurmukhi) {
       return _devaToGurmukhi(input);
     }
     if (from == gurmukhi && to == devanagari) {
       return _gurmukhiToDeva(input);
+    }
+
+    // Direct Brahmic <-> Brahmic conversion for scripts with compatible rows.
+    if (_scriptOffsets.containsKey(from) && _scriptOffsets.containsKey(to)) {
+      return _brahmicToBrahmic(input, from, to);
     }
 
     return input;

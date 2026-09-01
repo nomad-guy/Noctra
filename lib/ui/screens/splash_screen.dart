@@ -92,10 +92,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
 
-    final primaryColor = isDark ? Colors.white : const Color(0xFF0A0A0A);
-    final secondaryColor = isDark ? Colors.white54 : const Color(0x8A0A0A0A);
-    final trackColor = isDark ? Colors.white12 : const Color(0x18000000);
-    final backgroundColor = isDark ? const Color(0xFF050505) : const Color(0xFFFAFAFA);
+    final tokens = context.noctraTokens;
+    final primaryColor = tokens.primaryText;
+    final secondaryColor = tokens.secondaryText;
+    final trackColor = tokens.subtleBorder;
+    final backgroundColor = tokens.canvas;
 
     return Scaffold(
       backgroundColor: backgroundColor,

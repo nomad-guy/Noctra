@@ -15,8 +15,9 @@ class NoctraAudioEffectsEngine {
     private var loudnessEnhancer: LoudnessEnhancer? = null
     private var currentSessionId: Int = 0
 
-    fun attachSession(sessionId: Int) {
-        if (sessionId == currentSessionId && equalizer != null) return
+    fun attachSession(sessionId: Int): Boolean {
+        if (sessionId <= 0) return false
+        if (sessionId == currentSessionId && equalizer != null) return true
         release()
         currentSessionId = sessionId
         try {
@@ -30,7 +31,10 @@ class NoctraAudioEffectsEngine {
                     enabled = true
                 }
             }
-        } catch (_: Throwable) {}
+        } catch (_: Throwable) {
+            release()
+        }
+        return equalizer != null || bassBoost != null || virtualizer != null || presetReverb != null
     }
 
     fun applyBands(bands: List<Double>, bassStrength: Double, virtualizerStrength: Double): Boolean {
@@ -64,6 +68,7 @@ class NoctraAudioEffectsEngine {
 
     fun applyPresetMode(mode: String): Boolean {
         return try {
+            if (currentSessionId <= 0 || (equalizer == null && bassBoost == null && virtualizer == null && presetReverb == null)) return false
             when (mode.lowercase()) {
                 "spatial3d" -> {
                     virtualizer?.setStrength(1000.toShort())
@@ -78,6 +83,11 @@ class NoctraAudioEffectsEngine {
                 "studiomaster" -> {
                     virtualizer?.setStrength(200.toShort())
                     bassBoost?.setStrength(250.toShort())
+                    presetReverb?.preset = PresetReverb.PRESET_NONE
+                }
+                "lossless320" -> {
+                    virtualizer?.setStrength(0.toShort())
+                    bassBoost?.setStrength(0.toShort())
                     presetReverb?.preset = PresetReverb.PRESET_NONE
                 }
                 "bassultra" -> {

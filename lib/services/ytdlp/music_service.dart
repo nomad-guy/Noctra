@@ -4,38 +4,57 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import '../../core/utils/noctra_logger.dart';
-import '../../core/utils/permission_helper.dart';
+import '../../data/models/download_location.dart';
 import '../../data/models/song_model.dart';
 import '../../data/repositories/taste_vector_engine.dart';
+import '../../data/sources/noctra_local_database.dart';
 import '../metadata/artist_metadata_service.dart';
 import '../resolvers/stream_resolver.dart';
 import '../metadata/spotify_oembed_service.dart';
+import '../audio/stream_quality_service.dart';
 
 class ArtistDiscography {
   final List<Song> topTracks;
   final List<Map<String, dynamic>> albums, singles, similarArtists;
-  ArtistDiscography({required this.topTracks, required this.albums, required this.singles, required this.similarArtists});
+  ArtistDiscography(
+      {required this.topTracks,
+      required this.albums,
+      required this.singles,
+      required this.similarArtists});
 }
 
 class MusicService {
-  static final downloadProgressController = StreamController<Map<String, double>>.broadcast();
-  static Stream<Map<String, double>> get downloadProgressStream => downloadProgressController.stream;
+  static final downloadProgressController =
+      StreamController<Map<String, double>>.broadcast();
+  static Stream<Map<String, double>> get downloadProgressStream =>
+      downloadProgressController.stream;
 
-  static Future<List<Song>> search(String query, {String source = 'all'}) => searchTracks(query, source: source);
+  static Future<List<Song>> search(String query, {String source = 'all'}) =>
+      searchTracks(query, source: source);
 
-  static Future<List<Song>> searchTracks(String query, {String source = 'all'}) async {
+  static Future<List<Song>> searchTracks(String query,
+      {String source = 'all'}) async {
     final clean = query.trim();
     if (clean.isEmpty) return fetchTrendingTracks();
 
     if (SpotifyOEmbedService.isSpotifyUrl(clean)) {
       final spotifyMeta = await SpotifyOEmbedService.fetchMetadata(clean);
       if (spotifyMeta != null) {
-        final matches = await searchTracks('${spotifyMeta.title} ${spotifyMeta.authorName}');
+        final matches = await searchTracks(
+            '${spotifyMeta.title} ${spotifyMeta.authorName}');
         if (matches.isNotEmpty) {
           final first = matches.first;
-          final sSong = Song(id: first.id, title: spotifyMeta.title, artist: spotifyMeta.authorName, album: 'Spotify Global', artworkUrl: spotifyMeta.thumbnailUrl ?? first.artworkUrl, streamUrl: first.streamUrl, duration: first.duration, genre: first.genre, featureVector: first.featureVector);
+          final sSong = Song(
+              id: first.id,
+              title: spotifyMeta.title,
+              artist: spotifyMeta.authorName,
+              album: 'Spotify Global',
+              artworkUrl: spotifyMeta.thumbnailUrl ?? first.artworkUrl,
+              streamUrl: first.streamUrl,
+              duration: first.duration,
+              genre: first.genre,
+              featureVector: first.featureVector);
           return [sSong, ...matches.skip(1)];
         }
       }
@@ -49,10 +68,13 @@ class MusicService {
       if (s.title.isEmpty) return;
       // Prefer id-based dedup; fall back to title+artist for sources
       // that generate synthetic ids (e.g. lrc_*, itunes_*)
-      if (s.id.isNotEmpty && !s.id.startsWith('lrc_') && !s.id.startsWith('itunes_')) {
+      if (s.id.isNotEmpty &&
+          !s.id.startsWith('lrc_') &&
+          !s.id.startsWith('itunes_')) {
         if (!seenIds.add(s.id)) return;
       }
-      final key = '${s.title.toLowerCase().trim()}_${s.artist.toLowerCase().trim()}';
+      final key =
+          '${s.title.toLowerCase().trim()}_${s.artist.toLowerCase().trim()}';
       if (!seenKeys.add(key)) return;
       mergedResults.add(s);
     }
@@ -67,11 +89,33 @@ class MusicService {
     if (!kIsWeb && querySaavn) {
       futures.add(() async {
         try {
-          final List<dynamic>? nativeSongs = await const MethodChannel('com.noctra.app/native_resolver').invokeListMethod('searchJioSaavn', {'query': clean, 'limit': 20}).timeout(const Duration(seconds: 4));
+          final List<dynamic>? nativeSongs =
+              await const MethodChannel('com.noctra.app/native_resolver')
+                  .invokeListMethod('searchJioSaavn', {
+            'query': clean,
+            'limit': 20
+          }).timeout(const Duration(seconds: 4));
           if (nativeSongs != null) {
             for (final m in nativeSongs) {
               final map = m as Map;
-              addSong(Song(id: (map['id'] ?? 'jio_${(map['title']?.toString() ?? '').hashCode}_${(map['artist']?.toString() ?? '').hashCode}').toString(), title: (map['title'] ?? 'Unknown Track').toString(), artist: (map['artist'] ?? 'Unknown Artist').toString(), album: (map['album'] ?? '320k Master').toString(), artworkUrl: map['thumbnail'] as String?, streamUrl: (map['stream_url'] as String?)?.isNotEmpty == true ? map['stream_url'] as String? : null, duration: Duration(seconds: (map['duration'] as num?)?.toInt() ?? 210), genre: (map['source'] ?? '320k High-Fidelity').toString(), featureVector: _deriveFeatureVector(map['title']?.toString() ?? '', artist: map['artist']?.toString() ?? '', genre: map['source']?.toString() ?? '')));
+              addSong(Song(
+                  id: (map['id'] ??
+                          'jio_${(map['title']?.toString() ?? '').hashCode}_${(map['artist']?.toString() ?? '').hashCode}')
+                      .toString(),
+                  title: (map['title'] ?? 'Unknown Track').toString(),
+                  artist: (map['artist'] ?? 'Unknown Artist').toString(),
+                  album: (map['album'] ?? '320k Master').toString(),
+                  artworkUrl: map['thumbnail'] as String?,
+                  streamUrl: (map['stream_url'] as String?)?.isNotEmpty == true
+                      ? map['stream_url'] as String?
+                      : null,
+                  duration: Duration(
+                      seconds: (map['duration'] as num?)?.toInt() ?? 210),
+                  genre: (map['source'] ?? '320k High-Fidelity').toString(),
+                  featureVector: _deriveFeatureVector(
+                      map['title']?.toString() ?? '',
+                      artist: map['artist']?.toString() ?? '',
+                      genre: map['source']?.toString() ?? '')));
             }
           }
         } catch (_) {}
@@ -81,27 +125,51 @@ class MusicService {
     if (queryYt) {
       futures.add(() async {
         try {
-          final sUri = Uri.parse('https://music.youtube.com/youtubei/v1/search');
-          final sBody = jsonEncode({'query': clean, 'context': {'client': {'clientName': 'WEB_REMIX', 'clientVersion': '1.20240820.01.00', 'hl': 'en', 'gl': 'US'}}});
-          final sRes = await http.post(sUri, body: sBody, headers: {'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0'}).timeout(const Duration(seconds: 4));
-          if (sRes.statusCode == 200) {
-            final sections = jsonDecode(sRes.body)['contents']?['tabbedSearchResultsRenderer']?['tabs']?[0]?['tabRenderer']?['content']?['sectionListRenderer']?['contents'] as List?;
-            if (sections != null) {
-              for (final sec in sections) {
-                final items = (sec as Map)['itemSectionRenderer']?['contents'] as List? ?? (sec)['musicShelfRenderer']?['contents'] as List?;
-                if (items == null) continue;
-                for (final it in items) {
-                  final r = (it as Map)['musicResponsiveListItemRenderer'] as Map?;
-                  if (r == null) continue;
-                  final flex = r['flexColumns'] as List?;
-                  final t = (flex != null && flex.isNotEmpty) ? (flex[0]['musicResponsiveListItemFlexColumnRenderer']?['text']?['runs']?[0]?['text'] ?? '').toString() : '';
-                  final a = (flex != null && flex.length > 1) ? (flex[1]['musicResponsiveListItemFlexColumnRenderer']?['text']?['runs']?[0]?['text'] ?? 'YouTube Music').toString() : 'YouTube Music';
-                  String? vid = r['playlistItemData']?['videoId']?.toString() ?? r['navigationEndpoint']?['watchEndpoint']?['videoId']?.toString();
-                  if (vid != null && vid.length == 11 && t.isNotEmpty) {
-                    addSong(Song(id: vid, title: t, artist: a, album: 'Global Catalog', artworkUrl: 'https://i.ytimg.com/vi/$vid/hqdefault.jpg', streamUrl: null, duration: const Duration(seconds: 210), genre: 'Global Audio', featureVector: _deriveFeatureVector(t, artist: a)));
-                  }
-                }
+          final sUri =
+              Uri.parse('https://music.youtube.com/youtubei/v1/search');
+          final sBody = jsonEncode({
+            'query': clean,
+            'context': {
+              'client': {
+                'clientName': 'WEB_REMIX',
+                'clientVersion': '1.20240820.01.00',
+                'hl': 'en',
+                'gl': 'US'
               }
+            }
+          });
+          final sRes = await http.post(sUri, body: sBody, headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'Mozilla/5.0'
+          }).timeout(const Duration(seconds: 4));
+          if (sRes.statusCode == 200) {
+            final sData = jsonDecode(sRes.body);
+            _parseYtMusicSearchResults(sData, addSong);
+
+            // If few results, also try artist-specific search
+            if (mergedResults.length < 3) {
+              try {
+                final aUri =
+                    Uri.parse('https://music.youtube.com/youtubei/v1/search');
+                final aBody = jsonEncode({
+                  'query': '$clean songs',
+                  'context': {
+                    'client': {
+                      'clientName': 'WEB_REMIX',
+                      'clientVersion': '1.20240820.01.00',
+                      'hl': 'en',
+                      'gl': 'US'
+                    }
+                  }
+                });
+                final aRes = await http.post(aUri, body: aBody, headers: {
+                  'Content-Type': 'application/json',
+                  'User-Agent': 'Mozilla/5.0'
+                }).timeout(const Duration(seconds: 4));
+                if (aRes.statusCode == 200) {
+                  _parseYtMusicSearchResults(jsonDecode(aRes.body), addSong);
+                }
+              } catch (_) {}
             }
           }
         } catch (_) {}
@@ -111,12 +179,29 @@ class MusicService {
     if (queryItunes) {
       futures.add(() async {
         try {
-          final res = await http.get(Uri.parse('https://itunes.apple.com/search?term=${Uri.encodeComponent(clean)}&entity=song&limit=25')).timeout(const Duration(seconds: 4));
+          final res = await http
+              .get(Uri.parse(
+                  'https://itunes.apple.com/search?term=${Uri.encodeComponent(clean)}&entity=song&limit=25'))
+              .timeout(const Duration(seconds: 4));
           if (res.statusCode == 200) {
             final results = jsonDecode(res.body)['results'] as List?;
             if (results != null) {
               for (final item in results) {
-                addSong(Song(id: 'itunes_${item['trackId']}', title: item['trackName'] ?? 'Unknown Track', artist: item['artistName'] ?? 'Unknown Artist', album: item['collectionName'] ?? 'Master Album', artworkUrl: (item['artworkUrl100'] as String?)?.replaceAll('100x100bb', '600x600bb'), streamUrl: null, duration: Duration(milliseconds: item['trackTimeMillis'] ?? 210000), genre: item['primaryGenreName'] ?? 'Global', featureVector: _deriveFeatureVector(item['trackName'] ?? '', artist: item['artistName'] ?? '', album: item['collectionName'] ?? '', genre: item['primaryGenreName'] ?? '')));
+                addSong(Song(
+                    id: 'itunes_${item['trackId']}',
+                    title: item['trackName'] ?? 'Unknown Track',
+                    artist: item['artistName'] ?? 'Unknown Artist',
+                    album: item['collectionName'] ?? 'Master Album',
+                    artworkUrl: (item['artworkUrl100'] as String?)
+                        ?.replaceAll('100x100bb', '600x600bb'),
+                    streamUrl: null,
+                    duration: Duration(
+                        milliseconds: item['trackTimeMillis'] ?? 210000),
+                    genre: item['primaryGenreName'] ?? 'Global',
+                    featureVector: _deriveFeatureVector(item['trackName'] ?? '',
+                        artist: item['artistName'] ?? '',
+                        album: item['collectionName'] ?? '',
+                        genre: item['primaryGenreName'] ?? '')));
               }
             }
           }
@@ -127,15 +212,29 @@ class MusicService {
     if (src == 'all' && (clean.split(' ').length >= 2 || clean.length > 10)) {
       futures.add(() async {
         try {
-          final lUri = Uri.parse('https://lrclib.net/api/search?q=${Uri.encodeComponent(clean)}');
-          final lRes = await http.get(lUri, headers: {'User-Agent': 'Noctra/1.0.4'}).timeout(const Duration(seconds: 4));
+          final lUri = Uri.parse(
+              'https://lrclib.net/api/search?q=${Uri.encodeComponent(clean)}');
+          final lRes = await http.get(lUri, headers: {
+            'User-Agent': 'Noctra/1.0.4'
+          }).timeout(const Duration(seconds: 4));
           if (lRes.statusCode == 200) {
             final lData = jsonDecode(lRes.body) as List?;
             if (lData != null) {
               for (final it in lData.take(5)) {
-                final t = (it['trackName'] ?? '').toString(), a = (it['artistName'] ?? '').toString();
+                final t = (it['trackName'] ?? '').toString(),
+                    a = (it['artistName'] ?? '').toString();
                 if (t.isNotEmpty && a.isNotEmpty) {
-                  addSong(Song(id: 'lrc_${it['id']}', title: t, artist: a, album: '${it['albumName'] ?? 'Lyrics'} • Lyric Match', artworkUrl: null, streamUrl: null, duration: Duration(seconds: (it['duration'] as num?)?.toInt() ?? 210), genre: 'Matched Lyrics', featureVector: _deriveFeatureVector(t, artist: a)));
+                  addSong(Song(
+                      id: 'lrc_${it['id']}',
+                      title: t,
+                      artist: a,
+                      album: '${it['albumName'] ?? 'Lyrics'} • Lyric Match',
+                      artworkUrl: null,
+                      streamUrl: null,
+                      duration: Duration(
+                          seconds: (it['duration'] as num?)?.toInt() ?? 210),
+                      genre: 'Matched Lyrics',
+                      featureVector: _deriveFeatureVector(t, artist: a)));
                 }
               }
             }
@@ -148,15 +247,159 @@ class MusicService {
     return mergedResults.isNotEmpty ? mergedResults : fetchTrendingTracks();
   }
 
+  /// Parse all YouTube Music search result formats:
+  /// - musicResponsiveListItemRenderer (songs, videos)
+  /// - musicTwoRowItemRenderer (artists, albums, playlists)
+  /// - musicShelfRenderer (shelf sections with songs)
+  static void _parseYtMusicSearchResults(
+      Map<String, dynamic> sData, void Function(Song) addSong) {
+    try {
+      final sections = sData['contents']?['tabbedSearchResultsRenderer']
+              ?['tabs']?[0]?['tabRenderer']?['content']?['sectionListRenderer']
+          ?['contents'] as List?;
+      if (sections == null) return;
+
+      for (final sec in sections) {
+        final secMap = sec as Map;
+        // Try itemSectionRenderer → contents
+        final itemSections =
+            secMap['itemSectionRenderer']?['contents'] as List?;
+        // Try musicShelfRenderer → contents
+        final shelfItems = secMap['musicShelfRenderer']?['contents'] as List?;
+        final allItems = [
+          ...?itemSections,
+          ...?shelfItems,
+        ];
+
+        for (final it in allItems) {
+          final itMap = it as Map;
+
+          // Format 1: musicResponsiveListItemRenderer (songs, videos)
+          final r = itMap['musicResponsiveListItemRenderer'] as Map?;
+          if (r != null) {
+            final flex = r['flexColumns'] as List?;
+            final t = (flex != null && flex.isNotEmpty)
+                ? (flex[0]['musicResponsiveListItemFlexColumnRenderer']?['text']
+                            ?['runs']?[0]?['text'] ??
+                        '')
+                    .toString()
+                : '';
+            final a = (flex != null && flex.length > 1)
+                ? (flex[1]['musicResponsiveListItemFlexColumnRenderer']?['text']
+                            ?['runs']?[0]?['text'] ??
+                        'YouTube Music')
+                    .toString()
+                : 'YouTube Music';
+            String? vid = r['playlistItemData']?['videoId']?.toString() ??
+                r['navigationEndpoint']?['watchEndpoint']?['videoId']
+                    ?.toString();
+            // Extract thumbnail
+            String? thumb;
+            try {
+              final thumbnails = r['thumbnail']?['musicThumbnailRenderer']
+                  ?['thumbnail']?['thumbnails'] as List?;
+              if (thumbnails != null && thumbnails.isNotEmpty) {
+                thumb = thumbnails.last['url']?.toString();
+              }
+            } catch (_) {}
+            if (vid != null && vid.length == 11 && t.isNotEmpty) {
+              addSong(Song(
+                  id: vid,
+                  title: t,
+                  artist: a,
+                  album: 'Global Catalog',
+                  artworkUrl:
+                      thumb ?? 'https://i.ytimg.com/vi/$vid/hqdefault.jpg',
+                  streamUrl: null,
+                  duration: const Duration(seconds: 210),
+                  genre: 'Global Audio',
+                  featureVector: _deriveFeatureVector(t, artist: a)));
+            }
+            continue;
+          }
+
+          // Format 2: musicTwoRowItemRenderer (artists, albums, playlists)
+          final twoRow = itMap['musicTwoRowItemRenderer'] as Map?;
+          if (twoRow != null) {
+            final titleRuns = twoRow['title']?['runs'] as List?;
+            final t = titleRuns?.isNotEmpty == true
+                ? (titleRuns![0]['text'] ?? '').toString()
+                : '';
+            final subRuns = twoRow['subtitle']?['runs'] as List?;
+            final subText = subRuns?.isNotEmpty == true
+                ? subRuns!.map((r) => r['text'] ?? '').join().toString()
+                : '';
+            String? thumb;
+            try {
+              final thumbnails = twoRow['thumbnailRenderer']
+                      ?['musicThumbnailRenderer']?['thumbnail']?['thumbnails']
+                  as List?;
+              if (thumbnails != null && thumbnails.isNotEmpty) {
+                thumb = thumbnails.last['url']?.toString();
+              }
+            } catch (_) {}
+            String? navId;
+            try {
+              navId = twoRow['navigationEndpoint']?['browseEndpoint']
+                      ?['browseId']
+                  ?.toString();
+            } catch (_) {}
+            // For artists, the subtitle often says "Artist"
+            if (t.isNotEmpty && subText.toLowerCase().contains('artist')) {
+              // Artist card — search for their top tracks
+              addSong(Song(
+                  id: 'yt_artist_${t.hashCode}',
+                  title: t,
+                  artist: t,
+                  album: 'Artist',
+                  artworkUrl: thumb,
+                  streamUrl: null,
+                  duration: const Duration(seconds: 210),
+                  genre: 'Artist Match',
+                  featureVector: _deriveFeatureVector(t, artist: t)));
+            } else if (t.isNotEmpty) {
+              // Album, playlist, or video
+              addSong(Song(
+                  id: navId ?? 'yt_${t.hashCode}',
+                  title: t,
+                  artist: subText.isNotEmpty ? subText : 'YouTube Music',
+                  album: 'Global Catalog',
+                  artworkUrl: thumb,
+                  streamUrl: null,
+                  duration: const Duration(seconds: 210),
+                  genre: 'Global Audio',
+                  featureVector: _deriveFeatureVector(t, artist: subText)));
+            }
+            continue;
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
   static Future<List<Song>> fetchSimilarRadioQueue(Song currentSong) async {
     if (!kIsWeb && currentSong.id.length == 11) {
       try {
-        final List<dynamic>? list = await const MethodChannel('com.noctra.app/native_resolver').invokeListMethod('fetchRadio', {'videoId': currentSong.id});
+        final List<dynamic>? list =
+            await const MethodChannel('com.noctra.app/native_resolver')
+                .invokeListMethod('fetchRadio', {'videoId': currentSong.id});
         if (list != null && list.isNotEmpty) {
           return list.map((m) {
             final map = m as Map;
             final vid = map['id'].toString();
-            return Song(id: vid, title: (map['title'] ?? 'Similar Track').toString(), artist: (map['artist'] ?? currentSong.artist).toString(), album: 'Auto Radio', artworkUrl: 'https://i.ytimg.com/vi/$vid/hqdefault.jpg', streamUrl: null, duration: const Duration(seconds: 210), genre: currentSong.genre, featureVector: _deriveFeatureVector(map['title']?.toString() ?? '', artist: map['artist']?.toString() ?? currentSong.artist, genre: currentSong.genre ?? ''));
+            return Song(
+                id: vid,
+                title: (map['title'] ?? 'Similar Track').toString(),
+                artist: (map['artist'] ?? currentSong.artist).toString(),
+                album: 'Auto Radio',
+                artworkUrl: 'https://i.ytimg.com/vi/$vid/hqdefault.jpg',
+                streamUrl: null,
+                duration: const Duration(seconds: 210),
+                genre: currentSong.genre,
+                featureVector: _deriveFeatureVector(
+                    map['title']?.toString() ?? '',
+                    artist: map['artist']?.toString() ?? currentSong.artist,
+                    genre: currentSong.genre ?? ''));
           }).toList();
         }
       } catch (_) {}
@@ -168,23 +411,55 @@ class MusicService {
     final clean = artistName.split(RegExp(r'[,&/]')).first.trim();
     final top = await searchTracks(clean);
     final albums = [
-      {'title': '$clean: Master Essentials', 'year': '2024', 'art': top.isNotEmpty ? top.first.artworkUrl : 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500', 'tracks': top.take(8).toList()},
-      {'title': 'Complete Discography Deluxe', 'year': '2023', 'art': top.length > 8 ? top[8].artworkUrl : (top.length > 1 ? top[1].artworkUrl : 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500'), 'tracks': top.skip(8).take(8).toList()},
+      {
+        'title': '$clean: Master Essentials',
+        'year': '2024',
+        'art': top.isNotEmpty
+            ? top.first.artworkUrl
+            : 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500',
+        'tracks': top.take(8).toList()
+      },
+      {
+        'title': 'Complete Discography Deluxe',
+        'year': '2023',
+        'art': top.length > 8
+            ? top[8].artworkUrl
+            : (top.length > 1
+                ? top[1].artworkUrl
+                : 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500'),
+        'tracks': top.skip(8).take(8).toList()
+      },
     ];
     final singles = [
-      {'title': top.isNotEmpty ? top.first.title : 'Greatest Hit', 'year': '2024', 'art': top.isNotEmpty ? top.first.artworkUrl : null},
-      {'title': top.length > 2 ? top[2].title : 'Radio Single', 'year': '2023', 'art': top.length > 2 ? top[2].artworkUrl : null},
+      {
+        'title': top.isNotEmpty ? top.first.title : 'Greatest Hit',
+        'year': '2024',
+        'art': top.isNotEmpty ? top.first.artworkUrl : null
+      },
+      {
+        'title': top.length > 2 ? top[2].title : 'Radio Single',
+        'year': '2023',
+        'art': top.length > 2 ? top[2].artworkUrl : null
+      },
     ];
-    final dynamicSimilarNames = await ArtistMetadataService.fetchDynamicSimilarArtists(clean);
+    final dynamicSimilarNames =
+        await ArtistMetadataService.fetchDynamicSimilarArtists(clean);
     final similar = <Map<String, dynamic>>[];
     for (final name in dynamicSimilarNames.take(4)) {
       final info = await ArtistMetadataService.fetchArtistInfo(name);
       similar.add({
         'name': name,
-        'art': info.imageUrl ?? (top.isNotEmpty ? top.first.artworkUrl : 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500'),
+        'art': info.imageUrl ??
+            (top.isNotEmpty
+                ? top.first.artworkUrl
+                : 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500'),
       });
     }
-    return ArtistDiscography(topTracks: top, albums: albums, singles: singles, similarArtists: similar);
+    return ArtistDiscography(
+        topTracks: top,
+        albums: albums,
+        singles: singles,
+        similarArtists: similar);
   }
 
   static Future<List<Song>> fetchTrendingFeed() async => fetchTrendingTracks();
@@ -205,11 +480,32 @@ class MusicService {
 
   static Future<List<Song>> fetchTrendingTracks() async {
     try {
-      final res = await http.get(Uri.parse('https://itunes.apple.com/us/rss/topsongs/limit=25/json')).timeout(const Duration(seconds: 4));
+      final res = await http
+          .get(Uri.parse(
+              'https://itunes.apple.com/us/rss/topsongs/limit=25/json'))
+          .timeout(const Duration(seconds: 4));
       if (res.statusCode == 200) {
         final entries = jsonDecode(res.body)['feed']?['entry'] as List?;
         if (entries != null && entries.isNotEmpty) {
-          return entries.map((e) => Song(id: 'itunes_${e['id']?['attributes']?['im:id'] ?? e['title']?['label']}', title: e['im:name']?['label'] ?? 'Top Song', artist: e['im:artist']?['label'] ?? 'Top Artist', album: e['im:collection']?['im:name']?['label'] ?? '', artworkUrl: (e['im:image'] as List?)?.last?['label']?.replaceAll('170x170', '600x600'), streamUrl: null, duration: const Duration(seconds: 210), genre: e['category']?['attributes']?['label'] ?? 'Top Chart', featureVector: _deriveFeatureVector(e['im:name']?['label'] ?? '', artist: e['im:artist']?['label'] ?? '', album: e['im:collection']?['im:name']?['label'] ?? '', genre: e['category']?['attributes']?['label'] ?? ''))).toList();
+          return entries
+              .map((e) => Song(
+                  id:
+                      'itunes_${e['id']?['attributes']?['im:id'] ?? e['title']?['label']}',
+                  title: e['im:name']?['label'] ?? 'Top Song',
+                  artist: e['im:artist']?['label'] ?? 'Top Artist',
+                  album: e['im:collection']?['im:name']?['label'] ?? '',
+                  artworkUrl: (e['im:image'] as List?)
+                      ?.last?['label']
+                      ?.replaceAll('170x170', '600x600'),
+                  streamUrl: null,
+                  duration: const Duration(seconds: 210),
+                  genre: e['category']?['attributes']?['label'] ?? 'Top Chart',
+                  featureVector: _deriveFeatureVector(
+                      e['im:name']?['label'] ?? '',
+                      artist: e['im:artist']?['label'] ?? '',
+                      album: e['im:collection']?['im:name']?['label'] ?? '',
+                      genre: e['category']?['attributes']?['label'] ?? '')))
+              .toList();
         }
       }
     } catch (_) {}
@@ -217,41 +513,50 @@ class MusicService {
   }
 
   static Future<List<Song>> fetchVibeFeed(String vibeKey) async {
-    final Map<String, String> vibeSearches = {'noir_night': 'The Weeknd Dark Synthwave', 'deep_focus': 'Lofi Chill Beats Study', 'high_energy': 'Electronic Workout Cyberpunk', 'ambient_chill': 'Ambient Chillout Atmospheric', 'retro_synth': 'Outrun Synthwave Retrowave 80s', 'late_night': 'Night Drive Phonk Synthwave'};
+    final Map<String, String> vibeSearches = {
+      'noir_night': 'The Weeknd Dark Synthwave',
+      'deep_focus': 'Lofi Chill Beats Study',
+      'high_energy': 'Electronic Workout Cyberpunk',
+      'ambient_chill': 'Ambient Chillout Atmospheric',
+      'retro_synth': 'Outrun Synthwave Retrowave 80s',
+      'late_night': 'Night Drive Phonk Synthwave'
+    };
     final q = vibeSearches[vibeKey] ?? 'Synthwave Noir';
     return searchTracks(q);
   }
 
-  static Future<String?> resolveStreamUrl(Song song) async => CompositeStreamResolver.resolve(song);
+  static Future<String?> resolveStreamUrl(Song song) async =>
+      CompositeStreamResolver.resolve(song);
 
   static Future<Song?> downloadTrack(Song song) async {
     if (kIsWeb) return song.copyWith(isDownloaded: true);
     try {
-      await PermissionHelper.requestStoragePermissions();
-      Directory? baseDir;
-      try {
-        baseDir = await getApplicationDocumentsDirectory();
-      } catch (_) {
-        try {
-          baseDir = await getApplicationSupportDirectory();
-        } catch (_) {
-          baseDir = await getTemporaryDirectory();
-        }
+      final musicDir = await const DownloadLocationResolver()
+          .resolve(_selectedDownloadLocationKey());
+      if (!musicDir.existsSync()) {
+        musicDir.createSync(recursive: true);
       }
-      final musicDir = Directory('${baseDir.path}/NoctraMusic');
       if (!musicDir.existsSync()) musicDir.createSync(recursive: true);
-      final rawName = '${song.artist}_${song.title}'.replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(' ', '_');
-      final fileName = '${rawName.isNotEmpty ? rawName : song.id}.mp3';
+      final rawName = '${song.artist}_${song.title}'
+          .replaceAll(RegExp(r'[^\w\s-]'), '')
+          .replaceAll(' ', '_');
+      final qualityService = StreamQualityService();
+      final ext =
+          qualityService.preferredCodec.name; // mp3, aac, flac, opus, vorbis
+      final fileName = '${rawName.isNotEmpty ? rawName : song.id}.$ext';
       final file = File('${musicDir.path}/$fileName');
       final tempFile = File('${musicDir.path}/$fileName.tmp');
       final resolvedUrl = await resolveStreamUrl(song);
       if (resolvedUrl == null || resolvedUrl.isEmpty) return null;
       final parsedUri = Uri.tryParse(resolvedUrl);
-      if (parsedUri == null || (parsedUri.scheme != 'https' && parsedUri.scheme != 'file')) {
-        NoctraLogger.w('downloadTrack: Insecure or invalid URI scheme for ${song.title}');
+      if (parsedUri == null ||
+          (parsedUri.scheme != 'https' && parsedUri.scheme != 'file')) {
+        NoctraLogger.w(
+            'downloadTrack: Insecure or invalid URI scheme for ${song.title}');
         return null;
       }
-      final req = http.Request('GET', parsedUri)..headers.addAll({'User-Agent': 'Mozilla/5.0'});
+      final req = http.Request('GET', parsedUri)
+        ..headers.addAll({'User-Agent': 'Mozilla/5.0'});
       final client = http.Client();
       try {
         final resp = await client.send(req);
@@ -263,32 +568,44 @@ class MusicService {
             sink.add(chunk);
             received += chunk.length;
             if (total > 0) {
-              downloadProgressController.add({song.id: (received / total).clamp(0.0, 0.99)});
+              downloadProgressController
+                  .add({song.id: (received / total).clamp(0.0, 0.99)});
             } else {
-              downloadProgressController.add({song.id: (received / 4000000.0).clamp(0.05, 0.95)});
+              downloadProgressController
+                  .add({song.id: (received / 4000000.0).clamp(0.05, 0.95)});
             }
           });
           await sink.flush();
           await sink.close();
           if (total > 0 && received < (total * 0.95)) {
-            throw FormatException('Incomplete download: received $received of $total bytes');
+            throw FormatException(
+                'Incomplete download: received $received of $total bytes');
           }
           if (received < 10000) {
-            throw const FormatException('Downloaded audio file is too small or corrupt');
+            throw const FormatException(
+                'Downloaded audio file is too small or corrupt');
           }
           if (tempFile.existsSync()) {
             if (file.existsSync()) {
-              try { file.deleteSync(); } catch (_) {}
+              try {
+                file.deleteSync();
+              } catch (_) {}
             }
             tempFile.renameSync(file.path);
           }
         } catch (e) {
-          try { await sink.close(); } catch (_) {}
+          try {
+            await sink.close();
+          } catch (_) {}
           if (tempFile.existsSync()) {
-            try { tempFile.deleteSync(); } catch (_) {}
+            try {
+              tempFile.deleteSync();
+            } catch (_) {}
           }
           if (file.existsSync()) {
-            try { file.deleteSync(); } catch (_) {}
+            try {
+              file.deleteSync();
+            } catch (_) {}
           }
           rethrow;
         }
@@ -303,20 +620,32 @@ class MusicService {
     }
   }
 
-  static List<double> _deriveFeatureVector(String title, {String artist = '', String album = '', String genre = ''}) {
-    return TasteVectorEngine.extractTextEmbedding('$title $artist $album $genre');
+  static List<double> _deriveFeatureVector(String title,
+      {String artist = '', String album = '', String genre = ''}) {
+    return TasteVectorEngine.extractTextEmbedding(
+        '$title $artist $album $genre');
+  }
+
+  static String _selectedDownloadLocationKey() {
+    try {
+      return NoctraLocalDatabase().getCachedDownloadLocation();
+    } catch (_) {
+      return DownloadLocation.appDocs;
+    }
   }
 
   static Future<double?> fetchSponsorBlockIntroSkip(String videoId) async {
     try {
-      final uri = Uri.parse('https://sponsor.ajay.app/api/skipSegments?videoID=$videoId&categories=["music_offtopic"]');
+      final uri = Uri.parse(
+          'https://sponsor.ajay.app/api/skipSegments?videoID=$videoId&categories=["music_offtopic"]');
       final res = await http.get(uri).timeout(const Duration(seconds: 2));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as List?;
         if (data != null && data.isNotEmpty) {
           final seg = data[0]['segment'] as List?;
           if (seg != null && seg.length >= 2) {
-            final start = (seg[0] as num).toDouble(), end = (seg[1] as num).toDouble();
+            final start = (seg[0] as num).toDouble(),
+                end = (seg[1] as num).toDouble();
             if (start < 15.0 && end > 0) return end;
           }
         }

@@ -45,11 +45,13 @@ class SpotifyChartsSection extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Spotify Global Charts',
+                'Global Charts',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
-                  color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
+                  color: isDark
+                      ? NoirColors.blackTextPrimary
+                      : NoirColors.whiteTextPrimary,
                 ),
               ),
               Text(
@@ -67,7 +69,11 @@ class SpotifyChartsSection extends ConsumerWidget {
         // Chart Filter Chips
         ScrollConfiguration(
           behavior: ScrollConfiguration.of(context).copyWith(
-            dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad},
+            dragDevices: {
+              PointerDeviceKind.touch,
+              PointerDeviceKind.mouse,
+              PointerDeviceKind.trackpad
+            },
           ),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -82,25 +88,34 @@ class SpotifyChartsSection extends ConsumerWidget {
                     label: Text(c['label']!),
                     selected: isSelected,
                     onSelected: (_) {
-                      ref.read(selectedSpotifyChartKeyProvider.notifier).state = c['key']!;
+                      ref.read(selectedSpotifyChartKeyProvider.notifier).state =
+                          c['key']!;
                     },
-                    backgroundColor: isDark ? const Color(0xFF141414) : const Color(0xFFEBEBEB),
+                    backgroundColor: isDark
+                        ? const Color(0xFF141414)
+                        : const Color(0xFFEBEBEB),
                     selectedColor: isDark ? Colors.white : Colors.black,
                     labelStyle: TextStyle(
                       color: isSelected
                           ? (isDark ? Colors.black : Colors.white)
-                          : (isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary),
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          : (isDark
+                              ? NoirColors.blackTextPrimary
+                              : NoirColors.whiteTextPrimary),
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
                       fontSize: 11.5,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
-                        color: isSelected ? Colors.transparent : (isDark ? Colors.white12 : Colors.black12),
+                        color: isSelected
+                            ? Colors.transparent
+                            : (isDark ? Colors.white12 : Colors.black12),
                       ),
                     ),
                     showCheckmark: false,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   ),
                 );
               }).toList(),
@@ -116,7 +131,11 @@ class SpotifyChartsSection extends ConsumerWidget {
               height: 200,
               child: ScrollConfiguration(
                 behavior: ScrollConfiguration.of(context).copyWith(
-                  dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad},
+                  dragDevices: {
+                    PointerDeviceKind.touch,
+                    PointerDeviceKind.mouse,
+                    PointerDeviceKind.trackpad
+                  },
                 ),
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
@@ -125,13 +144,16 @@ class SpotifyChartsSection extends ConsumerWidget {
                   itemCount: tracks.length,
                   itemBuilder: (context, i) {
                     final song = tracks[i];
-                    final isThisPlaying = currentSong?.id == song.id && isPlaying;
+                    final isThisPlaying =
+                        currentSong?.id == song.id && isPlaying;
 
                     return Padding(
                       padding: const EdgeInsets.only(right: 12),
                       child: GestureDetector(
                         onTap: () {
-                          ref.read(audioPlayerServiceProvider).playSong(song, newQueue: tracks);
+                          ref
+                              .read(audioPlayerServiceProvider)
+                              .playSong(song, newQueue: tracks);
                         },
                         onLongPress: () => SongContextMenu.show(context, song),
                         child: GlassCard(
@@ -153,11 +175,18 @@ class SpotifyChartsSection extends ConsumerWidget {
                                         fit: BoxFit.cover,
                                         cacheWidth: 300,
                                         cacheHeight: 300,
-                                        errorBuilder: (context, error, stackTrace) => Container(
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                Container(
                                           width: 140,
                                           height: 116,
-                                          color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE5E5E5),
-                                          child: Icon(Icons.music_note_outlined, color: isDark ? Colors.white54 : Colors.black54),
+                                          color: isDark
+                                              ? const Color(0xFF1E1E1E)
+                                              : const Color(0xFFE5E5E5),
+                                          child: Icon(Icons.music_note_outlined,
+                                              color: isDark
+                                                  ? Colors.white54
+                                                  : Colors.black54),
                                         ),
                                       ),
                                     ),
@@ -169,7 +198,11 @@ class SpotifyChartsSection extends ConsumerWidget {
                                         height: 22,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: isDark ? Colors.black.withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.9),
+                                          color: isDark
+                                              ? Colors.black
+                                                  .withValues(alpha: 0.8)
+                                              : Colors.white
+                                                  .withValues(alpha: 0.9),
                                         ),
                                         alignment: Alignment.center,
                                         child: Text(
@@ -177,7 +210,9 @@ class SpotifyChartsSection extends ConsumerWidget {
                                           style: TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.w800,
-                                            color: isDark ? Colors.white : Colors.black,
+                                            color: isDark
+                                                ? Colors.white
+                                                : Colors.black,
                                           ),
                                         ),
                                       ),
@@ -187,12 +222,19 @@ class SpotifyChartsSection extends ConsumerWidget {
                                         bottom: 6,
                                         right: 6,
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6, vertical: 3),
                                           decoration: BoxDecoration(
-                                            color: Colors.black.withValues(alpha: 0.8),
-                                            borderRadius: BorderRadius.circular(6),
+                                            color: Colors.black
+                                                .withValues(alpha: 0.8),
+                                            borderRadius:
+                                                BorderRadius.circular(6),
                                           ),
-                                          child: LiveAudioWave(isPlaying: true, color: Colors.white, height: 10, barCount: 3),
+                                          child: LiveAudioWave(
+                                              isPlaying: true,
+                                              color: Colors.white,
+                                              height: 10,
+                                              barCount: 3),
                                         ),
                                       ),
                                   ],
@@ -205,7 +247,9 @@ class SpotifyChartsSection extends ConsumerWidget {
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
-                                    color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
+                                    color: isDark
+                                        ? NoirColors.blackTextPrimary
+                                        : NoirColors.whiteTextPrimary,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -215,7 +259,9 @@ class SpotifyChartsSection extends ConsumerWidget {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary,
+                                    color: isDark
+                                        ? NoirColors.blackTextSecondary
+                                        : NoirColors.whiteTextSecondary,
                                   ),
                                 ),
                               ],

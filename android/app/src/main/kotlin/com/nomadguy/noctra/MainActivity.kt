@@ -22,6 +22,8 @@ class MainActivity : AudioServiceActivity() {
     private val ROUTER_CHANNEL = "com.noctra.app/audio_router"
     private val DEVICES_EVENT_CHANNEL = "com.noctra.app/audio_devices"
     private val EFFECTS_CHANNEL = "com.noctra.app/audio_effects"
+    private val STEM_CHANNEL = "com.noctra.app/audio_stem_separation"
+    private val QUALITY_CHANNEL = "com.noctra.app/audio_quality"
 
     private var visualizer: Visualizer? = null
     private var audioRouter: NoctraAudioRouter? = null
@@ -97,8 +99,7 @@ class MainActivity : AudioServiceActivity() {
             when (call.method) {
                 "attachSession" -> {
                     val sid = call.argument<Int>("sessionId") ?: 0
-                    effectsEngine.attachSession(sid)
-                    result.success(true)
+                    result.success(effectsEngine.attachSession(sid))
                 }
                 "applyEqualizer" -> {
                     val bands = call.argument<List<Double>>("bands") ?: emptyList()
@@ -216,13 +217,121 @@ class MainActivity : AudioServiceActivity() {
         }
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ICON_CHANNEL).setMethodCallHandler { call, result ->
-            if (call.method == "setLauncherIcon") {
-                // Safe acknowledgement — avoid invoking destructive setComponentEnabledSetting
-                // while foreground activity is active which causes Android AMS to terminate the task.
-                result.success(true)
-            } else {
-                result.notImplemented()
+            when (call.method) {
+                "setLauncherIcon" -> {
+                    val iconKey = call.argument<String>("icon") ?: "noir_black"
+                    // Just queue — actual toggle happens in applyPendingIcon
+                    getSharedPreferences("noctra_theme", MODE_PRIVATE)
+                        .edit().putString("pending_icon", iconKey).apply()
+                    result.success(true)
+                }
+                "applyPendingIcon" -> {
+                    val iconKey = call.argument<String>("icon") ?: "noir_black"
+                    setLauncherIconAlias(iconKey)
+                    result.success(true)
+                }
+                else -> result.notImplemented()
             }
+        }
+
+        // Audio Stem Separation channel — delegates to native ML pipeline
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, STEM_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "separateStems" -> {
+                    val inputPath = call.argument<String>("inputPath") ?: ""
+                    val outputDir = call.argument<String>("outputDir") ?: ""
+                    val model = call.argument<String>("model") ?: "light"
+                    safeResult(result) {
+                        NoctraAudioStemEngine.separateStems(inputPath, outputDir, model)
+                    }
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        // Audio Quality / CODEC settings channel — persists preferences
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, QUALITY_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "setStreamQuality" -> {
+                    val bitrate = call.argument<Int>("bitrate") ?: 320
+                    val codec = call.argument<String>("codec") ?: "mp3"
+                    // Persist to SharedPreferences for native resolvers
+                    val prefs = getSharedPreferences("noctra_audio_quality", MODE_PRIVATE)
+                    prefs.edit().putInt("preferred_bitrate", bitrate)
+                        .putString("preferred_codec", codec).apply()
+                    result.success(true)
+                }
+                "setPreferredCodec" -> {
+                    val codec = call.argument<String>("codec") ?: "mp3"
+                    val prefs = getSharedPreferences("noctra_audio_quality", MODE_PRIVATE)
+                    prefs.edit().putString("preferred_codec", codec).apply()
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    /**
+     * Toggle the launcher icon by enabling the matching activity-alias
+     * and disabling all others.  Executes on a background thread with a
+     * short delay so the icon change doesn't kill the foreground task.
+     */
+    /**
+     * Swap the launcher icon by enabling the matching activity-alias and
+     * disabling all others. MainActivity always keeps its LAUNCHER filter
+     * so it serves as the guaranteed entry point — disabling aliases is safe.
+     */
+    private fun setLauncherIconAlias(iconKey: String) {
+        thread {
+            try {
+                val pm = packageManager
+                val pkg = packageName
+
+                // ALL aliases including .default — only ONE should be enabled at a time
+                val allAliases = listOf(
+                    "$pkg.MainActivity.default",
+                    "$pkg.MainActivity.noir_black",
+                    "$pkg.MainActivity.noir_white",
+                    "$pkg.MainActivity.amoled",
+                    "$pkg.MainActivity.liquid_glass",
+                )
+
+                val targetAlias = "$pkg.MainActivity.$iconKey"
+
+                // 1. Enable the target alias first (safe — enabling never kills)
+                try {
+                    pm.setComponentEnabledSetting(
+                        ComponentName(pkg, targetAlias),
+                        PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                        PackageManager.DONT_KILL_APP
+                    )
+                } catch (_: Throwable) {}
+
+                // 2. Disable all OTHER aliases (including .default)
+                //    Since only one alias is enabled, the launcher shows exactly one icon.
+                for (alias in allAliases) {
+                    if (alias == targetAlias) continue
+                    try {
+                        pm.setComponentEnabledSetting(
+                            ComponentName(pkg, alias),
+                            PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                            PackageManager.DONT_KILL_APP
+                        )
+                    } catch (_: Throwable) {}
+                }
+
+                // Persist the choice
+                getSharedPreferences("noctra_theme", MODE_PRIVATE)
+                    .edit().putString("launcher_icon", iconKey).apply()
+
+                // Force launcher to refresh
+                try {
+                    sendBroadcast(Intent(Intent.ACTION_PACKAGE_CHANGED).apply {
+                        data = android.net.Uri.fromParts("package", pkg, null)
+                    })
+                } catch (_: Throwable) {}
+            } catch (_: Throwable) {}
         }
     }
 

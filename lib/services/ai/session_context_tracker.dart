@@ -112,7 +112,8 @@ class SessionContextTracker {
     List<double> avg(List<_SessionEntry> entries) {
       final r = List<double>.filled(dim, 0.0);
       for (final e in entries) {
-        final v = e.song.featureVector.length == dim
+        final v = e.song.featureVector.length == dim &&
+                !e.song.featureVector.every((x) => x == 0.5)
             ? e.song.featureVector
             : TasteVectorEngine.extractSongEmbedding(e.song);
         for (int i = 0; i < dim; i++) {

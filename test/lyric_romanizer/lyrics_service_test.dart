@@ -20,7 +20,8 @@ void main() {
     });
 
     test('different songs should not match', () {
-      expect(LyricsService.titlesMatchForTest('Tum Hi Ho', 'Agar Tum Saath Ho'), false);
+      expect(LyricsService.titlesMatchForTest('Tum Hi Ho', 'Agar Tum Saath Ho'),
+          false);
     });
 
     test('short substring should NOT match (bug fix)', () {
@@ -29,8 +30,13 @@ void main() {
     });
 
     test('long substring should match', () {
-      expect(LyricsService.titlesMatchForTest('Tum Hi Ho', 'Tum Hi Ho Acoustic'), true);
-      expect(LyricsService.titlesMatchForTest('Shape of You', 'Shape of You (Remix)'), true);
+      expect(
+          LyricsService.titlesMatchForTest('Tum Hi Ho', 'Tum Hi Ho Acoustic'),
+          true);
+      expect(
+          LyricsService.titlesMatchForTest(
+              'Shape of You', 'Shape of You (Remix)'),
+          true);
     });
 
     test('empty strings', () {
@@ -64,9 +70,17 @@ void main() {
     });
   });
 
+  group('LyricsService script selection', () {
+    test('does not classify Gurmukhi lyrics as Latin', () {
+      expect(LyricsService.hasNonLatinScriptForTest('ਸਾਰੇ ਰੰਗ'), isTrue);
+      expect(LyricsService.hasNonLatinScriptForTest('Shape of You'), isFalse);
+    });
+  });
+
   group('LyricsService LRC parsing', () {
     test('parses standard LRC format', () {
-      final lrc = '[00:00.00] Tum hi ho\n[00:03.50] Ab tum hi ho\n[00:07.00] Bas tum hi ho';
+      final lrc =
+          '[00:00.00] Tum hi ho\n[00:03.50] Ab tum hi ho\n[00:07.00] Bas tum hi ho';
       final lines = LyricsService.parseLrcForTest(lrc);
       expect(lines.length, 3);
       expect(lines[0].text, 'Tum hi ho');
@@ -94,23 +108,27 @@ void main() {
       final lrc = '[01:23.456] Test line';
       final lines = LyricsService.parseLrcForTest(lrc);
       expect(lines.length, 1);
-      expect(lines[0].timestamp, Duration(minutes: 1, seconds: 23, milliseconds: 456));
+      expect(lines[0].timestamp,
+          Duration(minutes: 1, seconds: 23, milliseconds: 456));
     });
   });
 
   group('LyricsService sanitization', () {
     test('removes parentheses content', () {
-      final result = LyricsService.sanitizeTitleForTest('Tum Hi Ho (Official Video)');
+      final result =
+          LyricsService.sanitizeTitleForTest('Tum Hi Ho (Official Video)');
       expect(result, 'Tum Hi Ho');
     });
 
     test('removes feat artists', () {
-      final result = LyricsService.sanitizeTitleForTest('Song Title feat. Someone');
+      final result =
+          LyricsService.sanitizeTitleForTest('Song Title feat. Someone');
       expect(result, 'Song Title');
     });
 
     test('removes YouTube suffixes', () {
-      final result = LyricsService.sanitizeTitleForTest('Song Title - Official Music Video');
+      final result = LyricsService.sanitizeTitleForTest(
+          'Song Title - Official Music Video');
       expect(result, 'Song Title');
     });
 

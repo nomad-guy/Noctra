@@ -5,6 +5,7 @@ import '../sources/noctra_local_database.dart';
 import 'taste_vector_engine.dart';
 import '../../services/ytdlp/music_service.dart';
 import '../../core/utils/noctra_localization.dart';
+import '../../core/utils/noctra_logger.dart';
 
 class AIPlaylist {
   final String id, title, subtitle, artworkUrl, vibeKey;
@@ -73,8 +74,11 @@ class MusicRepository extends ChangeNotifier {
         _cachedTasteVector = List.unmodifiable(_userTasteVector);
       }
       _isLoaded = true;
-    } catch (_) {
-      _isLoaded = true;
+    } catch (e) {
+      // Keep the repository retryable. A transient storage failure should not
+      // permanently freeze the app with an empty library.
+      _isLoaded = false;
+      NoctraLogger.w('Music repository load failed; will retry', e);
     }
     // Always notify listeners — even on partial failure — so widgets
     // don't remain stuck on stale default state.

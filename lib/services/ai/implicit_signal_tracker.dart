@@ -1,9 +1,12 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import '../../core/utils/noctra_logger.dart';
 import '../../data/models/song_model.dart';
 import '../../data/repositories/music_repository.dart';
 import '../../data/repositories/neural_recommender_engine.dart';
 import '../../data/sources/noctra_sqlite_database.dart';
+import '../metadata/deezer_audio_features_service.dart';
 import 'knowledge_graph.dart';
 import 'session_context_tracker.dart';
 
@@ -42,39 +45,56 @@ class ImplicitSignalTracker {
     } else {
       signal = 1.0; eventType = 'complete_listen';
     }
-    _applySignal(song: song, eventType: eventType, signal: signal, completion: completion);
+    unawaited(_applySignal(song: song, eventType: eventType, signal: signal, completion: completion));
   }
 
-  void trackFavorite(Song song) => _applySignal(song: song, eventType: 'favorite', signal: 3.0, completion: 1.0);
-  void trackPlaylistAdd(Song song) => _applySignal(song: song, eventType: 'playlist_add', signal: 2.5, completion: 1.0);
-  void trackDownload(Song song) => _applySignal(song: song, eventType: 'download', signal: 2.0, completion: 1.0);
-  void trackReplay(Song song) => _applySignal(song: song, eventType: 'replay', signal: 1.2, completion: 1.0);
+  void trackFavorite(Song song) => unawaited(_applySignal(song: song, eventType: 'favorite', signal: 3.0, completion: 1.0));
+  void trackPlaylistAdd(Song song) => unawaited(_applySignal(song: song, eventType: 'playlist_add', signal: 2.5, completion: 1.0));
+  void trackDownload(Song song) => unawaited(_applySignal(song: song, eventType: 'download', signal: 2.0, completion: 1.0));
+  void trackReplay(Song song) => unawaited(_applySignal(song: song, eventType: 'replay', signal: 1.2, completion: 1.0));
 
   // New: user searched and selected a result — strong positive signal
-  void trackSearchSelect(Song song) => _applySignal(song: song, eventType: 'search_select', signal: 1.2, completion: 1.0);
+  void trackSearchSelect(Song song) => unawaited(_applySignal(song: song, eventType: 'search_select', signal: 1.2, completion: 1.0));
 
-  void _applySignal({
+  Future<void> _applySignal({
     required Song song,
     required String eventType,
     required double signal,
     required double completion,
-  }) {
+  }) async {
     try {
       // Update session tracker first (in-memory, fast)
       SessionContextTracker().recordSong(song, eventType);
 
-      // Record in SQLite persistent telemetry
+      // Fetch audio features for rich metadata
+      AudioFeatures audioFeats;
+      try {
+        audioFeats = await DeezerAudioFeaturesService.fetchFeatures(
+            song.title, song.artist);
+      } catch (_) {
+        audioFeats = AudioFeatures.defaults;
+      }
+
+      // Record in SQLite persistent telemetry with full per-song metadata
       NoctraSqliteDatabase().recordListeningEvent(
         song: song,
         eventType: eventType,
         signalScore: signal,
         completionRate: completion,
+        audioFeaturesJson: jsonEncode({
+          'energy': audioFeats.energy,
+          'danceability': audioFeats.danceability,
+          'valence': audioFeats.valence,
+          'tempo': audioFeats.tempo,
+          'acousticness': audioFeats.acousticness,
+          'source': audioFeats.source,
+        }),
       );
 
       // Online gradient descent update on long-term User Taste Vector
       MusicRepository().updateTasteVector(song, eventType);
 
-      // Train the neural MLP on this interaction
+      // Train the neural MLP on this interaction (with audio features)
       try {
         final userVec = MusicRepository().userTasteVector;
         final session = SessionContextTracker();
@@ -86,8 +106,18 @@ class ImplicitSignalTracker {
           momentumFeatures: session.momentumFeatures,
           affinityFeatures: session.topArtistAffinityFeatures(),
         );
+        // Fetch audio features for richer training signal
+        AudioFeatures audioFeats;
+        try {
+          audioFeats = await DeezerAudioFeaturesService.fetchFeatures(
+              song.title, song.artist);
+        } catch (_) {
+          audioFeats = AudioFeatures.defaults;
+        }
         NeuralRecommenderEngine.trainFromSignal(
-          userVector: blended, song: song, eventType: eventType, contextFeatures: ctx,
+          userVector: blended, song: song, eventType: eventType,
+          contextFeatures: ctx,
+          audioFeatures: audioFeats.toFeatureVector(),
         );
       } catch (_) {}
 

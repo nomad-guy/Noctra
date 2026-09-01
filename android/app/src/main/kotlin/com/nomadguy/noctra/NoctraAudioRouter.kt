@@ -70,35 +70,125 @@ class NoctraAudioRouter(private val context: Context) {
         return deviceList
     }
 
+    private var activeOutputDevices = mutableListOf<Int>()
+    private var isMultiOutputEnabled = false
+
     fun setPreferredOutputDevice(deviceId: Int): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val devices = audioManager.availableCommunicationDevices
-            val target = devices.find { it.id == deviceId }
-            if (target != null) {
-                return audioManager.setCommunicationDevice(target)
-            }
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        try {
             val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
             val target = devices.find { it.id == deviceId }
-            if (target != null) {
-                if (target.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
+            if (target == null) return false
+
+            when (target.type) {
+                AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> {
                     audioManager.isSpeakerphoneOn = true
-                } else if (target.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || target.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
-                    audioManager.isSpeakerphoneOn = false
-                    audioManager.startBluetoothSco()
-                    audioManager.isBluetoothScoOn = true
+                    audioManager.mode = AudioManager.MODE_NORMAL
                 }
-                notifyDeviceChange()
-                return true
+                AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+                AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
+                AudioDeviceInfo.TYPE_BLE_HEADSET,
+                AudioDeviceInfo.TYPE_BLE_SPEAKER -> {
+                    audioManager.isSpeakerphoneOn = false
+                    // Route to Bluetooth
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        audioManager.setCommunicationDevice(target)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        audioManager.startBluetoothSco()
+                        audioManager.isBluetoothScoOn = true
+                    }
+                }
+                AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+                AudioDeviceInfo.TYPE_WIRED_HEADSET -> {
+                    audioManager.isSpeakerphoneOn = false
+                }
+                AudioDeviceInfo.TYPE_USB_DEVICE,
+                AudioDeviceInfo.TYPE_USB_HEADSET -> {
+                    audioManager.isSpeakerphoneOn = false
+                }
+                else -> {
+                    audioManager.isSpeakerphoneOn = false
+                }
             }
+
+            activeOutputDevices.clear()
+            activeOutputDevices.add(deviceId)
+            isMultiOutputEnabled = false
+            notifyDeviceChange()
+            return true
+        } catch (e: Throwable) {
+            return false
         }
-        return false
     }
 
     fun setMultiOutputMode(enabled: Boolean, deviceIds: List<Int>): Boolean {
-        // Multi-Sink Audio Routing Trigger
-        notifyDeviceChange()
-        return true
+        try {
+            isMultiOutputEnabled = enabled
+            activeOutputDevices.clear()
+            activeOutputDevices.addAll(deviceIds)
+
+            if (enabled && deviceIds.size >= 2) {
+                // For true dual output on Android, we need to:
+                // 1. Set the primary device via setCommunicationDevice
+                // 2. Use Bluetooth SCO for secondary output
+                // Note: Android doesn't natively support simultaneous multi-sink
+                // media output. We use a combination of speaker + BT SCO.
+
+                val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+                val hasBluetooth = deviceIds.any { id ->
+                    devices.find { it.id == id }?.type?.let { type ->
+                        type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                        type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                        type == AudioDeviceInfo.TYPE_BLE_HEADSET ||
+                        type == AudioDeviceInfo.TYPE_BLE_SPEAKER
+                    } == true
+                }
+                val hasSpeaker = deviceIds.any { id ->
+                    devices.find { it.id == id }?.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+                }
+
+                if (hasBluetooth && hasSpeaker) {
+                    // Dual output: speaker + bluetooth
+                    audioManager.isSpeakerphoneOn = true
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        val btDevice = devices.find { dev ->
+                            deviceIds.any { it == dev.id } &&
+                            (dev.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                             dev.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+                             dev.type == AudioDeviceInfo.TYPE_BLE_HEADSET)
+                        }
+                        if (btDevice != null) {
+                            audioManager.setCommunicationDevice(btDevice)
+                        }
+                    } else {
+                        @Suppress("DEPRECATION")
+                        audioManager.startBluetoothSco()
+                        audioManager.isBluetoothScoOn = true
+                    }
+                } else if (hasBluetooth) {
+                    // Only bluetooth devices — route to first
+                    val firstBt = devices.find { dev ->
+                        deviceIds.any { it == dev.id }
+                    }
+                    if (firstBt != null) {
+                        setPreferredOutputDevice(firstBt.id)
+                    }
+                } else {
+                    // No bluetooth — just use speaker
+                    audioManager.isSpeakerphoneOn = true
+                }
+            } else if (!enabled) {
+                // Disable multi-output: use first device
+                if (deviceIds.isNotEmpty()) {
+                    setPreferredOutputDevice(deviceIds.first())
+                }
+            }
+
+            notifyDeviceChange()
+            return true
+        } catch (e: Throwable) {
+            return false
+        }
     }
 
     fun openSystemMediaOutputSwitcher(): Boolean {

@@ -36,7 +36,8 @@ class DevCreditsTab extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    NoctraAppLogo(size: 48, radius: 12, isDark: isDark, showGlow: true),
+                    NoctraAppLogo(
+                        size: 48, radius: 12, isDark: isDark, showGlow: true),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
@@ -52,14 +53,17 @@ class DevCreditsTab extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           InkWell(
-                            onTap: () => _openUrl('https://github.com/nomad-guy'),
+                            onTap: () =>
+                                _openUrl('https://github.com/nomad-guy'),
                             child: Text(
                               'Nomad Guy (@nomad-guy)',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 decoration: TextDecoration.underline,
-                                color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary,
+                                color: isDark
+                                    ? NoirColors.blackTextSecondary
+                                    : NoirColors.whiteTextSecondary,
                               ),
                             ),
                           ),
@@ -84,16 +88,26 @@ class DevCreditsTab extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     height: 1.45,
-                    color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary,
+                    color: isDark
+                        ? NoirColors.blackTextSecondary
+                        : NoirColors.whiteTextSecondary,
                   ),
                 ),
                 const SizedBox(height: 12),
-                _devSpecClickableRow('Repository', 'github.com/nomad-guy/Noctra', () => _openUrl('https://github.com/nomad-guy/Noctra'), isDark),
+                _devSpecClickableRow(
+                    'Repository',
+                    'github.com/nomad-guy/Noctra',
+                    () => _openUrl('https://github.com/nomad-guy/Noctra'),
+                    isDark),
                 _devSpecRow('License', 'GNU GPL v3.0 (FOSS)', isDark),
-                _devSpecRow('Audio Engine', 'High-Fidelity 320k + YouTube Direct', isDark),
-                _devSpecRow('Recommender', 'On-Device MLP + MMR (Pure Dart)', isDark),
-                _devSpecRow('Telemetry', 'Local SQLite WAL (Zero Cloud)', isDark),
-                _devSpecRow('Version', '${AppUpdateService.currentVersion} (Build 7)', isDark),
+                _devSpecRow(
+                    'Audio Engine', 'Adaptive high-fidelity playback', isDark),
+                _devSpecRow(
+                    'Recommender', 'On-Device MLP + MMR (Pure Dart)', isDark),
+                _devSpecRow(
+                    'Telemetry', 'Local SQLite WAL (Zero Cloud)', isDark),
+                _devSpecRow('Version',
+                    '${AppUpdateService.currentVersion} (Build 7)', isDark),
               ],
             ),
           ),
@@ -122,7 +136,9 @@ class DevCreditsTab extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11.5,
                     height: 1.45,
-                    color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary,
+                    color: isDark
+                        ? NoirColors.blackTextSecondary
+                        : NoirColors.whiteTextSecondary,
                   ),
                 ),
               ],
@@ -144,13 +160,19 @@ class DevCreditsTab extends StatelessWidget {
             width: 95,
             child: Text(
               label,
-              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white54 : Colors.black54),
+              style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white54 : Colors.black54),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: TextStyle(fontSize: 11.5, fontFamily: 'monospace', color: isDark ? Colors.white : Colors.black),
+              style: TextStyle(
+                  fontSize: 11.5,
+                  fontFamily: 'monospace',
+                  color: isDark ? Colors.white : Colors.black),
             ),
           ),
         ],
@@ -158,7 +180,8 @@ class DevCreditsTab extends StatelessWidget {
     );
   }
 
-  Widget _devSpecClickableRow(String label, String value, VoidCallback onTap, bool isDark) {
+  Widget _devSpecClickableRow(
+      String label, String value, VoidCallback onTap, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
@@ -168,7 +191,10 @@ class DevCreditsTab extends StatelessWidget {
             width: 95,
             child: Text(
               label,
-              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white54 : Colors.black54),
+              style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white54 : Colors.black54),
             ),
           ),
           Expanded(

@@ -71,6 +71,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final isDark = themeMode.isDark;
     final isSearching = ref.watch(isSearchingProvider);
     final searchResults = ref.watch(searchResultsProvider);
+    final catalogTopics = ref.watch(dynamicCatalogTopicsProvider);
     final syncService = ref.watch(p2pSyncServiceProvider);
 
     return Scaffold(
@@ -86,9 +87,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: Icon(Icons.menu_rounded, color: isDark ? Colors.white : Colors.black, size: 24),
+                    icon: Icon(Icons.menu_rounded,
+                        color: isDark ? Colors.white : Colors.black, size: 24),
                     tooltip: 'Open Sidebar',
-                    onPressed: () => ref.read(rootScaffoldKeyProvider).currentState?.openDrawer(),
+                    onPressed: () => ref
+                        .read(rootScaffoldKeyProvider)
+                        .currentState
+                        ?.openDrawer(),
                   ),
                   const SizedBox(width: 4),
                   Expanded(
@@ -98,7 +103,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
-                        color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
+                        color: isDark
+                            ? NoirColors.blackTextPrimary
+                            : NoirColors.whiteTextPrimary,
                       ),
                     ),
                   ),
@@ -122,7 +129,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   ),
                   IconButton(
                     tooltip: 'Developer Suite',
-                    icon: Icon(Icons.terminal_rounded, color: isDark ? Colors.white70 : Colors.black87, size: 22),
+                    icon: Icon(Icons.terminal_rounded,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                        size: 22),
                     onPressed: () {
                       showModalBottomSheet(
                         context: context,
@@ -141,40 +150,54 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: Container(
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF141414) : const Color(0xFFEBEBEB),
+                  color: isDark
+                      ? const Color(0xFF141414)
+                      : const Color(0xFFEBEBEB),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                  border: Border.all(
+                      color: isDark ? Colors.white12 : Colors.black12),
                 ),
                 child: TextField(
                   controller: _searchController,
                   onChanged: _onSearchChanged,
                   onSubmitted: _performSearch,
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black, fontSize: 14),
+                  style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black,
+                      fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'Search songs, artists, or paste URL...',
-                    hintStyle: TextStyle(fontSize: 13, color: isDark ? Colors.white38 : Colors.black38),
-                    prefixIcon: Icon(Icons.search_rounded, color: isDark ? Colors.white60 : Colors.black54),
+                    hintStyle: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? Colors.white38 : Colors.black38),
+                    prefixIcon: Icon(Icons.search_rounded,
+                        color: isDark ? Colors.white60 : Colors.black54),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
-                            icon: Icon(Icons.clear_rounded, size: 18, color: isDark ? Colors.white60 : Colors.black54),
+                            icon: Icon(Icons.clear_rounded,
+                                size: 18,
+                                color:
+                                    isDark ? Colors.white60 : Colors.black54),
                             onPressed: () {
                               _searchSequence++;
                               _debounceTimer?.cancel();
                               _searchController.clear();
-                              ref.read(searchResultsProvider.notifier).state = [];
-                              ref.read(isSearchingProvider.notifier).state = false;
+                              ref.read(searchResultsProvider.notifier).state =
+                                  [];
+                              ref.read(isSearchingProvider.notifier).state =
+                                  false;
                               setState(() {});
                             },
                           )
                         : null,
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                 ),
               ),
             ),
 
-            // Source Selector Chips
+            // Catalog quality filters. Provider identifiers stay internal.
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: SingleChildScrollView(
@@ -182,11 +205,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 physics: const BouncingScrollPhysics(),
                 child: Row(
                   children: [
-                    _sourceChip('All Sources', 'all', isDark),
+                    _sourceChip('All Catalog', 'all', isDark),
                     const SizedBox(width: 8),
-                    _sourceChip('JioSaavn 320k High-Fidelity', 'saavn', isDark),
+                    _sourceChip('High Fidelity', 'saavn', isDark),
                     const SizedBox(width: 8),
-                    _sourceChip('YouTube Music', 'ytmusic', isDark),
+                    _sourceChip('Extended Catalog', 'ytmusic', isDark),
                   ],
                 ),
               ),
@@ -198,6 +221,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 isDark: isDark,
                 searchResults: searchResults,
                 isSearching: isSearching,
+                catalogTopics: catalogTopics.asData?.value,
+                isLoadingCatalogTopics: catalogTopics.isLoading,
                 onGenreTap: (query) {
                   _searchController.text = query;
                   _performSearch(query);
@@ -215,7 +240,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return GestureDetector(
       onTap: () {
         setState(() => _selectedSource = sourceKey);
-        if (_searchController.text.isNotEmpty) _performSearch(_searchController.text);
+        if (_searchController.text.isNotEmpty) {
+          _performSearch(_searchController.text);
+        }
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -225,7 +252,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               : (isDark ? const Color(0xFF141414) : const Color(0xFFEBEBEB)),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? Colors.transparent : (isDark ? Colors.white12 : Colors.black12),
+            color: isSelected
+                ? Colors.transparent
+                : (isDark ? Colors.white12 : Colors.black12),
           ),
         ),
         child: Text(

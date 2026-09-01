@@ -5,6 +5,10 @@ class PermissionHelper {
   static Future<bool> requestStoragePermissions() async {
     if (kIsWeb) return true;
     try {
+      // Android 11+ needs MANAGE_EXTERNAL_STORAGE for custom folders
+      final manageStatus = await Permission.manageExternalStorage.request();
+      if (manageStatus.isGranted) return true;
+
       final statuses = await [
         Permission.audio,
         Permission.storage,

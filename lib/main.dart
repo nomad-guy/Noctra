@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import 'core/utils/noctra_logger.dart';
 import 'core/utils/permission_helper.dart';
 import 'data/repositories/music_repository.dart';
 import 'data/sources/noctra_local_database.dart';
+import 'data/repositories/neural_recommender_engine.dart';
 import 'providers/app_providers.dart';
 import 'services/audio/audio_player_service.dart';
 import 'services/updater/app_update_service.dart';
@@ -45,12 +47,31 @@ void main() async {
         androidShowNotificationBadge: true,
         androidStopForegroundOnPause: true,
       );
-    } catch (e, st) { NoctraLogger.e('JustAudioBackground.init failed', e, st); }
+    } catch (e, st) {
+      NoctraLogger.e('JustAudioBackground.init failed', e, st);
+    }
   }
 
-  try { await NoctraLocalDatabase().init(); } catch (e) { NoctraLogger.e('Database init error', e); }
-  try { await MusicRepository().init(); } catch (e) { NoctraLogger.e('Repository init error', e); }
-  try { await AudioPlayerService().restoreLastPlaybackSession(); } catch (e) { NoctraLogger.e('Session restore error', e); }
+  try {
+    await NoctraLocalDatabase().init();
+  } catch (e) {
+    NoctraLogger.e('Database init error', e);
+  }
+  try {
+    await NeuralRecommenderEngine.restoreFromDatabase();
+  } catch (e) {
+    NoctraLogger.w('Neural model restore error', e);
+  }
+  try {
+    await MusicRepository().init();
+  } catch (e) {
+    NoctraLogger.e('Repository init error', e);
+  }
+  try {
+    await AudioPlayerService().restoreLastPlaybackSession();
+  } catch (e) {
+    NoctraLogger.e('Session restore error', e);
+  }
 
   runApp(const ProviderScope(child: NoctraApp()));
 
@@ -58,7 +79,8 @@ void main() async {
   // version is on GitHub. Runs 3 seconds after launch to not compete with
   // audio session init or first-frame render.
   // unawaited: intentionally fire-and-forget after app launches.
-  Future.delayed(const Duration(seconds: 3)).then((_) => AppUpdateService.notifyUpdateAvailable());
+  Future.delayed(const Duration(seconds: 3))
+      .then((_) => AppUpdateService.notifyUpdateAvailable());
 }
 
 class NoctraApp extends ConsumerStatefulWidget {
@@ -68,10 +90,11 @@ class NoctraApp extends ConsumerStatefulWidget {
   ConsumerState<NoctraApp> createState() => _NoctraAppState();
 }
 
-class _NoctraAppState extends ConsumerState<NoctraApp> {
+class _NoctraAppState extends ConsumerState<NoctraApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Listen to theme changes: persist to DB and update launcher icon.
     // Using ref.listen in initState via addPostFrameCallback so the
     // ProviderScope is fully ready before we attach the listener.
@@ -81,6 +104,21 @@ class _NoctraAppState extends ConsumerState<NoctraApp> {
       DynamicIconService.updateForTheme(initial);
       NoctraLocalDatabase().saveCachedThemeMode(initial.name);
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      // Apply any pending icon swap now that the app is in the background.
+      // The launcher re-queries the enabled component list when we return.
+      DynamicIconService.applyPending();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override
@@ -99,18 +137,25 @@ class _NoctraAppState extends ConsumerState<NoctraApp> {
       });
     });
 
+    // Dynamic theme: both light and dark branches use the active mode
+    // so Flutter animates color transitions between any two modes.
+    final activeThemeData = NoirTheme.getTheme(themeMode);
     return MaterialApp(
       title: 'Noctra',
       debugShowCheckedModeBanner: false,
-      theme: NoirTheme.getTheme(NoirThemeMode.noirWhite),
-      darkTheme: NoirTheme.getTheme(NoirThemeMode.noirBlack),
+      theme: activeThemeData,
+      darkTheme: activeThemeData,
       themeMode: themeMode.isDark ? ThemeMode.dark : ThemeMode.light,
+      builder: (context, child) =>
+          NoctraThemeBackdrop(child: child ?? const SizedBox.shrink()),
       home: AnimatedSwitcher(
         duration: const Duration(milliseconds: 600),
         switchInCurve: Curves.easeOutCubic,
         switchOutCurve: Curves.easeInCubic,
         child: isInitialized
-            ? (hasCompletedOnboarding ? const MainNavigationShell() : const OnboardingScreen())
+            ? (hasCompletedOnboarding
+                ? const MainNavigationShell()
+                : const OnboardingScreen())
             : SplashScreen(
                 onInitialized: () async {
                   try {
@@ -128,7 +173,8 @@ class MainNavigationShell extends ConsumerStatefulWidget {
   const MainNavigationShell({super.key});
 
   @override
-  ConsumerState<MainNavigationShell> createState() => _MainNavigationShellState();
+  ConsumerState<MainNavigationShell> createState() =>
+      _MainNavigationShellState();
 }
 
 class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
@@ -143,9 +189,15 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   Widget build(BuildContext context) {
     final currentIndex = ref.watch(bottomNavIndexProvider);
     final scaffoldKey = ref.watch(rootScaffoldKeyProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return Scaffold(
       key: scaffoldKey,
+      // Transparent only in Liquid Glass so normal themes retain their own
+      // canvas instead of exposing the platform's default black surface.
+      backgroundColor: themeMode.isLiquidGlass
+          ? Colors.transparent
+          : context.noctraTokens.canvas,
       drawer: const NoirSidebar(),
       body: Stack(
         children: [
@@ -182,28 +234,70 @@ class _CustomBottomNavBar extends ConsumerWidget {
     final currentIndex = ref.watch(bottomNavIndexProvider);
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
+    final tokens = context.noctraTokens;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      height: 58,
-      decoration: BoxDecoration(
-        color: isDark ? (themeMode.isAmoled ? const Color(0xFF000000) : const Color(0xF2080808)) : const Color(0xF2FFFFFF),
-        border: Border(
-          top: BorderSide(
-            color: isDark ? Colors.white12 : Colors.black12,
-            width: 0.8,
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(
+            sigmaX: themeMode.isLiquidGlass ? 22 : 0,
+            sigmaY: themeMode.isLiquidGlass ? 22 : 0),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          height: 58,
+          decoration: BoxDecoration(
+            color: themeMode.isLiquidGlass
+                ? null
+                : (isDark
+                    ? (themeMode.isAmoled
+                        ? const Color(0xFF000000)
+                        : const Color(0xF2080808))
+                    : const Color(0xF2FFFFFF)),
+            gradient: themeMode.isLiquidGlass
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                        tokens.surfaceVariant.withValues(alpha: .86),
+                        tokens.surface.withValues(alpha: .80),
+                        tokens.secondaryAccent.withValues(alpha: .18)
+                      ])
+                : null,
+            border: Border(
+              top: BorderSide(
+                color: tokens.subtleBorder,
+                width: 0.8,
+              ),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _navItem(context, ref, 0, Icons.home_filled, Icons.home_outlined,
+                  'Home', currentIndex == 0, isDark),
+              _navItem(context, ref, 1, Icons.search_rounded,
+                  Icons.search_rounded, 'Search', currentIndex == 1, isDark),
+              _navItem(
+                  context,
+                  ref,
+                  2,
+                  Icons.library_music_rounded,
+                  Icons.library_music_outlined,
+                  'Library',
+                  currentIndex == 2,
+                  isDark),
+              _navItem(
+                  context,
+                  ref,
+                  3,
+                  Icons.auto_awesome_rounded,
+                  Icons.auto_awesome_outlined,
+                  'AI Studio',
+                  currentIndex == 3,
+                  isDark),
+            ],
           ),
         ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _navItem(context, ref, 0, Icons.home_filled, Icons.home_outlined, 'Home', currentIndex == 0, isDark),
-          _navItem(context, ref, 1, Icons.search_rounded, Icons.search_rounded, 'Search', currentIndex == 1, isDark),
-          _navItem(context, ref, 2, Icons.library_music_rounded, Icons.library_music_outlined, 'Library', currentIndex == 2, isDark),
-          _navItem(context, ref, 3, Icons.auto_awesome_rounded, Icons.auto_awesome_outlined, 'AI Studio', currentIndex == 3, isDark),
-        ],
       ),
     );
   }

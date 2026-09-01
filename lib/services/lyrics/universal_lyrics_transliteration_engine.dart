@@ -14,6 +14,7 @@ enum LyricScript {
   thai,
   hebrew,
   devanagari,
+  gurmukhi,
   bengali,
   tamil,
   telugu,
@@ -37,6 +38,7 @@ class UniversalLyricsTransliterationEngine {
   /// Detects the primary script of a given piece of lyric text.
   static LyricScript detectScript(String text) {
     int devanagariCount = 0;
+    int gurmukhiCount = 0;
     int bengaliCount = 0;
     int tamilCount = 0;
     int teluguCount = 0;
@@ -56,6 +58,8 @@ class UniversalLyricsTransliterationEngine {
     for (final rune in text.runes) {
       if (rune >= 0x0900 && rune <= 0x097F) {
         devanagariCount++;
+      } else if (rune >= 0x0A00 && rune <= 0x0A7F) {
+        gurmukhiCount++;
       } else if (rune >= 0x0980 && rune <= 0x09FF) {
         bengaliCount++;
       } else if (rune >= 0x0B80 && rune <= 0x0BFF) {
@@ -89,22 +93,25 @@ class UniversalLyricsTransliterationEngine {
       }
     }
 
-    if (japaneseCount > 0 || (chineseCount > 0 && japaneseCount > 0)) return LyricScript.japanese;
+    if (japaneseCount > 0) return LyricScript.japanese;
     if (koreanCount > 0) return LyricScript.korean;
     if (chineseCount > 5) return LyricScript.chinese;
-    if (devanagariCount > 3) return LyricScript.devanagari;
-    if (tamilCount > 3) return LyricScript.tamil;
-    if (teluguCount > 3) return LyricScript.telugu;
-    if (bengaliCount > 3) return LyricScript.bengali;
-    if (gujaratiCount > 3) return LyricScript.gujarati;
-    if (kannadaCount > 3) return LyricScript.kannada;
-    if (malayalamCount > 3) return LyricScript.malayalam;
-    if (odiaCount > 3) return LyricScript.odia;
-    if (cyrillicCount > 3) return LyricScript.cyrillic;
-    if (arabicCount > 3) return LyricScript.arabic;
-    if (greekCount > 3) return LyricScript.greek;
-    if (thaiCount > 3) return LyricScript.thai;
-    if (hebrewCount > 3) return LyricScript.hebrew;
+    // A single short lyric line can be a valid script sample. Requiring four
+    // characters made controls disappear for lines such as "दिल" or "مَن".
+    if (devanagariCount > 0) return LyricScript.devanagari;
+    if (gurmukhiCount > 0) return LyricScript.gurmukhi;
+    if (tamilCount > 0) return LyricScript.tamil;
+    if (teluguCount > 0) return LyricScript.telugu;
+    if (bengaliCount > 0) return LyricScript.bengali;
+    if (gujaratiCount > 0) return LyricScript.gujarati;
+    if (kannadaCount > 0) return LyricScript.kannada;
+    if (malayalamCount > 0) return LyricScript.malayalam;
+    if (odiaCount > 0) return LyricScript.odia;
+    if (cyrillicCount > 0) return LyricScript.cyrillic;
+    if (arabicCount > 0) return LyricScript.arabic;
+    if (greekCount > 0) return LyricScript.greek;
+    if (thaiCount > 0) return LyricScript.thai;
+    if (hebrewCount > 0) return LyricScript.hebrew;
 
     return LyricScript.latin;
   }
@@ -167,6 +174,12 @@ class UniversalLyricsTransliterationEngine {
         return const [
           ScriptOption(code: 'original', label: 'मूल (देवनागरी)'),
           ScriptOption(code: 'roman', label: 'Roman (English)'),
+        ];
+      case LyricScript.gurmukhi:
+        return const [
+          ScriptOption(code: 'original', label: 'ਮੂਲ (ਪੰਜਾਬੀ)'),
+          ScriptOption(code: 'roman', label: 'Roman (English)'),
+          ScriptOption(code: 'devanagari', label: 'देवनागरी (Hindi)'),
         ];
       case LyricScript.tamil:
       case LyricScript.telugu:
@@ -256,6 +269,9 @@ class UniversalLyricsTransliterationEngine {
       case LyricScript.devanagari:
         romanText = _romanizer.toRomanized(clean);
         break;
+      case LyricScript.gurmukhi:
+        romanText = _gurmukhiToRoman(clean);
+        break;
       case LyricScript.bengali:
         final deva = SanscriptEngine.t(clean, SanscriptEngine.bengali, SanscriptEngine.devanagari);
         romanText = _romanizer.toRomanized(deva);
@@ -295,6 +311,9 @@ class UniversalLyricsTransliterationEngine {
       if (sourceScript == LyricScript.devanagari) return clean;
       if (sourceScript == LyricScript.bengali) {
         return SanscriptEngine.t(clean, SanscriptEngine.bengali, SanscriptEngine.devanagari);
+      }
+      if (sourceScript == LyricScript.gurmukhi) {
+        return SanscriptEngine.t(clean, SanscriptEngine.gurmukhi, SanscriptEngine.devanagari);
       }
       return DevanagariTransliterationService.toDevanagari(romanText);
     }
@@ -453,6 +472,22 @@ class UniversalLyricsTransliterationEngine {
     return sb.toString();
   }
 
+  /// Punjabi-aware Romanization. The override layer handles frequent lyric
+  /// spellings while the Devanagari bridge supplies a consistent offline
+  /// fallback for words outside the vocabulary.
+  static String _gurmukhiToRoman(String text) {
+    return text.splitMapJoin(RegExp(r'\s+'), onMatch: (m) => m.group(0)!, onNonMatch: (token) {
+      final leading = RegExp(r'^\p{P}+', unicode: true).stringMatch(token) ?? '';
+      final trailing = RegExp(r'\p{P}+$', unicode: true).stringMatch(token) ?? '';
+      if (leading.length + trailing.length >= token.length) return token;
+      final core = token.substring(leading.length, token.length - trailing.length);
+      if (core.isEmpty) return token;
+      final override = _gurmukhiRomanOverrides[core];
+      final deva = SanscriptEngine.t(core, SanscriptEngine.gurmukhi, SanscriptEngine.devanagari);
+      return '$leading${override ?? _romanizer.toRomanized(deva).toLowerCase()}$trailing';
+    });
+  }
+
   // ──────────────────────────────────────────────────────────────────────────
   // Comprehensive Tables
   // ──────────────────────────────────────────────────────────────────────────
@@ -575,5 +610,14 @@ class UniversalLyricsTransliterationEngine {
     'ח': 'ch', 'ט': 't', 'י': 'y', 'כ': 'k', 'ך': 'k', 'ל': 'l', 'מ': 'm',
     'ם': 'm', 'נ': 'n', 'ן': 'n', 'ס': 's', 'ע': "'", 'פ': 'p', 'ף': 'p',
     'צ': 'tz', 'ץ': 'tz', 'ק': 'k', 'ר': 'r', 'ש': 'sh', 'ת': 't',
+  };
+
+  static const Map<String, String> _gurmukhiRomanOverrides = {
+    'ਸਾਰੇ': 'saare', 'ਰੰਗ': 'rang', 'ਵੇਖ': 'vekh', 'ਲਏ': 'lae',
+    'ਹੁਣ': 'hun', 'ਕੋਈ': 'koi', 'ਨਹੀਂ': 'nahi', 'ਤੇਰੇ': 'tere',
+    'ਦਿਲ': 'dil', 'ਮੇਰਾ': 'mera', 'ਤੇਰਾ': 'tera', 'ਜਾਣਾ': 'jaana',
+    'ਜਾਣੀ': 'jaani', 'ਕਰਦੇ': 'karde', 'ਕਹਿੰਦੇ': 'kehnde', 'ਆਖੀਂ': 'aakheen',
+    'ਸਜਣਾ': 'sajna', 'ਸਜਨਾ': 'sajna', 'ਪਿਆਰ': 'pyaar', 'ਇਸ਼ਕ': 'ishq',
+    'ਵਿੱਚ': 'vich', 'ਨਾਲ': 'naal', 'ਹੈ': 'hai', 'ਸੀ': 'si',
   };
 }

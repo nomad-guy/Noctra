@@ -2,22 +2,73 @@
 Main API Route Definitions for Noctra Backend Sidecar
 """
 import os
+from urllib.parse import urlparse
+
 import requests
-from flask import Blueprint, request, jsonify, redirect, Response, stream_with_context
+from flask import (
+    Blueprint,
+    Response,
+    jsonify,
+    redirect,
+    request,
+    stream_with_context,
+)
 from backend.core.config import DEFAULT_DOWNLOAD_DIR, logger
-from backend.services.jiosaavn_service import search_jiosaavn_music, get_jiosaavn_trending
-from backend.services.youtube_service import search_youtube_music, get_stream_url
-from backend.services.ai_rag_service import hybrid_dense_rag_rerank, generate_16axis_vector
+from backend.services.ai_rag_service import (
+    generate_16axis_vector,
+    hybrid_dense_rag_rerank,
+)
+from backend.services.jiosaavn_service import (
+    get_jiosaavn_trending,
+    search_jiosaavn_music,
+)
 from backend.services.lyrics_service import fetch_lyrics
-from backend.services.spotify_service import get_dynamic_spotify_charts, SPOTIFY_CHARTS
+from backend.services.spotify_service import (
+    SPOTIFY_CHARTS,
+    get_dynamic_spotify_charts,
+)
+from backend.services.youtube_service import (
+    get_stream_url,
+    search_youtube_music,
+)
 
 api_bp = Blueprint('api', __name__)
+
+_MAX_CATALOG_LIMIT = 50
+_TRUSTED_STREAM_HOSTS = (
+    'saavncdn.com',
+    'jiosaavn.com',
+    'googlevideo.com',
+    'youtube.com',
+    'ytimg.com',
+    'jamendo.com',
+)
+
+
+def _bounded_limit(raw_value, default=15):
+    try:
+        return max(1, min(int(raw_value), _MAX_CATALOG_LIMIT))
+    except (TypeError, ValueError):
+        return default
+
+
+def _is_trusted_stream_url(stream_url):
+    try:
+        parsed = urlparse(stream_url)
+        if parsed.scheme != 'https' or not parsed.hostname:
+            return False
+        host = parsed.hostname.lower()
+        return any(host == domain or host.endswith(f'.{domain}')
+                   for domain in _TRUSTED_STREAM_HOSTS)
+    except (TypeError, ValueError):
+        return False
+
 
 @api_bp.route('/search', methods=['GET'])
 def search_music():
     query = request.args.get('q', '').strip()
     source = request.args.get('source', 'all').lower().strip()
-    limit = int(request.args.get('limit', 15))
+    limit = _bounded_limit(request.args.get('limit'), default=15)
     if not query:
         return jsonify({"results": []})
     if source in ('youtube', 'ytmusic', 'yt'):
@@ -25,31 +76,42 @@ def search_music():
     elif source in ('jiosaavn', 'saavn'):
         results = search_jiosaavn_music(query, limit=limit)
     else:
-        results = search_jiosaavn_music(query, limit=limit) + search_youtube_music(query, limit=limit)
+        results = search_jiosaavn_music(
+            query, limit=limit) + search_youtube_music(query, limit=limit)
     ranked = hybrid_dense_rag_rerank(query, results)
-    return jsonify({"results": ranked[:limit], "query": query, "source": source})
+    return jsonify(
+        {"results": ranked[:limit], "query": query, "source": source})
+
 
 @api_bp.route('/trending', methods=['GET'])
 def get_trending():
     try:
-        results = get_jiosaavn_trending(limit=int(request.args.get('limit', 20)))
+        results = get_jiosaavn_trending(
+            limit=_bounded_limit(request.args.get('limit'), default=20))
         return jsonify({"trending": results, "results": results})
     except Exception as e:
         logger.error(f"Trending error: {e}")
         return jsonify({"trending": [], "results": [], "error": str(e)})
 
+
 @api_bp.route('/vibe_feed', methods=['GET'])
 def get_vibe_feed():
     try:
         vibe = request.args.get('vibe', 'late_night').strip()
-        limit = int(request.args.get('limit', 15))
+        limit = _bounded_limit(request.args.get('limit'), default=15)
         vibe_map = {
-            'late_night': 'Arijit Singh midnight songs', 'chill_lofi': 'lofi chill beats relaxing',
-            'high_energy': 'Badshah party songs dance', 'dark_synth': 'dark electronic ambient',
-            'acoustic_warm': 'acoustic unplugged ballad', 'bollywood': 'Bollywood latest romantic hits',
-            'punjabi': 'Diljit Dosanjh AP Dhillon Punjabi', 'rnb_soul': 'R&B soul smooth vibes',
-            'classical': 'Indian classical instrumental', 'kpop': 'K-Pop BTS trending',
-            'sufi': 'Sufi Nusrat Fateh Ali Khan', 'workout': 'workout motivation songs',
+            'late_night': 'Arijit Singh midnight songs',
+            'chill_lofi': 'lofi chill beats relaxing',
+            'high_energy': 'Badshah party songs dance',
+            'dark_synth': 'dark electronic ambient',
+            'acoustic_warm': 'acoustic unplugged ballad',
+            'bollywood': 'Bollywood latest romantic hits',
+            'punjabi': 'Diljit Dosanjh AP Dhillon Punjabi',
+            'rnb_soul': 'R&B soul smooth vibes',
+            'classical': 'Indian classical instrumental',
+            'kpop': 'K-Pop BTS trending',
+            'sufi': 'Sufi Nusrat Fateh Ali Khan',
+            'workout': 'workout motivation songs',
         }
         query = vibe_map.get(vibe, vibe.replace('_', ' '))
         candidates = search_jiosaavn_music(query, limit=limit * 2)
@@ -59,13 +121,14 @@ def get_vibe_feed():
         logger.error(f"Vibe feed error: {e}")
         return jsonify({"results": [], "error": str(e)})
 
+
 @api_bp.route('/ai_radio', methods=['GET'])
 def ai_radio():
     """AI Radio: search for songs similar to a seed track by title+artist."""
     try:
         title = request.args.get('title', '').strip()
         artist = request.args.get('artist', '').strip()
-        limit = int(request.args.get('limit', 15))
+        limit = _bounded_limit(request.args.get('limit'), default=15)
         if not title:
             return jsonify({"results": []})
         # Search by artist first (most relevant), then by title keywords
@@ -90,23 +153,26 @@ def ai_radio():
         logger.error(f"AI Radio error: {e}")
         return jsonify({"results": [], "error": str(e)})
 
+
 @api_bp.route('/vibe_curate', methods=['POST'])
 def vibe_curate():
     data = request.get_json() or {}
     vibe = data.get('vibe', 'Late Night Drive')
     user_taste = data.get('userTasteVector')
-    limit = int(data.get('limit', 12))
+    limit = _bounded_limit(data.get('limit'), default=12)
 
     candidates = search_jiosaavn_music(vibe, limit=limit * 2)
-    ranked = hybrid_dense_rag_rerank(vibe, candidates, user_taste_vector=user_taste)
+    ranked = hybrid_dense_rag_rerank(
+        vibe, candidates, user_taste_vector=user_taste)
     return jsonify({"results": ranked[:limit], "vibe": vibe})
+
 
 @api_bp.route('/spotify/charts', methods=['GET'])
 def get_spotify_charts():
     """Returns dynamic Spotify public chart playlists without API keys."""
     try:
         chart_key = request.args.get('chart', 'top_hits').strip()
-        limit = int(request.args.get('limit', 20))
+        limit = _bounded_limit(request.args.get('limit'), default=20)
         tracks = get_dynamic_spotify_charts(chart_key, limit=limit)
         return jsonify({
             "chart": chart_key,
@@ -118,20 +184,26 @@ def get_spotify_charts():
         logger.error(f"Spotify charts endpoint error: {e}")
         return jsonify({"results": [], "trending": [], "error": str(e)})
 
+
 @api_bp.route('/spotify/oembed', methods=['GET'])
 def spotify_oembed():
     """Zero-key Spotify oEmbed metadata proxy."""
     url = request.args.get('url', '').strip()
-    if not url or not (url.startswith('https://open.spotify.com/') or url.startswith('https://spotify.link/')):
+    if not url or not (url.startswith('https://open.spotify.com/')
+                       or url.startswith('https://spotify.link/')):
         return jsonify({"error": "Invalid Spotify URL"}), 400
     try:
-        res = requests.get(f"https://open.spotify.com/oembed?url={requests.utils.quote(url)}", timeout=5)
+        res = requests.get(
+            f"https://open.spotify.com/oembed?url={requests.utils.quote(url)}",
+            timeout=5)
         if res.status_code == 200:
             return jsonify(res.json())
-        return jsonify({"error": "Spotify oEmbed lookup failed"}), res.status_code
+        return jsonify({"error": "Spotify oEmbed lookup failed"}
+                       ), res.status_code
     except Exception as e:
         logger.error(f"Spotify oEmbed error: {e}")
         return jsonify({"error": "Spotify lookup error"}), 500
+
 
 @api_bp.route('/metadata/enrich', methods=['GET'])
 def enrich_metadata():
@@ -168,18 +240,28 @@ def enrich_metadata():
         logger.error(f"MusicBrainz enrichment error: {e}")
         return jsonify({"found": False, "error": str(e)})
 
+
 def _stream_response(stream_url, headers):
-    """Proxy audio stream bytes through Flask with Range support for seeking."""
+    """Proxy audio bytes through Flask while preserving seek range requests."""
+    if not _is_trusted_stream_url(stream_url):
+        logger.warning("Rejected untrusted stream URL")
+        return jsonify({"error": "Untrusted stream URL"}), 502
+
     # JioSaavn CDN: safe to redirect directly (browser-accessible, no auth)
     if 'saavncdn.com' in stream_url:
         return redirect(stream_url, code=302)
-    
+
     # All other streams (googlevideo.com, etc): proxy bytes through Flask
     # This is required because googlevideo.com URLs need specific headers
     # and block direct browser access without session binding
     try:
         req_headers = {}
-        for key in ('User-Agent', 'Accept', 'Accept-Language', 'Referer', 'Cookie'):
+        for key in (
+            'User-Agent',
+            'Accept',
+            'Accept-Language',
+            'Referer',
+                'Cookie'):
             if key in headers:
                 req_headers[key] = headers[key]
         if not req_headers.get('User-Agent'):
@@ -190,8 +272,12 @@ def _stream_response(stream_url, headers):
         if client_range:
             req_headers['Range'] = client_range
 
-        upstream = requests.get(stream_url, headers=req_headers, stream=True, timeout=15)
-        
+        upstream = requests.get(
+            stream_url,
+            headers=req_headers,
+            stream=True,
+            timeout=15)
+
         def generate():
             for chunk in upstream.iter_content(chunk_size=1024 * 64):
                 if chunk:
@@ -217,12 +303,14 @@ def _stream_response(stream_url, headers):
         logger.error(f"Stream proxy error: {e}")
         return jsonify({"error": "Stream proxy failed"}), 502
 
+
 @api_bp.route('/stream/<video_id>', methods=['GET'])
 def stream_audio(video_id):
     stream_url, headers = get_stream_url(video_id)
     if not stream_url:
         return jsonify({"error": "Failed to resolve stream"}), 502
     return _stream_response(stream_url, headers)
+
 
 @api_bp.route('/proxy_stream', methods=['GET'])
 def proxy_stream():
@@ -246,6 +334,7 @@ def proxy_stream():
         return jsonify({"error": "Failed to resolve stream"}), 502
     return _stream_response(stream_url, headers)
 
+
 @api_bp.route('/lyrics', methods=['GET'])
 def get_lyrics():
     title = request.args.get('title', '').strip()
@@ -254,33 +343,52 @@ def get_lyrics():
     res = fetch_lyrics(title, artist, duration)
     return jsonify(res)
 
+
 @api_bp.route('/ml/vectorize', methods=['POST'])
 def vectorize_text():
     text = (request.get_json() or {}).get('text', '')
     return jsonify({'vector': generate_16axis_vector(text), 'dimensions': 16})
 
+
 @api_bp.route('/download', methods=['POST'])
 def download_song():
     data = request.get_json() or {}
-    song_id, title, artist = data.get('id', ''), data.get('title', 'Unknown'), data.get('artist', 'Unknown')
-    stream_url = data.get('streamUrl') or data.get('stream_url', '')
-    if not stream_url and song_id:
+    song_id, title, artist = data.get(
+        'id', ''), data.get(
+        'title', 'Unknown'), data.get(
+            'artist', 'Unknown')
+    stream_url = None
+    if song_id:
         stream_url, _ = get_stream_url(song_id)
-    if not stream_url:
-        return jsonify({"error": "Missing stream URL"}), 400
+    if not stream_url or not _is_trusted_stream_url(stream_url):
+        return jsonify(
+            {"error": "Unable to resolve a trusted stream URL"}), 400
     try:
-        c_title = "".join(c for c in title if c.isalnum() or c in (' ', '_', '-')).strip()
-        c_artist = "".join(c for c in artist if c.isalnum() or c in (' ', '_', '-')).strip()
-        filepath = os.path.join(DEFAULT_DOWNLOAD_DIR, f"{c_artist} - {c_title}.m4a")
+        c_title = "".join(
+            c for c in title if c.isalnum() or c in (
+                ' ', '_', '-')).strip()
+        c_artist = "".join(
+            c for c in artist if c.isalnum() or c in (
+                ' ', '_', '-')).strip()
+        filepath = os.path.join(
+            DEFAULT_DOWNLOAD_DIR,
+            f"{c_artist} - {c_title}.m4a")
         if not os.path.exists(filepath):
-            resp = requests.get(stream_url, stream=True, timeout=30)
+            resp = requests.get(
+                stream_url, stream=True, timeout=30, allow_redirects=False)
             if resp.status_code == 200:
                 with open(filepath, 'wb') as f:
-                    for chunk in resp.iter_content(chunk_size=1024 * 64):
+                    for chunk in resp.iter_content(
+                            chunk_size=1024 * 64):
                         f.write(chunk)
             else:
-                return jsonify({"error": f"Download failed, status {resp.status_code}"}), 502
-        return jsonify({"status": "success", "message": "Downloaded lossless track", "path": filepath})
+                return jsonify(
+                    {"error": f"Download failed, status {resp.status_code}"}), 502
+        return jsonify({
+            "status": "success",
+            "message": "Downloaded lossless track",
+            "path": filepath,
+        })
     except Exception as e:
         logger.error(f"Download error: {e}")
         return jsonify({"error": str(e)}), 500

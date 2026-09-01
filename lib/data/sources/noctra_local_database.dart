@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/utils/noctra_logger.dart';
+import '../models/catalog_topic.dart';
+import '../models/download_location.dart';
 import '../models/song_model.dart';
 import '../repositories/taste_vector_engine.dart';
 import 'noctra_manifest_store.dart';
@@ -31,6 +33,25 @@ class NoctraLocalDatabase {
   List<String> get onboardedLanguages => List.unmodifiable(_onboardedLanguages);
   String getCachedThemeMode() => _cachedThemeMode;
 
+  String getCachedDownloadLocation() {
+    try {
+      return _prefs?.getString('noctra_download_location') ??
+          DownloadLocation.appDocs;
+    } catch (_) {
+      return DownloadLocation.appDocs;
+    }
+  }
+
+  Future<void> saveDownloadLocation(String key) async {
+    try {
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
+      _prefs = prefs;
+      await prefs.setString('noctra_download_location', key);
+    } catch (e) {
+      NoctraLogger.w('Failed to persist download location', e);
+    }
+  }
+
   /// Persists the active theme so it survives app restarts.
   Future<void> saveCachedThemeMode(String modeName) => saveThemeMode(modeName);
 
@@ -52,23 +73,30 @@ class NoctraLocalDatabase {
       _hasCompletedOnboarding = prefs.getBool('noctra_onboarded') ?? false;
       _onboardedArtists = prefs.getStringList('noctra_onboarded_artists') ?? [];
       _onboardedGenres = prefs.getStringList('noctra_onboarded_genres') ?? [];
-      _onboardedLanguages = prefs.getStringList('noctra_onboarded_languages') ?? [];
+      _onboardedLanguages =
+          prefs.getStringList('noctra_onboarded_languages') ?? [];
 
       _favorites.clear();
-      _favorites.addAll(_safeDecodeSongList(prefs.getString('noctra_favs'), 'noctra_favs', prefs));
+      _favorites.addAll(_safeDecodeSongList(
+          prefs.getString('noctra_favs'), 'noctra_favs', prefs));
       _downloads.clear();
-      _downloads.addAll(_safeDecodeSongList(prefs.getString('noctra_downloads'), 'noctra_downloads', prefs));
+      _downloads.addAll(_safeDecodeSongList(
+          prefs.getString('noctra_downloads'), 'noctra_downloads', prefs));
       _recent.clear();
-      _recent.addAll(_safeDecodeSongList(prefs.getString('noctra_recent'), 'noctra_recent', prefs));
+      _recent.addAll(_safeDecodeSongList(
+          prefs.getString('noctra_recent'), 'noctra_recent', prefs));
       _customFolders.clear();
-      _customFolders.addAll(_safeDecodeCustomFolders(prefs.getString('noctra_custom_folders'), prefs));
-      _cachedTasteVector = _safeDecodeTasteVector(prefs.getString('noctra_taste_vector'), prefs);
+      _customFolders.addAll(_safeDecodeCustomFolders(
+          prefs.getString('noctra_custom_folders'), prefs));
+      _cachedTasteVector =
+          _safeDecodeTasteVector(prefs.getString('noctra_taste_vector'), prefs);
       _cachedThemeMode = prefs.getString('noctra_theme_mode') ?? 'noirBlack';
 
       final kgStr = prefs.getString('noctra_kg_manifests');
       if (kgStr != null) {
         try {
-          _manifestStore.loadFromRawMap(jsonDecode(kgStr) as Map<String, dynamic>);
+          _manifestStore
+              .loadFromRawMap(jsonDecode(kgStr) as Map<String, dynamic>);
         } catch (e) {
           NoctraLogger.w('Self-healing manifests knowledge graph', e);
           prefs.remove('noctra_kg_manifests');
@@ -76,7 +104,8 @@ class NoctraLocalDatabase {
       }
       _isLoaded = true;
     } catch (e) {
-      NoctraLogger.e('Database initialization failed; will retry on next access', e);
+      NoctraLogger.e(
+          'Database initialization failed; will retry on next access', e);
       // Reset in-memory state and keep _isLoaded false so subsequent calls can retry
       _favorites.clear();
       _downloads.clear();
@@ -87,7 +116,8 @@ class NoctraLocalDatabase {
     }
   }
 
-  List<Song> _safeDecodeSongList(String? jsonStr, String key, SharedPreferences prefs) {
+  List<Song> _safeDecodeSongList(
+      String? jsonStr, String key, SharedPreferences prefs) {
     if (jsonStr == null || jsonStr.trim().isEmpty) return [];
     try {
       final decoded = jsonDecode(jsonStr);
@@ -98,8 +128,11 @@ class NoctraLocalDatabase {
         if (item is Map) {
           final song = Song.fromMap(Map<String, dynamic>.from(item));
           if (song.title.isEmpty) continue;
-          final effectiveId = song.id.isNotEmpty ? song.id : 'syn_${song.title.hashCode ^ song.artist.hashCode}';
-          final dedupSong = song.id.isEmpty ? song.copyWith(id: effectiveId) : song;
+          final effectiveId = song.id.isNotEmpty
+              ? song.id
+              : 'syn_${song.title.hashCode ^ song.artist.hashCode}';
+          final dedupSong =
+              song.id.isEmpty ? song.copyWith(id: effectiveId) : song;
           if (seen.add(effectiveId)) list.add(dedupSong);
         }
       }
@@ -111,7 +144,8 @@ class NoctraLocalDatabase {
     }
   }
 
-  Map<String, List<Song>> _safeDecodeCustomFolders(String? jsonStr, SharedPreferences prefs) {
+  Map<String, List<Song>> _safeDecodeCustomFolders(
+      String? jsonStr, SharedPreferences prefs) {
     if (jsonStr == null || jsonStr.trim().isEmpty) return {};
     try {
       final decoded = jsonDecode(jsonStr);
@@ -127,8 +161,11 @@ class NoctraLocalDatabase {
             if (item is Map) {
               final song = Song.fromMap(Map<String, dynamic>.from(item));
               if (song.title.isEmpty) continue;
-              final effectiveId = song.id.isNotEmpty ? song.id : 'syn_f_${song.title.hashCode}_${syntheticId++}';
-              final dedupSong = song.id.isEmpty ? song.copyWith(id: effectiveId) : song;
+              final effectiveId = song.id.isNotEmpty
+                  ? song.id
+                  : 'syn_f_${song.title.hashCode}_${syntheticId++}';
+              final dedupSong =
+                  song.id.isEmpty ? song.copyWith(id: effectiveId) : song;
               if (seen.add(effectiveId)) songs.add(dedupSong);
             }
           }
@@ -143,7 +180,8 @@ class NoctraLocalDatabase {
     }
   }
 
-  List<double> _safeDecodeTasteVector(String? jsonStr, SharedPreferences prefs) {
+  List<double> _safeDecodeTasteVector(
+      String? jsonStr, SharedPreferences prefs) {
     final def = TasteVectorEngine.getDefaultVector();
     if (jsonStr == null || jsonStr.trim().isEmpty) return def;
     try {
@@ -154,7 +192,9 @@ class NoctraLocalDatabase {
         final val = (e as num).toDouble();
         list.add(val.isNaN || val.isInfinite ? 0.5 : val.clamp(0.05, 0.95));
       }
-      while (list.length < TasteVectorEngine.vectorDimension) { list.add(0.5); }
+      while (list.length < TasteVectorEngine.vectorDimension) {
+        list.add(0.5);
+      }
       return list.take(TasteVectorEngine.vectorDimension).toList();
     } catch (e) {
       NoctraLogger.w('Self-healing corrupted taste vector', e);
@@ -163,7 +203,10 @@ class NoctraLocalDatabase {
     }
   }
 
-  Future<void> completeOnboarding({required List<String> languages, required List<String> genres, required List<String> artists}) async {
+  Future<void> completeOnboarding(
+      {required List<String> languages,
+      required List<String> genres,
+      required List<String> artists}) async {
     _hasCompletedOnboarding = true;
     _onboardedLanguages = languages;
     _onboardedGenres = genres;
@@ -176,15 +219,26 @@ class NoctraLocalDatabase {
     await prefs.setStringList('noctra_onboarded_artists', artists);
   }
 
-  Future<void> recordManifest(Song song, {String action = 'play', int listenedSeconds = 0, double completionRate = 1.0}) async {
+  Future<void> recordManifest(Song song,
+      {String action = 'play',
+      int listenedSeconds = 0,
+      double completionRate = 1.0}) async {
     await init();
-    _manifestStore.recordManifest(song, action: action, listenedSeconds: listenedSeconds, completionRate: completionRate);
+    _manifestStore.recordManifest(song,
+        action: action,
+        listenedSeconds: listenedSeconds,
+        completionRate: completionRate);
     await _manifestStore.persist();
   }
 
   List<String> getTopArtists({int limit = 6}) {
-    final sorted = _manifestStore.artistWeights.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    final historyList = sorted.take(limit).map((e) => e.key).where((a) => a.isNotEmpty).toList();
+    final sorted = _manifestStore.artistWeights.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final historyList = sorted
+        .take(limit)
+        .map((e) => e.key)
+        .where((a) => a.isNotEmpty)
+        .toList();
     return <String>{..._onboardedArtists, ...historyList}.take(limit).toList();
   }
 
@@ -195,23 +249,33 @@ class NoctraLocalDatabase {
   }
 
   List<String> getTopGenres({int limit = 4}) {
-    final sorted = _manifestStore.genreWeights.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    final history = sorted.take(limit).map((e) => e.key).where((g) => g.isNotEmpty).toList();
+    final sorted = _manifestStore.genreWeights.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final history = sorted
+        .take(limit)
+        .map((e) => e.key)
+        .where((g) => g.isNotEmpty)
+        .toList();
     return <String>{..._onboardedGenres, ...history}.take(limit).toList();
   }
 
   List<String> getTopLanguages({int limit = 3}) {
-    final sorted = _manifestStore.languageWeights.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    final history = sorted.take(limit).map((e) => e.key).where((l) => l.isNotEmpty).toList();
+    final sorted = _manifestStore.languageWeights.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final history = sorted
+        .take(limit)
+        .map((e) => e.key)
+        .where((l) => l.isNotEmpty)
+        .toList();
     return <String>{..._onboardedLanguages, ...history}.take(limit).toList();
   }
 
   Map<String, dynamic> getKnowledgeGraphSummary() => {
-    'totalTracksLearned': _manifestStore.manifests.length,
-    'topArtists': getTopArtists(limit: 4),
-    'topGenres': getTopGenres(limit: 3),
-    'topLanguages': getTopLanguages(limit: 2),
-  };
+        'totalTracksLearned': _manifestStore.manifests.length,
+        'topArtists': getTopArtists(limit: 4),
+        'topGenres': getTopGenres(limit: 3),
+        'topLanguages': getTopLanguages(limit: 2),
+      };
 
   Future<void> saveThemeMode(String mode) async {
     _cachedThemeMode = mode;
@@ -229,7 +293,8 @@ class NoctraLocalDatabase {
     try {
       final prefs = _prefs ?? await SharedPreferences.getInstance();
       _prefs = prefs;
-      final payload = jsonEncode({'song': song.toMap(), 'positionMs': positionMs});
+      final payload =
+          jsonEncode({'song': song.toMap(), 'positionMs': positionMs});
       await prefs.setString('noctra_last_playback', payload);
     } catch (_) {}
   }
@@ -243,62 +308,161 @@ class NoctraLocalDatabase {
         final decoded = jsonDecode(combined) as Map<String, dynamic>;
         final songMap = decoded['song'] as Map<String, dynamic>?;
         if (songMap != null) {
-          return {'song': Song.fromMap(songMap), 'positionMs': (decoded['positionMs'] as num?)?.toInt() ?? 0};
+          return {
+            'song': Song.fromMap(songMap),
+            'positionMs': (decoded['positionMs'] as num?)?.toInt() ?? 0
+          };
         }
       }
       final songJson = prefs.getString('noctra_last_song');
       final posMs = prefs.getInt('noctra_last_pos_ms') ?? 0;
       if (songJson != null) {
         final decoded = jsonDecode(songJson);
-        return {'song': Song.fromMap(Map<String, dynamic>.from(decoded)), 'positionMs': posMs};
+        return {
+          'song': Song.fromMap(Map<String, dynamic>.from(decoded)),
+          'positionMs': posMs
+        };
       }
     } catch (_) {}
     return null;
   }
 
   Future<void> saveFavorites(List<Song> songs) async {
-    final prefs = _prefs ?? await SharedPreferences.getInstance();
-    _prefs = prefs;
-    await prefs.setString('noctra_favs', jsonEncode(songs.map((e) => e.toMap()).toList()));
-    _favorites.clear();
-    _favorites.addAll(songs);
+    try {
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
+      _prefs = prefs;
+      await prefs.setString(
+          'noctra_favs', jsonEncode(songs.map((e) => e.toMap()).toList()));
+      _favorites
+        ..clear()
+        ..addAll(songs);
+    } catch (e) {
+      NoctraLogger.w('Failed to save favorites', e);
+    }
   }
 
   Future<void> saveDownloads(List<Song> songs) async {
-    final prefs = _prefs ?? await SharedPreferences.getInstance();
-    _prefs = prefs;
-    await prefs.setString('noctra_downloads', jsonEncode(songs.map((e) => e.toMap()).toList()));
-    _downloads.clear();
-    _downloads.addAll(songs);
+    try {
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
+      _prefs = prefs;
+      await prefs.setString(
+          'noctra_downloads', jsonEncode(songs.map((e) => e.toMap()).toList()));
+      _downloads
+        ..clear()
+        ..addAll(songs);
+    } catch (e) {
+      NoctraLogger.w('Failed to save downloads', e);
+    }
   }
 
   Future<void> saveRecent(List<Song> songs) async {
-    final prefs = _prefs ?? await SharedPreferences.getInstance();
-    _prefs = prefs;
-    await prefs.setString('noctra_recent', jsonEncode(songs.take(50).map((e) => e.toMap()).toList()));
-    _recent.clear();
-    _recent.addAll(songs);
+    try {
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
+      _prefs = prefs;
+      await prefs.setString('noctra_recent',
+          jsonEncode(songs.take(50).map((e) => e.toMap()).toList()));
+      _recent
+        ..clear()
+        ..addAll(songs);
+    } catch (e) {
+      NoctraLogger.w('Failed to save recent tracks', e);
+    }
   }
 
   Future<void> saveCustomFolders(Map<String, List<Song>> folders) async {
-    _customFolders.clear(); _customFolders.addAll(folders);
-    final prefs = _prefs ?? await SharedPreferences.getInstance();
-    _prefs = prefs;
-    final map = <String, dynamic>{};
-    folders.forEach((k, v) => map[k] = v.map((s) => s.toMap()).toList());
-    await prefs.setString('noctra_custom_folders', jsonEncode(map));
+    try {
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
+      _prefs = prefs;
+      final map = <String, dynamic>{};
+      folders.forEach((k, v) => map[k] = v.map((s) => s.toMap()).toList());
+      await prefs.setString('noctra_custom_folders', jsonEncode(map));
+      _customFolders
+        ..clear()
+        ..addAll(folders);
+    } catch (e) {
+      NoctraLogger.w('Failed to save custom folders', e);
+    }
   }
 
   Future<void> saveTasteVector(List<double> vector) async {
-    _cachedTasteVector = vector;
-    final prefs = _prefs ?? await SharedPreferences.getInstance();
-    _prefs = prefs;
-    await prefs.setString('noctra_taste_vector', jsonEncode(vector));
+    try {
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
+      _prefs = prefs;
+      await prefs.setString('noctra_taste_vector', jsonEncode(vector));
+      _cachedTasteVector = List<double>.unmodifiable(vector);
+    } catch (e) {
+      NoctraLogger.w('Failed to save taste vector', e);
+    }
   }
 
-  Future<List<Song>> loadFavorites() async { await init(); return List<Song>.unmodifiable(_favorites); }
-  Future<List<Song>> loadDownloads() async { await init(); return List<Song>.unmodifiable(_downloads); }
-  Future<List<Song>> loadRecent() async { await init(); return List<Song>.unmodifiable(_recent); }
-  Future<Map<String, List<Song>>> loadCustomFolders() async { await init(); return Map<String, List<Song>>.unmodifiable(_customFolders); }
-  Future<List<double>?> loadTasteVector() async { await init(); return _cachedTasteVector != null ? List<double>.unmodifiable(_cachedTasteVector!) : null; }
+  Future<List<CatalogTopic>> loadCatalogTopics() async {
+    try {
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
+      _prefs = prefs;
+      final raw = prefs.getString('noctra_catalog_topics');
+      if (raw == null) return const [];
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) throw const FormatException('Expected List');
+      return decoded
+          .whereType<Map>()
+          .map((item) => CatalogTopic(
+                title: item['title']?.toString() ?? '',
+                category: item['category']?.toString() ?? '',
+                query: item['query']?.toString() ?? '',
+              ))
+          .where((topic) => topic.title.isNotEmpty && topic.query.isNotEmpty)
+          .take(16)
+          .toList(growable: false);
+    } catch (e) {
+      NoctraLogger.w('Self-healing corrupted catalog topic cache', e);
+      return const [];
+    }
+  }
+
+  Future<void> saveCatalogTopics(List<CatalogTopic> topics) async {
+    try {
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
+      _prefs = prefs;
+      await prefs.setString(
+        'noctra_catalog_topics',
+        jsonEncode(topics
+            .take(16)
+            .map((topic) => {
+                  'title': topic.title,
+                  'category': topic.category,
+                  'query': topic.query,
+                })
+            .toList()),
+      );
+    } catch (e) {
+      NoctraLogger.w('Failed to persist catalog topics', e);
+    }
+  }
+
+  Future<List<Song>> loadFavorites() async {
+    await init();
+    return List<Song>.unmodifiable(_favorites);
+  }
+
+  Future<List<Song>> loadDownloads() async {
+    await init();
+    return List<Song>.unmodifiable(_downloads);
+  }
+
+  Future<List<Song>> loadRecent() async {
+    await init();
+    return List<Song>.unmodifiable(_recent);
+  }
+
+  Future<Map<String, List<Song>>> loadCustomFolders() async {
+    await init();
+    return Map<String, List<Song>>.unmodifiable(_customFolders);
+  }
+
+  Future<List<double>?> loadTasteVector() async {
+    await init();
+    return _cachedTasteVector != null
+        ? List<double>.unmodifiable(_cachedTasteVector!)
+        : null;
+  }
 }

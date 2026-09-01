@@ -84,27 +84,22 @@ class RomanizedTranslationEngine {
   String toRomanized(String text) => toRoman(text);
   String toRoman(String text) {
     if (text.trim().isEmpty) return text;
-    final buffer = StringBuffer();
-    final tokens = text.split(RegExp(r'(\s+)'));
-    bool first = true;
-
-    for (final token in tokens) {
-      if (!first) buffer.write(' ');
-      first = false;
-      if (token.isEmpty) continue;
-
+    // Keep the source whitespace exactly as written. The previous split and
+    // re-join path could collapse spacing and could throw on punctuation-only
+    // tokens such as "…" or "!!!".
+    return text.splitMapJoin(
+      RegExp(r'\s+'),
+      onMatch: (match) => match.group(0)!,
+      onNonMatch: (token) {
+        if (token.isEmpty) return token;
       final leading = RegExp(r'^[\s\p{P}]+', unicode: true).stringMatch(token) ?? '';
       final trailing = RegExp(r'[\s\p{P}]+$', unicode: true).stringMatch(token) ?? '';
+        if (leading.length + trailing.length >= token.length) return token;
       final core = token.substring(leading.length, token.length - trailing.length);
 
-      buffer.write(leading);
-      if (core.isNotEmpty) {
-        buffer.write(_convertWordToRomanCached(core));
-      }
-      buffer.write(trailing);
-    }
-
-    return buffer.toString();
+        return '$leading${_convertWordToRomanCached(core)}$trailing';
+      },
+    );
   }
 
   String _convertWordToRomanCached(String word) {

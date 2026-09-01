@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
 import 'package:noctra/data/models/song_model.dart';
 import 'package:noctra/data/repositories/taste_vector_engine.dart';
 import 'package:noctra/data/repositories/music_repository.dart';
@@ -9,6 +10,7 @@ import 'package:noctra/services/lyrics/sanscript_engine.dart';
 import 'package:noctra/services/lyrics/indic_xlit_engine.dart';
 import 'package:noctra/services/lyrics/universal_lyrics_transliteration_engine.dart';
 import 'package:noctra/core/utils/noctra_localization.dart';
+import 'package:noctra/core/theme/noir_theme.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -37,6 +39,21 @@ void main() {
       expect(decayed.length, 32);
       expect(decayed[0], lessThan(0.9));
       expect(decayed[0], greaterThan(0.5));
+    });
+  });
+
+  group('Dynamic theme tokens', () {
+    test('each built-in theme exposes distinct semantic tokens', () {
+      final black = NoirTheme.getTheme(NoirThemeMode.noirBlack);
+      final amoled = NoirTheme.getTheme(NoirThemeMode.noirAmoled);
+      final white = NoirTheme.getTheme(NoirThemeMode.noirWhite);
+      final glass = NoirTheme.getTheme(NoirThemeMode.liquidGlass);
+      expect(black.extension<NoctraThemeTokens>()?.canvas, isNotNull);
+      expect(amoled.scaffoldBackgroundColor, const Color(0xFF000000));
+      expect(white.brightness, Brightness.light);
+      expect(glass.extension<NoctraThemeTokens>()?.glassBlurSigma, 18);
+      expect(black.extension<NoctraThemeTokens>()?.surface,
+          isNot(white.extension<NoctraThemeTokens>()?.surface));
     });
   });
 
@@ -75,21 +92,29 @@ void main() {
       expect(engine.translateWord('sukoon'), 'peace / solace');
       expect(engine.translateWord('dil'), 'heart / soul');
     });
+
+    test('Preserves whitespace and safely handles punctuation-only tokens', () {
+      final engine = RomanizedTranslationEngine();
+      expect(engine.toRoman('दिल   !!! मेरा'), 'Dil   !!! Mera');
+    });
   });
 
   group('NoctraLocalization Tests', () {
-    test('Translates keys into Hindi, Urdu, Spanish, and French', () {
+    test('Translates keys into Hindi, Punjabi, Urdu, and Kannada', () {
       NoctraLocalization.currentLanguage = 'en';
       expect(NoctraLocalization.tr('app_name'), 'Noctra');
 
       NoctraLocalization.currentLanguage = 'hi';
       expect(NoctraLocalization.tr('app_name'), 'नोक्ट्रा');
 
+      NoctraLocalization.currentLanguage = 'pa';
+      expect(NoctraLocalization.tr('app_name'), 'ਨੋਕਟ੍ਰਾ');
+
       NoctraLocalization.currentLanguage = 'ur';
       expect(NoctraLocalization.tr('app_name'), 'نوکٹرا');
 
-      NoctraLocalization.currentLanguage = 'es';
-      expect(NoctraLocalization.tr('search_explore'), 'Buscar y Explorar');
+      NoctraLocalization.currentLanguage = 'kn';
+      expect(NoctraLocalization.tr('app_name'), 'ನೋಕ್ಟ್ರಾ');
     });
   });
 
@@ -109,12 +134,19 @@ void main() {
   });
 
   group('Universal Lyrics Transliteration Engine Tests', () {
+    test('Detects and converts short Devanagari lyric lines', () {
+      expect(UniversalLyricsTransliterationEngine.detectScript('दिल'), LyricScript.devanagari);
+      expect(UniversalLyricsTransliterationEngine.transliterateText('दिल', 'roman').toLowerCase(), contains('dil'));
+      expect(UniversalLyricsTransliterationEngine.transliterateText('dil', 'devanagari'), contains('दिल'));
+    });
+
     test('Detects Japanese, Korean, Cyrillic, Devanagari, and Latin scripts accurately', () {
       expect(UniversalLyricsTransliterationEngine.detectScript('こんにちは 世界'), LyricScript.japanese);
       expect(UniversalLyricsTransliterationEngine.detectScript('안녕하세요'), LyricScript.korean);
       expect(UniversalLyricsTransliterationEngine.detectScript('Привет мир'), LyricScript.cyrillic);
       expect(UniversalLyricsTransliterationEngine.detectScript('मेरा दिल ये पुकारे'), LyricScript.devanagari);
       expect(UniversalLyricsTransliterationEngine.detectScript('Shape of You'), LyricScript.latin);
+      expect(UniversalLyricsTransliterationEngine.detectScript('ਸਾਰੇ ਰੰਗ'), LyricScript.gurmukhi);
     });
 
     test('Transliterates Japanese Kana to Romaji accurately', () {
@@ -136,6 +168,14 @@ void main() {
     test('Transliterates Roman lyrics into Devanagari accurately', () {
       final dev = UniversalLyricsTransliterationEngine.transliterateText('mera dil', 'devanagari');
       expect(dev.contains('दिल'), isTrue);
+    });
+
+    test('Converts Gurmukhi lyrics to Roman and Devanagari', () {
+      final roman = UniversalLyricsTransliterationEngine.transliterateText('ਸਾਰੇ ਰੰਗ', 'roman');
+      final devanagari = UniversalLyricsTransliterationEngine.transliterateText('ਸਾਰੇ ਰੰਗ', 'devanagari');
+      expect(roman, isNot(contains('ਸਾਰੇ')));
+      expect(devanagari, isNot(contains('ਸਾਰੇ')));
+      expect(devanagari, contains('सा'));
     });
   });
 

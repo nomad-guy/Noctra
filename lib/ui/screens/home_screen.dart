@@ -13,6 +13,7 @@ import '../widgets/spotify_charts_section.dart';
 import '../widgets/dynamic_vibe_stream_section.dart';
 import '../widgets/top_artists_carousel.dart';
 import '../widgets/noctra_app_logo.dart';
+import '../widgets/glass_shard_icon.dart';
 import 'settings_sheet.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -43,7 +44,8 @@ class HomeScreen extends ConsumerWidget {
           color: isDark ? Colors.white : Colors.black,
           backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
           child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+            physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics()),
             slivers: [
               // Collapsing / Expanding Floating Glass Top Header
               SliverAppBar(
@@ -51,7 +53,11 @@ class HomeScreen extends ConsumerWidget {
                 snap: true,
                 pinned: false,
                 elevation: 0,
-                backgroundColor: isDark ? const Color(0xDD0A0A0A) : const Color(0xDDFAFAFA),
+                backgroundColor: themeMode.isLiquidGlass
+                    ? Colors.transparent
+                    : (isDark
+                        ? const Color(0xDD0A0A0A)
+                        : const Color(0xDDFAFAFA)),
                 surfaceTintColor: Colors.transparent,
                 toolbarHeight: 54,
                 automaticallyImplyLeading: false,
@@ -60,7 +66,11 @@ class HomeScreen extends ConsumerWidget {
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                     child: Container(
-                      color: isDark ? Colors.black.withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.7),
+                      color: themeMode.isLiquidGlass
+                          ? context.noctraTokens.surface.withValues(alpha: .54)
+                          : (isDark
+                              ? Colors.black.withValues(alpha: 0.6)
+                              : Colors.white.withValues(alpha: 0.7)),
                     ),
                   ),
                 ),
@@ -73,9 +83,14 @@ class HomeScreen extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: Icon(Icons.menu_rounded, color: isDark ? Colors.white : Colors.black, size: 22),
+                            icon: Icon(Icons.menu_rounded,
+                                color: isDark ? Colors.white : Colors.black,
+                                size: 22),
                             tooltip: 'Open Sidebar',
-                            onPressed: () => ref.read(rootScaffoldKeyProvider).currentState?.openDrawer(),
+                            onPressed: () => ref
+                                .read(rootScaffoldKeyProvider)
+                                .currentState
+                                ?.openDrawer(),
                           ),
                           NoctraAppLogo(size: 24, radius: 6, isDark: isDark),
                           const SizedBox(width: 6),
@@ -85,7 +100,9 @@ class HomeScreen extends ConsumerWidget {
                               fontSize: 15,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 2.0,
-                              color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
+                              color: isDark
+                                  ? NoirColors.blackTextPrimary
+                                  : NoirColors.whiteTextPrimary,
                             ),
                           ),
                         ],
@@ -108,7 +125,8 @@ class HomeScreen extends ConsumerWidget {
                             ref.invalidate(dynamicTrendingFeedProvider);
                             ref.invalidate(dynamicVibeTracksProvider);
                             ref.invalidate(dynamicSpotifyChartsProvider);
-                            await Future.delayed(const Duration(milliseconds: 600));
+                            await Future.delayed(
+                                const Duration(milliseconds: 600));
                           }),
                           _themeMenuButton(context, ref, themeMode, isDark),
                           _topBarIcon(
@@ -141,20 +159,30 @@ class HomeScreen extends ConsumerWidget {
                           fontSize: 26,
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.5,
-                          color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
+                          color: isDark
+                              ? NoirColors.blackTextPrimary
+                              : NoirColors.whiteTextPrimary,
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+                          color: isDark
+                              ? Colors.white10
+                              : Colors.black.withValues(alpha: 0.06),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                          border: Border.all(
+                              color: isDark ? Colors.white12 : Colors.black12),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            LiveAudioWave(isPlaying: isPlaying, color: isDark ? Colors.white : Colors.black, height: 11, barCount: 3),
+                            LiveAudioWave(
+                                isPlaying: isPlaying,
+                                color: isDark ? Colors.white : Colors.black,
+                                height: 11,
+                                barCount: 3),
                             const SizedBox(width: 5),
                             Text(
                               isPlaying ? 'PLAYING' : 'READY',
@@ -175,14 +203,20 @@ class HomeScreen extends ConsumerWidget {
 
               // Recently Played
               SliverToBoxAdapter(
-                child: RecentlyPlayedSection(isDark: isDark, currentSong: currentSong, isPlaying: isPlaying),
+                child: RecentlyPlayedSection(
+                    isDark: isDark,
+                    currentSong: currentSong,
+                    isPlaying: isPlaying),
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 6)),
 
               // Top Trending Hits Carousel
               SliverToBoxAdapter(
-                child: TrendingCarouselSection(isDark: isDark, currentSong: currentSong, isPlaying: isPlaying),
+                child: TrendingCarouselSection(
+                    isDark: isDark,
+                    currentSong: currentSong,
+                    isPlaying: isPlaying),
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 8)),
@@ -194,15 +228,19 @@ class HomeScreen extends ConsumerWidget {
 
               const SliverToBoxAdapter(child: SizedBox(height: 8)),
 
-              // Dynamic Spotify Global Charts
+              // Dynamic global charts
               SliverToBoxAdapter(
-                child: SpotifyChartsSection(isDark: isDark, currentSong: currentSong, isPlaying: isPlaying),
+                child: SpotifyChartsSection(
+                    isDark: isDark,
+                    currentSong: currentSong,
+                    isPlaying: isPlaying),
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 6)),
 
               // AI Generated Mixes
-              SliverToBoxAdapter(child: AIGeneratedPlaylistsSection(isDark: isDark)),
+              SliverToBoxAdapter(
+                  child: AIGeneratedPlaylistsSection(isDark: isDark)),
 
               const SliverToBoxAdapter(child: SizedBox(height: 10)),
 
@@ -213,7 +251,10 @@ class HomeScreen extends ConsumerWidget {
 
               // Made For You (Dynamic Vibe Stream)
               SliverToBoxAdapter(
-                child: DynamicVibeStreamSection(isDark: isDark, currentSong: currentSong, isPlaying: isPlaying),
+                child: DynamicVibeStreamSection(
+                    isDark: isDark,
+                    currentSong: currentSong,
+                    isPlaying: isPlaying),
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 160)),
@@ -224,12 +265,16 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _topBarIcon(IconData icon, String tooltip, bool isDark, {bool active = false, required VoidCallback onPressed}) {
+  Widget _topBarIcon(IconData icon, String tooltip, bool isDark,
+      {bool active = false, required VoidCallback onPressed}) {
     return IconButton(
       tooltip: tooltip,
       iconSize: 20,
       constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-      icon: Icon(icon, color: active ? (isDark ? Colors.white : Colors.black) : (isDark ? Colors.white60 : Colors.black54)),
+      icon: Icon(icon,
+          color: active
+              ? (isDark ? Colors.white : Colors.black)
+              : (isDark ? Colors.white60 : Colors.black54)),
       onPressed: onPressed,
     );
   }
@@ -239,27 +284,44 @@ class HomeScreen extends ConsumerWidget {
       tooltip: 'Refresh Feed',
       iconSize: 20,
       constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-      icon: Icon(Icons.refresh_rounded, color: isDark ? Colors.white60 : Colors.black54),
+      icon: Icon(Icons.refresh_rounded,
+          color: isDark ? Colors.white60 : Colors.black54),
       onPressed: onPressed,
     );
   }
 
-  Widget _themeMenuButton(BuildContext context, WidgetRef ref, NoirThemeMode current, bool isDark) {
-    final icon = current == NoirThemeMode.noirWhite
-        ? Icons.light_mode_outlined
-        : (current == NoirThemeMode.noirAmoled ? Icons.brightness_medium_outlined : Icons.dark_mode_outlined);
+  Widget _themeMenuButton(
+      BuildContext context, WidgetRef ref, NoirThemeMode current, bool isDark) {
+    final icon = current == NoirThemeMode.liquidGlass
+        ? null
+        : current == NoirThemeMode.noirWhite
+            ? Icons.light_mode_outlined
+            : (current == NoirThemeMode.noirAmoled
+                ? Icons.brightness_medium_outlined
+                : Icons.dark_mode_outlined);
     return PopupMenuButton<NoirThemeMode>(
       tooltip: 'Theme',
       iconSize: 20,
       constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-      icon: Icon(icon, color: isDark ? Colors.white60 : Colors.black54),
+      icon: icon == null
+          ? GlassShardIcon(size: 20, color: context.noctraTokens.accent, isActive: true)
+          : Icon(icon, color: isDark ? Colors.white60 : Colors.black54),
       onSelected: (mode) {
         ref.read(themeModeProvider.notifier).state = mode;
       },
       itemBuilder: (context) => [
-        const PopupMenuItem(value: NoirThemeMode.noirBlack, child: Text('Noir Black', style: TextStyle(fontSize: 13))),
-        const PopupMenuItem(value: NoirThemeMode.noirAmoled, child: Text('AMOLED', style: TextStyle(fontSize: 13))),
-        const PopupMenuItem(value: NoirThemeMode.noirWhite, child: Text('Noir White', style: TextStyle(fontSize: 13))),
+        const PopupMenuItem(
+            value: NoirThemeMode.noirBlack,
+            child: Text('Noir Black', style: TextStyle(fontSize: 13))),
+        const PopupMenuItem(
+            value: NoirThemeMode.noirAmoled,
+            child: Text('AMOLED', style: TextStyle(fontSize: 13))),
+        const PopupMenuItem(
+            value: NoirThemeMode.noirWhite,
+            child: Text('Noir White', style: TextStyle(fontSize: 13))),
+        const PopupMenuItem(
+            value: NoirThemeMode.liquidGlass,
+            child: Text('Liquid Glass', style: TextStyle(fontSize: 13))),
       ],
     );
   }

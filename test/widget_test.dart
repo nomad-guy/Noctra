@@ -18,6 +18,8 @@ void main() {
         child: const NoctraApp(),
       ),
     );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
     expect(find.byType(MaterialApp), findsOneWidget);
   });
@@ -85,7 +87,7 @@ void main() {
     expect(find.text(NoctraLocalization.tr('settings')), findsOneWidget);
     expect(find.text('Noir Black'), findsOneWidget);
     expect(find.text('AMOLED'), findsOneWidget);
-    expect(find.text('Noir White'), findsOneWidget);
+    expect(find.text('White'), findsOneWidget);
     expect(find.text('Language / भाषा'), findsOneWidget);
   });
 }

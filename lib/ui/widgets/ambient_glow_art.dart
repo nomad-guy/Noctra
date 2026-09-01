@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../../core/theme/noir_theme.dart';
 
 class AmbientGlowArt extends StatefulWidget {
   final String? imageUrl;
@@ -68,6 +69,7 @@ class _AmbientGlowArtState extends State<AmbientGlowArt> with SingleTickerProvid
   @override
   Widget build(BuildContext context) {
     final effectiveSize = widget.size;
+    final tokens = context.noctraTokens;
 
     return Center(
       child: SizedBox(
@@ -90,9 +92,7 @@ class _AmbientGlowArtState extends State<AmbientGlowArt> with SingleTickerProvid
                       borderRadius: BorderRadius.circular(widget.radius * 1.5),
                       boxShadow: [
                         BoxShadow(
-                          color: widget.isDark
-                              ? Colors.white.withValues(alpha: widget.isPlaying ? _glowOpacity.value * 0.22 : 0.08)
-                              : Colors.black.withValues(alpha: widget.isPlaying ? _glowOpacity.value * 0.18 : 0.06),
+                          color: tokens.secondaryAccent.withValues(alpha: widget.isPlaying ? _glowOpacity.value * 0.45 : 0.16),
                           blurRadius: 36,
                           spreadRadius: 8,
                         ),
@@ -111,7 +111,7 @@ class _AmbientGlowArtState extends State<AmbientGlowArt> with SingleTickerProvid
                   child: ImageFiltered(
                     imageFilter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                     child: Opacity(
-                      opacity: widget.isDark ? 0.35 : 0.25,
+                      opacity: Theme.of(context).brightness == Brightness.dark ? 0.35 : 0.25,
                       child: Image.network(
                         widget.imageUrl!,
                         fit: BoxFit.cover,
@@ -131,9 +131,9 @@ class _AmbientGlowArtState extends State<AmbientGlowArt> with SingleTickerProvid
                 width: effectiveSize,
                 height: effectiveSize,
                 decoration: BoxDecoration(
-                  color: widget.isDark ? const Color(0xFF141414) : const Color(0xFFEBEBEB),
+                  color: tokens.surfaceVariant,
                   border: Border.all(
-                    color: widget.isDark ? Colors.white24 : Colors.black12,
+                    color: tokens.border,
                     width: 1.2,
                   ),
                 ),
@@ -147,7 +147,7 @@ class _AmbientGlowArtState extends State<AmbientGlowArt> with SingleTickerProvid
                           child: Icon(
                             Icons.music_note_rounded,
                             size: effectiveSize * 0.35,
-                            color: widget.isDark ? Colors.white38 : Colors.black38,
+                            color: tokens.secondaryText,
                           ),
                         ),
                       )
@@ -155,7 +155,7 @@ class _AmbientGlowArtState extends State<AmbientGlowArt> with SingleTickerProvid
                         child: Icon(
                           Icons.album_rounded,
                           size: effectiveSize * 0.4,
-                          color: widget.isDark ? Colors.white38 : Colors.black38,
+                          color: tokens.secondaryText,
                         ),
                       ),
               ),

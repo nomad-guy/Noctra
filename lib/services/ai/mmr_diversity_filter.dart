@@ -44,11 +44,12 @@ class MMRDiversityFilter {
         // Hard constraint: Max 2 tracks per artist in Top 15
         if ((artistFrequency[artist] ?? 0) >= 2) continue;
 
+        final candidateVector = _embedding(c.song);
         double maxSimToSelected = 0.0;
         for (final s in selected) {
           final sim = TasteVectorEngine.cosineSimilarity(
-            c.song.featureVector,
-            s.song.featureVector,
+            candidateVector,
+            _embedding(s.song),
           );
           if (sim > maxSimToSelected) maxSimToSelected = sim;
         }
@@ -77,5 +78,13 @@ class MMRDiversityFilter {
     }
 
     return selected;
+  }
+
+  static List<double> _embedding(Song song) {
+    final vector = song.featureVector;
+    return vector.length == TasteVectorEngine.vectorDimension &&
+            !vector.every((value) => value == 0.5)
+        ? vector
+        : TasteVectorEngine.extractSongEmbedding(song);
   }
 }
