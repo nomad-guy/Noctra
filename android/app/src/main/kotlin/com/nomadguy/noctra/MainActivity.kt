@@ -42,11 +42,6 @@ class MainActivity : AudioServiceActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         launcherIconManager = LauncherIconManager(applicationContext)
-        // Reconcile persisted icon state with actual PackageManager state.
-        // Handles upgrade from old architecture, interrupted operations, OEM quirks.
-        try { launcherIconManager.reconcileOnStartup() } catch (e: Throwable) {
-            Log.e(TAG, "Icon reconciliation failed", e)
-        }
         try { audioRouter = NoctraAudioRouter(applicationContext) } catch (e: Throwable) {
             Log.e(TAG, "AudioRouter init failed", e)
         }
@@ -253,11 +248,21 @@ class MainActivity : AudioServiceActivity() {
         }
 
         // ====== ICON CHANNEL ======
-        // Single command: setIcon(key). Delegates to LauncherIconManager.
-        // No two-stage pending/apply. No lifecycle hook needed.
-        // Icon changes happen while app is active — launcher refreshes lazily.
+        // All icon operations serialized through iconExecutor.
+        // reconcileAndInit: combine reconcile + getCurrentIcon into one atomic operation.
+        // setIcon: switch launcher icon transactionally.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ICON_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
+                "reconcileAndInit" -> {
+                    iconExecutor.execute {
+                        val icon = launcherIconManager.reconcileAndGetCurrentIcon()
+                        runOnUiThread {
+                            if (!isFinishing && !isDestroyed) {
+                                result.success(icon)
+                            }
+                        }
+                    }
+                }
                 "setIcon" -> {
                     val iconKey = call.argument<String>("icon") ?: ""
                     if (iconKey.isEmpty()) {
@@ -278,9 +283,6 @@ class MainActivity : AudioServiceActivity() {
                             }
                         }
                     }
-                }
-                "getCurrentIcon" -> {
-                    result.success(launcherIconManager.getCurrentIcon())
                 }
                 else -> result.notImplemented()
             }

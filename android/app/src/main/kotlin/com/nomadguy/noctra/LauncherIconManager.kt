@@ -11,7 +11,7 @@ import android.util.Log
  * Invariant enforced everywhere: EXACTLY ONE alias is enabled at any time.
  *
  * Android PackageManager is the single source of truth.
- * Dart reads from this on startup via getCurrentIcon().
+ * All operations are serialized internally via synchronized blocks.
  */
 class LauncherIconManager(private val context: Context) {
 
@@ -34,34 +34,6 @@ class LauncherIconManager(private val context: Context) {
 
     // ---- Internal helpers ----
 
-    /**
-     * Read the current enabled/disabled state of every alias.
-     * Returns Result.failure if any state read fails (never silently defaults).
-     */
-    private fun captureState(): Result<Map<String, Int>> {
-        return try {
-            val state = aliases.mapValues { (_, alias) ->
-                pm.getComponentEnabledSetting(ComponentName(pkg, alias))
-            }
-            Result.success(state)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to capture component state", e)
-            Result.failure(e)
-        }
-    }
-
-    /** Restore a previously captured state snapshot. */
-    private fun restoreState(snapshot: Map<String, Int>) {
-        for ((key, state) in snapshot) {
-            val alias = aliases[key] ?: continue
-            try {
-                pm.setComponentEnabledSetting(ComponentName(pkg, alias), state, PackageManager.DONT_KILL_APP)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to restore alias $key to state $state", e)
-            }
-        }
-    }
-
     /** Check how many aliases are currently enabled, and which one. */
     private fun verifyExactlyOneEnabled(): Pair<Boolean, String?> {
         val enabledAliases = aliases.entries.filter { (_, alias) ->
@@ -75,99 +47,71 @@ class LauncherIconManager(private val context: Context) {
         return Pair(enabledAliases.size == 1, enabledAliases.firstOrNull()?.key)
     }
 
-    // ---- Public API ----
-
     /**
-     * Returns the key of the currently enabled launcher icon.
-     * Used by Dart on startup to read the actual Android state.
+     * Apply a target icon state: enable target, disable all others.
+     * Returns Result indicating success or the state of failure.
      */
-    fun getCurrentIcon(): String {
-        val (_, enabledKey) = verifyExactlyOneEnabled()
-        return enabledKey ?: "default"
-    }
+    @Synchronized
+    private fun applyIconState(targetKey: String): Result<Unit> {
+        val targetAlias = aliases[targetKey]
+            ?: return Result.failure(IllegalArgumentException("Unknown icon: $targetKey"))
 
-    /**
-     * Switch the launcher icon to [iconKey].
-     *
-     * Algorithm (transactional with rollback):
-     * 1. Capture current state
-     * 2. Enable target alias
-     * 3. Disable all other aliases
-     * 4. Verify exactly 1 enabled and it is the target
-     * 5a. On success → persist → return success
-     * 5b. On failure → restore old state → verify rollback → return failure
-     */
-    fun setIcon(iconKey: String): Result<Unit> {
-        val targetAlias = aliases[iconKey]
-            ?: return Result.failure(IllegalArgumentException("Unknown icon: $iconKey"))
-
-        // Step 1: Capture current state for rollback
-        val oldStateResult = captureState()
-        if (oldStateResult.isFailure) {
-            return Result.failure(IllegalStateException("Cannot read current state", oldStateResult.exceptionOrNull()))
-        }
-        val oldState = oldStateResult.getOrThrow()
-
-        try {
-            // Step 2: Enable the target alias first (safe — enabling never kills)
+        return try {
             pm.setComponentEnabledSetting(
                 ComponentName(pkg, targetAlias),
                 PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
                 PackageManager.DONT_KILL_APP
             )
-
-            // Step 3: Disable ALL other aliases
             for ((key, alias) in aliases) {
-                if (key == iconKey) continue
+                if (key == targetKey) continue
                 pm.setComponentEnabledSetting(
                     ComponentName(pkg, alias),
                     PackageManager.COMPONENT_ENABLED_STATE_DEFAULT,
                     PackageManager.DONT_KILL_APP
                 )
             }
-
-            // Step 4: Verify — must be exactly 1 enabled and it must be the target
-            val (ok, enabledKey) = verifyExactlyOneEnabled()
-            if (!ok || enabledKey != iconKey) {
-                Log.w(TAG, "Verification failed after switch (enabled=$enabledKey, expected=$iconKey) — restoring old state")
-                restoreState(oldState)
-
-                // Step 5b-verify: verify rollback itself
-                val (rollbackOk, rollbackKey) = verifyExactlyOneEnabled()
-                if (!rollbackOk) {
-                    Log.e(TAG, "ROLLBACK VERIFICATION FAILED (enabled=$rollbackKey) — state may be inconsistent")
-                }
-                return Result.failure(IllegalStateException("Icon verification failed: enabled=$enabledKey, expected=$iconKey"))
-            }
-
-            // Step 5a: All good — persist
-            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .edit()
-                .putString(PREFS_KEY, iconKey)
-                .apply()
-
-            Log.i(TAG, "Launcher icon switched to: $iconKey")
-            return Result.success(Unit)
-
+            Result.success(Unit)
         } catch (e: Exception) {
-            // Step 5b: Something failed — rollback to old state
-            Log.e(TAG, "Icon switch FAILED for: $iconKey — restoring old state", e)
-            restoreState(oldState)
-
-            // Verify rollback
-            val (rollbackOk, rollbackKey) = verifyExactlyOneEnabled()
-            if (!rollbackOk) {
-                Log.e(TAG, "ROLLBACK VERIFICATION FAILED after exception (enabled=$rollbackKey) — state may be inconsistent")
-            }
-            return Result.failure(e)
+            Log.e(TAG, "Failed to apply icon state for: $targetKey", e)
+            Result.failure(e)
         }
     }
 
     /**
-     * Called on app startup. Reconciles the persisted icon choice with
-     * actual PackageManager state. Invariant after return: EXACTLY ONE alias enabled.
+     * Last-resort recovery: force default alias enabled, all others disabled.
+     * If this fails, the app may lose its launcher icon entirely.
      */
-    fun reconcileOnStartup() {
+    private fun forceDefaultIcon() {
+        Log.w(TAG, "Last-resort: forcing default icon")
+        try {
+            pm.setComponentEnabledSetting(
+                ComponentName(pkg, aliases["default"]!!),
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                PackageManager.DONT_KILL_APP
+            )
+            for ((key, alias) in aliases) {
+                if (key == "default") continue
+                pm.setComponentEnabledSetting(
+                    ComponentName(pkg, alias),
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    PackageManager.DONT_KILL_APP
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "CRITICAL: Last-resort default icon recovery FAILED", e)
+        }
+    }
+
+    // ---- Public API ----
+
+    /**
+     * Combined initialization: reconcile state + return the actual current icon.
+     * This is the single native init operation called by Dart on startup.
+     *
+     * Returns the icon key that is actually enabled, or "default" as last resort.
+     */
+    @Synchronized
+    fun reconcileAndGetCurrentIcon(): String {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         var saved = prefs.getString(PREFS_KEY, "default") ?: "default"
 
@@ -177,45 +121,82 @@ class LauncherIconManager(private val context: Context) {
             saved = "default"
         }
 
-        val targetAlias = aliases[saved]!!
-
         // Check current state
         val (ok, enabledKey) = verifyExactlyOneEnabled()
 
         if (ok && enabledKey == saved) {
+            // State is consistent
             Log.i(TAG, "Icon state consistent: $saved")
-            return
+            return saved
         }
 
         // State is inconsistent — repair it
         Log.i(TAG, "Icon state inconsistent (enabled=$enabledKey, saved=$saved) — repairing")
 
-        try {
-            pm.setComponentEnabledSetting(
-                ComponentName(pkg, targetAlias),
-                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                PackageManager.DONT_KILL_APP
-            )
-            for ((key, alias) in aliases) {
-                if (key == saved) continue
-                pm.setComponentEnabledSetting(
-                    ComponentName(pkg, alias),
-                    PackageManager.COMPONENT_ENABLED_STATE_DEFAULT,
-                    PackageManager.DONT_KILL_APP
-                )
-            }
-
-            // Verify repair
+        val applyResult = applyIconState(saved)
+        if (applyResult.isSuccess) {
             val (repairedOk, repairedKey) = verifyExactlyOneEnabled()
             if (repairedOk && repairedKey == saved) {
-                Log.i(TAG, "Repaired launcher icon state to: $saved")
-                // Persist the repaired state
                 prefs.edit().putString(PREFS_KEY, saved).apply()
-            } else {
-                Log.e(TAG, "Repair verification failed (enabled=$repairedKey, expected=$saved)")
+                Log.i(TAG, "Repaired launcher icon to: $saved")
+                return saved
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to repair icon state", e)
+            Log.e(TAG, "Repair verification failed (enabled=$repairedKey, expected=$saved)")
+        } else {
+            Log.e(TAG, "Repair apply failed", applyResult.exceptionOrNull())
         }
+
+        // Repair failed — last resort: force default
+        forceDefaultIcon()
+        val (lastResortOk, lastResortKey) = verifyExactlyOneEnabled()
+        if (lastResortOk) {
+            prefs.edit().putString(PREFS_KEY, lastResortKey).apply()
+            Log.w(TAG, "Last-resort recovery succeeded: $lastResortKey")
+            return lastResortKey ?: "default"
+        }
+
+        // Absolute worst case — log critical error, return default
+        Log.e(TAG, "CRITICAL: Could not establish any valid launcher icon state")
+        return "default"
+    }
+
+    /**
+     * Switch the launcher icon to [iconKey].
+     *
+     * Transactional with rollback:
+     * 1. Enable target alias
+     * 2. Disable all other aliases
+     * 3. Verify exactly 1 enabled and it is the target
+     * 4a. Success → persist → return success
+     * 4b. Failure → last-resort recovery → return failure
+     */
+    @Synchronized
+    fun setIcon(iconKey: String): Result<Unit> {
+        val targetAlias = aliases[iconKey]
+            ?: return Result.failure(IllegalArgumentException("Unknown icon: $iconKey"))
+
+        // Apply target state
+        val applyResult = applyIconState(iconKey)
+        if (applyResult.isFailure) {
+            forceDefaultIcon()
+            return applyResult
+        }
+
+        // Verify
+        val (ok, enabledKey) = verifyExactlyOneEnabled()
+        if (!ok || enabledKey != iconKey) {
+            Log.w(TAG, "Verification failed (enabled=$enabledKey, expected=$iconKey) — last-resort recovery")
+            forceDefaultIcon()
+            return Result.failure(IllegalStateException("Icon verification failed: enabled=$enabledKey, expected=$iconKey"))
+        }
+
+        // All good — persist
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(PREFS_KEY, iconKey)
+            .apply()
+
+        Log.i(TAG, "Launcher icon switched to: $iconKey")
+        return Result.success(Unit)
     }
 }
