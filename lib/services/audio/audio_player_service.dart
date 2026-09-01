@@ -450,7 +450,7 @@ class AudioPlayerService {
     _emitSettings();
   }
 
-  static const _effectsChannel = MethodChannel('com.noctra.app/audio_effects');
+  static const _effectsChannel = MethodChannel('com.nomadguy.noctra/audio_effects');
 
   Future<bool> attachNativeEffectsSession() async {
     if (kIsWeb || !Platform.isAndroid) return false;

@@ -89,7 +89,7 @@ class _StemSeparationSheetState extends ConsumerState<StemSeparationSheet> {
 
   Future<String?> _resolveStreamUrl(Song song) async {
     try {
-      const channel = MethodChannel('com.noctra.app/native_resolver');
+      const channel = MethodChannel('com.nomadguy.noctra/native_resolver');
       return await channel.invokeMethod<String>('extractInnerTube', {
         'videoId': song.id,
       });

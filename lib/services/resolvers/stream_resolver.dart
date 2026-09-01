@@ -49,7 +49,7 @@ class DirectOpenStreamResolver implements StreamResolver {
 }
 
 class JioSaavnDirectResolver implements StreamResolver {
-  static const _channel = MethodChannel('com.noctra.app/native_resolver');
+  static const _channel = MethodChannel('com.nomadguy.noctra/native_resolver');
   @override
   String get sourceId => 'jiosaavn_320kbps';
   @override
@@ -87,7 +87,7 @@ class JioSaavnDirectResolver implements StreamResolver {
 }
 
 class NativeKotlinResolver implements StreamResolver {
-  static const _channel = MethodChannel('com.noctra.app/native_resolver');
+  static const _channel = MethodChannel('com.nomadguy.noctra/native_resolver');
   @override
   String get sourceId => 'native_kotlin_320k';
   @override
@@ -206,7 +206,7 @@ class InnerTubeMusicResolver implements StreamResolver {
       if (videoId.length == 11) {
         if (!kIsWeb) {
           try {
-            final nativeUrl = await const MethodChannel('com.noctra.app/native_resolver').invokeMethod<String>('extractInnerTube', {'videoId': videoId}).timeout(const Duration(seconds: 3));
+            final nativeUrl = await const MethodChannel('com.nomadguy.noctra/native_resolver').invokeMethod<String>('extractInnerTube', {'videoId': videoId}).timeout(const Duration(seconds: 3));
             if (nativeUrl != null && nativeUrl.isNotEmpty) return nativeUrl;
           } catch (_) {}
         }

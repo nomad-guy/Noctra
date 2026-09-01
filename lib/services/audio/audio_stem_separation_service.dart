@@ -42,7 +42,7 @@ class AudioStemSeparationService {
   AudioStemSeparationService._internal();
 
   static const _channel =
-      MethodChannel('com.noctra.app/audio_stem_separation');
+      MethodChannel('com.nomadguy.noctra/audio_stem_separation');
 
   final _progressController =
       StreamController<StemSeparationProgress>.broadcast();

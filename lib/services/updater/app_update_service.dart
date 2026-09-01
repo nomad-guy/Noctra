@@ -29,7 +29,7 @@ class AppUpdateService {
   static const String currentVersion = 'v1.1.5';
   static const String _releaseApiUrl = 'https://api.github.com/repos/nomad-guy/Noctra/releases/latest';
   static const String fallbackDownloadUrl = 'https://github.com/nomad-guy/Noctra/releases/latest/download/noctra-universal-release.apk';
-  static const notifyChannel = MethodChannel('com.noctra.app/update_notify');
+  static const notifyChannel = MethodChannel('com.nomadguy.noctra/update_notify');
   static bool _notifiedThisSession = false;
 
   /// Silently checks GitHub and fires a system notification if a newer version exists.

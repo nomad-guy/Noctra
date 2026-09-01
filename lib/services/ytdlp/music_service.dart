@@ -90,7 +90,7 @@ class MusicService {
       futures.add(() async {
         try {
           final List<dynamic>? nativeSongs =
-              await const MethodChannel('com.noctra.app/native_resolver')
+              await const MethodChannel('com.nomadguy.noctra/native_resolver')
                   .invokeListMethod('searchJioSaavn', {
             'query': clean,
             'limit': 20
@@ -381,7 +381,7 @@ class MusicService {
     if (!kIsWeb && currentSong.id.length == 11) {
       try {
         final List<dynamic>? list =
-            await const MethodChannel('com.noctra.app/native_resolver')
+            await const MethodChannel('com.nomadguy.noctra/native_resolver')
                 .invokeListMethod('fetchRadio', {'videoId': currentSong.id});
         if (list != null && list.isNotEmpty) {
           return list.map((m) {

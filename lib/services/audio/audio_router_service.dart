@@ -35,8 +35,8 @@ class AudioRouterService {
   static final AudioRouterService _instance = AudioRouterService._internal();
   factory AudioRouterService() => _instance;
 
-  static const _methodChannel = MethodChannel('com.noctra.app/audio_router');
-  static const _eventChannel = EventChannel('com.noctra.app/audio_devices');
+  static const _methodChannel = MethodChannel('com.nomadguy.noctra/audio_router');
+  static const _eventChannel = EventChannel('com.nomadguy.noctra/audio_devices');
 
   final _deviceController = StreamController<List<AudioDeviceEndpoint>>.broadcast();
   Stream<List<AudioDeviceEndpoint>> get devicesStream => _deviceController.stream;

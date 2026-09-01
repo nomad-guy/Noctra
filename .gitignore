@@ -62,3 +62,4 @@ app.*.map.json
 .idea/
 /vendor/
 get_preview/
+android/app/noctra-release.keystore

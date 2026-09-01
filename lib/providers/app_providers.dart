@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Importing both keeps all existing providers working without rewriting.
 import 'package:flutter_riverpod/legacy.dart';
 import '../core/theme/noir_theme.dart';
+import '../core/utils/dynamic_icon_service.dart';
 import '../core/utils/noctra_localization.dart';
 import '../data/models/song_model.dart';
 import '../data/models/catalog_topic.dart';
@@ -43,6 +44,11 @@ final themeModeProvider = StateProvider<NoirThemeMode>((ref) {
     return NoirThemeMode.liquidGlass;
   }
   return NoirThemeMode.noirBlack;
+});
+
+// App Icon state (independent of theme)
+final appIconProvider = StateProvider<NoctraAppIcon>((ref) {
+  return DynamicIconService.currentIcon;
 });
 
 // Settings state

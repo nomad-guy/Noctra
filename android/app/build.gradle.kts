@@ -14,6 +14,15 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("noctra-release.keystore")
+            storePassword = "noctra2026"
+            keyAlias = "noctra"
+            keyPassword = "noctra2026"
+        }
+    }
+
     defaultConfig {
         applicationId = "com.nomadguy.noctra"
         // just_audio 0.10 (Media3 ExoPlayer) requires API 21 minimum
@@ -33,7 +42,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 }

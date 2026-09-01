@@ -40,7 +40,7 @@ class StreamQualityService {
   StreamQualityService._internal();
 
   static const _channel =
-      MethodChannel('com.noctra.app/audio_quality');
+      MethodChannel('com.nomadguy.noctra/audio_quality');
 
   StreamQuality _streamQuality = StreamQuality.lossless;
   StreamQuality get streamQuality => _streamQuality;

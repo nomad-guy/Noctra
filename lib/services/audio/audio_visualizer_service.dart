@@ -8,7 +8,7 @@ class AudioVisualizerService {
   static final AudioVisualizerService _instance = AudioVisualizerService._internal();
   factory AudioVisualizerService() => _instance;
 
-  static const _eventChannel = EventChannel('com.noctra.app/audio_visualizer');
+  static const _eventChannel = EventChannel('com.nomadguy.noctra/audio_visualizer');
   StreamSubscription? _subscription, _sessionSub;
   Timer? _fallbackTicker;
   int? _currentSessionId;

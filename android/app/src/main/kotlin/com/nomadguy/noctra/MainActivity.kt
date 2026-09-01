@@ -3,27 +3,35 @@ package com.nomadguy.noctra
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.ComponentName
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.media.audiofx.Visualizer
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
-import kotlin.concurrent.thread
+import java.util.concurrent.Executors
 
 class MainActivity : AudioServiceActivity() {
-    private val RESOLVER_CHANNEL = "com.noctra.app/native_resolver"
-    private val ICON_CHANNEL = "com.noctra.app/launcher_icon"
-    private val UPDATE_NOTIFY_CHANNEL = "com.noctra.app/update_notify"
-    private val VISUALIZER_CHANNEL = "com.noctra.app/audio_visualizer"
-    private val ROUTER_CHANNEL = "com.noctra.app/audio_router"
-    private val DEVICES_EVENT_CHANNEL = "com.noctra.app/audio_devices"
-    private val EFFECTS_CHANNEL = "com.noctra.app/audio_effects"
-    private val STEM_CHANNEL = "com.noctra.app/audio_stem_separation"
-    private val QUALITY_CHANNEL = "com.noctra.app/audio_quality"
+
+    companion object {
+        private const val TAG = "NoctraMainActivity"
+    }
+
+    private val RESOLVER_CHANNEL = "com.nomadguy.noctra/native_resolver"
+    private val ICON_CHANNEL = "com.nomadguy.noctra/launcher_icon"
+    private val UPDATE_NOTIFY_CHANNEL = "com.nomadguy.noctra/update_notify"
+    private val VISUALIZER_CHANNEL = "com.nomadguy.noctra/audio_visualizer"
+    private val ROUTER_CHANNEL = "com.nomadguy.noctra/audio_router"
+    private val DEVICES_EVENT_CHANNEL = "com.nomadguy.noctra/audio_devices"
+    private val EFFECTS_CHANNEL = "com.nomadguy.noctra/audio_effects"
+    private val STEM_CHANNEL = "com.nomadguy.noctra/audio_stem_separation"
+    private val QUALITY_CHANNEL = "com.nomadguy.noctra/audio_quality"
+
+    /** Delegates icon changes — serialized, no race conditions. */
+    private lateinit var launcherIconManager: LauncherIconManager
+    private val iconExecutor = Executors.newSingleThreadExecutor()
 
     private var visualizer: Visualizer? = null
     private var audioRouter: NoctraAudioRouter? = null
@@ -31,8 +39,12 @@ class MainActivity : AudioServiceActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        try { audioRouter = NoctraAudioRouter(applicationContext) } catch (_: Throwable) {}
+        launcherIconManager = LauncherIconManager(applicationContext)
+        try { audioRouter = NoctraAudioRouter(applicationContext) } catch (e: Throwable) {
+            Log.e(TAG, "AudioRouter init failed", e)
+        }
 
+        // ====== VISUALIZER ======
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, VISUALIZER_CHANNEL).setStreamHandler(object : EventChannel.StreamHandler {
             override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
                 try {
@@ -54,7 +66,7 @@ class MainActivity : AudioServiceActivity() {
                                         val sample = (waveform[idx].toInt() and 0xFF) - 128
                                         magnitudes[i] = (Math.abs(sample) / 128.0).coerceIn(0.0, 1.0)
                                     }
-                                    runOnUiThread { try { events.success(magnitudes.toList()) } catch (_: Throwable) {} }
+                                    runOnUiThread { try { events.success(magnitudes.toList()) } catch (e: Throwable) { Log.e(TAG, "Visualizer event failed", e) } }
                                 }
                             }
                             override fun onFftDataCapture(vis: Visualizer?, fft: ByteArray?, samplingRate: Int) {
@@ -68,13 +80,13 @@ class MainActivity : AudioServiceActivity() {
                                         val raw = (Math.hypot(rk, ik) / 64.0).coerceIn(0.0, 1.0)
                                         magnitudes[i] = Math.pow(raw, 0.75)
                                     }
-                                    runOnUiThread { try { events.success(magnitudes.toList()) } catch (_: Throwable) {} }
+                                    runOnUiThread { try { events.success(magnitudes.toList()) } catch (e: Throwable) { Log.e(TAG, "FFT event failed", e) } }
                                 }
                             }
                         }, Visualizer.getMaxCaptureRate() / 2, true, true)
                         enabled = true
                     }
-                } catch (_: Throwable) {}
+                } catch (e: Throwable) { Log.e(TAG, "Visualizer setup failed", e) }
             }
 
             override fun onCancel(arguments: Any?) {
@@ -82,19 +94,21 @@ class MainActivity : AudioServiceActivity() {
                     visualizer?.enabled = false
                     visualizer?.release()
                     visualizer = null
-                } catch (_: Throwable) {}
+                } catch (e: Throwable) { Log.e(TAG, "Visualizer cleanup failed", e) }
             }
         })
 
+        // ====== AUDIO DEVICES EVENT ======
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, DEVICES_EVENT_CHANNEL).setStreamHandler(object : EventChannel.StreamHandler {
             override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
-                try { audioRouter?.startListening(events) } catch (_: Throwable) {}
+                try { audioRouter?.startListening(events) } catch (e: Throwable) { Log.e(TAG, "AudioRouter listen failed", e) }
             }
             override fun onCancel(arguments: Any?) {
-                try { audioRouter?.stopListening() } catch (_: Throwable) {}
+                try { audioRouter?.stopListening() } catch (e: Throwable) { Log.e(TAG, "AudioRouter cancel failed", e) }
             }
         })
 
+        // ====== AUDIO EFFECTS ======
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, EFFECTS_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "attachSession" -> {
@@ -115,6 +129,7 @@ class MainActivity : AudioServiceActivity() {
             }
         }
 
+        // ====== AUDIO ROUTER ======
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ROUTER_CHANNEL).setMethodCallHandler { call, result ->
             try {
                 when (call.method) {
@@ -133,9 +148,13 @@ class MainActivity : AudioServiceActivity() {
                     }
                     else -> result.notImplemented()
                 }
-            } catch (_: Throwable) { result.success(false) }
+            } catch (e: Throwable) {
+                Log.e(TAG, "Router channel error", e)
+                result.success(false)
+            }
         }
 
+        // ====== STREAM RESOLVER ======
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, RESOLVER_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "resolve320k" -> {
@@ -158,12 +177,18 @@ class MainActivity : AudioServiceActivity() {
                 }
                 "decryptUrl" -> {
                     val encUrl = call.argument<String>("encryptedUrl") ?: ""
-                    try { result.success(JioSaavnNativeEngine.decryptMediaUrl(encUrl)) } catch (_: Throwable) { result.success(null) }
+                    try {
+                        result.success(JioSaavnNativeEngine.decryptMediaUrl(encUrl))
+                    } catch (e: Throwable) {
+                        Log.e(TAG, "decryptUrl failed", e)
+                        result.success(null)
+                    }
                 }
                 else -> result.notImplemented()
             }
         }
 
+        // ====== UPDATE NOTIFICATIONS ======
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, UPDATE_NOTIFY_CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "showUpdateNotification") {
                 val title = call.argument<String>("title") ?: "Noctra update available"
@@ -190,7 +215,10 @@ class MainActivity : AudioServiceActivity() {
                         .build()
                     nm.notify(9001, notification)
                     result.success(true)
-                } catch (_: Throwable) { result.success(false) }
+                } catch (e: Throwable) {
+                    Log.e(TAG, "Update notification failed", e)
+                    result.success(false)
+                }
             } else if (call.method == "installApk") {
                 val filePath = call.argument<String>("filePath") ?: ""
                 try {
@@ -211,30 +239,42 @@ class MainActivity : AudioServiceActivity() {
                         result.success(false)
                     }
                 } catch (e: Throwable) {
+                    Log.e(TAG, "APK install failed", e)
                     result.error("INSTALL_ERROR", e.message, null)
                 }
             } else { result.notImplemented() }
         }
 
+        // ====== ICON CHANNEL ======
+        // Single command: setIcon(key). Delegates to LauncherIconManager.
+        // No two-stage pending/apply. No lifecycle hook needed.
+        // Icon changes happen while app is active — launcher refreshes lazily.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, ICON_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
-                "setLauncherIcon" -> {
-                    val iconKey = call.argument<String>("icon") ?: "noir_black"
-                    // Just queue — actual toggle happens in applyPendingIcon
-                    getSharedPreferences("noctra_theme", MODE_PRIVATE)
-                        .edit().putString("pending_icon", iconKey).apply()
-                    result.success(true)
-                }
-                "applyPendingIcon" -> {
-                    val iconKey = call.argument<String>("icon") ?: "noir_black"
-                    setLauncherIconAlias(iconKey)
-                    result.success(true)
+                "setIcon" -> {
+                    val iconKey = call.argument<String>("icon") ?: ""
+                    if (iconKey.isEmpty()) {
+                        result.error("INVALID_ICON", "Icon key must not be empty", null)
+                        return@setMethodCallHandler
+                    }
+                    iconExecutor.execute {
+                        val operation = launcherIconManager.setIcon(iconKey)
+                        runOnUiThread {
+                            operation.fold(
+                                onSuccess = { result.success(true) },
+                                onFailure = { error ->
+                                    Log.e(TAG, "Icon switch failed", error)
+                                    result.error("ICON_CHANGE_FAILED", error.message, null)
+                                }
+                            )
+                        }
+                    }
                 }
                 else -> result.notImplemented()
             }
         }
 
-        // Audio Stem Separation channel — delegates to native ML pipeline
+        // ====== STEM SEPARATION ======
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, STEM_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "separateStems" -> {
@@ -249,13 +289,12 @@ class MainActivity : AudioServiceActivity() {
             }
         }
 
-        // Audio Quality / CODEC settings channel — persists preferences
+        // ====== AUDIO QUALITY / CODEC ======
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, QUALITY_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "setStreamQuality" -> {
                     val bitrate = call.argument<Int>("bitrate") ?: 320
                     val codec = call.argument<String>("codec") ?: "mp3"
-                    // Persist to SharedPreferences for native resolvers
                     val prefs = getSharedPreferences("noctra_audio_quality", MODE_PRIVATE)
                     prefs.edit().putInt("preferred_bitrate", bitrate)
                         .putString("preferred_codec", codec).apply()
@@ -272,85 +311,27 @@ class MainActivity : AudioServiceActivity() {
         }
     }
 
-    /**
-     * Toggle the launcher icon by enabling the matching activity-alias
-     * and disabling all others.  Executes on a background thread with a
-     * short delay so the icon change doesn't kill the foreground task.
-     */
-    /**
-     * Swap the launcher icon by enabling the matching activity-alias and
-     * disabling all others. MainActivity always keeps its LAUNCHER filter
-     * so it serves as the guaranteed entry point — disabling aliases is safe.
-     */
-    private fun setLauncherIconAlias(iconKey: String) {
-        thread {
-            try {
-                val pm = packageManager
-                val pkg = packageName
-
-                // ALL aliases including .default — only ONE should be enabled at a time
-                val allAliases = listOf(
-                    "$pkg.MainActivity.default",
-                    "$pkg.MainActivity.noir_black",
-                    "$pkg.MainActivity.noir_white",
-                    "$pkg.MainActivity.amoled",
-                    "$pkg.MainActivity.liquid_glass",
-                )
-
-                val targetAlias = "$pkg.MainActivity.$iconKey"
-
-                // 1. Enable the target alias first (safe — enabling never kills)
-                try {
-                    pm.setComponentEnabledSetting(
-                        ComponentName(pkg, targetAlias),
-                        PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                        PackageManager.DONT_KILL_APP
-                    )
-                } catch (_: Throwable) {}
-
-                // 2. Disable all OTHER aliases (including .default)
-                //    Since only one alias is enabled, the launcher shows exactly one icon.
-                for (alias in allAliases) {
-                    if (alias == targetAlias) continue
-                    try {
-                        pm.setComponentEnabledSetting(
-                            ComponentName(pkg, alias),
-                            PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                            PackageManager.DONT_KILL_APP
-                        )
-                    } catch (_: Throwable) {}
-                }
-
-                // Persist the choice
-                getSharedPreferences("noctra_theme", MODE_PRIVATE)
-                    .edit().putString("launcher_icon", iconKey).apply()
-
-                // Force launcher to refresh
-                try {
-                    sendBroadcast(Intent(Intent.ACTION_PACKAGE_CHANGED).apply {
-                        data = android.net.Uri.fromParts("package", pkg, null)
-                    })
-                } catch (_: Throwable) {}
-            } catch (_: Throwable) {}
-        }
-    }
-
     private fun safeResult(result: MethodChannel.Result, block: () -> Any?) {
-        thread {
+        Thread {
             try {
                 val data = block()
                 runOnUiThread {
                     if (!isFinishing && !isDestroyed) {
-                        try { result.success(data) } catch (_: Throwable) {}
+                        try { result.success(data) } catch (e: Throwable) {
+                            Log.e(TAG, "MethodChannel result callback failed", e)
+                        }
                     }
                 }
-            } catch (_: Throwable) {
+            } catch (e: Throwable) {
+                Log.e(TAG, "Native resolver block failed", e)
                 runOnUiThread {
                     if (!isFinishing && !isDestroyed) {
-                        try { result.success(null) } catch (_: Throwable) {}
+                        try { result.success(null) } catch (e2: Throwable) {
+                            Log.e(TAG, "Failed to send null result", e2)
+                        }
                     }
                 }
             }
-        }
+        }.start()
     }
 }

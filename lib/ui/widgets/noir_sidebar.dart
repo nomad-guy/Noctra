@@ -220,34 +220,68 @@ class NoirSidebar extends ConsumerWidget {
               ),
             ),
 
-            // Theme Switcher — 3-way toggle (Black / AMOLED / White)
+            // Theme Switcher — tap button to cycle themes
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              child: GlassCard(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                radius: 14,
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              child: GestureDetector(
+                onTap: () {
+                  // Cycle: Noir Black -> AMOLED -> White -> Liquid Glass -> Noir Black
+                  final next = switch (themeMode) {
+                    NoirThemeMode.noirBlack => NoirThemeMode.noirAmoled,
+                    NoirThemeMode.noirAmoled => NoirThemeMode.noirWhite,
+                    NoirThemeMode.noirWhite => NoirThemeMode.liquidGlass,
+                    NoirThemeMode.liquidGlass => NoirThemeMode.noirBlack,
+                  };
+                  ref.read(themeModeProvider.notifier).state = next;
+                },
+                child: GlassCard(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  radius: 14,
+                  child: Row(
                     children: [
-                      Text('THEME',
-                          style: TextStyle(
-                              fontSize: 10,
-                              letterSpacing: 1.1,
-                              fontWeight: FontWeight.w800,
-                              color: tokens.secondaryText)),
-                      const SizedBox(height: 8),
-                      Wrap(spacing: 6, runSpacing: 6, children: [
-                        _themeChip(context, ref, 'Noir',
-                            NoirThemeMode.noirBlack, themeMode),
-                        _themeChip(context, ref, 'AMOLED',
-                            NoirThemeMode.noirAmoled, themeMode),
-                        _themeChip(context, ref, 'White',
-                            NoirThemeMode.noirWhite, themeMode),
-                        _themeChip(context, ref, 'Glass',
-                            NoirThemeMode.liquidGlass, themeMode),
-                      ]),
-                    ]),
+                      Icon(
+                        themeMode.isDark
+                            ? (themeMode.isAmoled
+                                ? Icons.dark_mode_rounded
+                                : Icons.nightlight_round)
+                            : Icons.light_mode_rounded,
+                        size: 18,
+                        color: tokens.accent,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('THEME',
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    letterSpacing: 1.1,
+                                    fontWeight: FontWeight.w800,
+                                    color: tokens.secondaryText)),
+                            const SizedBox(height: 2),
+                            Text(
+                              switch (themeMode) {
+                                NoirThemeMode.noirBlack => 'Noir Black',
+                                NoirThemeMode.noirAmoled => 'AMOLED',
+                                NoirThemeMode.noirWhite => 'White',
+                                NoirThemeMode.liquidGlass => 'Liquid Glass',
+                              },
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: tokens.primaryText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.swap_horiz_rounded,
+                          size: 16, color: tokens.secondaryText),
+                    ],
+                  ),
+                ),
               ),
             ),
 
@@ -317,31 +351,4 @@ class NoirSidebar extends ConsumerWidget {
     );
   }
 
-  Widget _themeChip(BuildContext context, WidgetRef ref, String label,
-      NoirThemeMode mode, NoirThemeMode current) {
-    final isSelected = current == mode;
-    final tokens = context.noctraTokens;
-    return GestureDetector(
-      onTap: () {
-        ref.read(themeModeProvider.notifier).state = mode;
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-        decoration: BoxDecoration(
-          color: isSelected ? tokens.accent : tokens.surfaceVariant,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              color: isSelected ? tokens.canvas : tokens.secondaryText,
-            ),
-          ),
-        ]),
-      ),
-    );
-  }
 }

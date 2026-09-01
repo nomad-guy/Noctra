@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/dynamic_icon_service.dart';
 import '../../core/utils/noctra_localization.dart';
 import '../../data/models/download_location.dart';
 import '../../data/repositories/neural_recommender_engine.dart';
@@ -87,8 +88,8 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
               ),
               const SizedBox(height: 18),
 
-              // Theme Selector
-              Text('INTERFACE THEME & APP ICON',
+              // Theme Selector — ONLY changes Flutter UI colors
+              Text('INTERFACE THEME',
                   style: TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w700,
@@ -121,6 +122,56 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                           NoirThemeMode.liquidGlass, themeMode, isDark),
                     ),
                   ],
+                ),
+              ),
+
+              const SizedBox(height: 18),
+
+              // App Icon Selector — ONLY changes Android launcher icon
+              Text('APP ICON',
+                  style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                      color: isDark ? Colors.white60 : Colors.black54)),
+              const SizedBox(height: 8),
+              GlassCard(
+                radius: 16,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _iconChip(context, 'Default',
+                          NoctraAppIcon.defaultIcon, isDark),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _iconChip(context, 'Noir Black',
+                          NoctraAppIcon.noirBlack, isDark),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _iconChip(context, 'Noir White',
+                          NoctraAppIcon.noirWhite, isDark),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _iconChip(context, 'Liquid Glass',
+                          NoctraAppIcon.liquidGlass, isDark),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  'Theme and icon are independent. You can mix any theme with any icon.',
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? Colors.white38 : Colors.black38,
+                      height: 1.4),
                 ),
               ),
 
@@ -625,6 +676,43 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
     return GestureDetector(
       onTap: () {
         ref.read(themeModeProvider.notifier).state = mode;
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
+        decoration: BoxDecoration(
+          color: isSelected ? tokens.accent : tokens.surfaceVariant,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? tokens.canvas : tokens.secondaryText,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _iconChip(BuildContext context, String title,
+      NoctraAppIcon icon, bool isDark) {
+    final currentIcon = ref.watch(appIconProvider);
+    final isSelected = currentIcon == icon;
+    final tokens = context.noctraTokens;
+    return GestureDetector(
+      onTap: () async {
+        // Optimistic: update state immediately
+        ref.read(appIconProvider.notifier).state = icon;
+        // Then call native
+        final success = await DynamicIconService.setIcon(icon);
+        if (!success) {
+          // Rollback if native failed
+          ref.read(appIconProvider.notifier).state = currentIcon;
+        }
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),

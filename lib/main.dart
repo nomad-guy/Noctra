@@ -73,14 +73,23 @@ void main() async {
     NoctraLogger.e('Session restore error', e);
   }
 
+  // Restore persisted launcher icon state (no alias toggle needed —
+  // Android already has the correct component enabled from last session).
+  await DynamicIconService.init();
+
   runApp(const ProviderScope(child: NoctraApp()));
 
   // Silent background update check — fires a system notification if a newer
   // version is on GitHub. Runs 3 seconds after launch to not compete with
   // audio session init or first-frame render.
   // unawaited: intentionally fire-and-forget after app launches.
-  Future.delayed(const Duration(seconds: 3))
-      .then((_) => AppUpdateService.notifyUpdateAvailable());
+  Future.delayed(const Duration(seconds: 3), () async {
+    try {
+      await AppUpdateService.notifyUpdateAvailable();
+    } catch (e) {
+      NoctraLogger.w('Update check failed — $e');
+    }
+  });
 }
 
 class NoctraApp extends ConsumerStatefulWidget {
@@ -90,35 +99,32 @@ class NoctraApp extends ConsumerStatefulWidget {
   ConsumerState<NoctraApp> createState() => _NoctraAppState();
 }
 
-class _NoctraAppState extends ConsumerState<NoctraApp> with WidgetsBindingObserver {
+class _NoctraAppState extends ConsumerState<NoctraApp> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    // Listen to theme changes: persist to DB and update launcher icon.
-    // Using ref.listen in initState via addPostFrameCallback so the
-    // ProviderScope is fully ready before we attach the listener.
+    // Persist theme to DB on first launch.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Fire once for the current theme on first launch
       final initial = ref.read(themeModeProvider);
-      DynamicIconService.updateForTheme(initial);
       NoctraLocalDatabase().saveCachedThemeMode(initial.name);
+      _updateSystemUI(initial);
     });
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
-      // Apply any pending icon swap now that the app is in the background.
-      // The launcher re-queries the enabled component list when we return.
-      DynamicIconService.applyPending();
-    }
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
+  /// Update system UI chrome (status bar, nav bar) for the given theme.
+  /// This is purely cosmetic — it does NOT touch the launcher icon.
+  void _updateSystemUI(NoirThemeMode mode) {
+    try {
+      final brightness = mode.isDark ? Brightness.light : Brightness.dark;
+      SystemChrome.setSystemUIOverlayStyle(
+        SystemUiOverlayStyle(
+          statusBarColor: const Color(0x00000000),
+          statusBarIconBrightness: brightness,
+          systemNavigationBarColor: const Color(0x00000000),
+          systemNavigationBarIconBrightness: brightness,
+        ),
+      );
+    } catch (_) {}
   }
 
   @override
@@ -127,13 +133,12 @@ class _NoctraAppState extends ConsumerState<NoctraApp> with WidgetsBindingObserv
     final isInitialized = ref.watch(appInitializedProvider);
     final hasCompletedOnboarding = ref.watch(onboardingCompletedProvider);
 
-    // ref.listen fires ONLY when themeMode changes — not on every rebuild.
-    // Safe here because listen is idempotent across rebuilds in Riverpod 3.x.
+    // Theme listener: ONLY updates system UI chrome + persists to DB.
+    // Does NOT touch the launcher icon. Theme and icon are independent.
     ref.listen<NoirThemeMode>(themeModeProvider, (_, next) {
-      // postFrameCallback so MethodChannel calls don't fire mid-frame
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        DynamicIconService.updateForTheme(next);
         NoctraLocalDatabase().saveCachedThemeMode(next.name);
+        _updateSystemUI(next);
       });
     });
 
