@@ -705,14 +705,9 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
     final tokens = context.noctraTokens;
     return GestureDetector(
       onTap: () async {
-        // Optimistic: update state immediately
-        ref.read(appIconProvider.notifier).state = icon;
-        // Then call native
-        final success = await DynamicIconService.setIcon(icon);
-        if (!success) {
-          // Rollback if native failed
-          ref.read(appIconProvider.notifier).state = currentIcon;
-        }
+        await DynamicIconService.setIcon(icon);
+        // Force provider refresh to reflect new state
+        ref.read(appIconProvider.notifier).state = DynamicIconService.currentIcon;
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),

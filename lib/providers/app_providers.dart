@@ -46,7 +46,7 @@ final themeModeProvider = StateProvider<NoirThemeMode>((ref) {
   return NoirThemeMode.noirBlack;
 });
 
-// App Icon state (independent of theme)
+// App Icon state (independent of theme, synced from DynamicIconService)
 final appIconProvider = StateProvider<NoctraAppIcon>((ref) {
   return DynamicIconService.currentIcon;
 });

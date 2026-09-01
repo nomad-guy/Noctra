@@ -267,7 +267,6 @@ class MainActivity : AudioServiceActivity() {
                     iconExecutor.execute {
                         val operation = launcherIconManager.setIcon(iconKey)
                         runOnUiThread {
-                            // Protect against Activity destruction during async operation
                             if (!isFinishing && !isDestroyed) {
                                 operation.fold(
                                     onSuccess = { result.success(true) },
@@ -279,6 +278,9 @@ class MainActivity : AudioServiceActivity() {
                             }
                         }
                     }
+                }
+                "getCurrentIcon" -> {
+                    result.success(launcherIconManager.getCurrentIcon())
                 }
                 else -> result.notImplemented()
             }
