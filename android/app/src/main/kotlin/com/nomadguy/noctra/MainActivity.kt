@@ -40,6 +40,11 @@ class MainActivity : AudioServiceActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         launcherIconManager = LauncherIconManager(applicationContext)
+        // Reconcile persisted icon state with actual PackageManager state.
+        // Handles upgrade from old architecture, interrupted operations, OEM quirks.
+        try { launcherIconManager.reconcileOnStartup() } catch (e: Throwable) {
+            Log.e(TAG, "Icon reconciliation failed", e)
+        }
         try { audioRouter = NoctraAudioRouter(applicationContext) } catch (e: Throwable) {
             Log.e(TAG, "AudioRouter init failed", e)
         }
@@ -309,6 +314,11 @@ class MainActivity : AudioServiceActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    override fun onDestroy() {
+        iconExecutor.shutdownNow()
+        super.onDestroy()
     }
 
     private fun safeResult(result: MethodChannel.Result, block: () -> Any?) {

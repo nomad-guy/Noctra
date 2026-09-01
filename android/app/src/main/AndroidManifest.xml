@@ -20,9 +20,9 @@
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
 
-        <!-- Main Activity — ALWAYS has LAUNCHER filter. This is the guaranteed
-             entry point that is NEVER disabled. Aliases are toggled on top of it
-             but the app is always launchable through this component. -->
+        <!-- Main Activity — NO LAUNCHER filter. This is the Flutter entry point
+             only. All launcher entries are owned by activity-aliases. This way
+             the app is always launchable through whichever alias is active. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -31,21 +31,31 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
             <meta-data
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
         </activity>
 
-        <!-- ====== ICON ALIASES (not theme aliases!) ======
-             These represent actual visual icon variants, NOT themes.
-             Theme = Flutter UI colors. Icon = Android launcher image.
-             Only ONE alias should be enabled at a time.
-             At install, none are enabled — MainActivity owns the launcher. -->
+        <!-- ====== LAUNCHER ALIASES ======
+             Exactly ONE of these is enabled at any time.
+             They represent actual icon variants, NOT themes.
+             At install: .default is enabled, others are disabled. -->
+
+        <!-- Default icon — always enabled at install, the fallback entry -->
+        <activity-alias
+            android:name=".MainActivity.default"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
+            android:label="Noctra"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <!-- Noir Black icon -->
         <activity-alias

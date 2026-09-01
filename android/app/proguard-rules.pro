@@ -38,8 +38,9 @@
 -keepclassmembers class androidx.media3.common.MediaItem { *; }
 -keepclassmembers class androidx.media3.common.MediaMetadata { *; }
 
-# 7. Keep only Noctra classes that use MethodChannel (reflection)
+# 7. Keep Noctra classes accessed from MainActivity (MethodChannel) or used at runtime
 -keep class com.nomadguy.noctra.MainActivity { *; }
+-keep class com.nomadguy.noctra.LauncherIconManager { *; }
 -keep class com.nomadguy.noctra.JioSaavnNativeEngine { *; }
 -keep class com.nomadguy.noctra.NoctraNativeStreamEngine { *; }
 -keep class com.nomadguy.noctra.NoctraAudioStemEngine { *; }

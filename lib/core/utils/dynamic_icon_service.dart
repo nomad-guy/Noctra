@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Theme = Flutter UI colors. Icon = Android launcher image.
 /// A user can have AMOLED theme with Liquid Glass icon — completely independent.
 enum NoctraAppIcon {
-  defaultIcon,   // ic_launcher — standard owl (app installs with this)
+  defaultIcon,   // ic_launcher — standard owl (enabled at install)
   noirBlack,     // ic_launcher_dark — white owl on dark bg
   noirWhite,     // ic_launcher_light — black owl on light bg
   liquidGlass,   // ic_launcher_liquid — cyan owl on sapphire bg
@@ -16,7 +16,7 @@ enum NoctraAppIcon {
 
 extension NoctraAppIconX on NoctraAppIcon {
   String get key => switch (this) {
-    NoctraAppIcon.defaultIcon => '',
+    NoctraAppIcon.defaultIcon => 'default',
     NoctraAppIcon.noirBlack => 'noir_black',
     NoctraAppIcon.noirWhite => 'noir_white',
     NoctraAppIcon.liquidGlass => 'liquid_glass',
@@ -30,6 +30,7 @@ extension NoctraAppIconX on NoctraAppIcon {
   };
 
   static NoctraAppIcon fromKey(String? key) => switch (key) {
+    'default' => NoctraAppIcon.defaultIcon,
     'noir_black' => NoctraAppIcon.noirBlack,
     'noir_white' => NoctraAppIcon.noirWhite,
     'liquid_glass' => NoctraAppIcon.liquidGlass,
@@ -39,14 +40,9 @@ extension NoctraAppIconX on NoctraAppIcon {
 
 /// Manages the Android launcher icon independently from the Flutter theme.
 ///
-/// Architecture:
-/// ```
-///   Theme selection ──→ Flutter UI (ThemeData rebuilds)
-///   Icon selection   ──→ Android activity-alias toggle
-/// ```
-///
-/// Changing AMOLED theme cannot change the launcher icon.
-/// Changing the launcher icon cannot change the theme.
+/// Uses a "latest-wins" queue: if the user taps multiple icons rapidly,
+/// only the last requested icon is applied (old pending requests are skipped).
+/// This avoids executing all four Android operations when the user taps fast.
 class DynamicIconService {
   static const _channel = MethodChannel('com.nomadguy.noctra/launcher_icon');
   static const _prefsKey = 'selected_icon';
@@ -59,7 +55,7 @@ class DynamicIconService {
 
   /// Initialize on app startup — restore persisted icon state.
   /// Does NOT perform an alias toggle (Android already has the right state
-  /// from the last session). Just syncs the Dart side.
+  /// from last session, reconciled by LauncherIconManager.reconcileOnStartup).
   static Future<void> init() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -70,15 +66,30 @@ class DynamicIconService {
     }
   }
 
-  /// Change the launcher icon. Uses optimistic update with rollback on failure.
+  /// Change the launcher icon.
   ///
-  /// The icon switch is serialized: if a previous switch is still in progress,
-  /// this call is a no-op. This prevents race conditions from rapid taps.
+  /// Uses optimistic update with rollback on failure.
+  /// Implements "latest-wins": if a previous switch is in progress,
+  /// it is superseded (the new request replaces it).
   static Future<bool> setIcon(NoctraAppIcon icon) async {
-    if (_changing) return false;
     if (_currentIcon == icon) return true;
     if (!Platform.isAndroid) return false;
 
+    // If a switch is already in progress, we still proceed — the serialized
+    // executor on the Kotlin side ensures only the final state matters.
+    // We just skip the Dart state update until the new request starts.
+    if (_changing) {
+      // Will be handled when the current operation completes
+      _pendingIcon = icon;
+      return false;
+    }
+
+    return _executeIconSwitch(icon);
+  }
+
+  static NoctraAppIcon? _pendingIcon;
+
+  static Future<bool> _executeIconSwitch(NoctraAppIcon icon) async {
     final previousIcon = _currentIcon;
     _changing = true;
 
@@ -101,6 +112,13 @@ class DynamicIconService {
       return false;
     } finally {
       _changing = false;
+
+      // If a new request came in while we were executing, process it now
+      if (_pendingIcon != null) {
+        final next = _pendingIcon!;
+        _pendingIcon = null;
+        _executeIconSwitch(next);
+      }
     }
   }
 }
