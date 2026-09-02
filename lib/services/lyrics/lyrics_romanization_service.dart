@@ -8,7 +8,7 @@ import '../lyric_romanizer/lyric_romanizer_types.dart' as lr;
 /// Script type enum (matches old LyricScript for UI compatibility).
 enum ScriptType {
   latin, japanese, korean, chinese, cyrillic, arabic, greek,
-  thai, hebrew, devanagari, bengali, tamil, telugu, gujarati,
+  thai, hebrew, devanagari, gurmukhi, bengali, tamil, telugu, gujarati,
   kannada, malayalam, odia, other,
 }
 
@@ -37,6 +37,7 @@ class LyricsRomanizationService {
     lr.ScriptType.korean => ScriptType.korean,
     lr.ScriptType.cyrillic => ScriptType.cyrillic,
     lr.ScriptType.devanagari => ScriptType.devanagari,
+    lr.ScriptType.gurmukhi => ScriptType.gurmukhi,
     lr.ScriptType.gujarati => ScriptType.gujarati,
     lr.ScriptType.telugu => ScriptType.telugu,
     lr.ScriptType.kannada => ScriptType.kannada,
@@ -188,7 +189,10 @@ class LyricsRomanizationService {
         SanscriptEngine.t(text, SanscriptEngine.kannada, SanscriptEngine.devanagari)),
     ScriptType.malayalam => _devaToRomanEngine.toRomanized(
         SanscriptEngine.t(text, SanscriptEngine.malayalam, SanscriptEngine.devanagari)),
-    ScriptType.odia => _devaToRomanEngine.toRomanized(text),
+    ScriptType.gurmukhi => _devaToRomanEngine.toRomanized(
+        SanscriptEngine.t(text, SanscriptEngine.gurmukhi, SanscriptEngine.devanagari)),
+    ScriptType.odia => _devaToRomanEngine.toRomanized(
+        SanscriptEngine.t(text, SanscriptEngine.odia, SanscriptEngine.devanagari)),
     ScriptType.japanese => _japaneseToRomaji(text),
     ScriptType.korean => _koreanToRoman(text),
     ScriptType.chinese => _chineseToPinyin(text),

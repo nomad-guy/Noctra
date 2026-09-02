@@ -32,8 +32,15 @@ class ScriptOption {
 
 class UniversalLyricsTransliterationEngine {
   static final Map<String, String> _cache = {};
-  static const int _maxCacheSize = 500;
+  static const int _maxCacheSize = 3000;
+  static int _lexiconVersion = 0;
   static final RomanizedTranslationEngine _romanizer = RomanizedTranslationEngine();
+
+  /// Called when custom pronunciations are learned — invalidates stale cache entries.
+  static void invalidateCache() {
+    _lexiconVersion++;
+    _cache.clear();
+  }
 
   /// Detects the primary script of a given piece of lyric text.
   static LyricScript detectScript(String text) {
@@ -95,7 +102,10 @@ class UniversalLyricsTransliterationEngine {
 
     if (japaneseCount > 0) return LyricScript.japanese;
     if (koreanCount > 0) return LyricScript.korean;
-    if (chineseCount > 5) return LyricScript.chinese;
+    // Han-only text (no kana) is ambiguous between Chinese and Japanese.
+    // Only classify as Chinese when there's a strong signal (many Han chars,
+    // no kana, and no other script present). Otherwise preserve original.
+    if (chineseCount > 10 && japaneseCount == 0) return LyricScript.chinese;
     // A single short lyric line can be a valid script sample. Requiring four
     // characters made controls disappear for lines such as "दिल" or "مَن".
     if (devanagariCount > 0) return LyricScript.devanagari;
@@ -205,7 +215,7 @@ class UniversalLyricsTransliterationEngine {
   static LyricsData transliterateLyrics(LyricsData lyrics, String targetScript) {
     if (targetScript == 'original' || targetScript == 'raw') return lyrics;
 
-    final cacheKeyPrefix = '$targetScript:';
+    final cacheKeyPrefix = 'v$_lexiconVersion:$targetScript:';
     if (lyrics.isSynced) {
       final convertedLines = lyrics.lines.map((line) {
         final cacheKey = '$cacheKeyPrefix${line.text}';
@@ -297,6 +307,9 @@ class UniversalLyricsTransliterationEngine {
         romanText = _romanizer.toRomanized(deva);
         break;
       case LyricScript.odia:
+        final deva = SanscriptEngine.t(clean, SanscriptEngine.odia, SanscriptEngine.devanagari);
+        romanText = _romanizer.toRomanized(deva);
+        break;
       case LyricScript.latin:
         romanText = clean;
         break;

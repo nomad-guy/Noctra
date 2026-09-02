@@ -41,6 +41,7 @@ const Map<ScriptType, ScriptMeta> scriptMetadata = {
   ScriptType.gujarati: ScriptMeta(ranges: [CodeRange(0x0A80, 0x0AFF)]),
   ScriptType.telugu: ScriptMeta(ranges: [CodeRange(0x0C00, 0x0C7F)]),
   ScriptType.kannada: ScriptMeta(ranges: [CodeRange(0x0C80, 0x0CFF)]),
+  ScriptType.gurmukhi: ScriptMeta(ranges: [CodeRange(0x0A00, 0x0A7F)]),
   ScriptType.odia: ScriptMeta(ranges: [CodeRange(0x0B00, 0x0B7F)]),
   ScriptType.tamil: ScriptMeta(ranges: [CodeRange(0x0B80, 0x0BFF)]),
   ScriptType.malayalam:

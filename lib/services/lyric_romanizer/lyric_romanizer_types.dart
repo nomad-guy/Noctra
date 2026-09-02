@@ -10,6 +10,7 @@ enum ScriptType {
   korean,
   cyrillic,
   devanagari,
+  gurmukhi,
   gujarati,
   telugu,
   kannada,

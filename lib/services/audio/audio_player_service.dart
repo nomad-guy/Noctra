@@ -42,8 +42,8 @@ class AudioPlayerService {
   StreamSubscription<PlayerException>? _errorSub;
   StreamSubscription<Duration>? _positionSub;
 
-  void _attachListeners() {
-    _detachListeners();
+  Future<void> _attachListeners() async {
+    await _detachListeners();
     _stateSub = _player.playerStateStream.listen((s) {
       if (_transitionInProgress) { return; }
       if (s.processingState == ProcessingState.completed) {
@@ -89,12 +89,14 @@ class AudioPlayerService {
     });
   }
 
-  void _detachListeners() {
-    _stateSub?.cancel();
+  Future<void> _detachListeners() async {
+    await Future.wait([
+      _stateSub?.cancel() ?? Future.value(),
+      _errorSub?.cancel() ?? Future.value(),
+      _positionSub?.cancel() ?? Future.value(),
+    ]);
     _stateSub = null;
-    _errorSub?.cancel();
     _errorSub = null;
-    _positionSub?.cancel();
     _positionSub = null;
   }
 
@@ -227,9 +229,18 @@ class AudioPlayerService {
       // Invalidate any active volume transition
       _volumeEpoch++;
       _transitionEpoch++;
-      try {
-        _player.setVolume(1.0);
-      } catch (_) {}
+      // Serialize volume restoration — catch async failures
+      final p = _player;
+      final epoch = _volumeEpoch;
+      _enqueue(() async {
+        if (_volumeEpoch == epoch && identical(p, _player)) {
+          try {
+            await p.setVolume(1.0);
+          } catch (e) {
+            NoctraLogger.w('Failed to restore volume after disabling fade', e);
+          }
+        }
+      });
     }
     _emitSettings();
   }
@@ -254,7 +265,7 @@ class AudioPlayerService {
     }
     _sleepTimerRemainingMinutes = minutes;
     _emitSettings();
-    _sleepTimer = Timer.periodic(const Duration(minutes: 1), (t) async {
+    _sleepTimer = Timer.periodic(const Duration(minutes: 1), (t) {
       if (_sleepTimerRemainingMinutes != null &&
           _sleepTimerRemainingMinutes! > 1) {
         _sleepTimerRemainingMinutes = _sleepTimerRemainingMinutes! - 1;
@@ -263,23 +274,36 @@ class AudioPlayerService {
         t.cancel();
         _sleepTimerRemainingMinutes = null;
         _emitSettings();
-        final p = _player; // Capture player identity
-        final vEpoch = ++_volumeEpoch;
-        final fadeId = _sleepFadeId; // Capture ownership token
-        for (int i = 10; i >= 0; i--) {
-          if (_sleepFadeId != fadeId || _volumeEpoch != vEpoch || !identical(p, _player)) { break; }
-          await p.setVolume(i / 10.0);
-          await Future.delayed(const Duration(milliseconds: 100));
-        }
-        if (_sleepFadeId == fadeId && _volumeEpoch == vEpoch && identical(p, _player)) {
-          await p.pause();
-        }
-        // Only restore volume if this fade still owns everything
-        if (_sleepFadeId == fadeId && _volumeEpoch == vEpoch && identical(p, _player)) {
-          await p.setVolume(1.0);
-        }
+        _runSleepFade();
       }
     });
+  }
+
+  /// Run the sleep-fade volume ramp with proper error handling.
+  /// Extracted from Timer.periodic callback so exceptions are caught.
+  Future<void> _runSleepFade() async {
+    final p = _player;
+    final vEpoch = ++_volumeEpoch;
+    final fadeId = _sleepFadeId;
+    try {
+      for (int i = 10; i >= 0; i--) {
+        if (_sleepFadeId != fadeId ||
+            _volumeEpoch != vEpoch ||
+            !identical(p, _player)) {
+          return;
+        }
+        await p.setVolume(i / 10.0);
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      if (_sleepFadeId == fadeId &&
+          _volumeEpoch == vEpoch &&
+          identical(p, _player)) {
+        await p.pause();
+        await p.setVolume(1.0);
+      }
+    } catch (e) {
+      NoctraLogger.w('Sleep fade failed', e);
+    }
   }
 
   // ── Safe player disposal ──
@@ -500,11 +524,11 @@ class AudioPlayerService {
       }
 
       // ALL checks passed — commit the swap
-      _detachListeners();
+      await _detachListeners();
       final oldSecondary = _secondary;
       _secondary = _player;
       _player = nextPlayer;
-      _attachListeners();
+      await _attachListeners();
       // Dispose stale secondary player
       if (oldSecondary != null) { await _disposeInactivePlayer(oldSecondary); }
 
@@ -802,11 +826,11 @@ class AudioPlayerService {
         _bufferedNext = null;
         _bufferedNextSong = null;
 
-        _detachListeners();
+        await _detachListeners();
         final oldSecondary = _secondary;
         _secondary = _player;
         _player = buffered;
-        _attachListeners();
+        await _attachListeners();
         if (oldSecondary != null) { await _disposeInactivePlayer(oldSecondary); }
 
         try {
@@ -1015,11 +1039,11 @@ class AudioPlayerService {
     }
 
     // ALL checks passed — commit
-    _detachListeners();
+    await _detachListeners();
     final oldSecondary = _secondary;
     _secondary = _player;
     _player = nextPlayer;
-    _attachListeners();
+    await _attachListeners();
     if (oldSecondary != null) { await _disposeInactivePlayer(oldSecondary); }
 
     _currentIndex = newIndex;

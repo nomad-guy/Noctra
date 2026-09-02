@@ -12,6 +12,7 @@ class SanscriptEngine {
   static const String tamil = 'tamil';
   static const String kannada = 'kannada';
   static const String malayalam = 'malayalam';
+  static const String odia = 'odia';
   static const String itrans = 'itrans';
   static const String iast = 'iast';
   static const String hk = 'hk';
@@ -25,6 +26,7 @@ class SanscriptEngine {
     'tamil': 0x0B80,
     'telugu': 0x0C00,
     'kannada': 0x0C80,
+    'odia': 0x0B00,
     'malayalam': 0x0D00,
   };
 

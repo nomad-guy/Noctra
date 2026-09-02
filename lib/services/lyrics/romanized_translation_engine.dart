@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'lyrics_service.dart';
 import 'dynamic_lexicon.dart';
+import 'universal_lyrics_transliteration_engine.dart';
 
 /// RomanizedTranslationEngine: Bidirectional high-fidelity Romanizer & Semantic Translator.
 ///
@@ -189,6 +190,8 @@ class RomanizedTranslationEngine {
     _customRomanOverrides[devanagariWord] = romanSpelling;
     _inverseDevanagariToRoman[devanagariWord] = romanSpelling;
     _romanCache.remove(devanagariWord);
+    // Also invalidate the universal engine's cache so learned corrections take effect
+    UniversalLyricsTransliterationEngine.invalidateCache();
   }
 
   /// Teach an English meaning/translation for a lyrical term.
