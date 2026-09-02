@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
 import '../../providers/app_providers.dart';
-import '../../services/ytdlp/music_service.dart';
 import 'glass_card.dart';
 
 class AIGeneratedPlaylistsSection extends ConsumerWidget {
@@ -60,8 +59,8 @@ class AIGeneratedPlaylistsSection extends ConsumerWidget {
                 return Padding(
                   padding: const EdgeInsets.only(right: 12),
                   child: GestureDetector(
-                    onTap: () async {
-                      final tracks = await MusicService.fetchVibeFeed(pl.vibeKey);
+                    onTap: () {
+                      final tracks = pl.tracks;
                       if (tracks.isNotEmpty) {
                         ref.read(audioPlayerServiceProvider).playSong(tracks.first, newQueue: tracks);
                       }

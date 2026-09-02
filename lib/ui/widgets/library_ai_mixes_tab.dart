@@ -21,8 +21,7 @@ class _LibraryAIMixesTabState extends ConsumerState<LibraryAIMixesTab> {
     if (_playingMix) return;
     setState(() => _playingMix = true);
     try {
-      final tracks = await MusicService.fetchVibeFeed(pl.vibeKey)
-          .timeout(const Duration(seconds: 8));
+      final tracks = pl.tracks;
       if (tracks.isNotEmpty && mounted) {
         ref.read(audioPlayerServiceProvider).playSong(tracks.first, newQueue: tracks);
       }
@@ -35,6 +34,7 @@ class _LibraryAIMixesTabState extends ConsumerState<LibraryAIMixesTab> {
     if (_playingMix) return;
     setState(() => _playingMix = true);
     try {
+      // AIFolders use fetchVibeFeed since they don't store tracks directly
       final tracks = await MusicService.fetchVibeFeed(folder.vibeKey)
           .timeout(const Duration(seconds: 8));
       if (tracks.isNotEmpty && mounted) {
