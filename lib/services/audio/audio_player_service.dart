@@ -47,46 +47,71 @@ class AudioPlayerService {
   // ── Crossfade/recovery/radio tokens ──
   int _autoCrossfadeGeneration = 0;
   bool _crossfadePending = false;
+  String? _crossfadePendingSongId;
+  int _crossfadePendingEpoch = 0;
   int _recoveryGeneration = 0;
+  bool _recoveryInFlight = false;
   final Map<String, Future<List<Song>>> _radioRequests = {};
+  int _radioGeneration = 0;
+
+  /// Helper: invalidate all automatic playback operations at state boundaries.
+  void _invalidatePlaybackOperations() {
+    _autoCrossfadeGeneration++;
+    _crossfadePending = false;
+    _crossfadePendingSongId = null;
+  }
 
   Future<void> _attachListeners() async {
     await _detachListeners();
     final gen = _listenerGeneration;
+    final attachedPlayer = _player; // Capture identity for stale-callback guard
     _stateSub = _player.playerStateStream.listen((s) {
       if (gen != _listenerGeneration) { return; }
+      if (!identical(attachedPlayer, _player)) { return; }
       if (_transitionInProgress) { return; }
       if (s.processingState == ProcessingState.completed) {
         final cbGen = gen;
+        final songId = _currentSong?.id;
+        final epoch = _playSessionEpoch;
+        final player = _player;
         _enqueue(() async {
           if (cbGen != _listenerGeneration) { return; }
+          if (epoch != _playSessionEpoch || _currentSong?.id != songId) { return; }
+          if (!identical(player, _player)) { return; }
           await _onSongCompletedInternal();
         });
       }
       // If crossfade was pending while buffering, try again now that player is ready
       if (_crossfadePending &&
+          _crossfadePendingSongId == _currentSong?.id &&
+          _crossfadePendingEpoch == _playSessionEpoch &&
           s.processingState == ProcessingState.ready &&
           _player.playing) {
         _crossfadePending = false;
+        _crossfadePendingSongId = null;
         final pos = _player.position;
         _checkAutoCrossfade(pos);
       }
     });
     _errorSub = _player.errorStream.listen((e) {
       if (gen != _listenerGeneration) { return; }
+      if (!identical(attachedPlayer, _player)) { return; }
       if (_transitionInProgress) { return; }
       NoctraLogger.e('AudioPlayer error: ${e.toString()}', e);
       final active = _currentSong;
       if (active != null) {
         final epoch = _playSessionEpoch;
         final failedPlayer = _player;
-        final rGen = _recoveryGeneration;
         final attempts = _recoveryAttemptsByEpoch[epoch] ?? 0;
         if (attempts >= _maxAutomaticRecoveryAttempts) {
           NoctraLogger.w(
               'AudioPlayer recovery limit reached for "${active.title}"', e);
           return;
         }
+        // Deduplicate: only one recovery at a time
+        if (_recoveryInFlight) { return; }
+        _recoveryInFlight = true;
+        final rGen = ++_recoveryGeneration; // Increment when scheduling
         final cbGen = gen;
         _enqueue(() async {
           try {
@@ -100,13 +125,14 @@ class AudioPlayerService {
             // Reset recovery counter after successful recovery
             _recoveryAttemptsByEpoch.remove(epoch);
           } finally {
-            if (_recoveryGeneration == rGen) { _recoveryGeneration = 0; }
+            _recoveryInFlight = false;
           }
         });
       }
     });
     _positionSub = _player.positionStream.listen((pos) {
       if (gen != _listenerGeneration) { return; }
+      if (!identical(attachedPlayer, _player)) { return; }
       if (_playSessionEpoch != _positionSaveEpoch) { return; }
       final activeSong = _currentSong;
       if (activeSong != null &&
@@ -253,18 +279,18 @@ class AudioPlayerService {
 
   void setCrossfadeSeconds(int sec) {
     _crossfadeSeconds = sec.clamp(0, 12);
+    _invalidatePlaybackOperations(); // Invalidate any queued crossfade using old value
     _emitSettings();
   }
 
   void toggleFade(bool enable) {
     _isFadeEnabled = enable;
+    // Changing fade settings invalidates previous transition decisions
+    _invalidatePlaybackOperations();
     if (!enable) {
       // Invalidate any active volume transition — only volume epoch, not
       // playback transition epoch (fade settings ≠ playback state change)
       _volumeEpoch++;
-      // Invalidate any queued auto-crossfade
-      _autoCrossfadeGeneration++;
-      _crossfadePending = false;
       // Serialize volume restoration — catch async failures
       final p = _player;
       final epoch = _volumeEpoch;
@@ -319,23 +345,26 @@ class AudioPlayerService {
   /// Extracted from Timer.periodic callback so exceptions are caught.
   Future<void> _runSleepFade() async {
     final p = _player;
+    final originalVolume = p.volume; // Capture actual volume before fade
     final vEpoch = ++_volumeEpoch;
     final fadeId = _sleepFadeId;
     try {
-      for (int i = 10; i >= 0; i--) {
+      const steps = 10;
+      for (int i = steps; i >= 0; i--) {
         if (_sleepFadeId != fadeId ||
             _volumeEpoch != vEpoch ||
             !identical(p, _player)) {
           return;
         }
-        await p.setVolume(i / 10.0);
+        final t = i / steps;
+        await p.setVolume(t * t * originalVolume); // Perceptual fade preserving original volume
         await Future.delayed(const Duration(milliseconds: 100));
       }
       if (_sleepFadeId == fadeId &&
           _volumeEpoch == vEpoch &&
           identical(p, _player)) {
         await p.pause();
-        await p.setVolume(1.0);
+        await p.setVolume(originalVolume);
       }
     } catch (e) {
       NoctraLogger.w('Sleep fade failed', e);
@@ -384,7 +413,8 @@ class AudioPlayerService {
     try {
       for (var i = 1; i <= steps; i++) {
         if (_volumeEpoch != vEpoch || !identical(p, _player)) { return; }
-        await p.setVolume(i / steps);
+        final t = i / steps;
+        await p.setVolume(t * t); // Perceptual quadratic curve
         await Future.delayed(stepDelay);
       }
     } catch (e) {
@@ -452,9 +482,10 @@ class AudioPlayerService {
           return CrossfadeResult.cancelled;
         }
         final progress = i / steps;
+        final easedProgress = progress * progress; // Perceptual curve
         await Future.wait([
-          oldPlayer.setVolume(1.0 - progress),
-          newPlayer.setVolume(progress),
+          oldPlayer.setVolume(1.0 - easedProgress),
+          newPlayer.setVolume(easedProgress),
         ]);
         await Future.delayed(stepDelay);
       }
@@ -489,29 +520,39 @@ class AudioPlayerService {
 
     final triggerPoint = duration - crossfadeDur;
     if (pos < triggerPoint) {
-      _crossfadePending = false; // Reset if we haven't reached trigger yet
+      // Reset pending state if we haven't reached trigger yet
+      if (_crossfadePending && _crossfadePendingSongId == _currentSong?.id) {
+        _crossfadePending = false;
+        _crossfadePendingSongId = null;
+      }
       return;
     }
 
     // Player not ready yet — mark pending and wait for ready state
     if (_player.processingState != ProcessingState.ready || !_player.playing) {
       _crossfadePending = true;
+      _crossfadePendingSongId = _currentSong?.id;
+      _crossfadePendingEpoch = _playSessionEpoch;
       return;
     }
 
     // Already at trigger and player is ready — schedule crossfade
     _crossfadePending = false;
+    _crossfadePendingSongId = null;
     final gen = ++_autoCrossfadeGeneration;
+    final songId = _currentSong?.id;
+    final epoch = _playSessionEpoch;
     _enqueue(() async {
       try {
         if (gen != _autoCrossfadeGeneration) { return; }
+        if (epoch != _playSessionEpoch || _currentSong?.id != songId) { return; }
         // Revalidate position before starting transition
         final d = _player.duration;
         final p = _player.position;
         if (d == null || p < d - crossfadeDur) { return; }
         await _autoCrossfadeNext();
       } finally {
-        if (gen == _autoCrossfadeGeneration) { _autoCrossfadeGeneration++; }
+        // Don't auto-increment here — let explicit invalidation handle it
       }
     });
   }
@@ -614,14 +655,18 @@ class AudioPlayerService {
     if (remaining >= _minAutoplayBuffer) { return; }
     if (_currentSong == null) { return; }
 
+    final seedId = _currentSong!.id;
     final similar = await _getRadioQueue(_currentSong!);
     if (similar.isEmpty ||
         epoch != _playSessionEpoch ||
         revision != _queueRevision) { return; }
+    // Validate seed is still current before inserting
+    if (_currentSong?.id != seedId) { return; }
 
     _mutateQueue(() {
       var added = false;
       for (final s in similar) {
+        // Filter again at insertion time — queue may have changed during request
         if (!_queue.any((q) => q.id == s.id)) { _queue.add(s); added = true; }
       }
       return added;
@@ -634,13 +679,22 @@ class AudioPlayerService {
     final existing = _radioRequests[seed.id];
     if (existing != null) { return existing; }
 
-    // Exclude songs already in queue to prevent loops
-    final queueIds = _queue.map((s) => s.id).toSet();
-    final request = MusicService.fetchSimilarRadioQueue(seed, excludeIds: queueIds);
+    // Exclude only the current song and immediate next few positions
+    // (not entire queue — too restrictive for recommendation quality)
+    final excludeIds = <String>{seed.id};
+    for (int i = _currentIndex + 1;
+         i < min(_queue.length, _currentIndex + 4); i++) {
+      excludeIds.add(_queue[i].id);
+    }
+    final gen = ++_radioGeneration;
+    final request = MusicService.fetchSimilarRadioQueue(seed, excludeIds: excludeIds);
     _radioRequests[seed.id] = request;
 
     try {
-      return await request;
+      final results = await request;
+      // Validate request is still relevant and filter stale results
+      if (gen != _radioGeneration) { return []; }
+      return results.where((s) => !_queue.any((q) => q.id == s.id)).toList();
     } finally {
       _radioRequests.remove(seed.id);
     }
@@ -888,8 +942,7 @@ class AudioPlayerService {
       } catch (_) {}
       _positionSaveEpoch = _playSessionEpoch;
       _lastSavedSec = -1;
-      _autoCrossfadeGeneration++; // Invalidate any queued auto-crossfade
-      _crossfadePending = false;
+      _invalidatePlaybackOperations();
       if (epoch != _playSessionEpoch) { return; }
 
       // Use pre-buffered player if available
@@ -1162,10 +1215,10 @@ class AudioPlayerService {
   }
 
   Future<void> seek(Duration pos) async {
-    _autoCrossfadeGeneration++; // Invalidate any queued auto-crossfade
-    _crossfadePending = false;
     try {
       await _player.seek(pos);
+      // Only invalidate after successful seek
+      _invalidatePlaybackOperations();
     } catch (_) {}
   }
 
@@ -1175,6 +1228,7 @@ class AudioPlayerService {
   Future<void> stopAndDismiss() async {
     _transitionEpoch++;
     _transitionInProgress = false;
+    _invalidatePlaybackOperations();
     try {
       await _player.stop();
     } catch (_) {}
