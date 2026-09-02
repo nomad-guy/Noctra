@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
@@ -102,7 +103,14 @@ class AudioPlayerService {
   Future<void> _opChain = Future.value();
 
   Future<void> _serialize(Future<void> Function() operation) {
-    final next = _opChain.then((_) => operation());
+    final next = _opChain.then((_) async {
+      try {
+        await operation();
+      } catch (e, st) {
+        NoctraLogger.e('Serialized playback operation failed', e, st);
+        rethrow;
+      }
+    });
     _opChain = next.catchError((_) {});
     return next;
   }
@@ -119,9 +127,10 @@ class AudioPlayerService {
   /// Monotonically increasing counter — incremented on every queue mutation.
   int _queueRevision = 0;
 
-  /// Centralized queue mutation helper — ensures revision is always incremented.
-  void _mutateQueue(void Function() mutate) {
-    mutate();
+  /// Centralized queue mutation helper — only increments revision if queue actually changed.
+  void _mutateQueue(bool Function() mutate) {
+    final changed = mutate();
+    if (!changed) { return; }
     _queueRevision++;
     _queueController.add(List.unmodifiable(_queue));
   }
@@ -284,9 +293,10 @@ class AudioPlayerService {
     final stepDelay = Duration(
         milliseconds: (dur.inMilliseconds / steps).round().clamp(10, 200));
     final vEpoch = ++_volumeEpoch;
+    final p = _player; // Capture identity
     for (var i = 1; i <= steps; i++) {
-      if (_volumeEpoch != vEpoch) { return; }
-      await _player.setVolume(i / steps);
+      if (_volumeEpoch != vEpoch || !identical(p, _player)) { return; }
+      await p.setVolume(i / steps);
       await Future.delayed(stepDelay);
     }
   }
@@ -303,32 +313,38 @@ class AudioPlayerService {
     final playEpoch = _playSessionEpoch;
     final vEpoch = ++_volumeEpoch;
 
-    // Check buffer readiness
+    // Check buffer readiness — require ready state + minimum buffer
     final buffered = nextPlayer.bufferedPosition;
-    final requiredBuffer = Duration(seconds: _crossfadeSeconds.clamp(1, 3));
-    if (buffered < requiredBuffer) {
-      NoctraLogger.w('Crossfade buffer insufficient: ${buffered.inMilliseconds}ms < ${requiredBuffer.inMilliseconds}ms');
+    final requiredBuffer = Duration(milliseconds: min(_crossfadeSeconds * 1000, 3000));
+    if (nextPlayer.processingState != ProcessingState.ready ||
+        buffered < requiredBuffer) {
+      NoctraLogger.w('Crossfade buffer insufficient: state=${nextPlayer.processingState}, buffer=${buffered.inMilliseconds}ms');
       return CrossfadeResult.failed;
     }
 
-    await nextPlayer.setVolume(0.0);
-    await nextPlayer.seek(Duration.zero);
-    await nextPlayer.play();
+    // Capture player references for safe volume operations
+    final oldPlayer = _player;
+    final newPlayer = nextPlayer;
+
+    await newPlayer.setVolume(0.0);
+    await newPlayer.seek(Duration.zero);
+    await newPlayer.play();
 
     for (var i = 1; i <= steps; i++) {
       if (_transitionEpoch != tEpoch ||
           _playSessionEpoch != playEpoch ||
-          _volumeEpoch != vEpoch) {
+          _volumeEpoch != vEpoch ||
+          !identical(oldPlayer, _player)) {
         try {
-          await nextPlayer.stop();
-          await nextPlayer.setVolume(1.0);
+          await newPlayer.stop();
+          await newPlayer.setVolume(1.0);
         } catch (_) {}
         return CrossfadeResult.cancelled;
       }
       final progress = i / steps;
       await Future.wait([
-        _player.setVolume(1.0 - progress),
-        nextPlayer.setVolume(progress),
+        oldPlayer.setVolume(1.0 - progress),
+        newPlayer.setVolume(progress),
       ]);
       await Future.delayed(stepDelay);
     }
@@ -348,13 +364,13 @@ class AudioPlayerService {
 
     final duration = _player.duration;
     if (duration == null) { return; }
-    if (duration.inSeconds <= _crossfadeSeconds) { return; }
+    final crossfadeDur = Duration(seconds: _crossfadeSeconds);
+    if (duration <= crossfadeDur) { return; }
 
-    if (_player.processingState != ProcessingState.ready &&
-        _player.processingState != ProcessingState.buffering) { return; }
+    // Only crossfade when player is truly ready — not buffering/stalled
+    if (_player.processingState != ProcessingState.ready) { return; }
     if (!_player.playing) { return; }
 
-    final crossfadeDur = Duration(seconds: _crossfadeSeconds);
     final triggerPoint = duration - crossfadeDur;
     if (pos < triggerPoint) { return; }
 
@@ -409,6 +425,11 @@ class AudioPlayerService {
       // Validate ALL conditions before promotion
       if (result != CrossfadeResult.completed) {
         await _disposePlayer(nextPlayer);
+        // If crossfade failed and current player already completed, advance
+        if (result == CrossfadeResult.failed &&
+            _player.processingState == ProcessingState.completed) {
+          _onSongCompleted();
+        }
         return;
       }
       if (epoch != _playSessionEpoch ||
@@ -428,9 +449,12 @@ class AudioPlayerService {
 
       // ALL checks passed — commit the swap
       _detachListeners();
+      final oldSecondary = _secondary;
       _secondary = _player;
       _player = nextPlayer;
       _attachListeners();
+      // Dispose stale secondary player
+      if (oldSecondary != null) { _disposePlayer(oldSecondary); }
 
       _currentIndex = newIndex;
       _currentSong = nextSong;
@@ -457,27 +481,29 @@ class AudioPlayerService {
         revision != _queueRevision) { return; }
 
     _mutateQueue(() {
+      var added = false;
       for (final s in similar) {
-        if (!_queue.any((q) => q.id == s.id)) { _queue.add(s); }
+        if (!_queue.any((q) => q.id == s.id)) { _queue.add(s); added = true; }
       }
+      return added;
     });
   }
 
   /// Single in-flight radio request — prevents duplicate network calls.
-  Future<List<Song>> _getRadioQueue(Song seed) {
+  Future<List<Song>> _getRadioQueue(Song seed) async {
     final existing = _radioRequest;
     if (existing != null) { return existing; }
 
     final request = MusicService.fetchSimilarRadioQueue(seed);
     _radioRequest = request;
 
-    request.whenComplete(() {
+    try {
+      return await request;
+    } finally {
       if (identical(_radioRequest, request)) {
         _radioRequest = null;
       }
-    });
-
-    return request;
+    }
   }
 
   // ── Preloading ──
@@ -508,9 +534,11 @@ class AudioPlayerService {
           }
           if (similar.isNotEmpty) {
             _mutateQueue(() {
+              var added = false;
               for (final s in similar) {
-                if (!_queue.any((q) => q.id == s.id)) { _queue.add(s); }
+                if (!_queue.any((q) => q.id == s.id)) { _queue.add(s); added = true; }
               }
+              return added;
             });
             if (_currentIndex + 1 < _queue.length) {
               _prepareNextPlayer(_queue[_currentIndex + 1], epoch, rev)
@@ -627,6 +655,7 @@ class AudioPlayerService {
         _queue.clear();
         _queue.add(_currentSong!);
         _currentIndex = 0;
+        return true;
       });
       _currentSongController.add(_currentSong);
       final resolved = await _resolveUrl(_currentSong!);
@@ -676,6 +705,7 @@ class AudioPlayerService {
             _queue.insert(0, song);
             _currentIndex = 0;
           }
+          return true;
         });
         // _invalidatePreload is async — clear ownership first, dispose after
         final oldBuffered = _bufferedNext;
@@ -687,6 +717,7 @@ class AudioPlayerService {
         _mutateQueue(() {
           _queue.add(song);
           _currentIndex = _queue.length - 1;
+          return true;
         });
       } else {
         _currentIndex = _queue.indexWhere((s) => s.id == song.id);
@@ -709,9 +740,11 @@ class AudioPlayerService {
         _bufferedNextSong = null;
 
         _detachListeners();
+        final oldSecondary = _secondary;
         _secondary = _player;
         _player = buffered;
         _attachListeners();
+        if (oldSecondary != null) { _disposePlayer(oldSecondary); }
 
         try {
           await _player.seek(Duration.zero);
@@ -894,6 +927,10 @@ class AudioPlayerService {
     // Validate ALL conditions before promotion
     if (result != CrossfadeResult.completed) {
       await _disposePlayer(nextPlayer);
+      if (result == CrossfadeResult.failed &&
+          _player.processingState == ProcessingState.completed) {
+        _onSongCompleted();
+      }
       return;
     }
     if (epoch != _playSessionEpoch ||
@@ -913,9 +950,11 @@ class AudioPlayerService {
 
     // ALL checks passed — commit
     _detachListeners();
+    final oldSecondary = _secondary;
     _secondary = _player;
     _player = nextPlayer;
     _attachListeners();
+    if (oldSecondary != null) { _disposePlayer(oldSecondary); }
 
     _currentIndex = newIndex;
     _currentSong = nextSong;
@@ -1058,6 +1097,7 @@ class AudioPlayerService {
   void addToQueue(Song song) {
     _mutateQueue(() {
       _queue.add(song);
+      return true;
     });
     NoctraLogger.d('addToQueue: ${song.title} (queue size: ${_queue.length})');
   }
@@ -1066,6 +1106,7 @@ class AudioPlayerService {
     _mutateQueue(() {
       final insertAt = (_currentIndex + 1).clamp(0, _queue.length);
       _queue.insert(insertAt, song);
+      return true;
     });
     NoctraLogger.d('playNext: ${song.title}');
   }
@@ -1075,6 +1116,7 @@ class AudioPlayerService {
     final wasPlaying = index == _currentIndex;
     _mutateQueue(() {
       _queue.removeAt(index);
+      return true;
     });
     if (wasPlaying && _queue.isNotEmpty) {
       _currentIndex = _currentIndex.clamp(0, _queue.length - 1);
@@ -1097,6 +1139,7 @@ class AudioPlayerService {
       } else if (oldIndex > _currentIndex && targetIndex <= _currentIndex) {
         _currentIndex++;
       }
+      return true;
     });
     _invalidatePreload();
   }
@@ -1108,6 +1151,7 @@ class AudioPlayerService {
       _queue.clear();
       _queue.add(current);
       _currentIndex = 0;
+      return true;
     });
     _invalidatePreload();
   }
