@@ -239,9 +239,14 @@ class AudioPlayerService {
   void setSleepTimer(int minutes) {
     _sleepTimer?.cancel();
     _sleepFadeId++; // Invalidate any running sleep fade
-    _volumeEpoch++;
+    final vEpoch = ++_volumeEpoch;
     final p = _player;
-    p.setVolume(1.0);
+    // Epoch-guarded volume restoration
+    _enqueue(() async {
+      if (_volumeEpoch == vEpoch && identical(p, _player)) {
+        await p.setVolume(1.0);
+      }
+    });
     if (minutes <= 0) {
       _sleepTimerRemainingMinutes = null;
       _emitSettings();
@@ -362,11 +367,11 @@ class AudioPlayerService {
     final oldPlayer = _player;
     final newPlayer = nextPlayer;
 
-    await newPlayer.setVolume(0.0);
-    await newPlayer.seek(Duration.zero);
-    await newPlayer.play();
-
     try {
+      await newPlayer.setVolume(0.0);
+      await newPlayer.seek(Duration.zero);
+      await newPlayer.play();
+
       for (var i = 1; i <= steps; i++) {
         if (_transitionEpoch != tEpoch ||
             _playSessionEpoch != playEpoch ||
@@ -614,6 +619,7 @@ class AudioPlayerService {
 
   Future<void> _prepareNextPlayer(
       Song song, int epoch, int revision) async {
+    AudioPlayer? nextPlayer;
     try {
       final resolved = await _resolveUrl(song);
       final url = _extractUrl(resolved);
@@ -621,7 +627,7 @@ class AudioPlayerService {
           epoch != _playSessionEpoch ||
           revision != _queueRevision) { return; }
 
-      final nextPlayer = AudioPlayer(maxSkipsOnError: 6);
+      nextPlayer = AudioPlayer(maxSkipsOnError: 6);
       final mediaItem = _createMediaItem(song);
       final src = url.startsWith('http')
           ? AudioSource.uri(Uri.parse(url), tag: mediaItem)
@@ -645,6 +651,7 @@ class AudioPlayerService {
       NoctraLogger.d('Pre-buffered next track: ${song.title}');
     } catch (e) {
       NoctraLogger.w('Pre-buffer failed for: ${song.title}', e);
+      await _disposePlayer(nextPlayer);
     }
   }
 
@@ -688,7 +695,11 @@ class AudioPlayerService {
     return 'CompositeResolver';
   }
 
-  Future<void> restoreLastPlaybackSession({bool autoPlay = false}) async {
+  Future<void> restoreLastPlaybackSession({bool autoPlay = false}) {
+    return _serialize(() => _restoreLastPlaybackSessionInternal(autoPlay: autoPlay));
+  }
+
+  Future<void> _restoreLastPlaybackSessionInternal({bool autoPlay = false}) async {
     try {
       final saved = await NoctraLocalDatabase().loadPlaybackPosition();
       if (saved == null || saved['song'] == null) { return; }
@@ -982,9 +993,9 @@ class AudioPlayerService {
     // Validate ALL conditions before promotion
     if (result != CrossfadeResult.completed) {
       await _disposePlayer(nextPlayer);
-      if (result == CrossfadeResult.failed &&
-          _player.processingState == ProcessingState.completed) {
-        _onSongCompletedInternal();
+      // Manual skip: fall back to direct play if cancelled/failed
+      if (epoch == _playSessionEpoch && _transitionId == myId) {
+        await _playSongInternal(nextSong);
       }
       return;
     }
@@ -1021,12 +1032,13 @@ class AudioPlayerService {
   }
 
   Future<AudioPlayer?> _preparePlayer(Song song, int epoch) async {
+    AudioPlayer? p;
     try {
       final resolved = await _resolveUrl(song);
       final url = _extractUrl(resolved);
       if (url.isEmpty || epoch != _playSessionEpoch) { return null; }
 
-      final p = AudioPlayer(maxSkipsOnError: 6);
+      p = AudioPlayer(maxSkipsOnError: 6);
       final mediaItem = _createMediaItem(song);
       final src = url.startsWith('http')
           ? AudioSource.uri(Uri.parse(url), tag: mediaItem)
@@ -1037,6 +1049,7 @@ class AudioPlayerService {
       return p;
     } catch (e) {
       NoctraLogger.w('Failed to prepare player for: ${song.title}', e);
+      await _disposePlayer(p);
       return null;
     }
   }
@@ -1163,6 +1176,7 @@ class AudioPlayerService {
       _queue.insert(insertAt, song);
       return true;
     });
+    _invalidatePreload(); // playNext changes what the next track is
     NoctraLogger.d('playNext: ${song.title}');
   }
 
