@@ -43,17 +43,33 @@ class AudioPlayerService {
   StreamSubscription<PlayerException>? _errorSub;
   StreamSubscription<Duration>? _positionSub;
   int _listenerGeneration = 0;
-  bool _autoCrossfadeQueued = false;
-  bool _recoveryQueued = false;
+
+  // ── Crossfade/recovery/radio tokens ──
+  int _autoCrossfadeGeneration = 0;
+  bool _crossfadePending = false;
+  int _recoveryGeneration = 0;
+  final Map<String, Future<List<Song>>> _radioRequests = {};
 
   Future<void> _attachListeners() async {
     await _detachListeners();
-    final gen = ++_listenerGeneration;
+    final gen = _listenerGeneration;
     _stateSub = _player.playerStateStream.listen((s) {
       if (gen != _listenerGeneration) { return; }
       if (_transitionInProgress) { return; }
       if (s.processingState == ProcessingState.completed) {
-        _enqueue(() => _onSongCompletedInternal());
+        final cbGen = gen;
+        _enqueue(() async {
+          if (cbGen != _listenerGeneration) { return; }
+          await _onSongCompletedInternal();
+        });
+      }
+      // If crossfade was pending while buffering, try again now that player is ready
+      if (_crossfadePending &&
+          s.processingState == ProcessingState.ready &&
+          _player.playing) {
+        _crossfadePending = false;
+        final pos = _player.position;
+        _checkAutoCrossfade(pos);
       }
     });
     _errorSub = _player.errorStream.listen((e) {
@@ -61,23 +77,30 @@ class AudioPlayerService {
       if (_transitionInProgress) { return; }
       NoctraLogger.e('AudioPlayer error: ${e.toString()}', e);
       final active = _currentSong;
-      if (active != null && !_recoveryQueued) {
+      if (active != null) {
         final epoch = _playSessionEpoch;
+        final failedPlayer = _player;
+        final rGen = _recoveryGeneration;
         final attempts = _recoveryAttemptsByEpoch[epoch] ?? 0;
         if (attempts >= _maxAutomaticRecoveryAttempts) {
           NoctraLogger.w(
               'AudioPlayer recovery limit reached for "${active.title}"', e);
           return;
         }
-        _recoveryQueued = true;
+        final cbGen = gen;
         _enqueue(() async {
           try {
+            if (cbGen != _listenerGeneration) { return; }
+            if (_recoveryGeneration != rGen) { return; }
             if (_playSessionEpoch != epoch || _currentSong?.id != active.id) { return; }
-            final currentPosition = _player.position;
+            if (!identical(failedPlayer, _player)) { return; }
             _recoveryAttemptsByEpoch[epoch] = attempts + 1;
+            final currentPosition = _player.position;
             await _playSongInternal(active, initialPosition: currentPosition);
+            // Reset recovery counter after successful recovery
+            _recoveryAttemptsByEpoch.remove(epoch);
           } finally {
-            _recoveryQueued = false;
+            if (_recoveryGeneration == rGen) { _recoveryGeneration = 0; }
           }
         });
       }
@@ -209,10 +232,6 @@ class AudioPlayerService {
   /// Minimum queue depth to maintain for autoplay.
   static const int _minAutoplayBuffer = 3;
 
-  /// Single in-flight radio request — prevents duplicate network calls.
-  Future<List<Song>>? _radioRequest;
-  String? _radioRequestSeedId;
-
   AudioPlayerService._internal() {
     _initAudioSession();
     _attachListeners();
@@ -240,9 +259,12 @@ class AudioPlayerService {
   void toggleFade(bool enable) {
     _isFadeEnabled = enable;
     if (!enable) {
-      // Invalidate any active volume transition
+      // Invalidate any active volume transition — only volume epoch, not
+      // playback transition epoch (fade settings ≠ playback state change)
       _volumeEpoch++;
-      _transitionEpoch++;
+      // Invalidate any queued auto-crossfade
+      _autoCrossfadeGeneration++;
+      _crossfadePending = false;
       // Serialize volume restoration — catch async failures
       final p = _player;
       final epoch = _volumeEpoch;
@@ -465,20 +487,31 @@ class AudioPlayerService {
     final crossfadeDur = Duration(seconds: _crossfadeSeconds);
     if (duration <= crossfadeDur) { return; }
 
-    // Only crossfade when player is truly ready — not buffering/stalled
-    if (_player.processingState != ProcessingState.ready) { return; }
-    if (!_player.playing) { return; }
-
     final triggerPoint = duration - crossfadeDur;
-    if (pos < triggerPoint) { return; }
+    if (pos < triggerPoint) {
+      _crossfadePending = false; // Reset if we haven't reached trigger yet
+      return;
+    }
 
-    if (_autoCrossfadeQueued) { return; }
-    _autoCrossfadeQueued = true;
+    // Player not ready yet — mark pending and wait for ready state
+    if (_player.processingState != ProcessingState.ready || !_player.playing) {
+      _crossfadePending = true;
+      return;
+    }
+
+    // Already at trigger and player is ready — schedule crossfade
+    _crossfadePending = false;
+    final gen = ++_autoCrossfadeGeneration;
     _enqueue(() async {
       try {
+        if (gen != _autoCrossfadeGeneration) { return; }
+        // Revalidate position before starting transition
+        final d = _player.duration;
+        final p = _player.position;
+        if (d == null || p < d - crossfadeDur) { return; }
         await _autoCrossfadeNext();
       } finally {
-        _autoCrossfadeQueued = false;
+        if (gen == _autoCrossfadeGeneration) { _autoCrossfadeGeneration++; }
       }
     });
   }
@@ -595,23 +628,21 @@ class AudioPlayerService {
     });
   }
 
-  /// Single in-flight radio request — prevents duplicate network calls.
-  /// Keyed by seed song so different seeds don't share stale results.
+  /// In-flight radio requests keyed by seed song ID — prevents duplicate
+  /// network calls while allowing different seeds to coexist.
   Future<List<Song>> _getRadioQueue(Song seed) async {
-    final existing = _radioRequest;
-    if (existing != null && _radioRequestSeedId == seed.id) { return existing; }
+    final existing = _radioRequests[seed.id];
+    if (existing != null) { return existing; }
 
-    final request = MusicService.fetchSimilarRadioQueue(seed);
-    _radioRequest = request;
-    _radioRequestSeedId = seed.id;
+    // Exclude songs already in queue to prevent loops
+    final queueIds = _queue.map((s) => s.id).toSet();
+    final request = MusicService.fetchSimilarRadioQueue(seed, excludeIds: queueIds);
+    _radioRequests[seed.id] = request;
 
     try {
       return await request;
     } finally {
-      if (identical(_radioRequest, request)) {
-        _radioRequest = null;
-        _radioRequestSeedId = null;
-      }
+      _radioRequests.remove(seed.id);
     }
   }
 
@@ -857,6 +888,8 @@ class AudioPlayerService {
       } catch (_) {}
       _positionSaveEpoch = _playSessionEpoch;
       _lastSavedSec = -1;
+      _autoCrossfadeGeneration++; // Invalidate any queued auto-crossfade
+      _crossfadePending = false;
       if (epoch != _playSessionEpoch) { return; }
 
       // Use pre-buffered player if available
@@ -1129,6 +1162,8 @@ class AudioPlayerService {
   }
 
   Future<void> seek(Duration pos) async {
+    _autoCrossfadeGeneration++; // Invalidate any queued auto-crossfade
+    _crossfadePending = false;
     try {
       await _player.seek(pos);
     } catch (_) {}

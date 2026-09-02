@@ -377,17 +377,22 @@ class MusicService {
     } catch (_) {}
   }
 
-  static Future<List<Song>> fetchSimilarRadioQueue(Song currentSong) async {
+  static Future<List<Song>> fetchSimilarRadioQueue(Song currentSong, {Set<String> excludeIds = const {}}) async {
     if (!kIsWeb && currentSong.id.length == 11) {
       try {
         final List<dynamic>? list =
             await const MethodChannel('com.nomadguy.noctra/native_resolver')
                 .invokeListMethod('fetchRadio', {'videoId': currentSong.id});
         if (list != null && list.isNotEmpty) {
-          return list.map((m) {
+          // Always exclude the seed song itself, plus any caller-provided IDs
+          final blocked = {currentSong.id, ...excludeIds};
+          final seen = <String>{}; // Deduplicate by ID
+          final results = <Song>[];
+          for (final m in list) {
             final map = m as Map;
             final vid = map['id'].toString();
-            return Song(
+            if (blocked.contains(vid) || !seen.add(vid)) continue;
+            results.add(Song(
                 id: vid,
                 title: (map['title'] ?? 'Similar Track').toString(),
                 artist: (map['artist'] ?? currentSong.artist).toString(),
@@ -399,8 +404,9 @@ class MusicService {
                 featureVector: _deriveFeatureVector(
                     map['title']?.toString() ?? '',
                     artist: map['artist']?.toString() ?? currentSong.artist,
-                    genre: currentSong.genre ?? ''));
-          }).toList();
+                    genre: currentSong.genre ?? '')));
+          }
+          return results;
         }
       } catch (_) {}
     }
