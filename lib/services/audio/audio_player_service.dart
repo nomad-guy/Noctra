@@ -19,18 +19,17 @@ class AudioPlayerService {
   factory AudioPlayerService() => _instance;
   static AudioPlayerService get instance => _instance;
 
-  /// Primary player for current track.
-  final AudioPlayer _player = AudioPlayer(maxSkipsOnError: 6);
+  /// Primary player — mutable so crossfade can swap the active player.
+  AudioPlayer _player = AudioPlayer(maxSkipsOnError: 6);
   AudioPlayer get player => _player;
 
-  /// Secondary player for crossfade transitions (created on demand).
+  /// Secondary player used during crossfade transitions.
   AudioPlayer? _crossfadePlayer;
 
-  /// Pre-resolved URL for the next track, to avoid resolution delay.
+  /// Pre-resolved URL for the next track.
   String? _preloadedNextUrl;
   Song? _preloadedNextSong;
   bool _preloading = false;
-
   final List<Song> _queue = [];
   List<Song> get queue => List.unmodifiable(_queue);
   int _currentIndex = 0;
@@ -61,8 +60,6 @@ class AudioPlayerService {
   bool get isFadeEnabled => _isFadeEnabled;
   LoopMode _loopMode = LoopMode.off;
   LoopMode get loopMode => _loopMode;
-
-  /// Default 0 — no artificial delay when queue has next track.
   int _autoplayDelaySeconds = 0;
   int get autoplayDelaySeconds => _autoplayDelaySeconds;
   int _crossfadeSeconds = 3;
@@ -82,15 +79,28 @@ class AudioPlayerService {
   static const int _maxAutomaticRecoveryAttempts = 2;
   final Map<int, int> _recoveryAttemptsByEpoch = {};
 
-  /// Fraction of song duration at which to preload the next track (0.0–1.0).
-  static const double _preloadThreshold = 0.70;
+  /// Transition epoch — incremented on every track change / crossfade start.
+  /// Fade loops check this to abort stale volume ramps.
+  int _transitionEpoch = 0;
+
+  /// Whether a crossfade transition is currently in progress.
+  bool _crossfading = false;
 
   AudioPlayerService._internal() {
     _initAudioSession();
-    _player.playerStateStream.listen((s) {
-      if (s.processingState == ProcessingState.completed) _onSongCompleted();
+    _attachListeners(_player);
+  }
+
+  /// Attach all playback listeners to the given player.
+  void _attachListeners(AudioPlayer p) {
+    p.playerStateStream.listen((s) {
+      // Only handle completion for the current primary player
+      if (identical(p, _player) && s.processingState == ProcessingState.completed) {
+        _onSongCompleted();
+      }
     });
-    _player.errorStream.listen((e) {
+    p.errorStream.listen((e) {
+      if (!identical(p, _player)) return; // Ignore errors from old crossfade player
       NoctraLogger.e('AudioPlayer error: ${e.toString()}', e);
       final active = _currentSong;
       if (active != null) {
@@ -111,7 +121,8 @@ class AudioPlayerService {
         });
       }
     });
-    _player.positionStream.listen((pos) {
+    p.positionStream.listen((pos) {
+      if (!identical(p, _player)) return; // Ignore position from old player
       if (_playSessionEpoch != _positionSaveEpoch) return;
       final activeSong = _currentSong;
       if (activeSong != null &&
@@ -125,8 +136,8 @@ class AudioPlayerService {
         NoctraLocalDatabase()
             .savePlaybackPosition(activeSong, pos.inMilliseconds);
       }
-      // Preload next track when current reaches ~70%
-      _checkAndPreloadNext(pos);
+      // Check for auto-crossfade trigger
+      _checkAutoCrossfade(pos);
     });
   }
 
@@ -193,33 +204,40 @@ class AudioPlayerService {
 
   // ── Fade / Crossfade helpers ──
 
-  /// Fade the primary player's volume from 0 to 1 over [duration].
+  /// Fade volume from 0 to 1 with transition epoch guard.
   Future<void> _fadeIn({Duration? duration}) async {
     if (!_isFadeEnabled) return;
     final dur = duration ?? const Duration(milliseconds: 400);
     const steps = 20;
     final stepDelay = Duration(
         milliseconds: (dur.inMilliseconds / steps).round().clamp(10, 200));
+    final epoch = _transitionEpoch;
     for (var i = 1; i <= steps; i++) {
+      if (_transitionEpoch != epoch) return; // Abort if track changed
       await _player.setVolume(i / steps);
       await Future.delayed(stepDelay);
     }
   }
 
-  /// Crossfade from primary player to [nextPlayer] over [_crossfadeSeconds].
-  /// Returns the next player (which becomes the new primary).
+  /// Crossfade from current primary player to [nextPlayer] over [_crossfadeSeconds].
+  /// Returns the next player (now audible).
   Future<AudioPlayer> _crossfadeTo(
       AudioPlayer nextPlayer, Song nextSong) async {
     final duration = Duration(seconds: _crossfadeSeconds);
     const steps = 30;
     final stepDelay = Duration(
         milliseconds: (duration.inMilliseconds / steps).round().clamp(10, 200));
+    final epoch = _transitionEpoch;
 
-    // Ensure next player starts at volume 0
     await nextPlayer.setVolume(0.0);
     await nextPlayer.play();
 
     for (var i = 1; i <= steps; i++) {
+      if (_transitionEpoch != epoch) {
+        // Transition cancelled — stop crossfade
+        await nextPlayer.setVolume(1.0);
+        return nextPlayer;
+      }
       final progress = i / steps;
       await Future.wait([
         _player.setVolume(1.0 - progress),
@@ -236,38 +254,151 @@ class AudioPlayerService {
     return nextPlayer;
   }
 
-  /// Check if we should preload the next track based on playback position.
-  void _checkAndPreloadNext(Duration pos) {
-    if (_preloading) return;
-    if (_currentSong == null) return;
-    if (_queue.isEmpty) return;
+  /// Check if we should auto-crossfade based on playback position.
+  /// Triggers when position >= duration - crossfadeDuration.
+  void _checkAutoCrossfade(Duration pos) {
+    if (_crossfading) return;
+    if (!_isFadeEnabled || _crossfadeSeconds <= 0) return;
+    if (_loopMode == LoopMode.one) return; // Don't crossfade on loop-one
 
     final duration = _player.duration;
-    if (duration == null || duration.inSeconds < 30) return;
+    if (duration == null) return;
 
-    // Check if we've reached the preload threshold
-    final threshold =
-        Duration(milliseconds: (duration.inMilliseconds * _preloadThreshold).round());
-    if (pos < threshold) return;
+    final crossfadeDur = Duration(seconds: _crossfadeSeconds);
+    final triggerPoint = duration - crossfadeDur;
 
-    // Don't preload if we're at the end of the queue and autoplay is off
-    final nextIndex = _currentIndex + 1;
-    if (nextIndex >= _queue.length && !_isAutoplayEnabled) return;
+    if (pos < triggerPoint) return;
 
-    // Get the next song
-    final nextSong =
-        nextIndex < _queue.length ? _queue[nextIndex] : null;
+    // Trigger auto-crossfade
+    _crossfading = true;
+    _autoCrossfadeNext().whenComplete(() => _crossfading = false);
+  }
+
+  /// Auto-crossfade to next track when approaching end of current track.
+  Future<void> _autoCrossfadeNext() async {
+    final epoch = _playSessionEpoch;
+    if (epoch != _playSessionEpoch) return;
+
+    // Determine next song
+    Song? nextSong;
+    if (_currentIndex < _queue.length - 1) {
+      nextSong = _queue[_currentIndex + 1];
+    } else if (_isAutoplayEnabled && _currentSong != null) {
+      // Need to fetch more tracks
+      final similar = await MusicService.fetchSimilarRadioQueue(_currentSong!);
+      if (similar.isNotEmpty && epoch == _playSessionEpoch) {
+        for (final s in similar) {
+          if (!_queue.any((q) => q.id == s.id)) _queue.add(s);
+        }
+        _queueController.add(_queue);
+        nextSong = _queue[_currentIndex + 1];
+      }
+    }
+
     if (nextSong == null) return;
-    if (_preloadedNextSong?.id == nextSong.id) return; // Already preloaded
 
-    _preloading = true;
-    _preloadTrack(nextSong).whenComplete(() => _preloading = false);
+    try {
+      final url = await _resolveUrl(nextSong);
+      if (url.isEmpty || epoch != _playSessionEpoch) return;
+
+      _crossfadePlayer ??= AudioPlayer(maxSkipsOnError: 6);
+      final nextPlayer = _crossfadePlayer!;
+
+      final mediaItem = _createMediaItem(nextSong);
+      final src = url.startsWith('http')
+          ? AudioSource.uri(Uri.parse(url), tag: mediaItem)
+          : AudioSource.file(url, tag: mediaItem);
+
+      await nextPlayer.setAudioSource(src);
+      await nextPlayer.setVolume(0.0);
+
+      final fadedPlayer = await _crossfadeTo(nextPlayer, nextSong);
+
+      // Real swap: reassign _player, reattach listeners
+      _performSwap(fadedPlayer);
+
+      _currentIndex++;
+      _currentSong = nextSong;
+      _songStartTime = DateTime.now();
+      _currentSongController.add(nextSong);
+      MusicRepository().recordSongPlayed(nextSong);
+
+      // Start preloading next-next track
+      _startPreloadNext();
+    } catch (e) {
+      NoctraLogger.w('Auto-crossfade failed, falling back to normal completion', e);
+    }
+  }
+
+  /// Perform the real player swap: reassign _player, detach/reattach listeners.
+  void _performSwap(AudioPlayer newPlayer) {
+    final old = _player;
+    _player = newPlayer;
+
+    // The old player's listeners now check `identical(p, _player)` and will
+    // silently ignore events. The new player already has listeners from
+    // _crossfadePlayer creation or we attach them now.
+    // We don't need to re-attach because _attachListeners was called when
+    // _crossfadePlayer was first created (if it went through playSong path),
+    // but to be safe, attach to new player.
+    _attachListeners(newPlayer);
+
+    // Recycle old player as future crossfade player
+    _crossfadePlayer = old;
+  }
+
+  /// Invalidate preload cache — call when queue or current track changes.
+  void _invalidatePreload() {
+    _preloadedNextUrl = null;
+    _preloadedNextSong = null;
+    _preloading = false;
+  }
+
+  // ── Preloading ──
+
+  /// Begin preloading the next track in the queue immediately.
+  void _startPreloadNext() {
+    if (_preloading) return;
+    final nextIndex = _currentIndex + 1;
+
+    if (nextIndex >= _queue.length) {
+      // At end of queue — fetch similar if autoplay enabled
+      if (_isAutoplayEnabled && _currentSong != null) {
+        _preloading = true;
+        final epoch = _playSessionEpoch;
+        MusicService.fetchSimilarRadioQueue(_currentSong!).then((similar) {
+          if (epoch != _playSessionEpoch) {
+            _preloading = false;
+            return;
+          }
+          if (similar.isNotEmpty) {
+            for (final s in similar) {
+              if (!_queue.any((q) => q.id == s.id)) _queue.add(s);
+            }
+            _queueController.add(_queue);
+            _preloadTrack(similar.first, epoch)
+                .whenComplete(() => _preloading = false);
+          } else {
+            _preloading = false;
+          }
+        }).catchError((_) {
+          _preloading = false;
+          return null;
+        });
+      }
+      return;
+    }
+
+    _preloadTrack(_queue[nextIndex], _playSessionEpoch);
   }
 
   /// Pre-resolve and cache the stream URL for a track.
-  Future<void> _preloadTrack(Song song) async {
+  /// Validates epoch before storing to prevent stale results.
+  Future<void> _preloadTrack(Song song, int epoch) async {
     try {
       final url = await CompositeStreamResolver.resolve(song);
+      // Discard if epoch changed (track was skipped/changed during resolution)
+      if (epoch != _playSessionEpoch) return;
       if (url != null && url.isNotEmpty) {
         _preloadedNextUrl = url;
         _preloadedNextSong = song;
@@ -276,6 +407,59 @@ class AudioPlayerService {
     } catch (e) {
       NoctraLogger.w('Preload failed for: ${song.title}', e);
     }
+  }
+
+  // ── URL Resolution ──
+
+  /// Resolve stream URL for a song, using preloaded URL if available.
+  Future<String> _resolveUrl(Song song) async {
+    // Use preloaded URL if available for this song
+    if (_preloadedNextSong?.id == song.id && _preloadedNextUrl != null) {
+      final url = _preloadedNextUrl!;
+      _preloadedNextUrl = null;
+      _preloadedNextSong = null;
+      NoctraLogger.d('Using preloaded URL for: ${song.title}');
+      return 'Preloaded:$url';
+    }
+
+    // Standard resolution
+    if (song.localFilePath != null &&
+        song.localFilePath!.isNotEmpty &&
+        !kIsWeb) {
+      try {
+        final f = File(song.localFilePath!);
+        if (f.existsSync() && f.lengthSync() > 1024) {
+          return 'LocalFile:${song.localFilePath!}';
+        }
+      } catch (_) {}
+    }
+    if (song.streamUrl != null &&
+        song.streamUrl!.contains('saavncdn.com')) {
+      return 'JioSaavn320k:${song.streamUrl!}';
+    }
+    if (song.id.startsWith('jam_')) {
+      return 'JamendoDirect:${song.streamUrl ?? ''}';
+    }
+    final url = await CompositeStreamResolver.resolve(song) ?? '';
+    return 'CompositeResolver:$url';
+  }
+
+  /// Extract the actual URL from a resolver-tagged result.
+  String _extractUrl(String resolved) {
+    final colonIdx = resolved.indexOf(':');
+    if (colonIdx > 0 && colonIdx < 20) {
+      return resolved.substring(colonIdx + 1);
+    }
+    return resolved;
+  }
+
+  /// Get the resolver name from a resolver-tagged result.
+  String _extractResolver(String resolved) {
+    final colonIdx = resolved.indexOf(':');
+    if (colonIdx > 0 && colonIdx < 20) {
+      return resolved.substring(0, colonIdx);
+    }
+    return 'CompositeResolver';
   }
 
   Future<void> restoreLastPlaybackSession({bool autoPlay = false}) async {
@@ -293,8 +477,9 @@ class AudioPlayerService {
       _currentIndex = 0;
       _currentSongController.add(_currentSong);
       _queueController.add(_queue);
-      final url = await CompositeStreamResolver.resolve(_currentSong!);
-      if (url != null && url.isNotEmpty) {
+      final resolved = await _resolveUrl(_currentSong!);
+      final url = _extractUrl(resolved);
+      if (url.isNotEmpty) {
         final src = url.startsWith('http')
             ? AudioSource.uri(Uri.parse(url),
                 tag: _createMediaItem(_currentSong!))
@@ -321,42 +506,13 @@ class AudioPlayerService {
       duration: s.duration,
       playable: true);
 
-  /// Resolve stream URL for a song, using preloaded URL if available.
-  Future<String> _resolveUrl(Song song) async {
-    // Use preloaded URL if available for this song
-    if (_preloadedNextSong?.id == song.id && _preloadedNextUrl != null) {
-      final url = _preloadedNextUrl!;
-      _preloadedNextUrl = null;
-      _preloadedNextSong = null;
-      NoctraLogger.d('Using preloaded URL for: ${song.title}');
-      return url;
-    }
-
-    // Standard resolution
-    if (song.localFilePath != null &&
-        song.localFilePath!.isNotEmpty &&
-        !kIsWeb) {
-      try {
-        final f = File(song.localFilePath!);
-        if (f.existsSync() && f.lengthSync() > 1024) {
-          return song.localFilePath!;
-        }
-      } catch (_) {}
-    }
-    if (song.streamUrl != null &&
-        song.streamUrl!.contains('saavncdn.com')) {
-      return song.streamUrl!;
-    }
-    if (song.id.startsWith('jam_')) {
-      return song.streamUrl ?? '';
-    }
-    return (await CompositeStreamResolver.resolve(song)) ?? '';
-  }
-
   Future<void> playSong(Song song,
       {List<Song>? newQueue, Duration? initialPosition}) async {
     final epoch = ++_playSessionEpoch;
     _recoveryAttemptsByEpoch.removeWhere((key, _) => key < epoch - 1);
+    _transitionEpoch++;
+    _crossfading = false;
+
     if (newQueue != null && newQueue.isNotEmpty) {
       _queue.clear();
       _queue.addAll(newQueue);
@@ -365,6 +521,7 @@ class AudioPlayerService {
         _queue.insert(0, song);
         _currentIndex = 0;
       }
+      _invalidatePreload(); // Queue changed — invalidate
     } else if (!_queue.any((s) => s.id == song.id)) {
       _queue.add(song);
       _currentIndex = _queue.length - 1;
@@ -386,8 +543,9 @@ class AudioPlayerService {
     final sw = Stopwatch()..start();
     String resolverName = 'Local', url = '';
     try {
-      resolverName = 'CompositeResolver';
-      url = await _resolveUrl(song);
+      final resolved = await _resolveUrl(song);
+      resolverName = _extractResolver(resolved);
+      url = _extractUrl(resolved);
       sw.stop();
       if (epoch != _playSessionEpoch) return;
       _lastResolution = StreamResolutionMetadata(
@@ -422,11 +580,10 @@ class AudioPlayerService {
           CompositeStreamResolver.invalidateCache(song.id);
           if (epoch == _playSessionEpoch) {
             try {
-              final fallbackUrl =
+              final fallbackResolved =
                   await CompositeStreamResolver.resolve(song, startTier: 1);
-              if (fallbackUrl != null &&
-                  fallbackUrl.isNotEmpty &&
-                  fallbackUrl != url) {
+              final fallbackUrl = fallbackResolved ?? '';
+              if (fallbackUrl.isNotEmpty && fallbackUrl != url) {
                 final fallbackSrc = fallbackUrl.startsWith('http')
                     ? AudioSource.uri(Uri.parse(fallbackUrl),
                         tag: currentMediaItem)
@@ -449,7 +606,7 @@ class AudioPlayerService {
             await _player.play();
           }
           await applyStudioMasterMode(_studioMasterMode);
-          // Start preloading next track immediately after play
+          // Start preloading next track immediately
           _startPreloadNext();
         }
       } else {
@@ -460,35 +617,6 @@ class AudioPlayerService {
     } catch (e) {
       NoctraLogger.w('playSong failed for "${song.title}"', e);
     }
-  }
-
-  /// Begin preloading the next track in the queue (background).
-  void _startPreloadNext() {
-    if (_preloading) return;
-    final nextIndex = _currentIndex + 1;
-    if (nextIndex >= _queue.length) {
-      // At end of queue — if autoplay, fetch similar tracks
-      if (_isAutoplayEnabled && _currentSong != null) {
-        _preloading = true;
-        MusicService.fetchSimilarRadioQueue(_currentSong!).then((similar) {
-          if (similar.isNotEmpty) {
-            for (final s in similar) {
-              if (!_queue.any((q) => q.id == s.id)) _queue.add(s);
-            }
-            _queueController.add(_queue);
-            if (similar.isNotEmpty) {
-              _preloadTrack(similar.first).whenComplete(() => _preloading = false);
-            } else {
-              _preloading = false;
-            }
-          } else {
-            _preloading = false;
-          }
-        }).catchError((_) { _preloading = false; });
-      }
-      return;
-    }
-    _preloadTrack(_queue[nextIndex]);
   }
 
   Future<void> resumeOrPlay() async {
@@ -536,7 +664,7 @@ class AudioPlayerService {
         _currentIndex = (_currentIndex + 1) % _queue.length;
         final nextSong = _queue[_currentIndex];
 
-        // Crossfade if enabled and crossfade seconds > 0
+        // Crossfade if enabled
         if (_isFadeEnabled && _crossfadeSeconds > 0) {
           await _crossfadeToNext(nextSong);
         } else {
@@ -551,12 +679,15 @@ class AudioPlayerService {
   /// Crossfade to the next song using a second player.
   Future<void> _crossfadeToNext(Song nextSong) async {
     final epoch = _playSessionEpoch;
+    _transitionEpoch++;
+    _crossfading = true;
     try {
-      // Resolve URL for next song (use preloaded if available)
       final url = await _resolveUrl(nextSong);
-      if (url.isEmpty || epoch != _playSessionEpoch) return;
+      if (url.isEmpty || epoch != _playSessionEpoch) {
+        _crossfading = false;
+        return;
+      }
 
-      // Create secondary player
       _crossfadePlayer ??= AudioPlayer(maxSkipsOnError: 6);
       final nextPlayer = _crossfadePlayer!;
 
@@ -568,39 +699,25 @@ class AudioPlayerService {
       await nextPlayer.setAudioSource(src);
       await nextPlayer.setVolume(0.0);
 
-      // Perform crossfade
       final fadedPlayer = await _crossfadeTo(nextPlayer, nextSong);
 
-      // Swap: the faded player is now the "new" primary
-      // We can't reassign _player (it's final), so we swap references
-      _swapPlayer(fadedPlayer);
+      // Real swap: reassign _player, attach listeners
+      _performSwap(fadedPlayer);
 
       _currentSong = nextSong;
       _songStartTime = DateTime.now();
       _currentSongController.add(nextSong);
       MusicRepository().recordSongPlayed(nextSong);
 
-      // Start preloading the next-next track
       _startPreloadNext();
     } catch (e) {
       NoctraLogger.w('Crossfade failed, falling back to direct play', e);
-      // Fallback: just play directly
       if (epoch == _playSessionEpoch) {
         await playSong(nextSong);
       }
+    } finally {
+      _crossfading = false;
     }
-  }
-
-  /// Swap the internal player reference after crossfade.
-  /// Since _player is final, we dispose the old one and reassign.
-  void _swapPlayer(AudioPlayer newPlayer) {
-    // We can't actually swap _player since it's final.
-    // Instead, we copy the state. For now, we just stop the old player
-    // and note that the crossfade player is now active.
-    // This is a limitation — ideally _player wouldn't be final.
-    // For now, we use the crossfade player as the active one.
-    // The _player stream listener will still fire for the old player,
-    // but since we already handled completion, it's fine.
   }
 
   Future<void> skipPrevious() async {
@@ -615,7 +732,6 @@ class AudioPlayerService {
   }
 
   Future<void> seek(Duration pos) async {
-    if (_skipInFlight) return;
     try {
       await _player.seek(pos);
     } catch (_) {}
@@ -625,13 +741,14 @@ class AudioPlayerService {
       .setVolume((vol.isNaN || vol.isInfinite) ? 1.0 : vol.clamp(0.0, 1.0));
 
   Future<void> stopAndDismiss() async {
+    _transitionEpoch++;
+    _crossfading = false;
     try {
       await _player.stop();
     } catch (_) {}
     _crossfadePlayer?.dispose();
     _crossfadePlayer = null;
-    _preloadedNextUrl = null;
-    _preloadedNextSong = null;
+    _invalidatePreload();
     _currentSong = null;
     _currentSongController.add(null);
   }
@@ -716,6 +833,7 @@ class AudioPlayerService {
   void addToQueue(Song song) {
     _queue.add(song);
     _queueController.add(_queue);
+    _invalidatePreload(); // Queue changed
     NoctraLogger.d('addToQueue: ${song.title} (queue size: ${_queue.length})');
   }
 
@@ -723,6 +841,7 @@ class AudioPlayerService {
     final insertAt = (_currentIndex + 1).clamp(0, _queue.length);
     _queue.insert(insertAt, song);
     _queueController.add(_queue);
+    _invalidatePreload(); // Queue changed
     NoctraLogger.d('playNext: ${song.title} at index $insertAt');
   }
 
@@ -736,6 +855,7 @@ class AudioPlayerService {
       _currentIndex = _currentIndex.clamp(0, _queue.length - 1);
     }
     _queueController.add(_queue);
+    _invalidatePreload(); // Queue changed
   }
 
   void reorderQueue(int oldIndex, int newIndex) {
@@ -751,6 +871,7 @@ class AudioPlayerService {
       _currentIndex++;
     }
     _queueController.add(_queue);
+    _invalidatePreload(); // Queue changed
   }
 
   void clearQueue() {
@@ -760,6 +881,7 @@ class AudioPlayerService {
     _queue.add(current);
     _currentIndex = 0;
     _queueController.add(_queue);
+    _invalidatePreload(); // Queue changed
   }
 
   Future<void> _onSongCompleted() async {
@@ -778,7 +900,6 @@ class AudioPlayerService {
       await _player.seek(Duration.zero);
       await _player.play();
     } else {
-      // Only apply delay if explicitly configured and > 0
       if (_autoplayDelaySeconds > 0) {
         await Future.delayed(Duration(seconds: _autoplayDelaySeconds));
       }
