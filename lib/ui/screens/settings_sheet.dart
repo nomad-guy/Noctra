@@ -706,7 +706,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
     return GestureDetector(
       onTap: () async {
         await DynamicIconService.setIcon(icon);
-        // Sync provider with actual service state
+        // Sync provider with actual service state after operation completes
         ref.read(appIconProvider.notifier).state = DynamicIconService.currentIcon;
       },
       child: Container(

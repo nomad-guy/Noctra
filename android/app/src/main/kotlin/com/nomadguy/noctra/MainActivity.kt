@@ -255,10 +255,25 @@ class MainActivity : AudioServiceActivity() {
             when (call.method) {
                 "reconcileAndInit" -> {
                     iconExecutor.execute {
-                        val icon = launcherIconManager.reconcileAndGetCurrentIcon()
-                        runOnUiThread {
-                            if (!isFinishing && !isDestroyed) {
-                                result.success(icon)
+                        try {
+                            val iconResult = launcherIconManager.reconcileAndGetCurrentIcon()
+                            runOnUiThread {
+                                if (!isFinishing && !isDestroyed) {
+                                    iconResult.fold(
+                                        onSuccess = { icon -> result.success(icon) },
+                                        onFailure = { error ->
+                                            Log.e(TAG, "Icon reconciliation failed", error)
+                                            result.error("ICON_STATE_UNRECOVERABLE", error.message, null)
+                                        }
+                                    )
+                                }
+                            }
+                        } catch (e: Throwable) {
+                            Log.e(TAG, "reconcileAndInit crashed", e)
+                            runOnUiThread {
+                                if (!isFinishing && !isDestroyed) {
+                                    result.error("ICON_INIT_ERROR", e.message, null)
+                                }
                             }
                         }
                     }

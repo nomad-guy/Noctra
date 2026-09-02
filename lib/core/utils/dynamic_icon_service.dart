@@ -12,6 +12,16 @@ enum NoctraAppIcon {
   liquidGlass,
 }
 
+/// Result of an icon change request.
+enum IconChangeResult {
+  /// The icon was successfully applied by Android.
+  applied,
+  /// The request was superseded by a newer request (latest-wins).
+  superseded,
+  /// The icon change failed on Android side.
+  failed,
+}
+
 extension NoctraAppIconX on NoctraAppIcon {
   String get key => switch (this) {
     NoctraAppIcon.defaultIcon => 'default',
@@ -39,91 +49,143 @@ extension NoctraAppIconX on NoctraAppIcon {
 
 /// Manages the Android launcher icon independently from the Flutter theme.
 ///
-/// Architecture: Android PackageManager is the single source of truth.
-/// - On init: calls reconcileAndInit() which reconciles + returns actual icon
-/// - On change: calls setIcon, waits for completion, updates state
-/// - No duplicate persistence (Android persists via SharedPreferences)
+/// Architecture:
+/// - Android PackageManager is the single source of truth
+/// - On init: single reconcileAndInit call that verifies + returns actual icon
+/// - On change: setIcon with transactional rollback on Android side
+/// - Dart maintains desired/actual state for UI, but never overrides Android truth
 /// - Latest-wins: only the final requested icon is applied
 class DynamicIconService {
   static const _channel = MethodChannel('com.nomadguy.noctra/launcher_icon');
 
-  /// The currently active launcher icon (read from Android on init).
-  static NoctraAppIcon _currentIcon = NoctraAppIcon.defaultIcon;
-  static NoctraAppIcon get currentIcon => _currentIcon;
+  /// The icon that Android currently has enabled (source of truth on startup).
+  static NoctraAppIcon _actualIcon = NoctraAppIcon.defaultIcon;
+  static NoctraAppIcon get currentIcon => _actualIcon;
+
+  /// Whether initialization completed successfully.
+  static bool _initialized = false;
+  static bool get isInitialized => _initialized;
 
   // ---- Worker state ----
   static bool _workerRunning = false;
-  static Completer<void>? _pendingCompleter;
   static NoctraAppIcon? _desiredIcon;
+  static Completer<IconChangeResult>? _activeCompleter;
+  static Completer<IconChangeResult>? _pendingCompleter;
 
   /// Initialize on app startup — single native call that reconciles state
   /// and returns the actual icon. Android is the source of truth.
   static Future<void> init() async {
-    if (!Platform.isAndroid) return;
+    if (!Platform.isAndroid) {
+      _initialized = true;
+      return;
+    }
     try {
       final key = await _channel.invokeMethod<String>('reconcileAndInit');
       if (key != null) {
-        _currentIcon = NoctraAppIconX.fromKey(key) ?? NoctraAppIcon.defaultIcon;
+        final parsed = NoctraAppIconX.fromKey(key);
+        if (parsed != null) {
+          _actualIcon = parsed;
+        } else {
+          // Native returned unknown key — this is an error, not a valid state
+          debugPrint(
+            'DynamicIconService: native returned unknown icon key "$key" — '
+            'launcher state may be inconsistent',
+          );
+          // Keep the default; the native side should have handled this
+        }
       }
+      _initialized = true;
     } catch (e) {
       debugPrint('DynamicIconService: reconcileAndInit failed — $e');
-      _currentIcon = NoctraAppIcon.defaultIcon;
+      _actualIcon = NoctraAppIcon.defaultIcon;
+      _initialized = true;
     }
   }
 
-  /// Request an icon change. Returns a Future that completes when the
-  /// FINAL requested icon has been applied (latest-wins).
+  /// Request an icon change using latest-wins semantics.
   ///
-  /// Every caller gets a Future that resolves to the outcome of the
-  /// last request in the queue, not their individual request.
-  static Future<bool> setIcon(NoctraAppIcon icon) async {
-    if (_currentIcon == icon) return true;
-    if (!Platform.isAndroid) return false;
+  /// Returns a Future that completes with:
+  /// - [IconChangeResult.applied] if this icon was successfully applied
+  /// - [IconChangeResult.superseded] if a newer request replaced this one
+  /// - [IconChangeResult.failed] if the operation failed on Android
+  static Future<IconChangeResult> setIcon(NoctraAppIcon icon) async {
+    if (_actualIcon == icon) return IconChangeResult.applied;
+    if (!Platform.isAndroid) return IconChangeResult.failed;
 
-    // Set desired state — worker will pick it up
+    // Set desired state
     _desiredIcon = icon;
 
-    // If worker isn't running, start it
     if (!_workerRunning) {
-      return _runWorker();
+      // No worker running — start one and give caller a fresh completer
+      _activeCompleter = Completer<IconChangeResult>();
+      _startWorker();
+      return _activeCompleter!.future;
     }
 
-    // Worker is running — it will process _desiredIcon when current op finishes.
-    // Return a Future that completes when the worker finishes this batch.
-    _pendingCompleter ??= Completer<void>();
-    return _pendingCompleter!.future.then((_) => _currentIcon == icon);
+    // Worker is running — new caller gets a pending completer
+    // When the worker finishes the batch, pending callers will be resolved
+    // based on whether their icon ended up being the final one applied
+    final completer = Completer<IconChangeResult>();
+    _pendingCompleter = completer;
+    return completer.future;
   }
 
-  /// Worker loop: processes the latest desired icon, repeats if more requests arrive.
-  static Future<bool> _runWorker() async {
+  /// Worker loop: processes the latest desired icon, repeats if more arrive.
+  static void _startWorker() async {
     _workerRunning = true;
-    bool lastSuccess = true;
 
     while (_desiredIcon != null) {
       final icon = _desiredIcon!;
       _desiredIcon = null;
 
-      final previousIcon = _currentIcon;
+      final previousIcon = _actualIcon;
 
       try {
         await _channel.invokeMethod('setIcon', {'icon': icon.key});
-        _currentIcon = icon;
-        lastSuccess = true;
+        _actualIcon = icon;
       } catch (e) {
-        _currentIcon = previousIcon;
+        _actualIcon = previousIcon;
         debugPrint('DynamicIconService: icon switch failed — $e');
-        lastSuccess = false;
+
+        // The active request failed
+        if (_activeCompleter != null && !_activeCompleter!.isCompleted) {
+          _activeCompleter!.complete(IconChangeResult.failed);
+          _activeCompleter = null;
+        }
+
+        // Pending requests also failed (same attempt)
+        if (_pendingCompleter != null && !_pendingCompleter!.isCompleted) {
+          _pendingCompleter!.complete(IconChangeResult.failed);
+          _pendingCompleter = null;
+        }
+
+        _workerRunning = false;
+        return;
+      }
+
+      // Success — complete the active request
+      if (_activeCompleter != null && !_activeCompleter!.isCompleted) {
+        _activeCompleter!.complete(IconChangeResult.applied);
+        _activeCompleter = null;
       }
     }
 
-    _workerRunning = false;
-
-    // Complete any waiting callers
+    // Worker finished. Complete pending request.
     if (_pendingCompleter != null && !_pendingCompleter!.isCompleted) {
-      _pendingCompleter!.complete();
+      // Check if the pending icon matches what we ended up with
+      if (_pendingCompleter != _activeCompleter) {
+        // This was a superseded request
+        _pendingCompleter!.complete(IconChangeResult.superseded);
+      } else {
+        _pendingCompleter!.complete(
+          _actualIcon == _desiredIcon
+              ? IconChangeResult.applied
+              : IconChangeResult.failed,
+        );
+      }
       _pendingCompleter = null;
     }
 
-    return lastSuccess;
+    _workerRunning = false;
   }
 }
