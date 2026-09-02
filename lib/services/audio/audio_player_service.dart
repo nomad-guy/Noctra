@@ -63,7 +63,7 @@ class AudioPlayerService {
         _recoveryAttemptsByEpoch[epoch] = attempts + 1;
         final pos = _player.position;
         CompositeStreamResolver.invalidateCache(active.id);
-        _serialize(() async {
+        _enqueue(() async {
           if (_playSessionEpoch != epoch || _currentSong?.id != active.id) { return; }
           await playSong(active, initialPosition: pos);
         });
@@ -237,7 +237,9 @@ class AudioPlayerService {
     _sleepTimer?.cancel();
     if (_isFading) {
       _isFading = false;
-      _player.setVolume(1.0);
+      _volumeEpoch++; // Invalidate running fade
+      final p = _player;
+      p.setVolume(1.0);
     }
     if (minutes <= 0) {
       _sleepTimerRemainingMinutes = null;
@@ -255,19 +257,22 @@ class AudioPlayerService {
         t.cancel();
         _sleepTimerRemainingMinutes = null;
         _emitSettings();
-        // Use shared volume epoch for sleep fade
+        final p = _player; // Capture player identity
         final vEpoch = ++_volumeEpoch;
         _isFading = true;
         for (int i = 10; i >= 0; i--) {
-          if (!_isFading || _volumeEpoch != vEpoch) { break; }
-          await _player.setVolume(i / 10.0);
+          if (!_isFading || _volumeEpoch != vEpoch || !identical(p, _player)) { break; }
+          await p.setVolume(i / 10.0);
           await Future.delayed(const Duration(milliseconds: 100));
         }
-        if (_isFading && _volumeEpoch == vEpoch) {
-          await _player.pause();
+        if (_isFading && _volumeEpoch == vEpoch && identical(p, _player)) {
+          await p.pause();
           _isFading = false;
         }
-        await _player.setVolume(1.0);
+        // Only restore volume if this fade still owns the epoch+player
+        if (_volumeEpoch == vEpoch && identical(p, _player)) {
+          await p.setVolume(1.0);
+        }
       }
     });
   }
@@ -282,6 +287,23 @@ class AudioPlayerService {
     try {
       await p.dispose();
     } catch (_) {}
+  }
+
+  /// Dispose only if NOT the active player — prevents accidental active-player disposal.
+  Future<void> _disposeInactivePlayer(AudioPlayer? p) async {
+    if (p == null) { return; }
+    if (identical(p, _player)) {
+      NoctraLogger.e('BUG: attempted to dispose active player');
+      return;
+    }
+    await _disposePlayer(p);
+  }
+
+  /// Fire-and-forget serialized operation with error logging.
+  void _enqueue(Future<void> Function() operation) {
+    _serialize(operation).catchError((e, st) {
+      NoctraLogger.e('Enqueued playback operation failed', e, st);
+    });
   }
 
   // ── Fade helpers ──
@@ -313,12 +335,20 @@ class AudioPlayerService {
     final playEpoch = _playSessionEpoch;
     final vEpoch = ++_volumeEpoch;
 
-    // Check buffer readiness — require ready state + minimum buffer
-    final buffered = nextPlayer.bufferedPosition;
+    // Check buffer readiness — wait briefly for ready state
     final requiredBuffer = Duration(milliseconds: min(_crossfadeSeconds * 1000, 3000));
-    if (nextPlayer.processingState != ProcessingState.ready ||
-        buffered < requiredBuffer) {
-      NoctraLogger.w('Crossfade buffer insufficient: state=${nextPlayer.processingState}, buffer=${buffered.inMilliseconds}ms');
+    const gracePeriod = Duration(milliseconds: 500);
+    final readyDeadline = DateTime.now().add(gracePeriod);
+
+    while (nextPlayer.processingState != ProcessingState.ready) {
+      if (DateTime.now().isAfter(readyDeadline)) {
+        NoctraLogger.w('Crossfade readiness timeout: state=${nextPlayer.processingState}');
+        return CrossfadeResult.failed;
+      }
+      await Future.delayed(const Duration(milliseconds: 50));
+    }
+    if (nextPlayer.bufferedPosition < requiredBuffer) {
+      NoctraLogger.w('Crossfade buffer insufficient: ${nextPlayer.bufferedPosition.inMilliseconds}ms');
       return CrossfadeResult.failed;
     }
 
@@ -330,27 +360,38 @@ class AudioPlayerService {
     await newPlayer.seek(Duration.zero);
     await newPlayer.play();
 
-    for (var i = 1; i <= steps; i++) {
-      if (_transitionEpoch != tEpoch ||
-          _playSessionEpoch != playEpoch ||
-          _volumeEpoch != vEpoch ||
-          !identical(oldPlayer, _player)) {
-        try {
-          await newPlayer.stop();
-          await newPlayer.setVolume(1.0);
-        } catch (_) {}
-        return CrossfadeResult.cancelled;
+    try {
+      for (var i = 1; i <= steps; i++) {
+        if (_transitionEpoch != tEpoch ||
+            _playSessionEpoch != playEpoch ||
+            _volumeEpoch != vEpoch ||
+            !identical(oldPlayer, _player)) {
+          try {
+            await newPlayer.stop();
+            await newPlayer.setVolume(1.0);
+          } catch (_) {}
+          return CrossfadeResult.cancelled;
+        }
+        final progress = i / steps;
+        await Future.wait([
+          oldPlayer.setVolume(1.0 - progress),
+          newPlayer.setVolume(progress),
+        ]);
+        await Future.delayed(stepDelay);
       }
-      final progress = i / steps;
-      await Future.wait([
-        oldPlayer.setVolume(1.0 - progress),
-        newPlayer.setVolume(progress),
-      ]);
-      await Future.delayed(stepDelay);
+    } catch (_) {
+      // Restore old player volume on any exception
+      try {
+        await oldPlayer.setVolume(1.0);
+      } catch (_) {}
+      try {
+        await newPlayer.stop();
+      } catch (_) {}
+      return CrossfadeResult.failed;
     }
 
     try {
-      await _player.stop();
+      await oldPlayer.stop();
     } catch (_) {}
 
     return CrossfadeResult.completed;
@@ -374,7 +415,7 @@ class AudioPlayerService {
     final triggerPoint = duration - crossfadeDur;
     if (pos < triggerPoint) { return; }
 
-    _serialize(() => _autoCrossfadeNext());
+    _enqueue(() => _autoCrossfadeNext());
   }
 
   Future<void> _autoCrossfadeNext() async {
@@ -454,7 +495,7 @@ class AudioPlayerService {
       _player = nextPlayer;
       _attachListeners();
       // Dispose stale secondary player
-      if (oldSecondary != null) { _disposePlayer(oldSecondary); }
+      if (oldSecondary != null) { await _disposeInactivePlayer(oldSecondary); }
 
       _currentIndex = newIndex;
       _currentSong = nextSong;
@@ -744,7 +785,7 @@ class AudioPlayerService {
         _secondary = _player;
         _player = buffered;
         _attachListeners();
-        if (oldSecondary != null) { _disposePlayer(oldSecondary); }
+        if (oldSecondary != null) { await _disposeInactivePlayer(oldSecondary); }
 
         try {
           await _player.seek(Duration.zero);
@@ -954,7 +995,7 @@ class AudioPlayerService {
     _secondary = _player;
     _player = nextPlayer;
     _attachListeners();
-    if (oldSecondary != null) { _disposePlayer(oldSecondary); }
+    if (oldSecondary != null) { await _disposeInactivePlayer(oldSecondary); }
 
     _currentIndex = newIndex;
     _currentSong = nextSong;
