@@ -46,7 +46,9 @@ class AudioPlayerService {
     _detachListeners();
     _stateSub = _player.playerStateStream.listen((s) {
       if (_transitionInProgress) { return; }
-      if (s.processingState == ProcessingState.completed) { _onSongCompleted(); }
+      if (s.processingState == ProcessingState.completed) {
+        _enqueue(() => _onSongCompletedInternal());
+      }
     });
     _errorSub = _player.errorStream.listen((e) {
       if (_transitionInProgress) { return; }
@@ -65,7 +67,7 @@ class AudioPlayerService {
         CompositeStreamResolver.invalidateCache(active.id);
         _enqueue(() async {
           if (_playSessionEpoch != epoch || _currentSong?.id != active.id) { return; }
-          await playSong(active, initialPosition: pos);
+          await _playSongInternal(active, initialPosition: pos);
         });
       }
     });
@@ -150,8 +152,9 @@ class AudioPlayerService {
 
   bool _isShuffleEnabled = false,
       _isAutoplayEnabled = true,
-      _isFadeEnabled = false,
-      _isFading = false;
+      _isFadeEnabled = false;
+  /// Sleep fade ownership token — incremented on each new fade to invalidate stale fades.
+  int _sleepFadeId = 0;
   bool get isShuffleEnabled => _isShuffleEnabled;
   bool get isAutoplayEnabled => _isAutoplayEnabled;
   bool get isFadeEnabled => _isFadeEnabled;
@@ -235,12 +238,10 @@ class AudioPlayerService {
 
   void setSleepTimer(int minutes) {
     _sleepTimer?.cancel();
-    if (_isFading) {
-      _isFading = false;
-      _volumeEpoch++; // Invalidate running fade
-      final p = _player;
-      p.setVolume(1.0);
-    }
+    _sleepFadeId++; // Invalidate any running sleep fade
+    _volumeEpoch++;
+    final p = _player;
+    p.setVolume(1.0);
     if (minutes <= 0) {
       _sleepTimerRemainingMinutes = null;
       _emitSettings();
@@ -259,18 +260,17 @@ class AudioPlayerService {
         _emitSettings();
         final p = _player; // Capture player identity
         final vEpoch = ++_volumeEpoch;
-        _isFading = true;
+        final fadeId = _sleepFadeId; // Capture ownership token
         for (int i = 10; i >= 0; i--) {
-          if (!_isFading || _volumeEpoch != vEpoch || !identical(p, _player)) { break; }
+          if (_sleepFadeId != fadeId || _volumeEpoch != vEpoch || !identical(p, _player)) { break; }
           await p.setVolume(i / 10.0);
           await Future.delayed(const Duration(milliseconds: 100));
         }
-        if (_isFading && _volumeEpoch == vEpoch && identical(p, _player)) {
+        if (_sleepFadeId == fadeId && _volumeEpoch == vEpoch && identical(p, _player)) {
           await p.pause();
-          _isFading = false;
         }
-        // Only restore volume if this fade still owns the epoch+player
-        if (_volumeEpoch == vEpoch && identical(p, _player)) {
+        // Only restore volume if this fade still owns everything
+        if (_sleepFadeId == fadeId && _volumeEpoch == vEpoch && identical(p, _player)) {
           await p.setVolume(1.0);
         }
       }
@@ -341,6 +341,12 @@ class AudioPlayerService {
     final readyDeadline = DateTime.now().add(gracePeriod);
 
     while (nextPlayer.processingState != ProcessingState.ready) {
+      // Check cancellation during wait
+      if (_transitionEpoch != tEpoch ||
+          _playSessionEpoch != playEpoch ||
+          _volumeEpoch != vEpoch) {
+        return CrossfadeResult.cancelled;
+      }
       if (DateTime.now().isAfter(readyDeadline)) {
         NoctraLogger.w('Crossfade readiness timeout: state=${nextPlayer.processingState}');
         return CrossfadeResult.failed;
@@ -469,7 +475,7 @@ class AudioPlayerService {
         // If crossfade failed and current player already completed, advance
         if (result == CrossfadeResult.failed &&
             _player.processingState == ProcessingState.completed) {
-          _onSongCompleted();
+          _onSongCompletedInternal();
         }
         return;
       }
@@ -730,8 +736,13 @@ class AudioPlayerService {
       playable: true);
 
   Future<void> playSong(Song song,
+      {List<Song>? newQueue, Duration? initialPosition}) {
+    return _serialize(() => _playSongInternal(song, newQueue: newQueue, initialPosition: initialPosition));
+  }
+
+  /// Internal playSong — NEVER call _serialize inside this.
+  Future<void> _playSongInternal(Song song,
       {List<Song>? newQueue, Duration? initialPosition}) async {
-    return _serialize(() async {
       final epoch = ++_playSessionEpoch;
       _recoveryAttemptsByEpoch.removeWhere((key, _) => key < epoch - 1);
       _transitionEpoch++;
@@ -880,7 +891,6 @@ class AudioPlayerService {
       } catch (e) {
         NoctraLogger.w('playSong failed for "${song.title}"', e);
       }
-    });
   }
 
   Future<void> resumeOrPlay() async {
@@ -898,45 +908,49 @@ class AudioPlayerService {
 
   Future<void> togglePlayPause() => resumeOrPlay();
 
-  Future<void> skipNext() async {
-    return _serialize(() async {
-      if (_transitionInProgress) { return; }
-      _transitionInProgress = true;
-      final myId = ++_transitionId;
-      try {
-        if (_songStartTime != null && _currentSong != null) {
-          final playedSec =
-              DateTime.now().difference(_songStartTime!).inSeconds;
-          ImplicitSignalTracker().trackPlaybackEnd(
-              song: _currentSong!,
-              listenedSeconds: playedSec,
-              totalDuration: _currentSong!.duration);
-          NoctraLocalDatabase().recordManifest(_currentSong!,
-              action: playedSec < 15 ? 'skip' : 'play',
-              listenedSeconds: playedSec);
-        }
-        if (_queue.isNotEmpty) {
-          if (_currentIndex >= _queue.length - 1 &&
-              _isAutoplayEnabled &&
-              _currentSong != null) {
-            await _ensureAutoplayQueue(
-                _playSessionEpoch, _queueRevision);
-          }
-          _currentIndex = (_currentIndex + 1) % _queue.length;
-          final nextSong = _queue[_currentIndex];
+  Future<void> skipNext() {
+    return _serialize(() => _skipNextInternal());
+  }
 
-          if (_isFadeEnabled && _crossfadeSeconds > 0) {
-            await _crossfadeToNext(nextSong, myId);
-          } else {
-            await playSong(nextSong);
-          }
+  /// Internal skipNext — NEVER call _serialize inside this.
+  Future<void> _skipNextInternal() async {
+    if (_transitionInProgress) { return; }
+    _transitionInProgress = true;
+    final myId = ++_transitionId;
+    try {
+      if (_songStartTime != null && _currentSong != null) {
+        final playedSec =
+            DateTime.now().difference(_songStartTime!).inSeconds;
+        ImplicitSignalTracker().trackPlaybackEnd(
+            song: _currentSong!,
+            listenedSeconds: playedSec,
+            totalDuration: _currentSong!.duration);
+        NoctraLocalDatabase().recordManifest(_currentSong!,
+            action: playedSec < 15 ? 'skip' : 'play',
+            listenedSeconds: playedSec);
+      }
+      if (_queue.isNotEmpty) {
+        if (_currentIndex >= _queue.length - 1 &&
+            _isAutoplayEnabled &&
+            _currentSong != null) {
+          await _ensureAutoplayQueue(
+              _playSessionEpoch, _queueRevision);
         }
-      } finally {
-        if (_transitionId == myId) {
-          _transitionInProgress = false;
+        _currentIndex = (_currentIndex + 1) % _queue.length;
+        final nextSong = _queue[_currentIndex];
+
+        if (_isFadeEnabled && _crossfadeSeconds > 0) {
+          await _crossfadeToNext(nextSong, myId);
+        } else {
+          // Call internal version — NEVER call playSong() here (would deadlock)
+          await _playSongInternal(nextSong);
         }
       }
-    });
+    } finally {
+      if (_transitionId == myId) {
+        _transitionInProgress = false;
+      }
+    }
   }
 
   Future<void> _crossfadeToNext(Song nextSong, int myId) async {
@@ -959,7 +973,7 @@ class AudioPlayerService {
         tEpoch != _transitionEpoch ||
         _transitionId != myId) {
       await _disposePlayer(nextPlayer);
-      await playSong(nextSong);
+      await _playSongInternal(nextSong);
       return;
     }
 
@@ -970,7 +984,7 @@ class AudioPlayerService {
       await _disposePlayer(nextPlayer);
       if (result == CrossfadeResult.failed &&
           _player.processingState == ProcessingState.completed) {
-        _onSongCompleted();
+        _onSongCompletedInternal();
       }
       return;
     }
@@ -1197,7 +1211,8 @@ class AudioPlayerService {
     _invalidatePreload();
   }
 
-  Future<void> _onSongCompleted() async {
+  /// Internal completion handler — NEVER call _serialize inside this.
+  Future<void> _onSongCompletedInternal() async {
     final playedSec = _songStartTime != null
         ? DateTime.now().difference(_songStartTime!).inSeconds
         : 210;
@@ -1216,7 +1231,8 @@ class AudioPlayerService {
       if (_autoplayDelaySeconds > 0) {
         await Future.delayed(Duration(seconds: _autoplayDelaySeconds));
       }
-      await skipNext();
+      // Call internal skip — NEVER call skipNext() here (would deadlock)
+      await _skipNextInternal();
     }
   }
 
