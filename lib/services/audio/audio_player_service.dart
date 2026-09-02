@@ -35,26 +35,33 @@ class AudioPlayerService {
   /// Pre-buffered player for the next track (source set, paused, buffering).
   AudioPlayer? _bufferedNext;
   Song? _bufferedNextSong;
+  int _preloadingGeneration = 0;
   bool _preloading = false;
 
   // ── Subscription lifecycle ──
   StreamSubscription<PlayerState>? _stateSub;
   StreamSubscription<PlayerException>? _errorSub;
   StreamSubscription<Duration>? _positionSub;
+  int _listenerGeneration = 0;
+  bool _autoCrossfadeQueued = false;
+  bool _recoveryQueued = false;
 
   Future<void> _attachListeners() async {
     await _detachListeners();
+    final gen = ++_listenerGeneration;
     _stateSub = _player.playerStateStream.listen((s) {
+      if (gen != _listenerGeneration) { return; }
       if (_transitionInProgress) { return; }
       if (s.processingState == ProcessingState.completed) {
         _enqueue(() => _onSongCompletedInternal());
       }
     });
     _errorSub = _player.errorStream.listen((e) {
+      if (gen != _listenerGeneration) { return; }
       if (_transitionInProgress) { return; }
       NoctraLogger.e('AudioPlayer error: ${e.toString()}', e);
       final active = _currentSong;
-      if (active != null) {
+      if (active != null && !_recoveryQueued) {
         final epoch = _playSessionEpoch;
         final attempts = _recoveryAttemptsByEpoch[epoch] ?? 0;
         if (attempts >= _maxAutomaticRecoveryAttempts) {
@@ -62,16 +69,21 @@ class AudioPlayerService {
               'AudioPlayer recovery limit reached for "${active.title}"', e);
           return;
         }
-        _recoveryAttemptsByEpoch[epoch] = attempts + 1;
-        final pos = _player.position;
-        CompositeStreamResolver.invalidateCache(active.id);
+        _recoveryQueued = true;
         _enqueue(() async {
-          if (_playSessionEpoch != epoch || _currentSong?.id != active.id) { return; }
-          await _playSongInternal(active, initialPosition: pos);
+          try {
+            if (_playSessionEpoch != epoch || _currentSong?.id != active.id) { return; }
+            final currentPosition = _player.position;
+            _recoveryAttemptsByEpoch[epoch] = attempts + 1;
+            await _playSongInternal(active, initialPosition: currentPosition);
+          } finally {
+            _recoveryQueued = false;
+          }
         });
       }
     });
     _positionSub = _player.positionStream.listen((pos) {
+      if (gen != _listenerGeneration) { return; }
       if (_playSessionEpoch != _positionSaveEpoch) { return; }
       final activeSong = _currentSong;
       if (activeSong != null &&
@@ -90,6 +102,7 @@ class AudioPlayerService {
   }
 
   Future<void> _detachListeners() async {
+    _listenerGeneration++; // Invalidate any in-flight callbacks
     await Future.wait([
       _stateSub?.cancel() ?? Future.value(),
       _errorSub?.cancel() ?? Future.value(),
@@ -198,6 +211,7 @@ class AudioPlayerService {
 
   /// Single in-flight radio request — prevents duplicate network calls.
   Future<List<Song>>? _radioRequest;
+  String? _radioRequestSeedId;
 
   AudioPlayerService._internal() {
     _initAudioSession();
@@ -274,7 +288,7 @@ class AudioPlayerService {
         t.cancel();
         _sleepTimerRemainingMinutes = null;
         _emitSettings();
-        _runSleepFade();
+        _enqueue(() => _runSleepFade());
       }
     });
   }
@@ -345,10 +359,18 @@ class AudioPlayerService {
         milliseconds: (dur.inMilliseconds / steps).round().clamp(10, 200));
     final vEpoch = ++_volumeEpoch;
     final p = _player; // Capture identity
-    for (var i = 1; i <= steps; i++) {
-      if (_volumeEpoch != vEpoch || !identical(p, _player)) { return; }
-      await p.setVolume(i / steps);
-      await Future.delayed(stepDelay);
+    try {
+      for (var i = 1; i <= steps; i++) {
+        if (_volumeEpoch != vEpoch || !identical(p, _player)) { return; }
+        await p.setVolume(i / steps);
+        await Future.delayed(stepDelay);
+      }
+    } catch (e) {
+      NoctraLogger.w('Fade-in failed', e);
+      // Restore to full volume if player is still current
+      if (_volumeEpoch == vEpoch && identical(p, _player)) {
+        try { await p.setVolume(1.0); } catch (_) {}
+      }
     }
   }
 
@@ -450,7 +472,15 @@ class AudioPlayerService {
     final triggerPoint = duration - crossfadeDur;
     if (pos < triggerPoint) { return; }
 
-    _enqueue(() => _autoCrossfadeNext());
+    if (_autoCrossfadeQueued) { return; }
+    _autoCrossfadeQueued = true;
+    _enqueue(() async {
+      try {
+        await _autoCrossfadeNext();
+      } finally {
+        _autoCrossfadeQueued = false;
+      }
+    });
   }
 
   Future<void> _autoCrossfadeNext() async {
@@ -504,7 +534,7 @@ class AudioPlayerService {
         // If crossfade failed and current player already completed, advance
         if (result == CrossfadeResult.failed &&
             _player.processingState == ProcessingState.completed) {
-          _onSongCompletedInternal();
+          await _onSongCompletedInternal();
         }
         return;
       }
@@ -566,18 +596,21 @@ class AudioPlayerService {
   }
 
   /// Single in-flight radio request — prevents duplicate network calls.
+  /// Keyed by seed song so different seeds don't share stale results.
   Future<List<Song>> _getRadioQueue(Song seed) async {
     final existing = _radioRequest;
-    if (existing != null) { return existing; }
+    if (existing != null && _radioRequestSeedId == seed.id) { return existing; }
 
     final request = MusicService.fetchSimilarRadioQueue(seed);
     _radioRequest = request;
+    _radioRequestSeedId = seed.id;
 
     try {
       return await request;
     } finally {
       if (identical(_radioRequest, request)) {
         _radioRequest = null;
+        _radioRequestSeedId = null;
       }
     }
   }
@@ -588,6 +621,7 @@ class AudioPlayerService {
     final player = _bufferedNext;
     _bufferedNext = null;
     _bufferedNextSong = null;
+    _preloadingGeneration++; // Invalidate any in-flight preload
     _preloading = false;
     if (player != null) {
       await _disposePlayer(player);
@@ -597,6 +631,7 @@ class AudioPlayerService {
   void _startPreloadNext() {
     if (_preloading) { return; }
     final nextIndex = _currentIndex + 1;
+    final gen = ++_preloadingGeneration;
 
     if (nextIndex >= _queue.length) {
       if (_isAutoplayEnabled && _currentSong != null) {
@@ -604,7 +639,8 @@ class AudioPlayerService {
         final epoch = _playSessionEpoch;
         final rev = _queueRevision;
         _getRadioQueue(_currentSong!).then((similar) {
-          if (epoch != _playSessionEpoch || rev != _queueRevision) {
+          if (gen != _preloadingGeneration ||
+              epoch != _playSessionEpoch || rev != _queueRevision) {
             _preloading = false;
             return;
           }
@@ -618,7 +654,9 @@ class AudioPlayerService {
             });
             if (_currentIndex + 1 < _queue.length) {
               _prepareNextPlayer(_queue[_currentIndex + 1], epoch, rev)
-                  .whenComplete(() => _preloading = false);
+                  .whenComplete(() {
+                if (gen == _preloadingGeneration) { _preloading = false; }
+              });
             } else {
               _preloading = false;
             }
@@ -637,8 +675,9 @@ class AudioPlayerService {
     final epoch = _playSessionEpoch;
     final rev = _queueRevision;
     final song = _queue[nextIndex];
-    _prepareNextPlayer(song, epoch, rev)
-        .whenComplete(() => _preloading = false);
+    _prepareNextPlayer(song, epoch, rev).whenComplete(() {
+      if (gen == _preloadingGeneration) { _preloading = false; }
+    });
   }
 
   Future<void> _prepareNextPlayer(
