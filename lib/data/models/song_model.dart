@@ -12,6 +12,7 @@ class Song {
   final String? genre;
   final String? mood;
   final bool isDownloaded;
+  final bool isFavorite;
   final List<double> featureVector;
   final int replayCount;
   final int skipCount;
@@ -28,6 +29,7 @@ class Song {
     this.genre,
     this.mood,
     this.isDownloaded = false,
+    this.isFavorite = false,
     List<double>? featureVector,
     this.replayCount = 0,
     this.skipCount = 0,
@@ -50,6 +52,7 @@ class Song {
     String? mood,
     bool clearMood = false,
     bool? isDownloaded,
+    bool? isFavorite,
     List<double>? featureVector,
     int? replayCount,
     int? skipCount,
@@ -66,6 +69,7 @@ class Song {
       genre: clearGenre ? null : (genre ?? this.genre),
       mood: clearMood ? null : (mood ?? this.mood),
       isDownloaded: isDownloaded ?? this.isDownloaded,
+      isFavorite: isFavorite ?? this.isFavorite,
       featureVector: featureVector != null ? List<double>.from(featureVector) : List<double>.from(this.featureVector),
       replayCount: replayCount ?? this.replayCount,
       skipCount: skipCount ?? this.skipCount,
@@ -84,6 +88,7 @@ class Song {
         'genre': genre,
         'mood': mood,
         'isDownloaded': isDownloaded ? 1 : 0,
+        'isFavorite': isFavorite ? 1 : 0,
         'featureVector': jsonEncode(featureVector),
         'replayCount': replayCount,
         'skipCount': skipCount,
@@ -92,56 +97,74 @@ class Song {
   Map<String, dynamic> toJson() => toMap();
 
   factory Song.fromMap(Map<String, dynamic> map) {
+    // Feature vector: validate dimensions, finiteness, range
     List<double> vec = List.filled(32, 0.5);
     if (map['featureVector'] != null) {
       try {
+        List<dynamic> raw;
         if (map['featureVector'] is List) {
-          vec = (map['featureVector'] as List).map((e) => (e as num).toDouble()).toList();
+          raw = map['featureVector'] as List;
         } else {
           final decoded = jsonDecode(map['featureVector']);
-          if (decoded is List) {
-            vec = decoded.map((e) => (e as num).toDouble()).toList();
-          }
+          raw = decoded is List ? decoded : <dynamic>[];
         }
-        while (vec.length < 32) { vec.add(0.5); }
-        if (vec.length > 32) { vec = vec.take(32).toList(); }
+        if (raw.isNotEmpty && raw.every((e) => e is num)) {
+          final parsed = raw.map<double>((e) => (e as num).toDouble()).toList();
+          if (parsed.every((v) => v.isFinite)) {
+            vec = parsed;
+            // Pad to 32 dimensions if shorter
+            while (vec.length < 32) { vec.add(0.5); }
+            if (vec.length > 32) { vec = vec.sublist(0, 32); }
+          }
+          // else: NaN/Infinity values — keep default 0.5 vector
+        }
+        // else: non-numeric elements — keep default 0.5 vector
       } catch (_) {}
     }
 
+    // Duration: durationMs is always milliseconds, no magnitude heuristic.
+    // The legacy 'duration' field is treated as SECONDS (never milliseconds).
     int parsedDurationMs = 0;
     final msVal = map['durationMs'];
-    final secVal = map['duration'];
     if (msVal != null) {
-      // durationMs is always milliseconds — never apply magnitude heuristic
       final num? p = msVal is num ? msVal : num.tryParse(msVal.toString());
-      if (p != null && p > 0) {
-        parsedDurationMs = p.toInt();
-      }
-    } else if (secVal != null) {
-      // duration field: treat as seconds if small, milliseconds if large
-      final num? p = secVal is num ? secVal : num.tryParse(secVal.toString());
-      if (p != null && p > 0) {
-        parsedDurationMs = p > 10000 ? p.toInt() : (p * 1000).toInt();
+      if (p != null && p > 0) parsedDurationMs = p.toInt();
+    } else {
+      final secVal = map['duration'];
+      if (secVal != null) {
+        final num? p = secVal is num ? secVal : num.tryParse(secVal.toString());
+        if (p != null && p > 0) parsedDurationMs = (p * 1000).toInt();
       }
     }
 
     return Song(
-      id: map['id'] ?? '',
-      title: map['title'] ?? 'Unknown Track',
-      artist: map['artist'] ?? 'Unknown Artist',
-      album: map['album'] ?? 'Single',
-      artworkUrl: map['artworkUrl'],
-      localFilePath: map['localFilePath'],
-      streamUrl: map['streamUrl'],
+      id: _parseStr(map['id']),
+      title: _parseStr(map['title'], 'Unknown Track'),
+      artist: _parseStr(map['artist'], 'Unknown Artist'),
+      album: _parseStr(map['album'], 'Single'),
+      artworkUrl: map['artworkUrl']?.toString(),
+      localFilePath: map['localFilePath']?.toString(),
+      streamUrl: map['streamUrl']?.toString(),
       duration: Duration(milliseconds: parsedDurationMs),
-      genre: map['genre'],
-      mood: map['mood'],
+      genre: map['genre']?.toString(),
+      mood: map['mood']?.toString(),
       isDownloaded: map['isDownloaded'] == 1 || map['isDownloaded'] == true,
+      isFavorite: map['isFavorite'] == 1 || map['isFavorite'] == true,
       featureVector: vec,
-      replayCount: map['replayCount'] ?? 0,
-      skipCount: map['skipCount'] ?? 0,
+      replayCount: _parseInt(map['replayCount']),
+      skipCount: _parseInt(map['skipCount']),
     );
   }
 
   factory Song.fromJson(Map<String, dynamic> json) => Song.fromMap(json);
+
+  // Type-safe parsing helpers for external data
+  static String _parseStr(dynamic v, [String fallback = '']) =>
+      v?.toString().trim() ?? fallback;
+  static int _parseInt(dynamic v, [int fallback = 0]) {
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v) ?? fallback;
+    return fallback;
+  }
 }

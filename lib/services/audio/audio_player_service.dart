@@ -377,8 +377,22 @@ class AudioPlayerService {
   Future<void> toggleShuffle() async {
     _isShuffleEnabled = !_isShuffleEnabled;
     _invalidatePlaybackOperations();
-    await _player.setShuffleModeEnabled(_isShuffleEnabled);
-    _reconcileIndex(); // Reconcile after shuffle
+    if (_isShuffleEnabled && _queue.length > 2) {
+      // Shuffle at Noctra level — just_audio shuffle is meaningless
+      // without ConcatenatingAudioSource.
+      final currentSong = _queue.isNotEmpty ? _queue[_currentIndex] : null;
+      final others = _queue.where((s) => s != currentSong).toList();
+      others.shuffle();
+      _mutateQueue(() {
+        _queue.clear();
+        if (currentSong != null) {
+          _queue.add(currentSong);
+          _currentIndex = 0;
+        }
+        _queue.addAll(others);
+        return true;
+      });
+    }
     _emitSettings();
   }
 
@@ -1382,9 +1396,10 @@ class AudioPlayerService {
   }
 
   void clearQueue() {
-    if (_currentSong == null) { return; }
+    if (_currentSong == null || _queue.isEmpty) { return; }
     _mutateQueue(() {
-      final current = _queue[_currentIndex];
+      final idx = _currentIndex.clamp(0, _queue.length - 1);
+      final current = _queue[idx];
       _queue.clear();
       _queue.add(current);
       _currentIndex = 0;

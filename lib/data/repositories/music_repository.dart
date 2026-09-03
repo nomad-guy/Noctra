@@ -118,7 +118,11 @@ class MusicRepository extends ChangeNotifier {
   bool isFavorite(String songId) => _favorites.any((s) => s.id == songId);
 
   void toggleFavorite(Song song) {
-    if (isFavorite(song.id)) { _favorites.removeWhere((s) => s.id == song.id); } else { _favorites.insert(0, song); }
+    if (isFavorite(song.id)) {
+      _favorites.removeWhere((s) => s.id == song.id);
+    } else {
+      _favorites.insert(0, song.copyWith(isFavorite: true));
+    }
     NoctraLocalDatabase().saveFavorites(_favorites);
     notifyListeners();
   }
