@@ -229,12 +229,41 @@ class MusicRepository extends ChangeNotifier {
     _downloads.removeWhere((s) => s.id == song.id);
     _downloads.insert(0, song);
     _downloadIds.add(song.id);
+
+    // Stamp matching favorite rows with the active offline file path
+    var favTouched = false;
+    for (var i = 0; i < _favorites.length; i++) {
+      if (_favorites[i].id == song.id) {
+        _favorites[i] = _favorites[i].copyWith(
+          isDownloaded: true,
+          localFilePath: song.localFilePath,
+        );
+        favTouched = true;
+      }
+    }
+
+    // Stamp matching songs across custom playlists/folders
+    var foldersTouched = false;
+    _customFolders.forEach((folderName, songs) {
+      for (var i = 0; i < songs.length; i++) {
+        if (songs[i].id == song.id) {
+          songs[i] = songs[i].copyWith(
+            isDownloaded: true,
+            localFilePath: song.localFilePath,
+          );
+          foldersTouched = true;
+        }
+      }
+    });
+
     NoctraLocalDatabase().saveDownloads(_downloads);
+    if (favTouched) NoctraLocalDatabase().saveFavorites(_favorites);
+    if (foldersTouched) NoctraLocalDatabase().saveCustomFolders(_customFolders);
     notifyListeners();
   }
 
   /// Updates song metadata (artwork, title, artist, album, genre) in-place
-  /// across favorites and downloads without altering list ordering or index positions.
+  /// across favorites, downloads, and custom folders without altering list ordering or index positions.
   void updateSongMetadata(Song updatedSong) {
     var favTouched = false;
     for (var i = 0; i < _favorites.length; i++) {
@@ -262,9 +291,25 @@ class MusicRepository extends ChangeNotifier {
         dlTouched = true;
       }
     }
+    var folderTouched = false;
+    _customFolders.forEach((_, songs) {
+      for (var i = 0; i < songs.length; i++) {
+        if (songs[i].id == updatedSong.id) {
+          songs[i] = songs[i].copyWith(
+            title: updatedSong.title,
+            artist: updatedSong.artist,
+            album: updatedSong.album,
+            artworkUrl: updatedSong.artworkUrl,
+            genre: updatedSong.genre,
+          );
+          folderTouched = true;
+        }
+      }
+    });
     if (favTouched) NoctraLocalDatabase().saveFavorites(_favorites);
     if (dlTouched) NoctraLocalDatabase().saveDownloads(_downloads);
-    if (favTouched || dlTouched) notifyListeners();
+    if (folderTouched) NoctraLocalDatabase().saveCustomFolders(_customFolders);
+    if (favTouched || dlTouched || folderTouched) notifyListeners();
   }
 
   /// Removes a download from the offline library and (optionally) deletes its
@@ -276,6 +321,7 @@ class MusicRepository extends ChangeNotifier {
     if (target == null) return;
     _downloads.removeWhere((d) => d.id == songId);
     _downloadIds.remove(songId);
+
     // Un-stamp favorite rows that point at this download so they never keep
     // advertising an offline file that no longer exists (state ownership).
     var favoritesTouched = false;
@@ -289,9 +335,28 @@ class MusicRepository extends ChangeNotifier {
         favoritesTouched = true;
       }
     }
+
+    // Un-stamp custom folders that hold this song so offline playback doesn't fail
+    var foldersTouched = false;
+    _customFolders.forEach((_, songs) {
+      for (var i = 0; i < songs.length; i++) {
+        final s = songs[i];
+        if (s.id == songId && (s.isDownloaded || s.localFilePath != null)) {
+          songs[i] = s.copyWith(
+            isDownloaded: false,
+            clearLocalFilePath: true,
+          );
+          foldersTouched = true;
+        }
+      }
+    });
+
     NoctraLocalDatabase().saveDownloads(_downloads);
     if (favoritesTouched) {
       NoctraLocalDatabase().saveFavorites(_favorites);
+    }
+    if (foldersTouched) {
+      NoctraLocalDatabase().saveCustomFolders(_customFolders);
     }
     notifyListeners();
     if (deleteFile && !kIsWeb && target.localFilePath != null) {
@@ -331,6 +396,7 @@ class MusicRepository extends ChangeNotifier {
     if (stale.isEmpty) return 0;
     _downloads.removeWhere((d) => stale.contains(d.id));
     _downloadIds.removeAll(stale);
+
     // Mirror the removal onto favorite rows that point at now-missing files.
     var favoritesTouched = false;
     for (var i = 0; i < _favorites.length; i++) {
@@ -342,9 +408,29 @@ class MusicRepository extends ChangeNotifier {
         favoritesTouched = true;
       }
     }
+
+    // Mirror onto custom folders
+    var foldersTouched = false;
+    _customFolders.forEach((_, songs) {
+      for (var i = 0; i < songs.length; i++) {
+        final s = songs[i];
+        if (stale.contains(s.id) &&
+            (s.isDownloaded || s.localFilePath != null)) {
+          songs[i] = s.copyWith(
+            isDownloaded: false,
+            clearLocalFilePath: true,
+          );
+          foldersTouched = true;
+        }
+      }
+    });
+
     NoctraLocalDatabase().saveDownloads(_downloads);
     if (favoritesTouched) {
       NoctraLocalDatabase().saveFavorites(_favorites);
+    }
+    if (foldersTouched) {
+      NoctraLocalDatabase().saveCustomFolders(_customFolders);
     }
     notifyListeners();
     return stale.length;
@@ -801,7 +887,7 @@ class MusicRepository extends ChangeNotifier {
     final clean = name.trim();
     if (clean.isNotEmpty && !_customFolders.containsKey(clean)) {
       _customFolders[clean] = [];
-      _persistState();
+      NoctraLocalDatabase().saveCustomFolders(_customFolders);
       notifyListeners();
     }
   }
@@ -810,8 +896,14 @@ class MusicRepository extends ChangeNotifier {
     if (_customFolders.containsKey(folderName)) {
       final list = _customFolders[folderName]!;
       if (!list.any((s) => s.id == song.id)) {
-        list.add(song);
-        _persistState();
+        final dl = _downloads.where((d) => d.id == song.id).firstOrNull;
+        final path = dl?.localFilePath;
+        list.add(song.copyWith(
+          isDownloaded: dl != null,
+          localFilePath: path,
+          clearLocalFilePath: path == null,
+        ));
+        NoctraLocalDatabase().saveCustomFolders(_customFolders);
         notifyListeners();
       }
     }
@@ -820,7 +912,7 @@ class MusicRepository extends ChangeNotifier {
   void removeSongFromFolder(String folderName, String songId) {
     if (_customFolders.containsKey(folderName)) {
       _customFolders[folderName]!.removeWhere((s) => s.id == songId);
-      _persistState();
+      NoctraLocalDatabase().saveCustomFolders(_customFolders);
       notifyListeners();
     }
   }
@@ -833,7 +925,7 @@ class MusicRepository extends ChangeNotifier {
         !_customFolders.containsKey(cleanNew)) {
       final songs = _customFolders.remove(oldName)!;
       _customFolders[cleanNew] = songs;
-      _persistState();
+      NoctraLocalDatabase().saveCustomFolders(_customFolders);
       notifyListeners();
     }
   }
@@ -841,7 +933,7 @@ class MusicRepository extends ChangeNotifier {
   void deleteFolder(String folderName) {
     if (folderName != 'Favorites' && _customFolders.containsKey(folderName)) {
       _customFolders.remove(folderName);
-      _persistState();
+      NoctraLocalDatabase().saveCustomFolders(_customFolders);
       notifyListeners();
     }
   }

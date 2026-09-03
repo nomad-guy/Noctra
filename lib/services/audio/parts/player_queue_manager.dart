@@ -73,7 +73,7 @@ mixin PlayerQueueMixin on AudioPlayerServiceBase {
       // (the old next entry), else stop cleanly.
       if (_queue.isNotEmpty) {
         _currentIndex = index.clamp(0, _queue.length - 1);
-        playSong(_queue[_currentIndex]);
+        playSong(_queue[_currentIndex], queueIndex: _currentIndex);
       } else {
         _currentIndex = 0;
         _currentSong = null;

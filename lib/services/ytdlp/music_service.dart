@@ -616,9 +616,27 @@ class MusicService {
       final qualityService = StreamQualityService();
       final ext =
           qualityService.preferredCodec.name; // mp3, aac, flac, opus, vorbis
-      final fileName = '${rawName.isNotEmpty ? rawName : song.id}.$ext';
+      final sanitizedFallbackId =
+          song.id.replaceAll(RegExp(r'[^\w-]'), '_');
+      final baseName = rawName.isNotEmpty ? rawName : sanitizedFallbackId;
+      // Clamp to at most 120 characters to stay strictly within filesystem limits
+      final safeBase =
+          baseName.length > 120 ? baseName.substring(0, 120) : baseName;
+      final fileName = '${safeBase.isNotEmpty ? safeBase : "track"}.$ext';
       final file = File('${musicDir.path}/$fileName');
-      final tempFile = File('${musicDir.path}/$fileName.tmp');
+
+      // Canonical path verification: prevent path traversal outside musicDir
+      final canonicalDir = musicDir.absolute.path.replaceAll('\\', '/');
+      final canonicalFile = file.absolute.path.replaceAll('\\', '/');
+      final normalizedPrefix =
+          canonicalDir.endsWith('/') ? canonicalDir : '$canonicalDir/';
+      if (!canonicalFile.startsWith(normalizedPrefix)) {
+        throw const FormatException('Path traversal detected in download target');
+      }
+
+      // Unique nonce per download attempt prevents concurrent download collisions
+      final nonce = DateTime.now().microsecondsSinceEpoch;
+      final tempFile = File('${musicDir.path}/.$fileName.$nonce.part');
       final resolvedUrl = await resolveStreamUrl(song);
       if (resolvedUrl == null || resolvedUrl.isEmpty) {
         if (!downloadProgressController.isClosed) {
@@ -674,7 +692,15 @@ class MusicService {
                 file.deleteSync();
               } catch (_) {}
             }
-            tempFile.renameSync(file.path);
+            try {
+              tempFile.renameSync(file.path);
+            } catch (_) {
+              // Fallback across filesystem mount points
+              tempFile.copySync(file.path);
+              try {
+                tempFile.deleteSync();
+              } catch (_) {}
+            }
           }
         } catch (e) {
           try {

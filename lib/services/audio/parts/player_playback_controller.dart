@@ -83,9 +83,11 @@ mixin PlayerPlaybackMixin on AudioPlayerServiceBase {
 
   @override
   Future<void> playSong(Song song,
-      {List<Song>? newQueue, Duration? initialPosition}) {
+      {List<Song>? newQueue, Duration? initialPosition, int? queueIndex}) {
     return _serialize(() => _playSongInternal(song,
-        newQueue: newQueue, initialPosition: initialPosition));
+        newQueue: newQueue,
+        initialPosition: initialPosition,
+        queueIndex: queueIndex));
   }
 
   Future<void> skipNext() {
@@ -124,7 +126,7 @@ mixin PlayerPlaybackMixin on AudioPlayerServiceBase {
         }
         if (_currentIndex > 0 && _queue.isNotEmpty) {
           _currentIndex--;
-          await _playSongInternal(_queue[_currentIndex]);
+          await _playSongInternal(_queue[_currentIndex], queueIndex: _currentIndex);
         }
       });
 
@@ -170,7 +172,7 @@ mixin PlayerPlaybackMixin on AudioPlayerServiceBase {
 
   @override
   Future<void> _playSongInternal(Song song,
-      {List<Song>? newQueue, Duration? initialPosition}) async {
+      {List<Song>? newQueue, Duration? initialPosition, int? queueIndex}) async {
     final epoch = ++_playSessionEpoch;
     _recoveryAttemptsByEpoch.removeWhere((key, _) => key < epoch - 1);
     _transitionEpoch++;
@@ -181,7 +183,17 @@ mixin PlayerPlaybackMixin on AudioPlayerServiceBase {
       _mutateQueue(() {
         _queue.clear();
         _queue.addAll(newQueue);
-        _currentIndex = _queue.indexWhere((s) => s.id == song.id);
+        if (queueIndex != null &&
+            queueIndex >= 0 &&
+            queueIndex < _queue.length &&
+            _queue[queueIndex].id == song.id) {
+          _currentIndex = queueIndex;
+        } else {
+          final exactIdx = _queue.indexOf(song);
+          _currentIndex = exactIdx >= 0
+              ? exactIdx
+              : _queue.indexWhere((s) => s.id == song.id);
+        }
         if (_currentIndex == -1) {
           _queue.insert(0, song);
           _currentIndex = 0;
@@ -196,6 +208,11 @@ mixin PlayerPlaybackMixin on AudioPlayerServiceBase {
       if (oldBuffered != null) {
         _disposePlayer(oldBuffered);
       }
+    } else if (queueIndex != null &&
+        queueIndex >= 0 &&
+        queueIndex < _queue.length &&
+        _queue[queueIndex].id == song.id) {
+      _currentIndex = queueIndex;
     } else if (!_queue.any((s) => s.id == song.id)) {
       _mutateQueue(() {
         _queue.add(song);
@@ -203,7 +220,10 @@ mixin PlayerPlaybackMixin on AudioPlayerServiceBase {
         return true;
       });
     } else {
-      _currentIndex = _queue.indexWhere((s) => s.id == song.id);
+      final exactIdx = _queue.indexOf(song);
+      _currentIndex = exactIdx >= 0
+          ? exactIdx
+          : _queue.indexWhere((s) => s.id == song.id);
     }
 
     final current = (_currentIndex >= 0 && _currentIndex < _queue.length)

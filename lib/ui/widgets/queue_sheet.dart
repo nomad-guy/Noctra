@@ -119,7 +119,7 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
                           child: _buildSongTile(
                             context, song, isDark,
                             onTap: () {
-                              player.playSong(song);
+                              player.playSong(song, queueIndex: i);
                               setState(() {});
                             },
                             trailing: IconButton(
