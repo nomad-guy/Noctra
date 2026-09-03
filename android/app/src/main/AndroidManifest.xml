@@ -18,7 +18,8 @@
         android:label="Noctra"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        android:enableOnBackInvokedCallback="true">
 
         <!-- Main Activity — NO LAUNCHER filter. This is the Flutter entry point
              only. All launcher entries are owned by activity-aliases. This way

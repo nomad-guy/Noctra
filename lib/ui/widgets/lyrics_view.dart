@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
 import '../../data/models/song_model.dart';
@@ -11,6 +12,20 @@ class LyricsView extends ConsumerStatefulWidget {
   final Song song;
   const LyricsView({super.key, required this.song});
 
+  /// Canonical single source of truth for active timed-lyric line resolution.
+  /// Returns the greatest index `i` where `lines[i].timestamp <= pos`.
+  /// Returns `-1` if [lines] is empty or [pos] is strictly before the first line.
+  static int findActiveIndex(List<LyricLine> lines, Duration pos) {
+    if (lines.isEmpty) return -1;
+    if (pos < lines.first.timestamp) return -1;
+    for (int i = lines.length - 1; i >= 0; i--) {
+      if (lines[i].timestamp <= pos) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   @override
   ConsumerState<LyricsView> createState() => _LyricsViewState();
 }
@@ -19,8 +34,10 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
   final ScrollController _scrollController = ScrollController();
   final Map<int, GlobalKey> _lineKeys = {};
   late Future<LyricsData> _lyricsFuture;
-  int _lastActiveIndex = -2;
+  int _lastActiveIndex = -1;
+  int _lastScrolledIndex = -1;
   int _lyricsGeneration = 0;
+  int _scrollGeneration = 0;
   bool _userIsScrolling = false;
   Timer? _resumeAutoScrollTimer;
   StreamSubscription<Duration>? _positionSub;
@@ -33,33 +50,35 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
   void initState() {
     super.initState();
     _loadLyrics();
-    // Subscribing to the position stream here (instead of watching it in
-    // build) means the lyrics list — transliteration output, ShaderMask,
-    // per-line text styles — only rebuilds when the ACTIVE line index
-    // actually changes, not on every ~200ms position tick.
+
+    // Position stream listener: single authoritative source of truth.
+    // Throttled: only triggers setState and viewport auto-scroll when
+    // the active line index ACTUALLY changes.
     _positionSub = ref
         .read(audioPlayerServiceProvider)
         .player
         .positionStream
         .listen((pos) {
       if (!mounted || !_isSynced || _cachedLines.isEmpty) return;
-      final activeIndex = _findActiveIndex(_cachedLines, pos);
+      final activeIndex = LyricsView.findActiveIndex(_cachedLines, pos);
       if (activeIndex == _lastActiveIndex) return;
+
       setState(() {
         _lastActiveIndex = activeIndex;
-        if (_userIsScrolling) return;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _scrollToIndex(activeIndex);
-        });
       });
+
+      if (!_userIsScrolling && activeIndex >= 0) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _scrollToIndex(activeIndex);
+          }
+        });
+      }
     });
   }
 
   void _loadLyrics() {
     final pref = ref.read(lyricsPreferenceProvider);
-    // Settings describe the desired presentation, not just the fetch source.
-    // Select it as soon as the payload arrives so the user does not have to
-    // manually press a second script button.
     final preferenceKey = pref.toLowerCase();
     final preferredScript = preferenceKey.contains('romanized')
         ? 'roman'
@@ -71,22 +90,31 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
       if (mounted &&
           currentGen == _lyricsGeneration &&
           widget.song.id == targetSongId) {
+        final lines = data.lines;
+        final isSynced = data.isSynced;
+        final pos = ref.read(audioPlayerServiceProvider).player.position;
+        final activeIndex = isSynced && lines.isNotEmpty
+            ? LyricsView.findActiveIndex(lines, pos)
+            : -1;
+
         setState(() {
           _selectedScript = preferredScript;
-          _cachedLines = data.lines;
-          _isSynced = data.isSynced;
+          _cachedLines = lines;
+          _isSynced = isSynced;
           _plainText = data.plainText;
           _lineKeys.clear();
-          // Establish the active line immediately (instead of waiting for
-          // the next position tick) so paused songs still highlight the
-          // current line as soon as lyrics arrive.
-          if (data.isSynced && data.lines.isNotEmpty) {
-            final pos = ref.read(audioPlayerServiceProvider).player.position;
-            _lastActiveIndex = _findActiveIndex(data.lines, pos);
-          } else {
-            _lastActiveIndex = -2;
-          }
+          _lastActiveIndex = activeIndex;
         });
+
+        // Immediately follow active line as soon as lyrics load (even if
+        // playback was already underway before network response arrived).
+        if (isSynced && activeIndex >= 0 && !_userIsScrolling) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && currentGen == _lyricsGeneration) {
+              _scrollToIndex(activeIndex);
+            }
+          });
+        }
       }
     });
   }
@@ -95,41 +123,65 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
   void didUpdateWidget(covariant LyricsView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.song.id != widget.song.id) {
-      _lastActiveIndex = -2;
+      _lyricsGeneration++;
+      _scrollGeneration++;
+      _lastActiveIndex = -1;
+      _lastScrolledIndex = -1;
+      _userIsScrolling = false;
+      _resumeAutoScrollTimer?.cancel();
       _selectedScript = 'original';
       _lineKeys.clear();
+      _cachedLines = [];
+      _isSynced = false;
+      _plainText = '';
       _loadLyrics();
     }
   }
 
-  int _findActiveIndex(List<LyricLine> lines, Duration pos) {
-    if (lines.isEmpty) return -1;
-    int low = 0, high = lines.length - 1, result = -1;
-    while (low <= high) {
-      final mid = (low + high) >> 1;
-      if (lines[mid].timestamp <= pos) {
-        result = mid;
-        low = mid + 1;
-      } else {
-        high = mid - 1;
-      }
-    }
-    return result;
-  }
-
-  void _scrollToIndex(int index) {
+  void _scrollToIndex(int index, {bool isRetry = false}) {
+    if (!mounted || !_scrollController.hasClients) return;
     if (_userIsScrolling) return;
-    if (index == _lastActiveIndex) return;
-    if (index < 0) return;
-    _lastActiveIndex = index;
+    if (index < 0 || index >= _cachedLines.length) return;
+    if (index == _lastScrolledIndex && !isRetry) return;
+
+    final targetGen = ++_scrollGeneration;
+    _lastScrolledIndex = index;
+
     final lineContext = _lineKeys[index]?.currentContext;
-    if (lineContext == null) return;
+    if (lineContext == null || !lineContext.mounted) {
+      // If layout has not finished yet, retry once on next frame.
+      if (!isRetry) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && targetGen == _scrollGeneration) {
+            _scrollToIndex(index, isRetry: true);
+          }
+        });
+      }
+      return;
+    }
+
     Scrollable.ensureVisible(
       lineContext,
-      alignment: 0.45,
-      duration: const Duration(milliseconds: 140),
+      alignment: 0.40, // Keeps current line comfortably near vertical center (40%)
+      duration: const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
     );
+  }
+
+  void _resumeAutoScroll() {
+    _resumeAutoScrollTimer?.cancel();
+    if (!mounted) return;
+    final pos = ref.read(audioPlayerServiceProvider).player.position;
+    final activeIndex = LyricsView.findActiveIndex(_cachedLines, pos);
+    setState(() {
+      _userIsScrolling = false;
+      if (activeIndex >= 0) {
+        _lastActiveIndex = activeIndex;
+      }
+    });
+    _lastScrolledIndex = -1; // Reset to ensure viewport moves back to active line
+    final target = _lastActiveIndex >= 0 ? _lastActiveIndex : 0;
+    _scrollToIndex(target);
   }
 
   @override
@@ -147,9 +199,6 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
     });
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
-    // The active line index is tracked by the position subscription in
-    // initState — reading it here means this build no longer re-runs on
-    // every position tick.
     final activeIndex = _lastActiveIndex;
 
     return FutureBuilder<LyricsData>(
@@ -181,7 +230,6 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
         final data = UniversalLyricsTransliterationEngine.transliterateLyrics(
             rawData, _selectedScript);
 
-        // Use cached data for sync, or freshly transliterated data
         final displayLines = data.isSynced ? data.lines : _cachedLines;
         final isSynced = data.isSynced || _isSynced;
 
@@ -193,15 +241,21 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
                       onNotification: (notification) {
                         if (notification is ScrollStartNotification &&
                             notification.dragDetails != null) {
-                          _userIsScrolling = true;
+                          if (!_userIsScrolling) {
+                            setState(() => _userIsScrolling = true);
+                          }
+                          _resumeAutoScrollTimer?.cancel();
+                        } else if (notification is UserScrollNotification &&
+                            notification.direction != ScrollDirection.idle) {
+                          if (!_userIsScrolling) {
+                            setState(() => _userIsScrolling = true);
+                          }
                           _resumeAutoScrollTimer?.cancel();
                         } else if (notification is ScrollEndNotification) {
                           _resumeAutoScrollTimer?.cancel();
-                          _resumeAutoScrollTimer =
-                              Timer(const Duration(seconds: 5), () {
-                            if (mounted) {
-                              setState(() => _userIsScrolling = false);
-                            }
+                          _resumeAutoScrollTimer = Timer(
+                              const Duration(milliseconds: 3500), () {
+                            _resumeAutoScroll();
                           });
                         }
                         return false;
@@ -221,64 +275,69 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
                           ).createShader(bounds);
                         },
                         blendMode: BlendMode.dstIn,
-                        child: ListView(
+                        child: SingleChildScrollView(
                           controller: _scrollController,
                           physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(20, 64, 20, 80),
-                          children: List.generate(displayLines.length, (index) {
-                            final line = displayLines[index];
-                            final isActive = index == activeIndex;
-                            final isPast =
-                                activeIndex >= 0 && index < activeIndex;
+                          padding: const EdgeInsets.fromLTRB(20, 72, 20, 120),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: List.generate(displayLines.length, (index) {
+                              final line = displayLines[index];
+                              final isActive = index == activeIndex;
+                              final isPast =
+                                  activeIndex >= 0 && index < activeIndex;
 
-                            return GestureDetector(
-                              key: _lineKeys.putIfAbsent(
-                                  index, () => GlobalKey()),
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () {
-                                ref
-                                    .read(audioPlayerServiceProvider)
-                                    .seek(line.timestamp);
-                                setState(() => _userIsScrolling = false);
-                                _scrollToIndex(index);
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(vertical: 4),
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 8, horizontal: 12),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Colors.transparent,
-                                    width: 1,
+                              return GestureDetector(
+                                key: _lineKeys.putIfAbsent(
+                                    index, () => GlobalKey()),
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () {
+                                  ref
+                                      .read(audioPlayerServiceProvider)
+                                      .seek(line.timestamp);
+                                  _resumeAutoScrollTimer?.cancel();
+                                  setState(() => _userIsScrolling = false);
+                                  _scrollToIndex(index);
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 8, horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.transparent,
+                                      width: 1,
+                                    ),
                                   ),
-                                ),
-                                child: AnimatedDefaultTextStyle(
-                                  duration: const Duration(milliseconds: 160),
-                                  curve: Curves.easeOutCubic,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0,
-                                    height: 1.4,
-                                    color: isActive
-                                        ? (isDark ? Colors.white : Colors.black)
-                                        : (isDark
-                                            ? Colors.white.withValues(
-                                                alpha: isPast ? 0.32 : 0.60)
-                                            : Colors.black.withValues(
-                                                alpha: isPast ? 0.26 : 0.50)),
-                                  ),
-                                  child: AnimatedOpacity(
+                                  child: AnimatedDefaultTextStyle(
                                     duration: const Duration(milliseconds: 160),
-                                    opacity:
-                                        isActive ? 1.0 : (isPast ? 0.72 : 0.9),
-                                    child: Text(line.text),
+                                    curve: Curves.easeOutCubic,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0,
+                                      height: 1.4,
+                                      color: isActive
+                                          ? (isDark ? Colors.white : Colors.black)
+                                          : (isDark
+                                              ? Colors.white.withValues(
+                                                  alpha: isPast ? 0.32 : 0.60)
+                                              : Colors.black.withValues(
+                                                  alpha: isPast ? 0.26 : 0.50)),
+                                    ),
+                                    child: AnimatedOpacity(
+                                      duration: const Duration(milliseconds: 160),
+                                      opacity: isActive
+                                          ? 1.0
+                                          : (isPast ? 0.72 : 0.9),
+                                      child: Text(line.text),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            );
-                          }),
+                              );
+                            }),
+                          ),
                         ),
                       ),
                     )
@@ -310,6 +369,53 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
                   }).toList(),
                 ),
               ),
+            if (_userIsScrolling && isSynced && displayLines.isNotEmpty)
+              Positioned(
+                bottom: 16,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: GestureDetector(
+                    onTap: _resumeAutoScroll,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.92)
+                            : Colors.black.withValues(alpha: 0.88),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.25),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.vertical_align_center_rounded,
+                            size: 14,
+                            color: isDark ? Colors.black : Colors.white,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Sync with Song',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? Colors.black : Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         );
       },
@@ -321,7 +427,15 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
     return GestureDetector(
       onTap: () {
         if (_selectedScript != code) {
-          setState(() => _selectedScript = code);
+          setState(() {
+            _selectedScript = code;
+            _lineKeys.clear();
+          });
+          if (_lastActiveIndex >= 0 && !_userIsScrolling) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _scrollToIndex(_lastActiveIndex);
+            });
+          }
         }
       },
       child: Container(

@@ -572,4 +572,11 @@ class LyricsService {
   static bool hasNonLatinScriptForTest(String text) => _hasNonLatinScript(text);
   static List<LyricLine> parseLrcForTest(String lrc) => _parseLrc(lrc);
   static String sanitizeTitleForTest(String title) => _sanitizeTitle(title);
+  static void setCacheForTest(String key, LyricsData data) => _setCache(key, data);
+  static void setCacheForSong(Song song, LyricsData data) {
+    _setCache('${song.id}_English / Global (Standard)', data);
+    _setCache('${song.id}_Romanized Hindi/Punjabi', data);
+    _setCache('${song.id}_Devanagari Hindi', data);
+  }
+  static void clearCacheForTest() => _cache.clear();
 }
