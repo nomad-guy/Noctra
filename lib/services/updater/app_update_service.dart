@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +12,35 @@ import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/utils/noctra_logger.dart';
 import '../../ui/widgets/glass_card.dart';
+
+/// Atomically promote a fully-verified `.part` file to its final name.
+/// Two concurrent verified downloads of the same version target the same
+/// final path; delete-then-rename interleavings can collide (rename onto
+/// an existing file fails on some platforms), so retry briefly. Content
+/// is identical for every attempt that reaches this point (same digest),
+/// so whichever rename lands last is correct.
+Future<void> _promoteVerifiedFile(File tmp, File finalFile) async {
+  for (int attempt = 0; attempt < 3; attempt++) {
+    try {
+      if (finalFile.existsSync()) finalFile.deleteSync();
+      await tmp.rename(finalFile.path);
+      return;
+    } on FileSystemException {
+      if (attempt == 2) rethrow;
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    }
+  }
+}
+
+/// Collects the [Digest] produced by a chunked hash conversion without
+/// buffering the hashed bytes themselves.
+class _DigestAccumulator implements Sink<crypto.Digest> {
+  final List<crypto.Digest> digests = [];
+  @override
+  void add(crypto.Digest data) => digests.add(data);
+  @override
+  void close() {}
+}
 
 class AppUpdateInfo {
   final bool hasUpdate;
@@ -39,12 +70,32 @@ class AppUpdateService {
       'https://api.github.com/repos/nomad-guy/Noctra/releases/latest';
   static const String fallbackDownloadUrl =
       'https://github.com/nomad-guy/Noctra/releases/latest/download/noctra-universal-release.apk';
+  static const String fallbackDownloadAssetName =
+      'noctra-universal-release.apk';
+  static const String expectedApplicationId = 'com.nomadguy.noctra';
+  static const installerCheckChannel =
+      MethodChannel('com.nomadguy.noctra/installer_check');
   static const notifyChannel =
       MethodChannel('com.nomadguy.noctra/update_notify');
   static const _signingCertChannel =
       MethodChannel('com.nomadguy.noctra/signing_cert');
   static const Duration _downloadTimeout = Duration(minutes: 10);
-  static const int _maxDownloadBytes = 200 * 1024 * 1024; // 200 MB hard cap
+
+  /// Inactivity guard while streaming the body — if no bytes arrive for
+  /// this long the download is treated as stalled and aborted. (The
+  /// overall 10-minute [_downloadTimeout] deadline already bounds the
+  /// whole operation across redirect hops.)
+  static const Duration _readIdleTimeout = Duration(seconds: 30);
+  static const int _defaultMaxDownloadBytes = 200 * 1024 * 1024;
+
+  /// 200 MB hard cap on APK size — applied to the declared Content-Length
+  /// AND incrementally while streaming. Test seam; production always uses
+  /// the 200 MB default.
+  @visibleForTesting
+  static int maxDownloadBytes = _defaultMaxDownloadBytes;
+
+  @visibleForTesting
+  static int get defaultMaxDownloadBytes => _defaultMaxDownloadBytes;
   static const List<String> _trustedReleaseHosts = [
     'github.com',
     'objects.githubusercontent.com',
@@ -101,6 +152,7 @@ class AppUpdateService {
         // Look for Universal APK asset first
         String downloadUrl = fallbackDownloadUrl;
         String? expectedSha;
+        String? matchedAssetName;
         final assets = data['assets'] as List?;
         if (assets != null) {
           for (final asset in assets) {
@@ -108,6 +160,7 @@ class AppUpdateService {
             if (name.contains('universal') && name.endsWith('.apk')) {
               downloadUrl =
                   asset['browser_download_url'] as String? ?? downloadUrl;
+              matchedAssetName = name;
               // GitHub v3 release assets do not expose a top-level digest
               // field. The release body or release notes usually pin the
               // SHA-256; we surface whatever the publisher included so
@@ -120,10 +173,15 @@ class AppUpdateService {
               break;
             }
           }
-          // Fall back: search the release body for a "sha256:" hint
+          // Fall back: search the release body for the SHA-256 that is
+          // EXPLICITLY associated with this APK's filename. A bare
+          // "first sha256 found" match is ambiguous when a release ships
+          // several artifacts (universal + per-ABI), so a lone hash is
+          // only accepted when the body pins exactly one hash total;
+          // any ambiguity refuses the update.
           if (expectedSha == null && notes.isNotEmpty) {
-            final m = RegExp(r'sha256:([a-fA-F0-9]{64})').firstMatch(notes);
-            if (m != null) expectedSha = m.group(1);
+            expectedSha = extractAssetSha256(notes,
+                assetName: matchedAssetName ?? fallbackDownloadAssetName);
           }
         }
 
@@ -173,98 +231,233 @@ class AppUpdateService {
   /// directory. Returns the local file path on success and `null`
   /// when verification fails or the URL is not on a trusted host.
   /// `onProgress` is invoked with (bytesReceived, totalBytes) where
-  /// totalBytes may be -1 when the Content-Length header is absent.
+  /// totalBytes is -1 when the Content-Length header is absent (the UI
+  /// renders an indeterminate bar in that case — never a fabricated size).
+  ///
+  /// Redirection is handled hop-by-hop with the Dart [HttpClient] so that
+  /// EVERY hop destination (not just the initial URL) is validated against
+  /// the trusted-host allowlist. The http package's own client follows
+  /// redirects internally, which would silently accept a malicious
+  /// redirect chain after the first host check.
   static Future<String?> downloadAndVerifyApk(
     AppUpdateInfo info, {
     void Function(int received, int total)? onProgress,
   }) async {
-    final uri = Uri.tryParse(info.downloadUrl);
-    if (uri == null) {
+    final initial = Uri.tryParse(info.downloadUrl);
+    if (initial == null) {
       NoctraLogger.w('Refusing APK download: invalid URL');
       return null;
     }
-    if (!_trustedReleaseHosts.contains(uri.host) &&
-        !uri.host.endsWith('.github.com')) {
-      NoctraLogger.w('Refusing APK download from untrusted host: ${uri.host}');
+    if (!isTrustedDownloadUri(initial)) {
+      NoctraLogger.w(
+          'Refusing APK download from untrusted host: ${initial.host}');
       return null;
     }
 
-    final client = http.Client();
+    // P0: refuse installs when no SHA-256 is published. The digest is
+    // required by AppUpdateInfo's contract, but double-check here so any
+    // hand-built AppUpdateInfo still gets refused.
+    if (info.expectedSha256.isEmpty ||
+        !RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(info.expectedSha256)) {
+      NoctraLogger.w('APK install refused: missing or invalid SHA-256');
+      return null;
+    }
+
+    Directory dir;
     try {
-      final req = http.Request('GET', uri);
-      final resp = await client.send(req).timeout(_downloadTimeout);
-      if (resp.statusCode != 200) {
-        NoctraLogger.w('APK download HTTP ${resp.statusCode}');
-        return null;
+      dir = await updateTempDirProvider();
+    } catch (e) {
+      NoctraLogger.w('Could not resolve temp directory', e);
+      return null;
+    }
+    // Unique .part per download attempt: two concurrent downloads (or a
+    // retry racing a previous attempt) must never share a partial file,
+    // or one could truncate/corrupt the other mid-write. Microseconds can
+    // collide when attempts start in the same tick, so add randomness.
+    final attempt =
+        '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(0x7fffffff)}';
+    final tmp =
+        File('${dir.path}/noctra-update-${info.latestVersion}.$attempt.part');
+    final finalFile =
+        File('${dir.path}/noctra-update-${info.latestVersion}.apk');
+
+    final client = HttpClient();
+    try {
+      return await _downloadWithRedirects(
+          client, initial, tmp, finalFile, info, onProgress);
+    } catch (e) {
+      // Transport-level failure (connection reset, DNS, timeout, HTTP
+      // parser errors). The UI calls this without a try/catch, so it must
+      // never throw — convert to a clean refusal and clean up the part.
+      NoctraLogger.w('APK download failed: $e');
+      if (tmp.existsSync()) {
+        try {
+          tmp.deleteSync();
+        } catch (_) {}
       }
-      // Refuse to write more than the hard cap even if Content-Length
-      // is missing or misreported.
-      final declared = resp.contentLength ?? -1;
-      if (declared > _maxDownloadBytes) {
-        NoctraLogger.w('APK too large: $declared bytes');
-        return null;
-      }
+      return null;
+    } finally {
+      client.close(force: true);
+    }
+  }
 
-      // P0: refuse installs when no SHA-256 is published. The
-      // contract change to AppUpdateInfo.expectedSha256 makes the
-      // digest required at compile time, but we double-check here
-      // so that any future caller of this helper that constructs an
-      // AppUpdateInfo by hand still gets refused.
-      if (info.expectedSha256.isEmpty ||
-          !RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(info.expectedSha256)) {
-        NoctraLogger.w('APK install refused: missing or invalid SHA-256');
-        return null;
-      }
-
-      final dir = await getTemporaryDirectory();
-      final tmp =
-          File('${dir.path}/noctra-update-${info.latestVersion}.apk.part');
-      final finalFile =
-          File('${dir.path}/noctra-update-${info.latestVersion}.apk');
-
-      // Stream the body to disk while collecting bytes for the hash.
-      final sink = tmp.openWrite();
-      final accumulator = <int>[];
-      int received = 0;
-      try {
-        await for (final chunk in resp.stream) {
-          if (received + chunk.length > _maxDownloadBytes) {
-            await sink.close();
-            await tmp.delete();
-            NoctraLogger.w('APK exceeded max size, aborted');
-            return null;
-          }
-          accumulator.addAll(chunk);
-          received += chunk.length;
-          onProgress?.call(received, declared >= 0 ? declared : received);
-        }
-        await sink.close();
-        final hex = crypto.sha256.convert(accumulator).toString();
-
-        if (hex.toLowerCase() != info.expectedSha256.toLowerCase()) {
-          await tmp.delete();
-          NoctraLogger.w(
-              'APK SHA-256 mismatch (expected=${info.expectedSha256}, got=$hex)');
+  static Future<String?> _downloadWithRedirects(
+    HttpClient client,
+    Uri initial,
+    File tmp,
+    File finalFile,
+    AppUpdateInfo info,
+    void Function(int received, int total)? onProgress,
+  ) async {
+    try {
+      final deadline = DateTime.now().add(_downloadTimeout);
+      var current = initial;
+      for (int hop = 0; hop <= 5; hop++) {
+        final remaining = deadline.difference(DateTime.now());
+        if (remaining <= Duration.zero) {
+          NoctraLogger.w('APK download timed out');
           return null;
         }
-        if (finalFile.existsSync()) finalFile.deleteSync();
-        await tmp.rename(finalFile.path);
-        return finalFile.path;
-      } catch (e) {
-        try {
-          await sink.close();
-        } catch (_) {}
-        if (tmp.existsSync()) {
-          try {
-            tmp.deleteSync();
-          } catch (_) {}
+        final req = await client.getUrl(current).timeout(remaining);
+        // We validate every redirect hop ourselves, so disable the
+        // client's silent auto-following for this request.
+        req.followRedirects = false;
+        req.maxRedirects = 0;
+        req.headers.set(HttpHeaders.userAgentHeader, 'Noctra-Update/1.0');
+        final resp = await req.close().timeout(remaining);
+
+        if (resp.statusCode >= 300 && resp.statusCode < 400) {
+          final loc = resp.headers.value(HttpHeaders.locationHeader);
+          // Drain so the connection can be reused/closed cleanly.
+          await _drainQuietly(resp);
+          if (loc == null) {
+            NoctraLogger.w('APK redirect without Location header');
+            return null;
+          }
+          final next = current.resolve(loc);
+          if (!isTrustedDownloadUri(next)) {
+            NoctraLogger.w(
+                'APK redirect to untrusted host refused: ${next.host}');
+            return null;
+          }
+          current = next;
+          continue;
         }
-        NoctraLogger.e('APK download failed', e);
-        return null;
+
+        if (resp.statusCode != 200) {
+          await _drainQuietly(resp);
+          NoctraLogger.w('APK download HTTP ${resp.statusCode}');
+          return null;
+        }
+
+        // Refuse to write more than the hard cap even if Content-Length
+        // is missing or misreported.
+        final declared = resp.contentLength; // -1 when absent
+        if (declared > maxDownloadBytes) {
+          await _drainQuietly(resp);
+          NoctraLogger.w('APK too large: $declared bytes');
+          return null;
+        }
+
+        final sink = tmp.openWrite();
+        // Streaming SHA-256: hash each chunk as it arrives — the APK is
+        // never accumulated in RAM (200 MB × 2 in memory was the previous
+        // design's peak).
+        final digestAccumulator = _DigestAccumulator();
+        final hashConverter =
+            crypto.sha256.startChunkedConversion(digestAccumulator);
+        int received = 0;
+        try {
+          // 30 s inactivity guard: a stalled upstream must not hold the
+          // download (and the modal) open forever.
+          await for (final chunk in resp.timeout(_readIdleTimeout)) {
+            if (received + chunk.length > maxDownloadBytes) {
+              await sink.close();
+              await tmp.delete();
+              NoctraLogger.w('APK exceeded max size, aborted');
+              return null;
+            }
+            hashConverter.add(chunk);
+            sink.add(
+                chunk); // write the body to disk (hash alone is not an APK)
+            received += chunk.length;
+            // Unknown length → report -1 so the UI shows an
+            // indeterminate bar instead of a fabricated total.
+            onProgress?.call(received, declared >= 0 ? declared : -1);
+          }
+          hashConverter.close();
+          await sink.flush();
+          await sink.close();
+          final hex = digestAccumulator.digests.single.toString();
+          if (hex.toLowerCase() != info.expectedSha256.toLowerCase()) {
+            await tmp.delete();
+            NoctraLogger.w(
+                'APK SHA-256 mismatch (expected=${info.expectedSha256}, got=$hex)');
+            return null;
+          }
+          await _promoteVerifiedFile(tmp, finalFile);
+          return finalFile.path;
+        } catch (e) {
+          try {
+            hashConverter.close();
+          } catch (_) {}
+          try {
+            await sink.close();
+          } catch (_) {}
+          if (tmp.existsSync()) {
+            try {
+              tmp.deleteSync();
+            } catch (_) {}
+          }
+          NoctraLogger.e('APK download failed', e);
+          return null;
+        }
       }
+      NoctraLogger.w('APK download exceeded max redirects');
+      return null;
     } finally {
-      client.close();
+      // Caller owns the client lifecycle and closes it unconditionally.
     }
+  }
+
+  /// Best-effort drain of a response body we are deliberately discarding
+  /// (redirect / error / oversize). Never throws: some servers declare a
+  /// Content-Length they never deliver, which would otherwise surface as
+  /// a spurious stream error while we are only trying to free the socket.
+  static Future<void> _drainQuietly(HttpClientResponse resp) async {
+    try {
+      await for (final _ in resp) {}
+    } catch (_) {}
+  }
+
+  /// Trust check applied to the initial download URL AND to every
+  /// redirect destination. HTTPS-only, host must be in or under one of
+  /// the trusted release hosts (exact or subdomain match on the parsed
+  /// host — never a substring of the full URL).
+  @visibleForTesting
+  static bool Function(Uri uri) isTrustedDownloadUri =
+      _defaultIsTrustedDownloadUri;
+
+  /// The production trust predicate — exposed so tests can restore it
+  /// after swapping in a loopback override.
+  @visibleForTesting
+  static bool Function(Uri uri) get defaultIsTrustedDownloadUri =>
+      _defaultIsTrustedDownloadUri;
+
+  /// Test seam for the temporary directory (production uses
+  /// path_provider, which is unavailable in pure unit tests).
+  @visibleForTesting
+  static Future<Directory> Function() updateTempDirProvider =
+      getTemporaryDirectory;
+
+  static bool _defaultIsTrustedDownloadUri(Uri uri) {
+    if (uri.scheme != 'https') return false;
+    final host = uri.host.toLowerCase();
+    if (host.isEmpty) return false;
+    for (final trusted in _trustedReleaseHosts) {
+      if (host == trusted || host.endsWith('.$trusted')) return true;
+    }
+    return false;
   }
 
   /// Verify the running APK's signing certificate against an expected
@@ -314,27 +507,108 @@ class AppUpdateService {
     }
   }
 
-  static bool _isVersionNewer(String latest, String current) {
+  static bool _isVersionNewer(String latest, String current) =>
+      compareVersions(latest, current) > 0;
+
+  /// Extract the SHA-256 that belongs to [assetName] from GitHub release
+  /// notes, with an EXPLICIT filename → hash association.
+  ///
+  /// Rules (fail closed):
+  ///  * hashes appearing on a line that also names the asset are
+  ///    candidates for that asset;
+  ///  * exactly one distinct candidate for [assetName] → accept;
+  ///  * no candidate but the body contains exactly ONE hash total →
+  ///    accept (single-artifact releases often omit the filename);
+  ///  * anything else (multiple named hashes, several anonymous hashes)
+  ///    → null: the update is refused rather than risk hashing a
+  ///    different artifact.
+  @visibleForTesting
+  static String? extractAssetSha256(String notes, {required String assetName}) {
+    if (notes.trim().isEmpty) return null;
+    final wanted = assetName.toLowerCase();
+    final named = <String>{};
+    final anonymous = <String>{};
+    // Note: inline (?i) flags are unsupported by the Dart VM RegExp used
+    // here, so the haystack is lower-cased before matching.
+    final hashRe = RegExp(r'(?:sha256[:=]?\s*)?\b([a-f0-9]{64})\b');
+    for (final rawLine in notes.split(RegExp(r'[\r\n]+'))) {
+      final line = rawLine.toLowerCase();
+      for (final m in hashRe.allMatches(line)) {
+        final hash = m.group(1)!;
+        (line.contains(wanted) ? named : anonymous).add(hash);
+      }
+    }
+    if (named.length == 1) return named.single;
+    if (named.isEmpty && anonymous.length == 1) return anonymous.single;
+    NoctraLogger.w(
+        'Refusing update: release notes SHA-256 association is ambiguous '
+        '(named=${named.length}, anonymous=${anonymous.length})');
+    return null;
+  }
+
+  /// Verify the DOWNLOADED APK before it reaches the installer: the
+  /// platform inspects the archive itself (package name, version,
+  /// signing-cert digests) and reports whether it is signed by the same
+  /// key as the currently installed app. Install is refused unless the
+  /// package id is Noctra's AND the signer matches — an attacker who
+  /// somehow substituted a different signed APK (or a repackaged one)
+  /// cannot pass. Fail-closed on any platform error.
+  static Future<bool> isVerifiedInstallCandidate(String filePath) async {
+    if (kIsWeb || filePath.isEmpty) return false;
     try {
-      final reg = RegExp(r'(\d+)\.(\d+)\.(\d+)');
-      final mLatest = reg.firstMatch(latest);
-      final mCurrent = reg.firstMatch(current);
-      if (mLatest == null || mCurrent == null) return false;
-
-      final lMajor = int.parse(mLatest.group(1)!);
-      final lMinor = int.parse(mLatest.group(2)!);
-      final lPatch = int.parse(mLatest.group(3)!);
-
-      final cMajor = int.parse(mCurrent.group(1)!);
-      final cMinor = int.parse(mCurrent.group(2)!);
-      final cPatch = int.parse(mCurrent.group(3)!);
-
-      if (lMajor != cMajor) return lMajor > cMajor;
-      if (lMinor != cMinor) return lMinor > cMinor;
-      return lPatch > cPatch;
-    } catch (_) {
+      final raw = await installerCheckChannel.invokeMapMethod<String, dynamic>(
+          'inspectDownloadedApk', {'filePath': filePath});
+      if (raw == null) return false;
+      final pkg = raw['packageName'];
+      if (pkg != expectedApplicationId) {
+        NoctraLogger.w('Refusing install: unexpected package "$pkg"');
+        return false;
+      }
+      if (raw['matchesInstalledSigner'] != true) {
+        NoctraLogger.w(
+            'Refusing install: APK signer does not match installed app');
+        return false;
+      }
+      return true;
+    } catch (e) {
+      NoctraLogger.w('APK pre-install inspection failed: $e');
       return false;
     }
+  }
+
+  /// Release-tag comparison. Accepts an optional leading `v`, a
+  /// `+build` suffix, a `-prerelease` suffix (pre-releases sort older
+  /// than their release), and any number of numeric dot-components
+  /// (`1.2.3.4` is valid). Returns >0 when [a] is newer than [b], <0
+  /// when older, 0 when equal.
+  ///
+  /// Unparseable input returns 0 — a garbage `latest` tag can never be
+  /// advertised as an upgrade, and a malformed installed version can
+  /// never silently block or force a downgrade. Fail closed.
+  @visibleForTesting
+  static int compareVersions(String a, String b) {
+    final pa = _parseSemver(a);
+    final pb = _parseSemver(b);
+    if (pa == null || pb == null) return 0;
+    final depth = pa.$1.length > pb.$1.length ? pa.$1.length : pb.$1.length;
+    for (int i = 0; i < depth; i++) {
+      final x = i < pa.$1.length ? pa.$1[i] : 0;
+      final y = i < pb.$1.length ? pb.$1[i] : 0;
+      if (x != y) return x > y ? 1 : -1;
+    }
+    // Equal numeric core: a release beats its own pre-release.
+    if (pa.$2 != null && pb.$2 == null) return -1; // a is pre-release
+    if (pa.$2 == null && pb.$2 != null) return 1; // b is pre-release
+    return 0;
+  }
+
+  static (List<int>, String?)? _parseSemver(String raw) {
+    final m = RegExp(
+            r'^[vV]?(\d+(?:\.\d+)*)(?:-([0-9A-Za-z.\-]+))?(?:\+[0-9A-Za-z.\-]+)?$')
+        .firstMatch(raw.trim());
+    if (m == null) return null;
+    final nums = m.group(1)!.split('.').map(int.parse).toList();
+    return (nums, m.group(2));
   }
 
   static void showUpdateModal(
@@ -411,6 +685,28 @@ class _InAppUpdateModalContentState extends State<_InAppUpdateModalContent> {
         _errorMessage =
             'Update verification failed or download was blocked. Tap external download below.';
       });
+      return;
+    }
+
+    // Gate the installer on APK identity + signer continuity. The SHA-256
+    // already proved the bytes match the published digest; this proves the
+    // artifact really is Noctra's, signed by the same key as the installed
+    // app, BEFORE the OS package installer is invoked.
+    final verified =
+        await AppUpdateService.isVerifiedInstallCandidate(filePath);
+    if (!verified) {
+      // Fail closed: never hand an unverified artifact to the installer.
+      try {
+        final f = File(filePath);
+        if (f.existsSync()) f.deleteSync();
+      } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+          _errorMessage =
+              'Update package verification failed. The update was not installed.';
+        });
+      }
       return;
     }
 

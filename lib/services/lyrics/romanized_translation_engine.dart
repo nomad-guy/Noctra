@@ -30,7 +30,9 @@ class RomanizedTranslationEngine {
     for (final key in _lexicon.allKeys) {
       final dev = _lexicon.lookup(key);
       if (dev != null && dev.isNotEmpty) {
-        if (!_inverseDevanagariToRoman.containsKey(dev) || (!key.contains(RegExp(r'[A-Z]')) && key.length <= _inverseDevanagariToRoman[dev]!.length)) {
+        if (!_inverseDevanagariToRoman.containsKey(dev) ||
+            (!key.contains(RegExp(r'[A-Z]')) &&
+                key.length <= _inverseDevanagariToRoman[dev]!.length)) {
           _inverseDevanagariToRoman[dev] = _capitalize(key);
         }
       }
@@ -38,47 +40,164 @@ class RomanizedTranslationEngine {
 
     // Seed core English poetic translations for common Hindustani lyric terms
     _englishGlossary.addAll({
-      'dil': 'heart / soul', 'ishq': 'passion / deep love', 'pyaar': 'love', 'pyar': 'love',
-      'mohabbat': 'affection / love', 'zindagi': 'life', 'khuda': 'god / almighty',
-      'rabba': 'lord / god', 'rab': 'lord', 'naina': 'eyes', 'aankhen': 'eyes',
-      'dard': 'pain / longing', 'sukoon': 'peace / solace', 'khushi': 'happiness',
-      'gham': 'sorrow / grief', 'aansu': 'tears', 'intezaar': 'waiting / longing',
-      'armaan': 'desires / wishes', 'sapna': 'dream', 'khwab': 'dream / vision',
-      'tamanna': 'wish / yearning', 'chahat': 'longing / affection', 'dhadkan': 'heartbeat',
-      'saansein': 'breaths', 'hawayein': 'winds / breezes', 'kesariya': 'saffron / beloved',
-      'raat': 'night', 'din': 'day', 'subah': 'morning', 'shaam': 'evening',
-      'chand': 'moon', 'sitara': 'star', 'suraj': 'sun', 'aasman': 'sky',
-      'baarish': 'rain', 'hawa': 'breeze', 'lamha': 'moment', 'khamoshi': 'silence',
-      'awaaz': 'voice / calling', 'sanam': 'beloved', 'yaar': 'friend / lover',
-      'jaaneman': 'sweetheart', 'jaan': 'life / beloved', 'humsafar': 'companion / soulmate',
-      'mehboob': 'beloved', 'piya': 'beloved', 'manwa': 'my heart', 'jiyara': 'my soul',
-      'manzil': 'destination', 'safar': 'journey', 'raah': 'path', 'dua': 'prayer / blessing',
-      'kismat': 'destiny / fate', 'naseeb': 'fate', 'rooh': 'soul / spirit',
+      'dil': 'heart / soul',
+      'ishq': 'passion / deep love',
+      'pyaar': 'love',
+      'pyar': 'love',
+      'mohabbat': 'affection / love',
+      'zindagi': 'life',
+      'khuda': 'god / almighty',
+      'rabba': 'lord / god',
+      'rab': 'lord',
+      'naina': 'eyes',
+      'aankhen': 'eyes',
+      'dard': 'pain / longing',
+      'sukoon': 'peace / solace',
+      'khushi': 'happiness',
+      'gham': 'sorrow / grief',
+      'aansu': 'tears',
+      'intezaar': 'waiting / longing',
+      'armaan': 'desires / wishes',
+      'sapna': 'dream',
+      'khwab': 'dream / vision',
+      'tamanna': 'wish / yearning',
+      'chahat': 'longing / affection',
+      'dhadkan': 'heartbeat',
+      'saansein': 'breaths',
+      'hawayein': 'winds / breezes',
+      'kesariya': 'saffron / beloved',
+      'raat': 'night',
+      'din': 'day',
+      'subah': 'morning',
+      'shaam': 'evening',
+      'chand': 'moon',
+      'sitara': 'star',
+      'suraj': 'sun',
+      'aasman': 'sky',
+      'baarish': 'rain',
+      'hawa': 'breeze',
+      'lamha': 'moment',
+      'khamoshi': 'silence',
+      'awaaz': 'voice / calling',
+      'sanam': 'beloved',
+      'yaar': 'friend / lover',
+      'jaaneman': 'sweetheart',
+      'jaan': 'life / beloved',
+      'humsafar': 'companion / soulmate',
+      'mehboob': 'beloved',
+      'piya': 'beloved',
+      'manwa': 'my heart',
+      'jiyara': 'my soul',
+      'manzil': 'destination',
+      'safar': 'journey',
+      'raah': 'path',
+      'dua': 'prayer / blessing',
+      'kismat': 'destiny / fate',
+      'naseeb': 'fate',
+      'rooh': 'soul / spirit',
     });
   }
 
   static const Map<String, String> _vowels = {
-    'अ': 'a', 'आ': 'aa', 'इ': 'i', 'ई': 'ee', 'उ': 'u', 'ऊ': 'oo',
-    'ऋ': 'ri', 'ए': 'e', 'ऐ': 'ai', 'ओ': 'o', 'औ': 'au',
-    'अं': 'an', 'अः': 'ah', 'ऑ': 'o', 'ऍ': 'e',
+    'अ': 'a',
+    'आ': 'aa',
+    'इ': 'i',
+    'ई': 'ee',
+    'उ': 'u',
+    'ऊ': 'oo',
+    'ऋ': 'ri',
+    'ए': 'e',
+    'ऐ': 'ai',
+    'ओ': 'o',
+    'औ': 'au',
+    'अं': 'an',
+    'अः': 'ah',
+    'ऑ': 'o',
+    'ऍ': 'e',
   };
 
   static const Map<String, String> _matras = {
-    'ा': 'aa', 'ि': 'i', 'ी': 'ee', 'ु': 'u', 'ू': 'oo',
-    'ृ': 'ri', 'े': 'e', 'ै': 'ai', 'ो': 'o', 'ौ': 'au',
-    'ं': 'n', 'ँ': 'n', 'ः': 'h', '़': '', '्': '',
+    'ा': 'aa',
+    'ि': 'i',
+    'ी': 'ee',
+    'ु': 'u',
+    'ू': 'oo',
+    'ृ': 'ri',
+    'े': 'e',
+    'ै': 'ai',
+    'ो': 'o',
+    'ौ': 'au',
+    'ं': 'n',
+    'ँ': 'n',
+    'ः': 'h',
+    '़': '',
+    '्': '',
+  };
+
+  /// Marks that attach to a preceding consonant WITHOUT supplying a vowel
+  /// sign — the consonant keeps its inherent vowel, which is nasalised
+  /// (ं ँ) or aspirated (ः). They must be handled distinctly from vowel
+  /// matras or the vowel would be lost (कं → "kn" instead of "kan").
+  static const Set<String> _nasalMarks = {'ं', 'ँ', 'ः'};
+
+  /// Nukta-bearing consonants (base letter + U+093C) mapped to their
+  /// Urdu/Persian phonemes. The base keys are single code points; the
+  /// nukta mark is consumed separately during parsing.
+  static const Map<String, String> _nuktaConsonants = {
+    'क': 'q',
+    'ख': 'kh',
+    'ग': 'gh',
+    'ज': 'z',
+    'ड': 'r',
+    'ढ': 'rh',
+    'फ': 'f',
   };
 
   static const Map<String, String> _consonants = {
-    'क': 'k', 'ख': 'kh', 'ग': 'g', 'घ': 'gh', 'ङ': 'ng',
-    'च': 'ch', 'छ': 'chh', 'ज': 'j', 'झ': 'jh', 'ञ': 'ny',
-    'ट': 't', 'ठ': 'th', 'ड': 'd', 'ढ': 'dh', 'ण': 'n',
-    'त': 't', 'थ': 'th', 'द': 'd', 'ध': 'dh', 'न': 'n',
-    'प': 'p', 'फ': 'ph', 'ब': 'b', 'भ': 'bh', 'म': 'm',
-    'य': 'y', 'र': 'r', 'ल': 'l', 'व': 'v',
-    'श': 'sh', 'ष': 'sh', 'स': 's', 'ह': 'h',
-    'क़': 'q', 'ख़': 'kh', 'ग़': 'gh', 'ज़': 'z', 'ड़': 'r', 'ढ़': 'rh', 'फ़': 'f',
-    'क्ष': 'ksh', 'त्र': 'tr', 'ज्ञ': 'gyan', 'श्र': 'shr',
+    'क': 'k',
+    'ख': 'kh',
+    'ग': 'g',
+    'घ': 'gh',
+    'ङ': 'ng',
+    'च': 'ch',
+    'छ': 'chh',
+    'ज': 'j',
+    'झ': 'jh',
+    'ञ': 'ny',
+    'ट': 't',
+    'ठ': 'th',
+    'ड': 'd',
+    'ढ': 'dh',
+    'ण': 'n',
+    'त': 't',
+    'थ': 'th',
+    'द': 'd',
+    'ध': 'dh',
+    'न': 'n',
+    'प': 'p',
+    'फ': 'ph',
+    'ब': 'b',
+    'भ': 'bh',
+    'म': 'm',
+    'य': 'y',
+    'र': 'r',
+    'ल': 'l',
+    'व': 'v',
+    'श': 'sh',
+    'ष': 'sh',
+    'स': 's',
+    'ह': 'h',
+    'क़': 'q',
+    'ख़': 'kh',
+    'ग़': 'gh',
+    'ज़': 'z',
+    'ड़': 'r',
+    'ढ़': 'rh',
+    'फ़': 'f',
+    'क्ष': 'ksh',
+    'त्र': 'tr',
+    'ज्ञ': 'gyan',
+    'श्र': 'shr',
   };
 
   /// Convert Devanagari text into natural Romanized English script.
@@ -93,10 +212,13 @@ class RomanizedTranslationEngine {
       onMatch: (match) => match.group(0)!,
       onNonMatch: (token) {
         if (token.isEmpty) return token;
-      final leading = RegExp(r'^[\s\p{P}]+', unicode: true).stringMatch(token) ?? '';
-      final trailing = RegExp(r'[\s\p{P}]+$', unicode: true).stringMatch(token) ?? '';
+        final leading =
+            RegExp(r'^[\s\p{P}]+', unicode: true).stringMatch(token) ?? '';
+        final trailing =
+            RegExp(r'[\s\p{P}]+$', unicode: true).stringMatch(token) ?? '';
         if (leading.length + trailing.length >= token.length) return token;
-      final core = token.substring(leading.length, token.length - trailing.length);
+        final core =
+            token.substring(leading.length, token.length - trailing.length);
 
         return '$leading${_convertWordToRomanCached(core)}$trailing';
       },
@@ -137,7 +259,7 @@ class RomanizedTranslationEngine {
 
     for (int i = 0; i < len; i++) {
       final ch = String.fromCharCode(runes[i]);
-      final nextCh = i + 1 < len ? String.fromCharCode(runes[i + 1]) : null;
+      var nextCh = i + 1 < len ? String.fromCharCode(runes[i + 1]) : null;
 
       // Independent vowel
       if (_vowels.containsKey(ch)) {
@@ -147,13 +269,30 @@ class RomanizedTranslationEngine {
 
       // Consonant
       if (_consonants.containsKey(ch)) {
-        final romanConsonant = _consonants[ch]!;
+        // Nukta: क़/ज़/फ़/ड़/ढ़ are base consonant + U+093C — two code
+        // points. They can never match the single-character keys above,
+        // so resolve the pair here and consume the nukta mark.
+        var romanConsonant = _consonants[ch]!;
+        if (nextCh == '़' && _nuktaConsonants.containsKey(ch)) {
+          romanConsonant = _nuktaConsonants[ch]!;
+          i++; // consume the nukta mark
+          nextCh = i + 1 < len ? String.fromCharCode(runes[i + 1]) : null;
+        }
         buf.write(romanConsonant);
 
-        // Check following character for halant, matra, or inherent 'a'
+        // Check following character for halant, nasal/visarga mark,
+        // vowel matra, or the inherent 'a' (schwa) vowel.
         if (nextCh == '्') {
           // Halant: virama conjunct, suppress inherent vowel
           i++; // Skip halant
+        } else if (nextCh != null && _nasalMarks.contains(nextCh)) {
+          // Anusvara / chandrabindu / visarga nasalise (or aspirate) the
+          // consonant's INHERENT vowel — the vowel is written first:
+          //   कं (ka + anusvara) → "kan", never "kn"
+          //   कः (ka + visarga)  → "kah"
+          buf.write('a');
+          buf.write(_matras[nextCh]);
+          i++; // Skip the mark
         } else if (nextCh != null && _matras.containsKey(nextCh)) {
           // Matra: append vowel matra
           buf.write(_matras[nextCh]);
@@ -223,7 +362,8 @@ class RomanizedTranslationEngine {
     final newPlain = data.lines.isNotEmpty
         ? newLines.map((l) => l.text).join('\n')
         : toRoman(data.plainText);
-    return LyricsData(isSynced: data.isSynced, lines: newLines, plainText: newPlain);
+    return LyricsData(
+        isSynced: data.isSynced, lines: newLines, plainText: newPlain);
   }
 
   static String _capitalize(String s) {
@@ -238,9 +378,12 @@ class RomanizedTranslationService {
 
   static final RomanizedTranslationEngine engine = RomanizedTranslationEngine();
 
-  static String toRoman(String devanagariText) => engine.toRoman(devanagariText);
+  static String toRoman(String devanagariText) =>
+      engine.toRoman(devanagariText);
 
-  static LyricsData romanizeLyrics(LyricsData data) => engine.romanizeLyrics(data);
+  static LyricsData romanizeLyrics(LyricsData data) =>
+      engine.romanizeLyrics(data);
 
-  static String translateWord(String romanWord) => engine.translateWord(romanWord);
+  static String translateWord(String romanWord) =>
+      engine.translateWord(romanWord);
 }

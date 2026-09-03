@@ -121,4 +121,162 @@ void main() {
       expect(await AppUpdateService.isSignaturePinned(digest), isTrue);
     });
   });
+
+  group('extractAssetSha256', () {
+    const hashA =
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const hashB =
+        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    const hashC =
+        'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+
+    test('accepts a hash explicitly named on its line', () {
+      final notes = '## SHA-256\n'
+          'noctra-universal-release.apk: sha256:$hashA\n'
+          'noctra-arm64-v8a-release.apk: sha256:$hashB';
+      expect(
+          AppUpdateService.extractAssetSha256(notes,
+              assetName: 'noctra-universal-release.apk'),
+          hashA);
+    });
+
+    test('accepts a lone hash when the body pins exactly one total', () {
+      final notes = 'Release notes\nSHA256: $hashA\nEnjoy!';
+      expect(
+          AppUpdateService.extractAssetSha256(notes,
+              assetName: 'noctra-universal-release.apk'),
+          hashA);
+    });
+
+    test('accepts uppercase and surrounding whitespace', () {
+      final notes =
+          'noctra-universal-release.apk   sha256: ${hashA.toUpperCase()}  ';
+      expect(
+          AppUpdateService.extractAssetSha256(notes,
+              assetName: 'noctra-universal-release.apk'),
+          hashA);
+    });
+
+    test('refuses multiple anonymous hashes (ambiguous)', () {
+      final notes = 'h1: $hashA\nh2: $hashB';
+      expect(
+          AppUpdateService.extractAssetSha256(notes,
+              assetName: 'noctra-universal-release.apk'),
+          isNull);
+    });
+
+    test('refuses when another artifact hash is present and ours is unnamed',
+        () {
+      final notes =
+          'noctra-arm64-v8a-release.apk: sha256:$hashB\nother: $hashC';
+      expect(
+          AppUpdateService.extractAssetSha256(notes,
+              assetName: 'noctra-universal-release.apk'),
+          isNull);
+    });
+
+    test('ignores wrong-length hex strings', () {
+      final notes = 'sha256:abcd1234 (too short) sha256:$hashA';
+      expect(
+          AppUpdateService.extractAssetSha256(notes,
+              assetName: 'noctra-universal-release.apk'),
+          hashA);
+    });
+
+    test('empty notes refuse', () {
+      expect(
+          AppUpdateService.extractAssetSha256('',
+              assetName: 'noctra-universal-release.apk'),
+          isNull);
+    });
+  });
+
+  group('compareVersions', () {
+    test('basic ordering', () {
+      expect(
+          AppUpdateService.compareVersions('v1.2.3', 'v1.2.2'), greaterThan(0));
+      expect(AppUpdateService.compareVersions('1.2.2', '1.2.3'), lessThan(0));
+      expect(AppUpdateService.compareVersions('1.2.3', '1.2.3'), 0);
+      expect(
+          AppUpdateService.compareVersions('v2.0.0', 'v1.9.9'), greaterThan(0));
+    });
+
+    test('accepts build metadata and extra numeric components', () {
+      expect(AppUpdateService.compareVersions('1.2.3+build5', '1.2.3'), 0);
+      expect(
+          AppUpdateService.compareVersions('1.2.3.4', '1.2.3'), greaterThan(0));
+      expect(AppUpdateService.compareVersions('1.2.4', '1.2.3.99'),
+          greaterThan(0));
+    });
+
+    test('pre-releases sort older than their release', () {
+      expect(
+          AppUpdateService.compareVersions('1.2.3-rc1', '1.2.3'), lessThan(0));
+      expect(AppUpdateService.compareVersions('1.2.3', '1.2.3-rc1'),
+          greaterThan(0));
+    });
+
+    test('malformed versions fail closed (never newer, never downgrade)', () {
+      expect(AppUpdateService.compareVersions('not-a-version', '1.0.0'), 0);
+      expect(AppUpdateService.compareVersions('1.0.0', 'garbage!!'), 0);
+      expect(AppUpdateService.compareVersions('1..2.3', '1.0.0'), 0);
+      expect(AppUpdateService.compareVersions('v1.2.3', ''), 0);
+    });
+  });
+
+  group('isVerifiedInstallCandidate', () {
+    const checkChannel = MethodChannel('com.nomadguy.noctra/installer_check');
+
+    test('accepts matching package with signer continuity', () async {
+      messenger.setMockMethodCallHandler(checkChannel, (call) async {
+        return <String, dynamic>{
+          'packageName': AppUpdateService.expectedApplicationId,
+          'versionCode': 42,
+          'versionName': '2.0.0',
+          'signerDigests': <String>[
+            'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+          ],
+          'matchesInstalledSigner': true,
+        };
+      });
+      expect(await AppUpdateService.isVerifiedInstallCandidate('/tmp/x.apk'),
+          isTrue);
+    });
+
+    test('refuses a different package id', () async {
+      messenger.setMockMethodCallHandler(checkChannel, (call) async {
+        return <String, dynamic>{
+          'packageName': 'com.evil.other',
+          'matchesInstalledSigner': true,
+        };
+      });
+      expect(await AppUpdateService.isVerifiedInstallCandidate('/tmp/x.apk'),
+          isFalse);
+    });
+
+    test('refuses when the signer does not match the installed app', () async {
+      messenger.setMockMethodCallHandler(checkChannel, (call) async {
+        return <String, dynamic>{
+          'packageName': AppUpdateService.expectedApplicationId,
+          'matchesInstalledSigner': false,
+        };
+      });
+      expect(await AppUpdateService.isVerifiedInstallCandidate('/tmp/x.apk'),
+          isFalse);
+    });
+
+    test('refuses on platform error (fail closed)', () async {
+      messenger.setMockMethodCallHandler(checkChannel, (call) async {
+        throw PlatformException(code: 'INSTALLER_CHECK_ERROR');
+      });
+      expect(await AppUpdateService.isVerifiedInstallCandidate('/tmp/x.apk'),
+          isFalse);
+    });
+
+    test('refuses null / empty responses', () async {
+      messenger.setMockMethodCallHandler(checkChannel, (call) async => null);
+      expect(await AppUpdateService.isVerifiedInstallCandidate('/tmp/x.apk'),
+          isFalse);
+    });
+  });
 }

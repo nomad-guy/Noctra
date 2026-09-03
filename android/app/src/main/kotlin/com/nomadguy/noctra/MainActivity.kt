@@ -23,6 +23,7 @@ class MainActivity : AudioServiceActivity() {
     private val ICON_CHANNEL = "com.nomadguy.noctra/launcher_icon"
     private val UPDATE_NOTIFY_CHANNEL = "com.nomadguy.noctra/update_notify"
     private val SIGNING_CERT_CHANNEL = "com.nomadguy.noctra/signing_cert"
+    private val INSTALLER_CHECK_CHANNEL = "com.nomadguy.noctra/installer_check"
     private val VISUALIZER_CHANNEL = "com.nomadguy.noctra/audio_visualizer"
     private val ROUTER_CHANNEL = "com.nomadguy.noctra/audio_router"
     private val DEVICES_EVENT_CHANNEL = "com.nomadguy.noctra/audio_devices"
@@ -300,47 +301,89 @@ class MainActivity : AudioServiceActivity() {
         }
 
         // ====== SIGNING CERTIFICATE ======
-        // Returns the SHA-256 of the *signing* certificate of the
-        // currently installed package. On Android 9+ this uses the
-        // modern GET_SIGNING_CERTIFICATES path; on Android 7-8 it
-        // falls back to the legacy PackageInfo.signatures field.
-        // The Dart side compares this against the digest pinned at
-        // build time. Returning a non-null string is the only
-        // success path; any error is surfaced so the caller can
-        // refuse the install rather than silently assume a match.
+        // Returns the SHA-256 digests of the *signing* certificate(s) of
+        // the currently installed package. On Android 9+ this uses the
+        // modern GET_SIGNING_CERTIFICATES path; on Android 7-8 it falls
+        // back to the legacy PackageInfo.signatures field. For a single
+        // signer we return signingCertificateHistory — the set of certs
+        // the app has been signed with across key rotations — so a pin
+        // against any historical cert keeps updates working after a
+        // rotation. Multi-signer apps return all current signers.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SIGNING_CERT_CHANNEL).setMethodCallHandler { call, result ->
             if (call.method != "getInstalledSigningCertSha256") {
                 result.notImplemented()
                 return@setMethodCallHandler
             }
             try {
-                val pm = packageManager
-                val pkgName = packageName
-                val digests = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-                    val info = pm.getPackageInfo(
-                        pkgName,
-                        android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES
-                    )
-                    val signingInfo = info.signingInfo
-                    val sigs = if (signingInfo == null) {
-                        emptyArray<android.content.pm.Signature>()
-                    } else if (signingInfo.hasMultipleSigners()) {
-                        signingInfo.apkContentsSigners
-                    } else {
-                        signingInfo.signingCertificateHistory
-                    }
-                    sigs.map { sig -> certSha256(sig) }
-                } else {
-                    @Suppress("DEPRECATION")
-                    val info = pm.getPackageInfo(pkgName, android.content.pm.PackageManager.GET_SIGNATURES)
-                    @Suppress("DEPRECATION")
-                    val sigs = info.signatures ?: emptyArray<android.content.pm.Signature>()
-                    sigs.map { sig -> certSha256(sig) }
-                }
-                result.success(digests)
+                result.success(installedSignerDigests(packageManager, packageName))
             } catch (e: Throwable) {
                 Log.e(TAG, "signing cert lookup failed", e)
                 result.error("SIGNING_CERT_ERROR", e.message, null)
+            }
+        }
+
+        // ====== INSTALLER CHECK ======
+        // Inspects a DOWNLOADED (not installed) APK before it reaches the
+        // package installer: package name, versionCode/versionName and the
+        // signing-cert digests of the archive, plus whether any of those
+        // digests matches the currently installed app's signer. The Dart
+        // side refuses to invoke installApk unless the package is Noctra's
+        // AND the signer matches (Android also enforces signature
+        // continuity on update; this makes the refusal explicit and early).
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, INSTALLER_CHECK_CHANNEL).setMethodCallHandler { call, result ->
+            if (call.method != "inspectDownloadedApk") {
+                result.notImplemented()
+                return@setMethodCallHandler
+            }
+            try {
+                val path = call.argument<String>("filePath")
+                if (path.isNullOrEmpty()) {
+                    result.error("INSTALLER_CHECK_ERROR", "missing filePath", null)
+                    return@setMethodCallHandler
+                }
+                val archive = packageManager.getPackageArchiveInfo(
+                    path,
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                        android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES
+                    } else {
+                        @Suppress("DEPRECATION")
+                        android.content.pm.PackageManager.GET_SIGNATURES
+                    }
+                )
+                if (archive == null) {
+                    result.error("INSTALLER_CHECK_ERROR", "unparsable APK", null)
+                    return@setMethodCallHandler
+                }
+                // Several fields are only populated when sourceDir points at
+                // the archive itself.
+                archive.applicationInfo?.sourceDir = path
+                val pkgName = archive.packageName ?: ""
+                val versionName = archive.versionName ?: ""
+                val versionCode: Long =
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                        archive.longVersionCode
+                    } else {
+                        @Suppress("DEPRECATION")
+                        archive.versionCode.toLong()
+                    }
+                val signerDigests = signerDigestsOf(archive)
+                val matchesInstalled =
+                    signerDigests.isNotEmpty() &&
+                        signerDigests.any {
+                            installedSignerDigests(packageManager, packageName)
+                                .contains(it)
+                        }
+                val payload = mapOf(
+                    "packageName" to pkgName,
+                    "versionCode" to versionCode,
+                    "versionName" to versionName,
+                    "signerDigests" to signerDigests,
+                    "matchesInstalledSigner" to matchesInstalled
+                )
+                result.success(payload)
+            } catch (e: Throwable) {
+                Log.e(TAG, "installer check failed", e)
+                result.error("INSTALLER_CHECK_ERROR", e.message, null)
             }
         }
 
@@ -499,8 +542,68 @@ class MainActivity : AudioServiceActivity() {
 private fun certSha256(
     sig: android.content.pm.Signature
 ): String {
+    // Signature.toByteArray() returns the DER-encoded X.509 certificate —
+    // the same bytes Android's own PackageManager hashes for
+    // PackageInfo.signingInfo / signatures, so the digest is directly
+    // comparable to the platform's.
     val raw = sig.toByteArray()
     val md = java.security.MessageDigest.getInstance("SHA-256")
     val digest = md.digest(raw)
     return digest.joinToString("") { "%02x".format(it) }
+}
+
+/**
+ * SHA-256 digests of the signing certificates of the INSTALLED package.
+ * API 28+ uses signingInfo (signingCertificateHistory for the common
+ * single-signer case, so certificates from past key rotations remain
+ * accepted); API 27 and below uses the legacy signatures field.
+ */
+private fun installedSignerDigests(
+    pm: android.content.pm.PackageManager,
+    pkgName: String
+): List<String> {
+    return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+        val info = pm.getPackageInfo(
+            pkgName,
+            android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES
+        )
+        val signingInfo = info.signingInfo
+        val sigs = if (signingInfo == null) {
+            emptyArray<android.content.pm.Signature>()
+        } else if (signingInfo.hasMultipleSigners()) {
+            signingInfo.apkContentsSigners
+        } else {
+            signingInfo.signingCertificateHistory
+        }
+        sigs.map { sig -> certSha256(sig) }
+    } else {
+        @Suppress("DEPRECATION")
+        val info = pm.getPackageInfo(pkgName, android.content.pm.PackageManager.GET_SIGNATURES)
+        @Suppress("DEPRECATION")
+        val sigs = info.signatures ?: emptyArray<android.content.pm.Signature>()
+        sigs.map { sig -> certSha256(sig) }
+    }
+}
+
+/**
+ * SHA-256 digests of the signing certificates embedded in a parsed APK
+ * archive ([PackageInfo] obtained via getPackageArchiveInfo). Mirrors the
+ * installed-package extraction rules.
+ */
+private fun signerDigestsOf(archive: android.content.pm.PackageInfo): List<String> {
+    return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+        val signingInfo = archive.signingInfo
+        val sigs = if (signingInfo == null) {
+            emptyArray<android.content.pm.Signature>()
+        } else if (signingInfo.hasMultipleSigners()) {
+            signingInfo.apkContentsSigners
+        } else {
+            signingInfo.signingCertificateHistory
+        }
+        sigs.map { sig -> certSha256(sig) }
+    } else {
+        @Suppress("DEPRECATION")
+        val sigs = archive.signatures ?: emptyArray<android.content.pm.Signature>()
+        sigs.map { sig -> certSha256(sig) }
+    }
 }
