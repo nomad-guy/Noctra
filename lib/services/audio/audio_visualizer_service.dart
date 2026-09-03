@@ -5,10 +5,12 @@ import 'package:flutter/services.dart';
 import 'audio_player_service.dart';
 
 class AudioVisualizerService {
-  static final AudioVisualizerService _instance = AudioVisualizerService._internal();
+  static final AudioVisualizerService _instance =
+      AudioVisualizerService._internal();
   factory AudioVisualizerService() => _instance;
 
-  static const _eventChannel = EventChannel('com.nomadguy.noctra/audio_visualizer');
+  static const _eventChannel =
+      EventChannel('com.nomadguy.noctra/audio_visualizer');
   StreamSubscription? _subscription, _sessionSub;
   Timer? _fallbackTicker;
   int? _currentSessionId;
@@ -18,8 +20,17 @@ class AudioVisualizerService {
   final _fftController = StreamController<List<double>>.broadcast();
   Stream<List<double>> get fftStream => _fftController.stream;
 
+  // Waveform stream added so the Dart side mirrors the native
+  // envelope. The previous version silently dropped waveform
+  // packets because it only inspected `data is List`.
+  final _waveformController = StreamController<List<double>>.broadcast();
+  Stream<List<double>> get waveformStream => _waveformController.stream;
+
   List<double> _latestFft = List.filled(32, 0.2);
   List<double> get latestFft => List.unmodifiable(_latestFft);
+
+  List<double> _latestWaveform = List.filled(32, 0.0);
+  List<double> get latestWaveform => List.unmodifiable(_latestWaveform);
 
   AudioVisualizerService._internal() {
     _init();
@@ -34,8 +45,11 @@ class AudioVisualizerService {
           _startListening(initialSessionId);
         }
         _sessionSub?.cancel();
-        _sessionSub = playerService.player.androidAudioSessionIdStream.listen((sessionId) {
-          if (sessionId != null && sessionId > 0 && sessionId != _currentSessionId) {
+        _sessionSub = playerService.player.androidAudioSessionIdStream
+            .listen((sessionId) {
+          if (sessionId != null &&
+              sessionId > 0 &&
+              sessionId != _currentSessionId) {
             _startListening(sessionId);
           }
         });
@@ -60,23 +74,22 @@ class AudioVisualizerService {
     _currentSessionId = sessionId;
     _subscription?.cancel();
     try {
-      _subscription = _eventChannel.receiveBroadcastStream({'sessionId': sessionId}).listen(
-        (data) {
-          if (data is List && data.isNotEmpty) {
-            _lastHardwarePacketMs = DateTime.now().millisecondsSinceEpoch;
-            final parsed = data.map((e) => (e as num).toDouble()).toList();
-            final List<double> bins = List.filled(32, 0.0);
-            for (int i = 0; i < 32; i++) {
-              final idx = (i * parsed.length) ~/ 32;
-              bins[i] = parsed[idx.clamp(0, parsed.length - 1)];
-            }
-            _latestFft = bins;
-            _fftController.add(_latestFft);
-          }
-        },
+      _subscription =
+          _eventChannel.receiveBroadcastStream({'sessionId': sessionId}).listen(
+        (data) => handleEnvelope(data),
         onError: (_) {},
       );
     } catch (_) {}
+  }
+
+  List<double> _resample32(List<double> input) {
+    if (input.length == 32) return List<double>.from(input);
+    final out = List<double>.filled(32, 0.0);
+    for (int i = 0; i < 32; i++) {
+      final idx = (i * input.length) ~/ 32;
+      out[i] = input[idx.clamp(0, input.length - 1)];
+    }
+    return out;
   }
 
   final AudioPlayerService _audioPlayer = AudioPlayerService();
@@ -112,5 +125,35 @@ class AudioVisualizerService {
     _subscription?.cancel();
     _sessionSub?.cancel();
     _fftController.close();
+    _waveformController.close();
+  }
+
+  /// Demultiplex a single envelope from the native visualizer.
+  /// Exposed (not private) so the demux logic can be unit tested
+  /// without a real audio session. Returns true if the envelope
+  /// was recognised and dispatched to a stream; false otherwise.
+  @visibleForTesting
+  bool handleEnvelope(dynamic data) {
+    if (data is! Map) return false;
+    final type = data['type'];
+    final raw = data['data'];
+    if (raw is! List || raw.isEmpty) return false;
+    final parsed = raw.map((e) {
+      if (e is num) return e.toDouble();
+      if (e is String) return double.tryParse(e) ?? 0.0;
+      return 0.0;
+    }).toList();
+
+    _lastHardwarePacketMs = DateTime.now().millisecondsSinceEpoch;
+    if (type == 'fft') {
+      _latestFft = _resample32(parsed);
+      _fftController.add(_latestFft);
+      return true;
+    } else if (type == 'waveform') {
+      _latestWaveform = _resample32(parsed);
+      _waveformController.add(_latestWaveform);
+      return true;
+    }
+    return false;
   }
 }
