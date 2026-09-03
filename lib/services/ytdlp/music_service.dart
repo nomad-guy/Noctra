@@ -384,29 +384,32 @@ class MusicService {
             await const MethodChannel('com.nomadguy.noctra/native_resolver')
                 .invokeListMethod('fetchRadio', {'videoId': currentSong.id});
         if (list != null && list.isNotEmpty) {
-          // Always exclude the seed song itself, plus any caller-provided IDs
           final blocked = {currentSong.id, ...excludeIds};
-          final seen = <String>{}; // Deduplicate by ID
+          final seen = <String>{};
           final results = <Song>[];
           for (final m in list) {
-            final map = m as Map;
-            final vid = map['id'].toString();
+            // Validate each item independently — one malformed item must not abort the loop
+            if (m is! Map) continue;
+            final rawId = m['id'];
+            if (rawId is! String || rawId.trim().isEmpty) continue;
+            final vid = rawId.trim();
             if (blocked.contains(vid) || !seen.add(vid)) continue;
             results.add(Song(
                 id: vid,
-                title: (map['title'] ?? 'Similar Track').toString(),
-                artist: (map['artist'] ?? currentSong.artist).toString(),
+                title: (m['title'] ?? 'Similar Track').toString(),
+                artist: (m['artist'] ?? currentSong.artist).toString(),
                 album: 'Auto Radio',
                 artworkUrl: 'https://i.ytimg.com/vi/$vid/hqdefault.jpg',
                 streamUrl: null,
                 duration: const Duration(seconds: 210),
                 genre: currentSong.genre,
                 featureVector: _deriveFeatureVector(
-                    map['title']?.toString() ?? '',
-                    artist: map['artist']?.toString() ?? currentSong.artist,
+                    m['title']?.toString() ?? '',
+                    artist: m['artist']?.toString() ?? currentSong.artist,
                     genre: currentSong.genre ?? '')));
           }
-          return results;
+          // Only return native results if filtering produced actual songs
+          if (results.isNotEmpty) return results;
         }
       } catch (_) {}
     }

@@ -170,12 +170,11 @@ class NoctraSqliteDatabase {
         'signal_score': signalScore,
         'completion_rate': completionRate,
         'duration_listened_ms': durationListenedMs,
-        'total_duration_ms': totalDurationMs,
-        'is_in_favorites': song.isDownloaded ? 1 : 0,
-        'is_downloaded': song.isDownloaded ? 1 : 0,
-        'replay_count': song.replayCount,
-        'audio_features_json': audioFeaturesJson,
-        'timestamp': now,
+        'total_duration_ms': totalDurationMs,          'is_in_favorites': 0,
+          'is_downloaded': song.isDownloaded ? 1 : 0,
+          'replay_count': song.replayCount,
+          'audio_features_json': audioFeaturesJson,
+          'timestamp': now,
       });
 
       // Upsert track embedding with full per-song metadata
@@ -214,7 +213,7 @@ class NoctraSqliteDatabase {
           'genre': song.genre,
           'album': song.album,
           'duration_ms': song.duration.inMilliseconds,
-          'is_in_favorites': song.isDownloaded ? 1 : 0,
+          'is_in_favorites': 0,
           'is_downloaded': song.isDownloaded ? 1 : 0,
           'replay_count': newReplays,
           'total_listen_time_ms': newListenTime,

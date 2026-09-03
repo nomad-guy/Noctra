@@ -17,9 +17,9 @@ android {
     signingConfigs {
         create("release") {
             storeFile = file("noctra-release.keystore")
-            storePassword = "noctra2026"
-            keyAlias = "noctra"
-            keyPassword = "noctra2026"
+            storePassword = System.getenv("NOCTRA_KEYSTORE_PASSWORD") ?: ""
+            keyAlias = System.getenv("NOCTRA_KEY_ALIAS") ?: "noctra"
+            keyPassword = System.getenv("NOCTRA_KEY_PASSWORD") ?: ""
         }
     }
 

@@ -1,6 +1,22 @@
-/// Pure Dart high-performance port of the Sanscript matrix for zero-latency,
-/// offline cross-Indic script transliteration (Devanagari, Gurmukhi, Bengali,
-/// Gujarati, Telugu, Tamil, Kannada, Malayalam, ITRANS, IAST, HK).
+/// High-performance cross-Indic script conversion for Brahmic scripts.
+///
+/// **What this engine does well:**
+///   - Devanagari ↔ Gurmukhi (with correct special-character mappings)
+///   - Inter-Brahmic conversion for scripts with compatible Unicode layouts
+///     (Devanagari, Bengali, Gujarati, Odia, Kannada, Telugu, Malayalam)
+///
+/// **Known limitations:**
+///   - Tamil has a non-standard vowel order in Unicode; offset mapping
+///     produces incorrect characters for some Tamil vowel signs.
+///   - Latin/IAST/ITRANS/HK are NOT fully implemented — input is returned
+///     unchanged for those paths. Do NOT rely on this engine for
+///     Roman→Indic or Indic→Roman transliteration.
+///   - Cross-Indic offset mapping is an approximation. Phoneme-level
+///     mapping (e.g. Sanskrit-specific conjuncts, language-aware rules)
+///     requires a dedicated Sanscript/indic-transliterate package.
+///
+/// For production-quality Roman↔Indic transliteration, use the
+/// `indic_transliterate` or `sanscript_dart` packages instead.
 class SanscriptEngine {
   SanscriptEngine._();
 
@@ -118,7 +134,14 @@ class SanscriptEngine {
       final code = text.codeUnitAt(i);
       if (code >= fromOffset && code < fromOffset + 0x80) {
         final relative = code - fromOffset;
-        buf.writeCharCode(toOffset + relative);
+        final targetCode = toOffset + relative;
+        // Clamp to the Unicode block range — avoid emitting
+        // unassigned/invalid codepoints that could corrupt rendering.
+        if (targetCode >= toOffset && targetCode < toOffset + 0x80) {
+          buf.writeCharCode(targetCode);
+        } else {
+          buf.writeCharCode(code); // keep original if target is out of range
+        }
       } else {
         buf.writeCharCode(code);
       }

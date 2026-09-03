@@ -112,11 +112,13 @@ class Song {
     final msVal = map['durationMs'];
     final secVal = map['duration'];
     if (msVal != null) {
+      // durationMs is always milliseconds — never apply magnitude heuristic
       final num? p = msVal is num ? msVal : num.tryParse(msVal.toString());
       if (p != null && p > 0) {
-        parsedDurationMs = p < 1000 ? (p * 1000).toInt() : p.toInt();
+        parsedDurationMs = p.toInt();
       }
     } else if (secVal != null) {
+      // duration field: treat as seconds if small, milliseconds if large
       final num? p = secVal is num ? secVal : num.tryParse(secVal.toString());
       if (p != null && p > 0) {
         parsedDurationMs = p > 10000 ? p.toInt() : (p * 1000).toInt();
