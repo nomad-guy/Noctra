@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:just_audio/just_audio.dart';
 import '../../core/utils/noctra_logger.dart';
 import '../../data/models/song_model.dart';
 import '../audio/audio_player_service.dart';
@@ -166,6 +167,33 @@ class P2PSyncService extends ChangeNotifier {
   /// so an old session can never mutate a newer one.
   int _sessionEpoch = 0;
 
+  /// Monotonic sequence number for sync packets to enforce strict ordering
+  /// and reject replay attacks.
+  int _syncSequence = 0;
+  int _lastSeenSequence = -1;
+  String? _clientSessionId;
+  String get activeSessionId =>
+      isHost ? '$_roomCode-$_sessionEpoch' : (_clientSessionId ?? '$_roomCode-$_sessionEpoch');
+  bool _isApplyingRemoteSync = false;
+
+  StreamSubscription<PlayerState>? _playerStateSub;
+  StreamSubscription<Song?>? _currentSongSub;
+  Timer? _periodicSyncTimer;
+  Timer? _debounceSyncTimer;
+
+  Timer? _heartbeatTimer;
+  Timer? _clientLivenessTimer;
+  int _lastHostActivityMs = 0;
+
+  static const int beaconPort = 8098;
+  RawDatagramSocket? _beaconBroadcastSocket;
+  Timer? _beaconBroadcastTimer;
+  RawDatagramSocket? _discoverySocket;
+  Timer? _discoveryPruneTimer;
+  final List<DiscoveredJamRoom> _discoveredRooms = [];
+  List<DiscoveredJamRoom> get discoveredRooms =>
+      List.unmodifiable(_discoveredRooms);
+
   final List<Song> _collaborativeQueue = [];
   List<Song> get collaborativeQueue => List.unmodifiable(_collaborativeQueue);
   final List<JamChatMessage> _chatMessages = [];
@@ -186,7 +214,212 @@ class P2PSyncService extends ChangeNotifier {
   /// Per-IP failed-auth tracking; bounded by [_authTrackMaxEntries].
   final Map<String, _AuthTrack> _authFailures = {};
 
-  void initialize(AudioPlayerService audioPlayer) => _audioPlayer = audioPlayer;
+  void initialize(AudioPlayerService audioPlayer) {
+    _audioPlayer = audioPlayer;
+    if (isHost) _attachPlayerListeners();
+  }
+
+  void _attachPlayerListeners() {
+    _detachPlayerListeners();
+    final ap = _audioPlayer;
+    if (ap == null) return;
+
+    _playerStateSub = ap.player.playerStateStream.listen((state) {
+      if (isHost && _connectedPeers.isNotEmpty && !_isApplyingRemoteSync) {
+        _scheduleDebouncedSync();
+      }
+    });
+
+    _currentSongSub = ap.currentSongStream.listen((song) {
+      if (isHost && _connectedPeers.isNotEmpty && !_isApplyingRemoteSync) {
+        _scheduleDebouncedSync();
+      }
+    });
+
+    _periodicSyncTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (isHost &&
+          _connectedPeers.isNotEmpty &&
+          (_audioPlayer?.player.playing ?? false)) {
+        broadcastSync();
+      }
+    });
+  }
+
+  void _detachPlayerListeners() {
+    _playerStateSub?.cancel();
+    _playerStateSub = null;
+    _currentSongSub?.cancel();
+    _currentSongSub = null;
+    _periodicSyncTimer?.cancel();
+    _periodicSyncTimer = null;
+    _debounceSyncTimer?.cancel();
+    _debounceSyncTimer = null;
+  }
+
+  void _scheduleDebouncedSync() {
+    _debounceSyncTimer?.cancel();
+    _debounceSyncTimer = Timer(const Duration(milliseconds: 60), () {
+      if (isHost) broadcastSync();
+    });
+  }
+
+  void _startHostHeartbeat(int epoch) {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (epoch != _sessionEpoch || !isHost) return;
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      final pingMsg = jsonEncode({'type': 'ping', 'timestamp': nowMs});
+      _broadcastToPeers(pingMsg);
+
+      final deadSockets = <dynamic>[];
+      _peerTracks.forEach((socket, track) {
+        if (nowMs - track.lastSeenMs > 15000) {
+          deadSockets.add(socket);
+        }
+      });
+      for (final s in deadSockets) {
+        NoctraLogger.w(
+            'Jam dropping unresponsive peer (15s heartbeat timeout)');
+        _dropPeer(s);
+      }
+    });
+  }
+
+  void _startClientLivenessCheck(int epoch, String hostIp, int port) {
+    _clientLivenessTimer?.cancel();
+    _lastHostActivityMs = DateTime.now().millisecondsSinceEpoch;
+    _clientLivenessTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (epoch != _sessionEpoch || !isClient) return;
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      if (nowMs - _lastHostActivityMs > 15000) {
+        NoctraLogger.w(
+            'Jam host heartbeat timeout (15s) - attempting reconnect');
+        _clientLivenessTimer?.cancel();
+        _onClientSocketClosed(epoch, hostIp, port);
+      }
+    });
+  }
+
+  Future<void> _startBeaconBroadcast() async {
+    _beaconBroadcastTimer?.cancel();
+    try {
+      _beaconBroadcastSocket?.close();
+    } catch (_) {}
+    if (kIsWeb) return;
+    try {
+      _beaconBroadcastSocket = await RawDatagramSocket.bind(
+        InternetAddress.anyIPv4,
+        0,
+        reuseAddress: true,
+      );
+      _beaconBroadcastSocket?.broadcastEnabled = true;
+      _beaconBroadcastTimer =
+          Timer.periodic(const Duration(seconds: 2), (_) => _sendBeacon());
+    } catch (e) {
+      NoctraLogger.w('Jam beacon broadcast init failed', e);
+    }
+  }
+
+  void _sendBeacon() {
+    if (!isHost || _beaconBroadcastSocket == null) return;
+    final payload = jsonEncode({
+      'type': 'noctra_jam_beacon',
+      'roomCode': _roomCode,
+      'hostName': _userName,
+      'hostIp': _localIp ?? '127.0.0.1',
+      'port': _port,
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    });
+    try {
+      _beaconBroadcastSocket?.send(
+        utf8.encode(payload),
+        InternetAddress('255.255.255.255'),
+        beaconPort,
+      );
+    } catch (_) {}
+  }
+
+  Future<void> startDiscovery() async {
+    if (kIsWeb) return;
+    stopDiscovery();
+    try {
+      _discoverySocket = await RawDatagramSocket.bind(
+        InternetAddress.anyIPv4,
+        beaconPort,
+        reuseAddress: true,
+      );
+      _discoverySocket?.broadcastEnabled = true;
+      _discoverySocket?.listen((event) {
+        if (event == RawSocketEvent.read) {
+          final datagram = _discoverySocket?.receive();
+          if (datagram != null) {
+            _handleBeaconPacket(datagram.data, datagram.address.address);
+          }
+        }
+      });
+      _discoveryPruneTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+        final now = DateTime.now();
+        final beforeCount = _discoveredRooms.length;
+        _discoveredRooms
+            .removeWhere((r) => now.difference(r.lastSeen).inSeconds > 6);
+        if (_discoveredRooms.length != beforeCount) notifyListeners();
+      });
+    } catch (e) {
+      NoctraLogger.w('Jam UDP discovery start failed', e);
+    }
+  }
+
+  void _handleBeaconPacket(List<int> bytes, String senderIp) {
+    try {
+      final str = utf8.decode(bytes);
+      final map = jsonDecode(str);
+      if (map is! Map<String, dynamic>) return;
+      if (map['type'] != 'noctra_jam_beacon') return;
+      final rCode = map['roomCode']?.toString();
+      final hName = map['hostName']?.toString();
+      final portNum = map['port'] is int ? map['port'] as int : 8099;
+      final claimedIp = map['hostIp']?.toString();
+      final effectiveIp = (claimedIp != null &&
+              claimedIp.isNotEmpty &&
+              claimedIp != '127.0.0.1' &&
+              claimedIp != '0.0.0.0')
+          ? claimedIp
+          : senderIp;
+      if (rCode == null || rCode.isEmpty) return;
+
+      final room = DiscoveredJamRoom(
+        roomCode: rCode,
+        hostName: (hName != null && hName.isNotEmpty) ? hName : 'Host',
+        hostIp: effectiveIp,
+        port: portNum,
+        lastSeen: DateTime.now(),
+      );
+
+      final idx = _discoveredRooms.indexWhere((r) =>
+          r.roomCode == rCode &&
+          r.hostIp == effectiveIp &&
+          r.port == portNum);
+      if (idx >= 0) {
+        _discoveredRooms[idx] = room;
+      } else {
+        _discoveredRooms.add(room);
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  void stopDiscovery() {
+    _discoveryPruneTimer?.cancel();
+    _discoveryPruneTimer = null;
+    try {
+      _discoverySocket?.close();
+    } catch (_) {}
+    _discoverySocket = null;
+    if (_discoveredRooms.isNotEmpty) {
+      _discoveredRooms.clear();
+      notifyListeners();
+    }
+  }
   void setUserName(String name) {
     _userName = name.trim().isEmpty ? 'Listener' : name.trim();
     notifyListeners();
@@ -304,6 +537,10 @@ class P2PSyncService extends ChangeNotifier {
     }, onError: (Object e) {
       NoctraLogger.w('Jam host server error', e);
     });
+    _syncSequence = 0;
+    _attachPlayerListeners();
+    _startHostHeartbeat(epoch);
+    _startBeaconBroadcast();
     notifyListeners();
     return true;
   }
@@ -424,8 +661,11 @@ class P2PSyncService extends ChangeNotifier {
     _peerTracks[socket] = _PeerInboundTrack();
     notifyListeners();
 
+    _syncSequence++;
     final statePayload = <String, dynamic>{
       'type': 'jam_full_state',
+      'seq': _syncSequence,
+      'sessionId': activeSessionId,
       'roomCode': _roomCode,
       'hostControlsOnly': _hostControlsOnly,
       'queue': _wireQueueSlice(),
@@ -437,6 +677,7 @@ class P2PSyncService extends ChangeNotifier {
           _sanitizeSongForWire(_audioPlayer!.currentSong!).toMap();
       statePayload['positionMs'] = _audioPlayer!.player.position.inMilliseconds;
       statePayload['isPlaying'] = _audioPlayer!.player.playing;
+      statePayload['hostTimestamp'] = DateTime.now().millisecondsSinceEpoch;
     }
     try {
       socket.add(jsonEncode(statePayload));
@@ -468,6 +709,8 @@ class P2PSyncService extends ChangeNotifier {
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     final track = _peerTracks[socket];
     if (track == null) return;
+    track.lastSeenMs = nowMs;
+
     if (!_tickRate(track.general, P2PSyncService.inboundLimitPerWindow,
         P2PSyncService.inboundWindowMs, nowMs)) {
       NoctraLogger.w('Jam peer dropped: inbound message rate exceeded');
@@ -479,6 +722,15 @@ class P2PSyncService extends ChangeNotifier {
     if (data == null) return; // malformed/oversized/deep — rejected silently
     final type = data['type'];
     if (type is! String || type.isEmpty) return;
+
+    if (type == 'pong') return;
+    if (type == 'ping') {
+      try {
+        socket.add(
+            jsonEncode({'type': 'pong', 'timestamp': data['timestamp']}));
+      } catch (_) {}
+      return;
+    }
 
     switch (type) {
       case 'chat':
@@ -501,9 +753,18 @@ class P2PSyncService extends ChangeNotifier {
         break;
       case 'remove_from_queue':
         if (!_hostControlsOnly) {
-          final id = data['songId'];
-          if (id is String && id.trim().isNotEmpty && id.length <= 128) {
-            removeFromCollaborativeQueue(id.trim());
+          final rawIndex = data['queueIndex'];
+          if (rawIndex is int &&
+              rawIndex >= 0 &&
+              rawIndex < _collaborativeQueue.length) {
+            _collaborativeQueue.removeAt(rawIndex);
+            notifyListeners();
+            broadcastSync();
+          } else {
+            final id = data['songId'];
+            if (id is String && id.trim().isNotEmpty && id.length <= 128) {
+              removeFromCollaborativeQueue(id.trim());
+            }
           }
         }
         break;
@@ -943,6 +1204,9 @@ class P2PSyncService extends ChangeNotifier {
     }
     _role = SyncCastRole.client;
     _clientRetryCount = 0;
+    _lastSeenSequence = -1;
+    _lastHostActivityMs = DateTime.now().millisecondsSinceEpoch;
+    _startClientLivenessCheck(epoch, cleanIp, port);
     notifyListeners();
     return true;
   }
@@ -992,12 +1256,57 @@ class P2PSyncService extends ChangeNotifier {
     final type = data['type'];
     if (type is! String) return;
 
+    _lastHostActivityMs = DateTime.now().millisecondsSinceEpoch;
+
+    if (type == 'ping') {
+      if (_clientSocket != null) {
+        try {
+          _clientSocket.add(jsonEncode({
+            'type': 'pong',
+            'timestamp': data['timestamp'],
+          }));
+        } catch (_) {}
+      }
+      return;
+    }
+    if (type == 'pong') {
+      return;
+    }
+
     if (type == 'chat') {
       final msg = _decodeChatMessage(data['message']);
       if (msg != null) _appendChat(msg);
       return;
     }
     if (type == 'sync' || type == 'jam_full_state') {
+      final incomingSession = data['sessionId'];
+      if (type == 'jam_full_state') {
+        if (data.containsKey('roomCode') && data['roomCode'] is String) {
+          _roomCode = data['roomCode'] as String;
+        }
+        if (incomingSession != null && incomingSession is String) {
+          _clientSessionId = incomingSession;
+        }
+      } else if (type == 'sync') {
+        if (_clientSessionId != null &&
+            incomingSession != null &&
+            incomingSession is String &&
+            incomingSession.isNotEmpty &&
+            incomingSession != _clientSessionId) {
+          // Message from a stale or foreign session — drop
+          return;
+        }
+      }
+
+      final incomingSeq = data['seq'];
+      if (incomingSeq is int) {
+        if (incomingSeq <= _lastSeenSequence) {
+          // Stale / out-of-order / replayed sync packet — ignore
+          return;
+        }
+        _lastSeenSequence = incomingSeq;
+      }
+
       final controls = data['hostControlsOnly'];
       _hostControlsOnly = controls == true;
       if (data.containsKey('queue')) {
@@ -1007,15 +1316,29 @@ class P2PSyncService extends ChangeNotifier {
         final song = _decodeRemoteSong(data['song']);
         if (song != null && _audioPlayer != null) {
           final isPlaying = data['isPlaying'] == true;
+          final hostTime = _readNum(data['hostTimestamp'])?.round();
+          final nowMs = DateTime.now().millisecondsSinceEpoch;
           final posMs = _readNum(data['positionMs']);
-          final position =
+          var targetPosMs =
               (posMs != null && posMs >= 0 && posMs <= 24 * 60 * 60 * 1000)
-                  ? Duration(milliseconds: posMs.round())
-                  : Duration.zero;
+                  ? posMs.round()
+                  : 0;
+          if (isPlaying && hostTime != null && nowMs > hostTime) {
+            final transitMs = (nowMs - hostTime).clamp(0, 3000);
+            targetPosMs += transitMs;
+          }
+          final position = Duration(milliseconds: targetPosMs);
+
+          _isApplyingRemoteSync = true;
           try {
             if (_audioPlayer!.currentSong?.id != song.id) {
-              unawaited(
-                  _audioPlayer!.playSong(song, initialPosition: position));
+              unawaited(_audioPlayer!
+                  .playSong(song, initialPosition: position)
+                  .then((_) {
+                if (!isPlaying && (_audioPlayer?.player.playing ?? false)) {
+                  _audioPlayer?.pause();
+                }
+              }));
             } else {
               if (isPlaying && !_audioPlayer!.player.playing) {
                 unawaited(_audioPlayer!.resumeOrPlay());
@@ -1023,13 +1346,19 @@ class P2PSyncService extends ChangeNotifier {
                 _audioPlayer!.pause();
               }
               final currentPos = _audioPlayer!.player.position;
-              if ((currentPos - position).abs() > const Duration(seconds: 2)) {
+              if ((currentPos - position).inMilliseconds.abs() > 2000) {
                 unawaited(_audioPlayer!.player.seek(position));
               }
             }
           } catch (e) {
             NoctraLogger.w('apply host sync failed', e);
+          } finally {
+            _isApplyingRemoteSync = false;
           }
+        }
+      } else if (data.containsKey('song') && data['song'] == null) {
+        if (_audioPlayer != null && _audioPlayer!.player.playing) {
+          _audioPlayer!.pause();
         }
       }
       notifyListeners();
@@ -1088,15 +1417,25 @@ class P2PSyncService extends ChangeNotifier {
     }
   }
 
-  void removeFromCollaborativeQueue(String songId) {
+  void removeFromCollaborativeQueue(String songId, {int? queueIndex}) {
     if (_hostControlsOnly && !isHost) return; // listeners cannot mutate
-    _collaborativeQueue.removeWhere((s) => s.id == songId);
+    if (queueIndex != null &&
+        queueIndex >= 0 &&
+        queueIndex < _collaborativeQueue.length) {
+      _collaborativeQueue.removeAt(queueIndex);
+    } else {
+      _collaborativeQueue.removeWhere((s) => s.id == songId);
+    }
     notifyListeners();
     if (isHost) broadcastSync();
     if (isClient && _clientSocket != null && !_hostControlsOnly) {
       try {
-        _clientSocket
-            .add(jsonEncode({'type': 'remove_from_queue', 'songId': songId}));
+        final payload = <String, dynamic>{
+          'type': 'remove_from_queue',
+          'songId': songId,
+        };
+        if (queueIndex != null) payload['queueIndex'] = queueIndex;
+        _clientSocket.add(jsonEncode(payload));
       } catch (_) {}
     }
   }
@@ -1109,6 +1448,7 @@ class P2PSyncService extends ChangeNotifier {
 
   void broadcastSync() {
     if (!isHost) return;
+    _syncSequence++;
     final current = _audioPlayer?.currentSong;
     final sanitizedCurrent =
         current != null ? _sanitizeSongForWire(current) : null;
@@ -1122,6 +1462,8 @@ class P2PSyncService extends ChangeNotifier {
           .map(_sanitizeSongForWire)
           .toList(),
       hostControlsOnly: _hostControlsOnly,
+      sequence: _syncSequence,
+      sessionId: activeSessionId,
     ));
     _broadcastToPeers(packet);
   }
@@ -1147,10 +1489,25 @@ class P2PSyncService extends ChangeNotifier {
     _sessionEpoch++; // invalidate every in-flight continuation
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
+    _clientLivenessTimer?.cancel();
+    _clientLivenessTimer = null;
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+    _detachPlayerListeners();
+    _beaconBroadcastTimer?.cancel();
+    _beaconBroadcastTimer = null;
+    try {
+      _beaconBroadcastSocket?.close();
+    } catch (_) {}
+    _beaconBroadcastSocket = null;
+    stopDiscovery();
     _role = SyncCastRole.idle;
     _connectedHostIp = null;
     _localIp = null;
     _clientRetryCount = 0;
+    _syncSequence = 0;
+    _lastSeenSequence = -1;
+    _clientSessionId = null;
     _roomSecret = ''; // previous credential must never remain valid
     _clientRoomSecret = '';
     try {
@@ -1238,6 +1595,7 @@ class P2PSyncService extends ChangeNotifier {
 class _PeerInboundTrack {
   final _RateState general = _RateState();
   final _RateState chat = _RateState();
+  int lastSeenMs = DateTime.now().millisecondsSinceEpoch;
 }
 
 /// A connection that upgraded but has not yet answered the auth challenge.

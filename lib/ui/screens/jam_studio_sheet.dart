@@ -26,6 +26,11 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(p2pSyncServiceProvider).startDiscovery();
+      }
+    });
   }
 
   @override
@@ -33,6 +38,7 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet>
     _tabController.dispose();
     _hostIpCtrl.dispose();
     _roomSecretCtrl.dispose();
+    ref.read(p2pSyncServiceProvider).stopDiscovery();
     super.dispose();
   }
 
@@ -217,6 +223,86 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet>
               ],
             ),
           ),
+          if (syncService.discoveredRooms.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            GlassCard(
+              radius: 16,
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.wifi_tethering_rounded,
+                          size: 16,
+                          color: isDark ? Colors.white : Colors.black),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Nearby Rooms Found (${syncService.discoveredRooms.length})',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ...syncService.discoveredRooms.map((room) {
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.white10
+                            : Colors.black.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${room.hostName} (${room.roomCode})',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12.5,
+                                    color: isDark ? Colors.white : Colors.black,
+                                  ),
+                                ),
+                                Text(
+                                  '${room.hostIp}:${room.port}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontFamily: 'monospace',
+                                    color: isDark
+                                        ? Colors.white60
+                                        : Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _hostIpCtrl.text = room.hostIp;
+                              });
+                            },
+                            child: const Text('Select',
+                                style: TextStyle(fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           GlassCard(
             radius: 16,
