@@ -103,8 +103,9 @@ class P2PSyncService extends ChangeNotifier {
   }
 
   bool _isValidHostOrIp(String host) {
-    if (host == 'localhost' || host == '127.0.0.1' || host == '::1')
+    if (host == 'localhost' || host == '127.0.0.1' || host == '::1') {
       return true;
+    }
     // Hostnames (.local, .lan, alphanumeric)
     if (RegExp(r'^[a-zA-Z0-9._-]+$').hasMatch(host) && !host.contains('..')) {
       // If looks like IPv4, validate strictly
@@ -163,13 +164,13 @@ class P2PSyncService extends ChangeNotifier {
             return;
           }
           // Reject the upgrade when the room secret is missing or
-          // mismatched. We accept the secret either as a query
-          // parameter or as a `X-Noctra-Room` header. The 4-digit
-          // numeric code is no longer sufficient on its own.
-          final presentedSecret = (request.uri.queryParameters['secret'] ??
-                  request.headers.value('X-Noctra-Room') ??
-                  '')
-              .trim();
+          // mismatched. The secret is accepted ONLY via the
+          // `X-Noctra-Room` header, never as a URL query parameter.
+          // Putting it in the URL would expose it to any reverse
+          // proxy or web server access log, defeating the purpose
+          // of replacing the brute-forceable 4-digit code.
+          final presentedSecret =
+              (request.headers.value('X-Noctra-Room') ?? '').trim();
           if (!_constantTimeEquals(presentedSecret, _roomSecret)) {
             request.response.statusCode = HttpStatus.unauthorized;
             request.response.close();
@@ -182,12 +183,18 @@ class P2PSyncService extends ChangeNotifier {
             final statePayload = {
               'type': 'jam_full_state',
               'roomCode': _roomCode,
-              'roomSecret': _roomSecret,
               'hostControlsOnly': _hostControlsOnly,
               'queue': _collaborativeQueue.map((s) => s.toMap()).toList(),
               'chatMessages': _chatMessages.map((m) => m.toMap()).toList(),
               'serverTime': DateTime.now().millisecondsSinceEpoch,
             };
+            // The room secret is NEVER sent in the post-auth
+            // state payload. The client already proved possession
+            // of the secret during the WebSocket upgrade; sending
+            // it back over the wire only widens the window for
+            // accidental capture (logs, memory dumps, packet
+            // captures). The client retains its own copy locally
+            // and uses it for any future re-auth, if needed.
             if (_audioPlayer?.currentSong != null) {
               statePayload['song'] = _audioPlayer!.currentSong!.toMap();
               statePayload['positionMs'] =
@@ -239,8 +246,9 @@ class P2PSyncService extends ChangeNotifier {
             timestamp: rawMsg.timestamp,
           );
           _chatMessages.add(sanitizedMsg);
-          if (_chatMessages.length > maxChatCount)
+          if (_chatMessages.length > maxChatCount) {
             _chatMessages.removeRange(0, _chatMessages.length - maxChatCount);
+          }
           _broadcastToPeers(
               jsonEncode(P2PPacket.createChatPacket(sanitizedMsg)));
           notifyListeners();
@@ -375,8 +383,9 @@ class P2PSyncService extends ChangeNotifier {
             timestamp: rawMsg.timestamp,
           );
           _chatMessages.add(sanitizedMsg);
-          if (_chatMessages.length > maxChatCount)
+          if (_chatMessages.length > maxChatCount) {
             _chatMessages.removeRange(0, _chatMessages.length - maxChatCount);
+          }
           notifyListeners();
         }
       } else if (type == 'sync' || type == 'jam_full_state') {
@@ -394,12 +403,15 @@ class P2PSyncService extends ChangeNotifier {
           final isPlaying = data['isPlaying'] ?? false;
           final posMs = data['positionMs'];
           if (_audioPlayer != null) {
-            if (_audioPlayer!.currentSong?.id != song.id)
+            if (_audioPlayer!.currentSong?.id != song.id) {
               _audioPlayer!.playSong(song);
-            if (isPlaying && !_audioPlayer!.player.playing)
+            }
+            if (isPlaying && !_audioPlayer!.player.playing) {
               _audioPlayer!.player.play();
-            if (!isPlaying && _audioPlayer!.player.playing)
+            }
+            if (!isPlaying && _audioPlayer!.player.playing) {
               _audioPlayer!.player.pause();
+            }
             final posMsInt = posMs is num
                 ? posMs.toInt()
                 : (int.tryParse(posMs?.toString() ?? '') ?? 0);
@@ -426,8 +438,9 @@ class P2PSyncService extends ChangeNotifier {
       timestamp: DateTime.now(),
     );
     _chatMessages.add(msg);
-    if (_chatMessages.length > maxChatCount)
+    if (_chatMessages.length > maxChatCount) {
       _chatMessages.removeRange(0, _chatMessages.length - maxChatCount);
+    }
     notifyListeners();
     final packet = jsonEncode(P2PPacket.createChatPacket(msg));
     if (isHost) _broadcastToPeers(packet);

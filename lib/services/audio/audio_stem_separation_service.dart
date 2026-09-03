@@ -185,6 +185,7 @@ class AudioStemSeparationService {
 
   /// Download audio file temporarily for stem separation.
   Future<String> _downloadForSeparation(String url, String songId) async {
+    final client = HttpClient();
     try {
       final tempDir = await getTemporaryDirectory();
       final tempFile = File('${tempDir.path}/stem_input_$songId.wav');
@@ -192,17 +193,45 @@ class AudioStemSeparationService {
         return tempFile.path;
       }
 
-      final client = HttpClient();
-      final request = await client.getUrl(Uri.parse(url));
+      // Hard cap the input size to 100 MB. A 4-minute 320 kbps MP3
+      // is ~10 MB; anything materially larger indicates either a
+      // raw lossless file (not suitable for the band splitter) or
+      // a malicious server. Refuse rather than pin disk.
+      const maxInputBytes = 100 * 1024 * 1024;
+      client.connectionTimeout = const Duration(seconds: 8);
+      // idleTimeout / connectionTimeout are connection-level; a
+      // per-request timeout is also applied below via .timeout().
+      final request = await client
+          .getUrl(Uri.parse(url))
+          .timeout(const Duration(seconds: 8));
       final response = await request.close();
       final sink = tempFile.openWrite();
-      await response.pipe(sink);
-      client.close();
+      int received = 0;
+      await for (final chunk in response) {
+        received += chunk.length;
+        if (received > maxInputBytes) {
+          await sink.close();
+          if (tempFile.existsSync()) {
+            try {
+              tempFile.deleteSync();
+            } catch (_) {}
+          }
+          NoctraLogger.w('Stem input exceeded 100 MB, aborted');
+          return '';
+        }
+        sink.add(chunk);
+      }
+      await sink.flush();
+      await sink.close();
 
       return tempFile.path;
     } catch (e) {
       NoctraLogger.e('Failed to download audio for separation', e);
       return '';
+    } finally {
+      try {
+        client.close(force: true);
+      } catch (_) {}
     }
   }
 

@@ -35,10 +35,39 @@ class Song {
     this.isDownloaded = false,
     this.isFavorite = false,
     List<double>? featureVector,
-    this.hasValidFeatureVector = true,
+    bool? hasValidFeatureVector,
     this.replayCount = 0,
     this.skipCount = 0,
-  }) : featureVector = featureVector ?? List.filled(32, 0.5);
+  })  : featureVector = _normalizeVector(featureVector),
+        hasValidFeatureVector =
+            hasValidFeatureVector ?? _vectorLooksValid(featureVector);
+
+  /// True when [featureVector] carries genuine, usable embedding data:
+  /// the song was constructed/parsed with a valid exactly-32D vector
+  /// AND that vector is not the neutral all-0.5 fill. Consumers must
+  /// use this instead of inferring "missing" from the vector's values
+  /// (a real neutral vector is indistinguishable from the fill by
+  /// value alone; only the explicit validity flag can tell them apart).
+  bool get hasUsableEmbedding =>
+      hasValidFeatureVector && !featureVector.every((v) => v == 0.5);
+
+  /// Coerce an optionally-supplied vector to the canonical 32D form.
+  /// Missing or malformed vectors become the neutral 0.5 fill (never
+  /// silently padded/truncated real data); [hasValidFeatureVector]
+  /// records whether real data was actually supplied.
+  static List<double> _normalizeVector(List<double>? raw) {
+    if (raw == null) return List.filled(32, 0.5);
+    if (raw.length == 32 &&
+        raw.every((v) => v.isFinite && v >= 0.0 && v <= 1.0)) {
+      return List<double>.from(raw);
+    }
+    return List.filled(32, 0.5);
+  }
+
+  static bool _vectorLooksValid(List<double>? raw) =>
+      raw != null &&
+      raw.length == 32 &&
+      raw.every((v) => v.isFinite && v >= 0.0 && v <= 1.0);
 
   Song copyWith({
     String? id,

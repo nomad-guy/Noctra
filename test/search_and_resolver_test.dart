@@ -22,6 +22,93 @@ void main() {
       expect(song.featureVector.length, 32);
     });
 
+    test('song without a feature vector is marked invalid (never fake data)',
+        () {
+      final song = Song(
+        id: 'test123',
+        title: 'Tum Hi Ho',
+        artist: 'Arijit Singh',
+        duration: const Duration(minutes: 4),
+      );
+      // No vector supplied — the neutral fill must NOT masquerade as a
+      // genuine embedding.
+      expect(song.featureVector.length, 32);
+      expect(song.hasValidFeatureVector, false);
+      expect(song.hasUsableEmbedding, false);
+    });
+
+    test('song with a valid 32-dim vector is usable', () {
+      final vec = List.generate(32, (i) => 0.05 + i * 0.01);
+      final song = Song(
+        id: 'test123',
+        title: 'T',
+        artist: 'A',
+        duration: const Duration(seconds: 1),
+        featureVector: vec,
+      );
+      expect(song.hasValidFeatureVector, true);
+      expect(song.hasUsableEmbedding, true);
+    });
+
+    test('explicit all-0.5 vector is valid data but not usable embedding', () {
+      final song = Song(
+        id: 'test123',
+        title: 'T',
+        artist: 'A',
+        duration: const Duration(seconds: 1),
+        featureVector: List.filled(32, 0.5),
+      );
+      // Explicitly supplied and in-range — valid. But a neutral vector
+      // contributes nothing, so consumers must not treat it as data.
+      expect(song.hasValidFeatureVector, true);
+      expect(song.hasUsableEmbedding, false);
+    });
+
+    test('wrong-dimension or non-finite vectors are rejected, not padded', () {
+      final tooShort = Song(
+        id: 'a',
+        title: 'T',
+        artist: 'A',
+        duration: const Duration(seconds: 1),
+        featureVector: List.filled(16, 0.7),
+      );
+      expect(tooShort.featureVector.length, 32);
+      expect(tooShort.hasValidFeatureVector, false);
+      expect(tooShort.hasUsableEmbedding, false);
+
+      final tooLong = Song(
+        id: 'b',
+        title: 'T',
+        artist: 'A',
+        duration: const Duration(seconds: 1),
+        featureVector: List.filled(33, 0.7),
+      );
+      expect(tooLong.featureVector.length, 32);
+      expect(tooLong.hasValidFeatureVector, false);
+
+      final withNaN = Song(
+        id: 'c',
+        title: 'T',
+        artist: 'A',
+        duration: const Duration(seconds: 1),
+        featureVector: List.generate(32, (i) => i == 3 ? double.nan : 0.5),
+      );
+      expect(withNaN.hasValidFeatureVector, false);
+      expect(withNaN.hasUsableEmbedding, false);
+    });
+
+    test('copyWith keeps an explicit validity flag', () {
+      final invalid = Song(
+        id: 'x',
+        title: 'T',
+        artist: 'A',
+        duration: const Duration(seconds: 1),
+      );
+      final copy = invalid.copyWith(title: 'New');
+      expect(copy.hasValidFeatureVector, false);
+      expect(copy.hasUsableEmbedding, false);
+    });
+
     test('copyWith preserves all fields', () {
       final song = Song(
         id: 'test123',

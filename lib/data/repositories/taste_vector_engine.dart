@@ -185,9 +185,11 @@ class TasteVectorEngine {
   }
 
   static List<double> selfHealAndRecalibrate(List<double> currentVector, {Song? lastSong, String eventType = 'listen'}) {
-    final List<double> targetVector = lastSong != null && lastSong.featureVector.isNotEmpty
-        ? (lastSong.featureVector.every((x) => x == 0.5) ? extractSongEmbedding(lastSong) : lastSong.featureVector)
-        : getDefaultVector();
+    final List<double> targetVector = lastSong == null
+        ? getDefaultVector()
+        : (lastSong.hasUsableEmbedding
+            ? lastSong.featureVector
+            : extractSongEmbedding(lastSong));
     final List<double> updated = List<double>.from(currentVector);
     while (updated.length < vectorDimension) {
       updated.add(0.5);

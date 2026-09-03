@@ -197,9 +197,9 @@ class MusicRepository extends ChangeNotifier {
   }
 
   int computeMatchScore(Song song) {
-    final songEmbedding = song.featureVector.every((x) => x == 0.5)
-        ? TasteVectorEngine.extractSongEmbedding(song)
-        : song.featureVector;
+    final songEmbedding = song.hasUsableEmbedding
+        ? song.featureVector
+        : TasteVectorEngine.extractSongEmbedding(song);
     final sim =
         TasteVectorEngine.cosineSimilarity(songEmbedding, _userTasteVector);
     final historyAffinity =
@@ -528,13 +528,14 @@ class MusicRepository extends ChangeNotifier {
     final candidates = {..._localLibrary, ..._downloads, ..._recentlyPlayed}
         .map((s) => s.copyWith())
         .toList();
-    if (candidates.isEmpty)
+    if (candidates.isEmpty) {
       candidates.addAll(_localLibrary.map((s) => s.copyWith()));
+    }
 
     final scored = candidates.map((s) {
-      final songEmbedding = s.featureVector.every((x) => x == 0.5)
-          ? TasteVectorEngine.extractSongEmbedding(s)
-          : s.featureVector;
+      final songEmbedding = s.hasUsableEmbedding
+          ? s.featureVector
+          : TasteVectorEngine.extractSongEmbedding(s);
       final sim = TasteVectorEngine.cosineSimilarity(songEmbedding, target);
       final score = ((sim * 85) + 14).round().clamp(10, 99);
       final exp = TasteVectorEngine.generateExplanation(
@@ -569,9 +570,9 @@ class MusicRepository extends ChangeNotifier {
         .toList();
 
     final scored = candidates.map((s) {
-      final songEmbedding = s.featureVector.every((x) => x == 0.5)
-          ? TasteVectorEngine.extractSongEmbedding(s)
-          : s.featureVector;
+      final songEmbedding = s.hasUsableEmbedding
+          ? s.featureVector
+          : TasteVectorEngine.extractSongEmbedding(s);
       final sim = TasteVectorEngine.cosineSimilarity(songEmbedding, target);
       final score = ((sim * 85) + 14).round().clamp(10, 99);
       final exp =
@@ -596,8 +597,9 @@ class MusicRepository extends ChangeNotifier {
         return [seed, ...unique];
       }
       final artistFeed = await MusicService.search('${seed.artist} best songs');
-      if (artistFeed.isNotEmpty)
+      if (artistFeed.isNotEmpty) {
         return [seed, ...artistFeed.where((s) => s.id != seed.id)];
+      }
     } catch (_) {}
     return [seed, ..._localLibrary.where((s) => s.id != seed.id)];
   }

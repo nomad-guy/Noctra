@@ -22,6 +22,7 @@ class MainActivity : AudioServiceActivity() {
     private val RESOLVER_CHANNEL = "com.nomadguy.noctra/native_resolver"
     private val ICON_CHANNEL = "com.nomadguy.noctra/launcher_icon"
     private val UPDATE_NOTIFY_CHANNEL = "com.nomadguy.noctra/update_notify"
+    private val SIGNING_CERT_CHANNEL = "com.nomadguy.noctra/signing_cert"
     private val VISUALIZER_CHANNEL = "com.nomadguy.noctra/audio_visualizer"
     private val ROUTER_CHANNEL = "com.nomadguy.noctra/audio_router"
     private val DEVICES_EVENT_CHANNEL = "com.nomadguy.noctra/audio_devices"
@@ -298,6 +299,51 @@ class MainActivity : AudioServiceActivity() {
             } else { result.notImplemented() }
         }
 
+        // ====== SIGNING CERTIFICATE ======
+        // Returns the SHA-256 of the *signing* certificate of the
+        // currently installed package. On Android 9+ this uses the
+        // modern GET_SIGNING_CERTIFICATES path; on Android 7-8 it
+        // falls back to the legacy PackageInfo.signatures field.
+        // The Dart side compares this against the digest pinned at
+        // build time. Returning a non-null string is the only
+        // success path; any error is surfaced so the caller can
+        // refuse the install rather than silently assume a match.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SIGNING_CERT_CHANNEL).setMethodCallHandler { call, result ->
+            if (call.method != "getInstalledSigningCertSha256") {
+                result.notImplemented()
+                return@setMethodCallHandler
+            }
+            try {
+                val pm = packageManager
+                val pkgName = packageName
+                val digests = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    val info = pm.getPackageInfo(
+                        pkgName,
+                        android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES
+                    )
+                    val signingInfo = info.signingInfo
+                    val sigs = if (signingInfo == null) {
+                        emptyArray<android.content.pm.Signature>()
+                    } else if (signingInfo.hasMultipleSigners()) {
+                        signingInfo.apkContentsSigners
+                    } else {
+                        signingInfo.signingCertificateHistory
+                    }
+                    sigs.map { sig -> certSha256(sig) }
+                } else {
+                    @Suppress("DEPRECATION")
+                    val info = pm.getPackageInfo(pkgName, android.content.pm.PackageManager.GET_SIGNATURES)
+                    @Suppress("DEPRECATION")
+                    val sigs = info.signatures ?: emptyArray<android.content.pm.Signature>()
+                    sigs.map { sig -> certSha256(sig) }
+                }
+                result.success(digests)
+            } catch (e: Throwable) {
+                Log.e(TAG, "signing cert lookup failed", e)
+                result.error("SIGNING_CERT_ERROR", e.message, null)
+            }
+        }
+
         // ====== ICON CHANNEL ======
         // All icon operations serialized through iconExecutor.
         // reconcileAndInit: combine reconcile + getCurrentIcon into one atomic operation.
@@ -440,4 +486,21 @@ class MainActivity : AudioServiceActivity() {
             }
         }
     }
+}
+
+/**
+ * Compute the SHA-256 of a Signature's underlying X.509 certificate
+ * (lower-case hex). PackageManager.signingInfo gives us Signature
+ * objects whose `toCharsString()` is the cert encoded via the
+ * platform's CertificateFactory pipeline, which is the right
+ * primitive for stable pinning across rebuilds that re-sign with
+ * the same key.
+ */
+private fun certSha256(
+    sig: android.content.pm.Signature
+): String {
+    val raw = sig.toByteArray()
+    val md = java.security.MessageDigest.getInstance("SHA-256")
+    val digest = md.digest(raw)
+    return digest.joinToString("") { "%02x".format(it) }
 }

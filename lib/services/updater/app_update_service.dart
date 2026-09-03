@@ -41,6 +41,8 @@ class AppUpdateService {
       'https://github.com/nomad-guy/Noctra/releases/latest/download/noctra-universal-release.apk';
   static const notifyChannel =
       MethodChannel('com.nomadguy.noctra/update_notify');
+  static const _signingCertChannel =
+      MethodChannel('com.nomadguy.noctra/signing_cert');
   static const Duration _downloadTimeout = Duration(minutes: 10);
   static const int _maxDownloadBytes = 200 * 1024 * 1024; // 200 MB hard cap
   static const List<String> _trustedReleaseHosts = [
@@ -266,17 +268,37 @@ class AppUpdateService {
   }
 
   /// Verify the running APK's signing certificate against an expected
-  /// SHA-256 digest. Stub: the real implementation reads the certificate
-  /// from the platform `PackageManager` on Android. The placeholder is
-  /// kept here so callers can guard installs today.
+  /// SHA-256 digest. Returns true only when the platform reports a
+  /// signing certificate whose SHA-256 matches [expectedSha256]
+  /// (case-insensitive, lower-case normalised).
+  ///
+  /// The native side (MainActivity.SIGNING_CERT_CHANNEL) reads the
+  /// installed package's signing certificate(s) via PackageManager:
+  ///   - Android 9+ → GET_SIGNING_CERTIFICATES → signingInfo
+  ///   - Android 7-8 → GET_SIGNATURES → info.signatures
+  /// and returns a list of SHA-256 hex strings. A match on any of
+  /// them counts as pinned (so signing-certificate rotation through
+  /// signingCertificateHistory is tolerated).
+  ///
+  /// Any error (channel missing, PackageManager exception,
+  /// malformed response, or empty list) is treated as "not pinned"
+  /// and the caller MUST refuse the install. The default-deny
+  /// behaviour is intentional: silently returning true would let a
+  /// downgraded or repackaged APK slip through.
   static Future<bool> isSignaturePinned(String expectedSha256) async {
     if (kIsWeb) return false;
+    if (expectedSha256.isEmpty) return false;
+    final want = expectedSha256.toLowerCase();
     try {
-      // Production: call into the platform channel to read the
-      // installed package's signing certificate and compare.
-      // For now, refuse all un-pinned certs.
+      final raw = await _signingCertChannel
+          .invokeMethod<List<dynamic>>('getInstalledSigningCertSha256');
+      if (raw == null) return false;
+      for (final entry in raw) {
+        if (entry is String && entry.toLowerCase() == want) return true;
+      }
       return false;
-    } catch (_) {
+    } catch (e) {
+      NoctraLogger.w('Signing cert lookup failed: $e');
       return false;
     }
   }

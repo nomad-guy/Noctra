@@ -83,8 +83,7 @@ class SessionContextTracker {
       final recency = (qi + 1) / _queue.length;
       final w = e.weight * recency;
 
-      final vec = e.song.featureVector.length == dim &&
-              !e.song.featureVector.every((x) => x == 0.5)
+      final vec = e.song.hasUsableEmbedding
           ? e.song.featureVector
           : TasteVectorEngine.extractSongEmbedding(e.song);
 
@@ -112,8 +111,7 @@ class SessionContextTracker {
     List<double> avg(List<_SessionEntry> entries) {
       final r = List<double>.filled(dim, 0.0);
       for (final e in entries) {
-        final v = e.song.featureVector.length == dim &&
-                !e.song.featureVector.every((x) => x == 0.5)
+        final v = e.song.hasUsableEmbedding
             ? e.song.featureVector
             : TasteVectorEngine.extractSongEmbedding(e.song);
         for (int i = 0; i < dim; i++) {

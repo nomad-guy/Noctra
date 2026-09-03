@@ -42,13 +42,17 @@ class DirectOpenStreamResolver implements StreamResolver {
   Future<bool> canResolve(Song song) async {
     final url = song.streamUrl;
     if (url == null || url.isEmpty) return false;
-    if (url.contains('scdn.co') ||
-        url.contains('spotify.com') ||
-        url.contains('preview') ||
-        url.contains('apple.com')) {
-      return false;
+    if (!_TrustedAudioHosts.isTrusted(url)) return false;
+    // Reject known-bad hosts even if they are in the trusted set
+    // (defence in depth — e.g. an attacker who somehow registers
+    // `attacker.com.youtube.com` won't pass because the trusted
+    // list already excludes `youtube.com` direct hosts).
+    final host = Uri.tryParse(url)?.host.toLowerCase() ?? '';
+    const blockedSuffixes = ['scdn.co', 'spotify.com', 'apple.com'];
+    for (final suffix in blockedSuffixes) {
+      if (host == suffix || host.endsWith('.$suffix')) return false;
     }
-    return !url.contains('youtube.com') && !url.contains('youtu.be');
+    return true;
   }
 
   @override
@@ -452,7 +456,6 @@ class _TrustedAudioHosts {
     'www.jiosaavn.com',
     'storage.googleapis.com',
     'googlevideo.com',
-    'youtube.com',
     'ytimg.com',
     'i.ytimg.com',
     'lh3.googleusercontent.com',

@@ -85,9 +85,9 @@ class CandidateRetrievalService {
 
     // If seed song given, blend its embedding into target (30%)
     if (seedSong != null) {
-      final seedEmbed = seedSong.featureVector.every((x) => x == 0.5)
-          ? TasteVectorEngine.extractSongEmbedding(seedSong)
-          : seedSong.featureVector;
+      final seedEmbed = seedSong.hasUsableEmbedding
+          ? seedSong.featureVector
+          : TasteVectorEngine.extractSongEmbedding(seedSong);
       targetVector = TasteVectorEngine.blendVectors(targetVector, seedEmbed, 0.70);
     }
 

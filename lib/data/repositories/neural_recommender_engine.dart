@@ -191,8 +191,7 @@ class NeuralRecommenderEngine {
     List<double>? patternFeatures,
     List<double>? socialFeatures,
   }) {
-    final songVec = song.featureVector.isNotEmpty &&
-            !song.featureVector.every((x) => x == 0.5)
+    final songVec = song.hasUsableEmbedding
         ? song.featureVector
         : TasteVectorEngine.extractSongEmbedding(song);
 
@@ -321,8 +320,7 @@ class NeuralRecommenderEngine {
     List<double>? patternFeatures,
     List<double>? socialFeatures,
   }) {
-    final songVec = song.featureVector.isNotEmpty &&
-            !song.featureVector.every((x) => x == 0.5)
+    final songVec = song.hasUsableEmbedding
         ? song.featureVector
         : TasteVectorEngine.extractSongEmbedding(song);
 

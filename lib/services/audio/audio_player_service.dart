@@ -426,6 +426,61 @@ class AudioPlayerService {
     _emitSettings();
   }
 
+  /// Pure helper: current-first playback order for shuffle. The current
+  /// entry is identified by queue *position* (never by Song object
+  /// identity or ID), so duplicate entries survive intact.
+  @visibleForTesting
+  static List<Song> buildShuffledPlaybackOrder(
+      List<Song> queue, int currentIndex,
+      [Random? random]) {
+    if (queue.isEmpty) return <Song>[];
+    final currentIdx = currentIndex.clamp(0, queue.length - 1);
+    // Capture the current song BEFORE building the others list.
+    final currentSong = queue[currentIdx];
+    final others = <Song>[];
+    for (int i = 0; i < queue.length; i++) {
+      if (i != currentIdx) others.add(queue[i]);
+    }
+    others.shuffle(random);
+    return <Song>[currentSong, ...others];
+  }
+
+  /// Pure helper: reconcile the canonical (pre-shuffle) snapshot with the
+  /// live queue contents when shuffle is disabled. The snapshot is only
+  /// as-of the moment shuffle was enabled — songs may have been
+  /// added/removed/played since, and IDs may repeat — so a plain
+  /// snapshot restore would resurrect removed songs and drop added
+  /// ones. Instead reconcile by multiset:
+  ///  1. walk canonical order, keeping exactly as many copies of each
+  ///     ID as the live queue still contains (removals stay removed,
+  ///     canonical relative order and multiplicity preserved), then
+  ///  2. append surplus live entries (songs added while shuffling) in
+  ///     live order, so nothing the user added ever vanishes.
+  @visibleForTesting
+  static List<Song> restoreCanonicalOrder(
+      List<Song> canonical, List<Song> live) {
+    final need = <String, int>{};
+    for (final s in live) {
+      need[s.id] = (need[s.id] ?? 0) + 1;
+    }
+    final rebuilt = <Song>[];
+    for (final s in canonical) {
+      final remaining = need[s.id] ?? 0;
+      if (remaining > 0) {
+        rebuilt.add(s);
+        need[s.id] = remaining - 1;
+      }
+    }
+    for (final s in live) {
+      final remaining = need[s.id] ?? 0;
+      if (remaining > 0) {
+        rebuilt.add(s);
+        need[s.id] = remaining - 1;
+      }
+    }
+    return rebuilt;
+  }
+
   Future<void> toggleShuffle() async {
     _isShuffleEnabled = !_isShuffleEnabled;
     _invalidatePlaybackOperations();
@@ -433,18 +488,7 @@ class AudioPlayerService {
       // Save canonical order before first shuffle.
       _canonicalQueue = List<Song>.from(_queue);
       _canonicalIndex = _currentIndex;
-      // Shuffle at Noctra level — just_audio shuffle is meaningless
-      // without ConcatenatingAudioSource.
-      // Use index-based identity to avoid object identity issues.
-      final currentIdx = _currentIndex.clamp(0, _queue.length - 1);
-      // Capture the current song BEFORE clearing the queue.
-      final currentSong = _queue[currentIdx];
-      final others = <Song>[];
-      for (int i = 0; i < _queue.length; i++) {
-        if (i != currentIdx) others.add(_queue[i]);
-      }
-      others.shuffle();
-      final shuffled = <Song>[currentSong, ...others];
+      final shuffled = buildShuffledPlaybackOrder(_queue, _currentIndex);
       _mutateQueue(() {
         _queue
           ..clear()
@@ -453,19 +497,23 @@ class AudioPlayerService {
         return true;
       });
     } else if (!_isShuffleEnabled && _canonicalQueue != null) {
-      // Restore canonical order when shuffle is disabled.
-      final currentId = _queue.isNotEmpty
-          ? _queue[_currentIndex.clamp(0, _queue.length - 1)].id
-          : null;
+      final rebuilt =
+          restoreCanonicalOrder(_canonicalQueue!, List<Song>.from(_queue));
+      final currentId = _currentSong?.id;
       _mutateQueue(() {
-        _queue.clear();
-        _queue.addAll(_canonicalQueue!);
+        _queue
+          ..clear()
+          ..addAll(rebuilt);
         // Restore currentIndex to the currently playing song.
         if (currentId != null) {
           _currentIndex = _queue.indexWhere((s) => s.id == currentId);
-          if (_currentIndex == -1) _currentIndex = 0;
-        } else {
-          _currentIndex = _canonicalIndex.clamp(0, _queue.length - 1);
+        }
+        if (_currentIndex < 0 || _currentIndex >= _queue.length) {
+          // Queue can be empty if every song was removed while
+          // shuffled — keep index 0 as the empty-queue sentinel.
+          _currentIndex = _queue.isEmpty
+              ? 0
+              : _canonicalIndex.clamp(0, _queue.length - 1);
         }
         _canonicalQueue = null;
         return true;

@@ -281,6 +281,30 @@ def _stream_response(stream_url, headers):
         # Cap the proxy response to a sane upper bound to prevent a
         # misbehaving upstream from pinning a worker thread.
         max_proxy_bytes = 500 * 1024 * 1024  # 500 MB
+        upstream_content_length = upstream.headers.get('Content-Length')
+        # Whether to advertise Content-Length at all. If the upstream
+        # reports a size that is bigger than our proxy cap, we MUST
+        # not pass that header through: the client would expect
+        # `upstream_content_length` bytes, but the proxy will stop at
+        # `max_proxy_bytes`, leaving a truncated body with a lying
+        # Content-Length — the classic way browsers / just_audio
+        # misbehave on audio streams. When the upstream size is
+        # within our cap, we pass it through unchanged; otherwise
+        # we omit it and let the client treat the response as
+        # indeterminate-length chunked transfer.
+        advertise_length = False
+        if upstream_content_length:
+            try:
+                upstream_len_int = int(upstream_content_length)
+                if upstream_len_int <= max_proxy_bytes:
+                    advertise_length = True
+                else:
+                    logger.warning(
+                        "Upstream Content-Length %s exceeds proxy cap; "
+                        "omitting Content-Length header",
+                        upstream_content_length)
+            except (TypeError, ValueError):
+                advertise_length = False
 
         def generate():
             nonlocal_max_bytes = max_proxy_bytes
@@ -303,8 +327,8 @@ def _stream_response(stream_url, headers):
             'Accept-Ranges': 'bytes',
             'Access-Control-Allow-Origin': '*',
         }
-        if upstream.headers.get('Content-Length'):
-            resp_headers['Content-Length'] = upstream.headers['Content-Length']
+        if advertise_length:
+            resp_headers['Content-Length'] = upstream_content_length
         if upstream.headers.get('Content-Range'):
             resp_headers['Content-Range'] = upstream.headers['Content-Range']
 

@@ -80,11 +80,7 @@ class MMRDiversityFilter {
     return selected;
   }
 
-  static List<double> _embedding(Song song) {
-    final vector = song.featureVector;
-    return vector.length == TasteVectorEngine.vectorDimension &&
-            !vector.every((value) => value == 0.5)
-        ? vector
-        : TasteVectorEngine.extractSongEmbedding(song);
-  }
+  static List<double> _embedding(Song song) => song.hasUsableEmbedding
+      ? song.featureVector
+      : TasteVectorEngine.extractSongEmbedding(song);
 }

@@ -20,15 +20,30 @@ android {
             val ksPw = System.getenv("NOCTRA_KEYSTORE_PASSWORD")
             val keyPw = System.getenv("NOCTRA_KEY_PASSWORD")
             val keyAlias = System.getenv("NOCTRA_KEY_ALIAS") ?: "noctra"
-            if (ksPw.isNullOrBlank() || keyPw.isNullOrBlank()) {
-                throw GradleException(
-                    "Release signing requires NOCTRA_KEYSTORE_PASSWORD and NOCTRA_KEY_PASSWORD " +
-                    "environment variables. Set them in ~/.gradle/gradle.properties or CI secrets."
-                )
+            val releaseRequested = gradle.startParameter.taskNames.any { task ->
+                task.contains("Release", ignoreCase = true) ||
+                    task.contains("Bundle", ignoreCase = true)
             }
-            storePassword = ksPw
-            this.keyAlias = keyAlias
-            keyPassword = keyPw
+            if (ksPw.isNullOrBlank() || keyPw.isNullOrBlank()) {
+                if (releaseRequested) {
+                    // Fail fast ONLY when a release artifact was actually
+                    // requested — never block assembleDebug/assembleProfile
+                    // for developers without signing secrets.
+                    throw GradleException(
+                        "Release signing requires NOCTRA_KEYSTORE_PASSWORD and NOCTRA_KEY_PASSWORD " +
+                        "environment variables. Set them in ~/.gradle/gradle.properties or CI secrets."
+                    )
+                }
+                // Debug/profile builds don't use this config; leave the
+                // passwords empty so configuration never throws.
+                storePassword = ""
+                this.keyAlias = keyAlias
+                keyPassword = ""
+            } else {
+                storePassword = ksPw
+                this.keyAlias = keyAlias
+                keyPassword = keyPw
+            }
         }
     }
 

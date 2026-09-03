@@ -1,5 +1,17 @@
 """
-Noctra 16-Axis Neural Space, Knowledge Graph & Hybrid Dense RAG Engine
+Noctra 16-Axis Keyword Scoring, Knowledge Graph, and Re-Ranker.
+
+NOTE: This module does NOT contain a neural model or a vector store.
+The "16-axis" representation is a deterministic keyword-driven
+heuristic (see `generate_16axis_vector`) that produces a 16-d
+fingerprint from text via substring matching and an MD5
+perturbation. The "Hybrid Dense RAG" re-ranker combines a
+prompt-side cosine similarity (60%) with a user-taste similarity
+(40%); both similarities are computed on these keyword vectors, not
+on learned embeddings. The previous module name implied ML that
+does not exist on-device or in this process. The name is kept
+publicly for backward compatibility with the API contract; do not
+add features that rely on a real embedding model being present.
 """
 import hashlib
 import numpy as np
@@ -91,7 +103,14 @@ def query_knowledge_graph_context(seed_text):
     }
 
 def hybrid_dense_rag_rerank(query, candidate_tracks, user_taste_vector=None):
-    """RAG pipeline: Combines prompt dense vector similarity (60%) with user taste alignment (40%)."""
+    """Re-rank candidate tracks by keyword-vector similarity.
+
+    Combines a prompt-side similarity (60%) with a user-taste
+    similarity (40%) when a taste vector is supplied, otherwise
+    uses the prompt similarity alone. Both similarities are cosine
+    similarities on the deterministic 16-axis keyword vector; no
+    learned embeddings are involved.
+    """
     prompt_vector = generate_16axis_vector(query)
     ranked = []
 
