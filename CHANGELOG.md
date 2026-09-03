@@ -1,5 +1,39 @@
 # Changelog
 
+## v1.1.6 (2026-09-03)
+
+### 🏗️ Architecture & Modular Decomposition (Phase 17)
+- **Strict $\le$ 300 LOC Ceiling**: Fully decomposed all monolithic files across `lib/`, `test/`, and `android/app/src/main/` — zero source files exceed 300 lines of code.
+- **Rebuild Scope Isolation**: Extracted `LibrarySongRow` into an isolated consumer widget; playback stream changes now only rebuild the visible rows rather than recomputing the full master library merge.
+- **Decoupled Audio Playback Engine**: Segmented playback infrastructure into clean delegates (`PlayerCrossfadeEngine`, `PlayerSessionLoader`, `PlayerCrossfadeRamp`, `PlayerAutoplayManager`, and `PlayerPlaybackController`).
+- **Decoupled Neural Recommender Engine**: Separated feature extraction, model weights, and training routines (`NeuralFeatureBuilder`, `NeuralModelWeights`, `NeuralTrainingEngine`).
+- **Decoupled P2P SyncCast Suite**: Modularized host and client engines, packet codecs, rate limiting, and cryptographic handshake handlers.
+- **Decoupled Migration & Importer Pipeline**: Extracted modular importers (`SpotifyImporter`, `AppleMusicImporter`, `YouTubeMusicImporter`, `JioSaavnImporter`, `PlaylistFileImporters`) with chunked resilient database commits.
+- **Decoupled Native Android Layer**: Split `MainActivity.kt` and `NoctraAudioStemEngine.kt` into dedicated channel delegates for audio, installer, icon switcher, resolver, visualizer, and DSP processing.
+
+### 🎵 High-Fidelity Streaming & Resolver Security
+- **6-Tier Composite Stream Resolver**: Resilient hierarchical resolution pipeline (`Local Cache` $\rightarrow$ `Direct Stream` $\rightarrow$ `JioSaavn 320k` $\rightarrow$ `Native Kotlin` $\rightarrow$ `InnerTube REST` $\rightarrow$ `YouTube Web Search`).
+- **Resolver Security Hardening**: Strict host whitelisting, SSRF protection, untrusted redirect refusal, and mandatory HTTPS validation on remote audio endpoints.
+- **Granular Quality & Codec Control**: Re-architected `StreamQualitySheet` with dedicated option selectors for bitrate tiers (64k to Lossless), audio processing toggles (volume normalization & gapless playback), and real-time file size estimation.
+
+### 📜 Multi-Script Lyrics & Poetic Translation
+- **Modular Transliteration Engines**: Segmented transliteration mapping tables and phonetic rules for Devanagari, Brahmic Indic scripts, and international scripts (Japanese, Korean, Chinese, Cyrillic, Arabic, Greek, Thai, Hebrew).
+- **Poetic Semantic Translator**: Integrated 3-layer translation lexicon with runtime word learning and Hindustani lyrical terms glossary.
+
+### 🎨 Noir Design System & Theme Engine
+- **Triple Theme Harmony**: Precision-tuned **Noir Black** (obsidian glass), **Noir White** (minimal editorial), and **Liquid Glass** (sapphire blur glassmorphism). Confirmed complete deprecation of AMOLED in favor of true Noir branding.
+- **Dynamic Launcher Icon Synchronization**: Seamlessly switches the Android launcher icon in background lifecycle events to reflect the active theme.
+
+### 🌐 Internationalization & App Shell
+- **Comprehensive 8-Language Localization**: Full native coverage across English, Hindi, Punjabi, Urdu, Kannada, Tamil, Marathi, and Odia.
+- **Modular App Shell**: Decomposed `main.dart` into `MainNavigationShell` and `CustomBottomNavBar` with smooth animated tab transitions and drawer navigation.
+
+### ✅ Test Suite & Verification
+- **576/576 Tests Passing**: Expanded test suite covering model validation, stream security, audio crossfade, P2P networking, migration parsing, and rebuild scope isolation.
+- **Zero Static Analysis Warnings**: Clean `flutter analyze` run across all Dart code.
+
+---
+
 ## v1.1.5 (2026-09-01)
 
 ### 🎵 Audio & Playback
@@ -11,7 +45,7 @@
 
 ### 🎨 Dynamic Launcher Icon
 - Proper activity-alias system with `.default` alias owning the LAUNCHER entry
-- Theme-aware launcher icons: Noir Black, Noir White, AMOLED, Liquid Glass
+- Theme-aware launcher icons: Noir Black, Noir White, Liquid Glass
 - Deferred icon swap — applies when app goes to background to avoid process kill
 - `WidgetsBindingObserver` integration for lifecycle-aware icon updates
 
@@ -39,11 +73,10 @@
 ### 🐛 Bug Fixes
 - Fixed Python syntax error in `backend/routes/api_routes.py`
 - Fixed line length violations in test files
-- Fixed widget test for updated localization (Spanish/French → Punjabi/Kannada)
+- Fixed widget test for updated localization
 - Removed unused imports across codebase
 - Fixed `deprecated_member_use` for `onReorder` in queue sheet
 
 ### ✅ Quality
 - 320/320 tests passing
 - 0 flutter analyze issues
-- Comprehensive test coverage for search, resolver, lyrics, and neural engine

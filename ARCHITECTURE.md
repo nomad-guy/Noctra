@@ -1,28 +1,28 @@
 # Noctra Architecture & Technical Documentation
 
-> **Noctra** is an authentication-less, privacy-first, on-device agentic music player built with Flutter, Dart, Riverpod, and a lightweight Python sidecar. It features an on-device 16-Axis Neural Knowledge Graph, compact vector embeddings, adaptive smart queueing, zero-key metadata enrichment, and multi-source streaming (JioSaavn 320kbps CD lossless and YouTube Music Opus/AAC).
+> **Noctra** is an authentication-less, privacy-first, on-device agentic music player built with Flutter, Dart, Riverpod, and native Android Kotlin DSP delegates. It features an on-device 120-Dimension Neural Knowledge Graph, compact vector embeddings, adaptive smart queueing, zero-key metadata enrichment, 6-tier composite stream resolution (JioSaavn 320kbps CD lossless and YouTube Music Opus/AAC), and a strict $\le$ 300 LOC modular architectural design.
 
 ---
 
-## 1. System Overview
+## 1. System Architectural Overview
 
 ```text
 +-------------------------------------------------------------+
 |                           FLUTTER                           |
-|                 Dart + Flutter Riverpod                     |
+|                 Dart 3 + Flutter Riverpod                   |
 +-------------------------------------------------------------+
-| UI Layer (Material 3 + Liquid Glassmorphic Noir)            |
-| - Noir Design System (Noir White / Noir Black)              |
+| UI LAYER (Material 3 + Triple Noir Aesthetic)               |
+| - Noir Design System (Noir Black / Noir White / Liquid Glass) |
 | - Home Screen (Spotify-Style Flow, Trending, Made For You)  |
 | - Search & Multi-Source Explorer (YouTube + JioSaavn)       |
 | - Library (Songs, Albums, Artists, Folders)                 |
-| - AI Studio (16-Axis Vibe Prompts, Similarity Radio)        |
+| - AI Studio (120-dim Vibe Prompts, Similarity Radio)        |
 | - Adaptive Player & Smart Queue (Synthwave & Spectrum Bars) |
 | - P2P SyncCast (Local WebSocket Hotspot Party Mode)         |
 +-------------------------------------------------------------+
-| LOCAL STORAGE & KNOWLEDGE GRAPH (Drift / SQLite)            |
+| LOCAL STORAGE & KNOWLEDGE GRAPH (SQLite Engine)             |
 | - songs, artists, albums, playlists, history                |
-| - user_preferences & user_taste_vector                      |
+| - user_preferences & user_taste_vector (120 dimensions)     |
 | - graph_nodes & graph_edges (PERFORMED, HAS_MOOD, etc.)     |
 | - metadata_cache (LRCLIB, Cover Art & Tag Cache)            |
 +-------------------------------------------------------------+
@@ -32,80 +32,98 @@
 | - 3. JioSaavn 500x500 Uncompressed Artwork Pipeline         |
 | - 4. Persistent Local SQLite Artwork & Tag Cache            |
 +-------------------------------------------------------------+
-| PYTHON SIDECAR (yt-dlp & ML Intelligence Engine)            |
-| - JioSaavn Direct DES 320kbps Audio Decrypter               |
-| - yt-dlp Audio Stream Resolver (Android Client)             |
-| - Chunked Stream Proxy with HTTP Range Header Support       |
-| - 16-Axis Text Vectorizer & Hybrid Dense RAG Reranker       |
+| STREAM RESOLUTION PIPELINE (6-Tier Composite Resolver)      |
+| - Tier 1: Local Disk Vault Cache                            |
+| - Tier 2: Direct Validated HTTPS Stream                     |
+| - Tier 3: JioSaavn Direct 320kbps CD Decryption             |
+| - Tier 4: Native Android Kotlin Audio Resolver              |
+| - Tier 5: YouTube Music InnerTube REST Direct Extractor     |
+| - Tier 6: YouTube Web Search Fallback Resolver              |
 +-------------------------------------------------------------+
-| ON-DEVICE MUSIC INTELLIGENCE ENGINE                         |
-| - Knowledge Graph Recommender & Co-occurrence Traversal     |
-| - Incremental Taste Profile (Reward on Complete/Replay)     |
-| - Adaptive Queue Agent (Skip detection & energy shift)      |
-| - Transparent "Why This?" Explanation Engine                |
+| ON-DEVICE NEURAL INTELLIGENCE ENGINE                        |
+| - 120-Dimensional Vector Space (Acoustic + Context)         |
+| - 4-Layer Tiny MLP Ranker (120 -> 64 -> 32 -> 16 -> 1)      |
+| - Maximal Marginal Relevance (MMR) Diversity Reranker       |
+| - Online Reinforcement Learning (Reward Shaping Engine)     |
 +-------------------------------------------------------------+
-| PLAYBACK & PLATFORM INTEGRATION                             |
-| - Android Media3 / ExoPlayer (just_audio + service)         |
+| PLAYBACK & NATIVE PLATFORM INTEGRATION                      |
+| - Android Media3 / ExoPlayer (just_audio + background)      |
+| - Hardware-Accelerated Kotlin DSP Equalizer & Effects       |
 | - System Notifications, Lock Screen & Audio Focus           |
 +-------------------------------------------------------------+
 ```
 
 ---
 
-## 2. Multi-Source Streaming & Stream Resolution
+## 2. Strict Modular Architecture ($\le$ 300 LOC Limit)
 
-### JioSaavn Direct 320kbps Stream Decryption
-- Uses Triple-DES ECB decryption on the `encrypted_media_url` payload returned by JioSaavn's internal catalog.
-- Replaces bitrate tags with `_320.mp4` / `_320.m4a` to stream full 320kbps CD-quality audio directly from `aac.saavncdn.com`.
-- Cached in-memory with a 300-second TTL to minimize repeated requests.
+Every source file in Noctra is bounded to $\le$ 300 lines of code. Monolithic files have been decomposed into dedicated delegates:
 
-### YouTube Audio Android Client Extraction
-- Uses `yt-dlp` configured with the `android` player client to avoid SABR-related 403 authorization errors.
-- Extracted streams are proxied via Flask (`/api/proxy_stream`) supporting HTTP `Range` requests, enabling precise player seeking without downloading entire tracks upfront.
+### Playback Infrastructure
+- `PlayerCrossfadeEngine`: Orchestrates dual-player crossfading.
+- `PlayerSessionLoader`: Handles session loading and pre-buffering.
+- `PlayerCrossfadeRamp`: Computes exponential/logarithmic volume ramps.
+- `PlayerAutoplayManager`: Algorithmic queue population when playback finishes.
+- `PlayerPlaybackController`: Exposes high-level playback actions.
 
----
+### Native Android Architecture
+- `AudioChannelsDelegate`: ExoPlayer lifecycle and native channel bridge.
+- `ResolverChannelDelegate`: Native audio stream resolution.
+- `VisualizerChannelDelegate`: Hardware audio visualizer FFT data streaming.
+- `LauncherIconChannelDelegate`: Theme-synchronized launcher activity-alias switching.
+- `InstallerChannelDelegate`: Self-updating APK verification and installation.
+- `StemDspHelper`: Hardware digital signal processing filters.
 
-## 3. On-Device 16-Axis Acoustic Intelligence
-
-### Vector Space Dimensions
-The recommendation model operates across 16 acoustic dimensions:
-1. `Dark Tone`
-2. `Ambient Depth`
-3. `Energy`
-4. `Chill Factor`
-5. `Melancholy`
-6. `Acoustic Warmth`
-7. `Electronic`
-8. `Vocal Presence`
-9. `Harmonic Density`
-10. `Analog Synth`
-11. `Night Drive`
-12. `Cognitive Focus`
-13. `Uplift`
-14. `Sub-Bass Weight`
-15. `Rhythm Tempo`
-16. `Instrumental`
-
-### Scoring & Matching Logic
-- **Cosine Similarity**: Vector dot products normalize similarity scores between candidate tracks and the user's active taste vector.
-- **Match Score**: Scaled to `75% - 99%` for human-readable affinity ratings.
-- **Incremental Feedback**:
-  - `PLAY / COMPLETE / REPLAY`: Increases weights of matching acoustic dimensions.
-  - `QUICK SKIP`: Decreases weights of active dimensions.
+### Rebuild Scope Isolation
+- `LibrarySongRow`: Dedicated consumer widget isolating playback stream subscriptions per visible row. Eliminates full-tab rebuilds during playback ticks.
 
 ---
 
-## 4. Frame-Accurate Synced Lyrics Engine
+## 3. 6-Tier Composite Stream Resolution
 
-- **Tier 1**: Local Python sidecar exact query with duration filtering.
-- **Tier 2**: Direct LRCLIB exact matching (`track_name`, `artist_name`, `duration`).
-- **Tier 3**: Direct LRCLIB fuzzy search with duration proximity sorting (+/- 15 seconds).
-- **Tier 4**: JioSaavn plain lyrics fallback.
+```text
+Incoming Song Request
+       |
+       v
+[Local Disk Cache?] ---> YES ---> Play Local File
+       |
+       NO
+       v
+[Direct Stream Valid?] -> YES -> Play Direct Stream
+       |
+       NO
+       v
+[JioSaavn 320k Match?] -> YES -> Decrypt & Play 320k Stream
+       |
+       NO
+       v
+[Native Kotlin Extractor] -> YES -> Play Native Stream
+       |
+       NO
+       v
+[InnerTube REST JSON] ---> YES ---> Play Opus/AAC Stream
+       |
+       NO
+       v
+[YouTube Web Search Fallback] -> YES -> Play Search Stream
+       |
+       NO
+       v
+Throw ResolutionException (Graceful User Alert)
+```
 
 ---
 
-## 5. Local P2P SyncCast (Party Mode)
+## 4. Multi-Script Indic & World Lyrics Engine
 
-- **Local Discovery**: Operates over local Wi-Fi or mobile hotspots using WebSockets.
-- **Clock Synchronization**: Synchronizes playback position and state between Host and Client devices without an external cloud mediator.
-- **Shared Queue**: Broadcasts track queue and metadata in real time.
+- **Sanscript Brahmic Matrix Engine**: Offline, zero-latency pure Dart transliteration across Devanagari, Gurmukhi, Bengali, Gujarati, Telugu, Tamil, Kannada, Malayalam, and Odia.
+- **International Script Transliteration**: Japanese (Romaji), Korean (Hangul $\rightarrow$ Roman), Chinese (Hanzi $\rightarrow$ Pinyin), Cyrillic, Arabic, Greek, Thai, and Hebrew.
+- **Dynamic Semantic Translation**: 3-layer lexicon with runtime learning, schwa-deletion heuristics, and poetic Hindustani glossary.
+
+---
+
+## 5. Security Architecture
+
+- **Host Whitelisting**: Connections strictly restricted to verified audio CDN domains.
+- **Anti-SSRF Protection**: Rejects all private IP ranges, loopback (`127.0.0.1`, `localhost`), link-local, and non-HTTPS URLs.
+- **Hop-by-Hop Redirect Validation**: Follows HTTP redirects only after independently validating the target host against the security whitelist.
