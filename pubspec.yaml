@@ -35,5 +35,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/
-    - assets/images/
+    - assets/images/logo_noctra_noir_black.png
+    - assets/images/logo_noctra_noir_white.png
+    - assets/images/logo_noctra_liquid_glass.png
+    - assets/images/liquid_glass_shard.png

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -125,7 +126,13 @@ class NoctraLocalDatabase {
           prefs.getString('noctra_custom_folders'), prefs));
       _cachedTasteVector =
           _safeDecodeTasteVector(prefs.getString('noctra_taste_vector'), prefs);
-      _cachedThemeMode = prefs.getString('noctra_theme_mode') ?? 'noirBlack';
+      final savedTheme = prefs.getString('noctra_theme_mode') ?? 'noirBlack';
+      if (savedTheme == 'amoled' || savedTheme == 'noirAmoled') {
+        _cachedThemeMode = 'noirBlack';
+        unawaited(prefs.setString('noctra_theme_mode', 'noirBlack'));
+      } else {
+        _cachedThemeMode = savedTheme;
+      }
 
       final kgStr = prefs.getString('noctra_kg_manifests');
       if (kgStr != null) {

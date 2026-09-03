@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:io';
 import 'dart:math';
 import 'package:crypto/crypto.dart' as crypto;
@@ -91,6 +92,20 @@ class AppUpdateService {
   /// Mutable only so tests can exercise both modes; production ships
   /// with the owner's chosen value.
   static String pinnedSignerSha256 = '';
+
+  /// Returns the current device ABI identifier ('arm64-v8a', 'armeabi-v7a',
+  /// 'x86_64', or 'universal' on Web / unknown architecture).
+  static String get currentDeviceAbi {
+    if (kIsWeb) return 'universal';
+    try {
+      final abi = Abi.current();
+      if (abi == Abi.androidArm64) return 'arm64-v8a';
+      if (abi == Abi.androidArm) return 'armeabi-v7a';
+      if (abi == Abi.androidX64) return 'x86_64';
+    } catch (_) {}
+    return 'universal';
+  }
+
   static const notifyChannel =
       MethodChannel('com.nomadguy.noctra/update_notify');
   static const _signingCertChannel =
@@ -184,30 +199,70 @@ class AppUpdateService {
         final notes = (data['body'] as String?) ??
             'Performance optimizations and stability improvements.';
 
-        // Look for Universal APK asset first
+        // Select optimal APK asset: prefer device architecture (e.g. arm64-v8a: ~23.9MB vs universal: ~62MB)
+        // Fall back to universal APK if no ABI-specific asset is published.
         String downloadUrl = fallbackDownloadUrl;
         String? expectedSha;
         String? matchedAssetName;
         final assets = data['assets'] as List?;
         if (assets != null) {
-          for (final asset in assets) {
-            final name = (asset['name'] as String? ?? '').toLowerCase();
-            if (name.contains('universal') && name.endsWith('.apk')) {
-              downloadUrl =
-                  asset['browser_download_url'] as String? ?? downloadUrl;
-              matchedAssetName = name;
-              // GitHub v3 release assets do not expose a top-level digest
-              // field. The release body or release notes usually pin the
-              // SHA-256; we surface whatever the publisher included so
-              // the in-app installer can refuse a mismatched download.
-              final digest =
-                  asset['digest'] as String?; // e.g. "sha256:abc123..."
-              if (digest != null && digest.startsWith('sha256:')) {
-                expectedSha = digest.substring(7);
+          final targetAbi = currentDeviceAbi;
+          Map<String, dynamic>? selectedAsset;
+
+          // 1. First priority: device ABI matching asset (e.g. 'arm64-v8a' or 'arm64')
+          if (targetAbi != 'universal') {
+            for (final a in assets) {
+              if (a is Map) {
+                final name = (a['name'] as String? ?? '').toLowerCase();
+                if (name.endsWith('.apk') &&
+                    (name.contains(targetAbi) ||
+                        (targetAbi == 'arm64-v8a' && (name.contains('arm64') || name.contains('arm64-v8a'))) ||
+                        (targetAbi == 'armeabi-v7a' && (name.contains('armeabi') || name.contains('armv7'))) ||
+                        (targetAbi == 'x86_64' && name.contains('x86_64')))) {
+                  selectedAsset = Map<String, dynamic>.from(a);
+                  break;
+                }
               }
-              break;
             }
           }
+
+          // 2. Second priority: universal APK
+          if (selectedAsset == null) {
+            for (final a in assets) {
+              if (a is Map) {
+                final name = (a['name'] as String? ?? '').toLowerCase();
+                if (name.contains('universal') && name.endsWith('.apk')) {
+                  selectedAsset = Map<String, dynamic>.from(a);
+                  break;
+                }
+              }
+            }
+          }
+
+          // 3. Third priority: any standalone .apk
+          if (selectedAsset == null) {
+            for (final a in assets) {
+              if (a is Map) {
+                final name = (a['name'] as String? ?? '').toLowerCase();
+                if (name.endsWith('.apk')) {
+                  selectedAsset = Map<String, dynamic>.from(a);
+                  break;
+                }
+              }
+            }
+          }
+
+          if (selectedAsset != null) {
+            downloadUrl =
+                selectedAsset['browser_download_url'] as String? ?? downloadUrl;
+            matchedAssetName =
+                (selectedAsset['name'] as String? ?? '').toLowerCase();
+            final digest = selectedAsset['digest'] as String?;
+            if (digest != null && digest.startsWith('sha256:')) {
+              expectedSha = digest.substring(7);
+            }
+          }
+
           // Fall back: search the release body for the SHA-256 that is
           // EXPLICITLY associated with this APK's filename. A bare
           // "first sha256 found" match is ambiguous when a release ships
@@ -566,11 +621,30 @@ class AppUpdateService {
     // Note: inline (?i) flags are unsupported by the Dart VM RegExp used
     // here, so the haystack is lower-cased before matching.
     final hashRe = RegExp(r'(?:sha256[:=]?\s*)?\b([a-f0-9]{64})\b');
-    for (final rawLine in notes.split(RegExp(r'[\r\n]+'))) {
+    final lines = notes.split(RegExp(r'[\r\n]+'));
+    String? currentContextFile;
+
+    for (final rawLine in lines) {
       final line = rawLine.toLowerCase();
+      // Track current artifact context when a line introduces an .apk filename
+      if (line.contains('.apk')) {
+        currentContextFile = line;
+      }
+
       for (final m in hashRe.allMatches(line)) {
         final hash = m.group(1)!;
-        (line.contains(wanted) ? named : anonymous).add(hash);
+        final isLineMatched = line.contains(wanted);
+        final isContextMatched =
+            currentContextFile != null && currentContextFile.contains(wanted);
+
+        if (isLineMatched || isContextMatched) {
+          named.add(hash);
+        } else if (line.contains('.apk') ||
+            (currentContextFile != null && currentContextFile.contains('.apk'))) {
+          // This hash is associated with another named artifact, not an orphan.
+        } else {
+          anonymous.add(hash);
+        }
       }
     }
     if (named.length == 1) return named.single;
