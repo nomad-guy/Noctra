@@ -248,14 +248,69 @@ object NoctraAudioStemEngine {
         }
     }
 
+    /**
+     * Inverse FFT. The forward transform above uses angle = -2π/N,
+     * so the inverse uses +2π/N and divides by N on output. Without
+     * this routine the masker was calling `fft()` on a masked
+     * spectrum and writing the *forward* transform of the masked
+     * spectrum back into the time domain — which is not a valid
+     * reconstruction and produced garbage audio.
+     */
+    private fun ifft(buffer: DoubleArray, n: Int) {
+        if (n <= 1) return
+        var j = 0
+        for (i in 1 until n) {
+            var bit = n shr 1
+            while (j and bit != 0) { j = j xor bit; bit = bit shr 1 }
+            j = j xor bit
+            if (i < j) {
+                var tmp = buffer[i * 2]; buffer[i * 2] = buffer[j * 2]; buffer[j * 2] = tmp
+                tmp = buffer[i * 2 + 1]; buffer[i * 2 + 1] = buffer[j * 2 + 1]; buffer[j * 2 + 1] = tmp
+            }
+        }
+        var len = 2
+        while (len <= n) {
+            val halfLen = len / 2
+            val angle = 2.0 * Math.PI / len // conjugate of forward angle
+            val wRe = cos(angle)
+            val wIm = sin(angle)
+            var i = 0
+            while (i < n) {
+                var curRe = 1.0; var curIm = 0.0
+                for (k in 0 until halfLen) {
+                    val tRe = curRe * buffer[(i + k + halfLen) * 2] - curIm * buffer[(i + k + halfLen) * 2 + 1]
+                    val tIm = curRe * buffer[(i + k + halfLen) * 2 + 1] + curIm * buffer[(i + k + halfLen) * 2]
+                    val evenRe = buffer[(i + k) * 2]; val evenIm = buffer[(i + k) * 2 + 1]
+                    buffer[(i + k) * 2] = evenRe + tRe; buffer[(i + k) * 2 + 1] = evenIm + tIm
+                    buffer[(i + k + halfLen) * 2] = evenRe - tRe; buffer[(i + k + halfLen) * 2 + 1] = evenIm - tIm
+                    val newCurRe = curRe * wRe - curIm * wIm; curIm = curRe * wIm + curIm * wRe; curRe = newCurRe
+                }
+                i += len
+            }
+            len = len shl 1
+        }
+        // Normalise by 1/N for the inverse.
+        for (i in 0 until n) {
+            buffer[i * 2] /= n
+            buffer[i * 2 + 1] /= n
+        }
+    }
+
     private fun applyMaskAndWrite(fftBuffer: DoubleArray, mask: BooleanArray, output: ShortArray, startSample: Int, channels: Int, frameSize: Int) {
+        // Build the masked spectrum, then transform it BACK to the
+        // time domain with the real inverse. The previous version
+        // called the forward FFT here, which produced the DFT of a
+        // zero-padded masked spectrum — not a meaningful audio
+        // signal. With a proper IFFT and a 1/N normaliser (inside
+        // ifft), the sum of all masks on the original buffer
+        // reconstructs the input on the unmasked band.
         val masked = DoubleArray(frameSize * 2)
         for (k in 0 until frameSize) {
             if (mask[k]) { masked[k * 2] = fftBuffer[k * 2]; masked[k * 2 + 1] = fftBuffer[k * 2 + 1] }
         }
-        fft(masked, frameSize)
+        ifft(masked, frameSize)
         for (i in 0 until frameSize) {
-            val sample = (masked[i * 2] / frameSize * Short.MAX_VALUE).coerceIn(Short.MIN_VALUE.toDouble(), Short.MAX_VALUE.toDouble()).toInt().toShort()
+            val sample = (masked[i * 2] * Short.MAX_VALUE).coerceIn(Short.MIN_VALUE.toDouble(), Short.MAX_VALUE.toDouble()).toInt().toShort()
             for (ch in 0 until channels) {
                 val idx = (startSample + i * channels + ch).coerceIn(0, output.size - 1)
                 output[idx] = sample

@@ -33,8 +33,13 @@ class StemSeparationResult {
   });
 }
 
-/// On-device audio stem separation using Android native ML pipeline.
-/// Separates audio into vocals, drums, bass, and other instrumentals.
+/// On-device audio stem separation. The Android backend uses a
+/// spectral-band splitter (FFT → frequency-band mask → IFFT) and
+/// is NOT a neural model. Vocals / drums / bass / other are
+/// produced by isolating fixed frequency bands of the input.
+/// The interface and naming are kept for backward compatibility
+/// with the rest of the app, but the engine is a DSP band
+/// splitter, not a learned model.
 class AudioStemSeparationService {
   static final AudioStemSeparationService _instance =
       AudioStemSeparationService._internal();
@@ -89,8 +94,7 @@ class AudioStemSeparationService {
       // Check for cached results
       final cachedResult = _checkCache(stemsDir);
       if (cachedResult != null) {
-        NoctraLogger.d(
-            'Stem separation cache hit for song $songId');
+        NoctraLogger.d('Stem separation cache hit for song $songId');
         _isProcessing = false;
         return cachedResult;
       }
@@ -114,7 +118,7 @@ class AudioStemSeparationService {
       _progressController.add(StemSeparationProgress(
         stage: 'separating',
         progress: 0.2,
-        message: 'Running neural stem separation...',
+        message: 'Running spectral band split...',
       ));
 
       final Map<dynamic, dynamic>? result =
@@ -148,8 +152,7 @@ class AudioStemSeparationService {
             name: entry.key,
             displayName: entry.value,
             audioFile: file,
-            durationSeconds:
-                (result['duration'] as num?)?.toDouble() ?? 0.0,
+            durationSeconds: (result['duration'] as num?)?.toDouble() ?? 0.0,
           ));
         }
       }
@@ -262,7 +265,8 @@ class AudioStemSeparationService {
 
 /// Progress tracking for stem separation.
 class StemSeparationProgress {
-  final String stage; // 'preparing', 'downloading', 'separating', 'complete', 'error'
+  final String
+      stage; // 'preparing', 'downloading', 'separating', 'complete', 'error'
   final double progress; // 0.0 to 1.0
   final String message;
 
