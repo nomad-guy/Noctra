@@ -368,6 +368,7 @@ mixin PlayerCrossfadeMixin on AudioPlayerServiceBase {
     _player = nextPlayer;
     await _attachListeners();
     await _disposePlayer(oldPlayer);
+    await applyStudioMasterMode(_studioMasterMode);
 
     _currentIndex = newIndex;
     _currentSong = nextSong;

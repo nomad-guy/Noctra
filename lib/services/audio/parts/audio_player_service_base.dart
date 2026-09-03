@@ -44,10 +44,14 @@ abstract class AudioPlayerServiceBase {
 
   // ─── [02] Serialization (state lock + async work) ──────────────────────
 
+  bool _isDisposed = false;
+
   /// Serialized operation chain for playback operations.
   Future<void> _opChain = Future.value();
   Future<void> _serialize(Future<void> Function() operation) {
+    if (_isDisposed) return Future.value();
     final next = _opChain.then((_) async {
+      if (_isDisposed) return;
       try {
         await operation();
       } catch (e, st) {
@@ -138,6 +142,8 @@ abstract class AudioPlayerServiceBase {
   void _playNonBlocking(AudioPlayer p, String context);
   void _mutateQueue(bool Function() mutate);
   void _reconcileIndex();
+  Future<void> playSong(Song song,
+      {List<Song>? newQueue, Duration? initialPosition});
   Future<void> _playSongInternal(Song song, {Duration? initialPosition});
   Future<void> _crossfadeToNext(Song nextSong, int myId);
   Future<void> _onSongCompletedInternal();

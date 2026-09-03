@@ -73,13 +73,14 @@ mixin PlayerQueueMixin on AudioPlayerServiceBase {
       // (the old next entry), else stop cleanly.
       if (_queue.isNotEmpty) {
         _currentIndex = index.clamp(0, _queue.length - 1);
-        _playSongInternal(_queue[_currentIndex]);
+        playSong(_queue[_currentIndex]);
       } else {
         _currentIndex = 0;
         _currentSong = null;
         if (!_currentSongController.isClosed) {
           _currentSongController.add(null);
         }
+        unawaited(_player.stop().catchError((_) {}));
       }
     } else {
       // Removing an entry before the current one shifts the current

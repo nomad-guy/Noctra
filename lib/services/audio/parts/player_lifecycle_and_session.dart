@@ -32,7 +32,9 @@ mixin PlayerLifecycleMixin on AudioPlayerServiceBase {
 
   @override
   Future<void> _attachListeners() async {
+    if (_isDisposed) return;
     await _detachListeners();
+    if (_isDisposed) return;
     final gen = _listenerGeneration;
     final attachedPlayer = _player;
 
@@ -224,6 +226,7 @@ mixin PlayerLifecycleMixin on AudioPlayerServiceBase {
   // ─── [27] Disposal ─────────────────────────────────────────────────────
 
   void dispose() {
+    _isDisposed = true;
     _sleepTimer?.cancel();
     _detachListeners();
     _player.dispose();

@@ -116,48 +116,57 @@ mixin PlayerEffectsMixin on AudioPlayerServiceBase {
 
   // ─── [10] Sleep timer ───────────────────────────────────────────────────
 
+  void cancelSleepTimer() => setSleepTimer(0);
+
   void setSleepTimer(int minutes) {
-    cancelSleepTimer();
+    _sleepTimer?.cancel();
+    _sleepFadeId++;
+    _volumeEpoch++;
+    _autoplayDelayGeneration++; // Cancel any pending autoplay delay
+
+    if (minutes <= 0) {
+      _sleepTimerRemainingMinutes = null;
+      _emitSettings();
+      return;
+    }
     _sleepTimerRemainingMinutes = minutes;
     _emitSettings();
-
-    _sleepTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
-      if (_sleepTimerRemainingMinutes == null ||
-          _sleepTimerRemainingMinutes! <= 1) {
-        timer.cancel();
-        _sleepTimerRemainingMinutes = null;
-        _emitSettings();
-        const fadeDurationMs = 5000;
-        final fadeId = ++_sleepFadeId;
-        _runSleepFade(fadeDurationMs, fadeId);
-      } else {
+    _sleepTimer = Timer.periodic(const Duration(minutes: 1), (t) {
+      if (_sleepTimerRemainingMinutes != null &&
+          _sleepTimerRemainingMinutes! > 1) {
         _sleepTimerRemainingMinutes = _sleepTimerRemainingMinutes! - 1;
         _emitSettings();
+      } else {
+        t.cancel();
+        _sleepTimerRemainingMinutes = null;
+        _emitSettings();
+        _enqueue(() => _runSleepFade());
       }
     });
   }
 
-  void cancelSleepTimer() {
-    _sleepTimer?.cancel();
-    _sleepTimer = null;
-    _sleepTimerRemainingMinutes = null;
-    _sleepFadeId++;
-    _emitSettings();
-  }
-
-  Future<void> _runSleepFade(int durationMs, int fadeId) async {
+  Future<void> _runSleepFade() async {
+    final p = _player;
+    final originalVolume = p.volume;
+    final vEpoch = ++_volumeEpoch;
+    final fadeId = _sleepFadeId;
     try {
-      const steps = 20;
-      final stepDelay = Duration(milliseconds: durationMs ~/ steps);
-      final initialVol = _targetVolume;
-      for (var i = steps - 1; i >= 0; i--) {
-        if (_sleepFadeId != fadeId) return;
-        await _player.setVolume(initialVol * (i / steps));
-        await Future.delayed(stepDelay);
+      const steps = 10;
+      for (int i = steps; i >= 0; i--) {
+        if (_sleepFadeId != fadeId ||
+            _volumeEpoch != vEpoch ||
+            !identical(p, _player)) {
+          return;
+        }
+        final t = i / steps;
+        await p.setVolume(t * t * originalVolume);
+        await Future.delayed(const Duration(milliseconds: 100));
       }
-      if (_sleepFadeId == fadeId) {
-        await _player.pause();
-        await _player.setVolume(initialVol);
+      if (_sleepFadeId == fadeId &&
+          _volumeEpoch == vEpoch &&
+          identical(p, _player)) {
+        await p.pause();
+        await p.setVolume(originalVolume);
       }
     } catch (e) {
       NoctraLogger.w('Sleep fade failed', e);

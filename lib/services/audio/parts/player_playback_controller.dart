@@ -81,6 +81,7 @@ mixin PlayerPlaybackMixin on AudioPlayerServiceBase {
 
   // ─── [22] Public playback API ──────────────────────────────────────────
 
+  @override
   Future<void> playSong(Song song,
       {List<Song>? newQueue, Duration? initialPosition}) {
     return _serialize(() => _playSongInternal(song,
@@ -138,6 +139,7 @@ mixin PlayerPlaybackMixin on AudioPlayerServiceBase {
   void pause() {
     _invalidatePlaybackOperations();
     _transitionEpoch++;
+    _playSessionEpoch++;
     unawaited(_player.pause().catchError((e) {
       NoctraLogger.w('pause failed', e);
     }));
@@ -153,6 +155,7 @@ mixin PlayerPlaybackMixin on AudioPlayerServiceBase {
   Future<void> stopAndDismiss() => _serialize(() async {
         _invalidatePlaybackOperations();
         _transitionEpoch++;
+        _playSessionEpoch++;
         try {
           await _player.stop();
         } catch (_) {}
@@ -318,7 +321,7 @@ mixin PlayerPlaybackMixin on AudioPlayerServiceBase {
         if (_isFadeEnabled) {
           await _player.setVolume(0.0);
           _playNonBlocking(_player, 'playSong');
-          await (this as dynamic)._fadeIn();
+          await _fadeIn();
         } else {
           await _player.setVolume(_targetVolume);
           _playNonBlocking(_player, 'playSong');
