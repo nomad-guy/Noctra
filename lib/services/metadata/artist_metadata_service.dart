@@ -256,6 +256,12 @@ class ArtistMetadataService {
     }
 
     final list = discovered.take(6).toList();
+    // Bound the similar-artist cache exactly like the main metadata cache:
+    // an unbounded Map keyed by every artist the user browses would grow
+    // without limit over a session.
+    if (_similarCache.length >= _maxCacheEntries) {
+      _similarCache.remove(_similarCache.keys.first);
+    }
     _similarCache[key] = list;
     return list;
   }

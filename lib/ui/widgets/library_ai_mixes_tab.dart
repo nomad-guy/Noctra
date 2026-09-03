@@ -93,6 +93,7 @@ class _LibraryAIMixesTabState extends ConsumerState<LibraryAIMixesTab> {
                           borderRadius: BorderRadius.circular(14),
                           child: Stack(children: [
                             Image.network(pl.artworkUrl, width: 130, height: 108, fit: BoxFit.cover,
+                              cacheWidth: 260, cacheHeight: 216,
                               errorBuilder: (c, e, st) => Container(width: 130, height: 108,
                                 color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFE5E5E5),
                                 child: Icon(Icons.album_rounded, size: 36, color: isDark ? Colors.white24 : Colors.black.withValues(alpha: 0.24)))),

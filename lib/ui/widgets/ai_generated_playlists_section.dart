@@ -83,6 +83,8 @@ class AIGeneratedPlaylistsSection extends ConsumerWidget {
                                     width: 136,
                                     height: 110,
                                     fit: BoxFit.cover,
+                                    cacheWidth: 280,
+                                    cacheHeight: 220,
                                     errorBuilder: (context, error, stackTrace) => Container(
                                       width: 136,
                                       height: 110,

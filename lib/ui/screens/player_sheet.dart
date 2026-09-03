@@ -52,7 +52,10 @@ class PlayerSheet extends ConsumerWidget {
     final repo = ref.watch(musicRepositoryProvider);
     final song = ref.watch(currentSongStreamProvider).value;
     final isPlaying = ref.watch(isPlayingStreamProvider).value ?? false;
-    final position = ref.watch(positionStreamProvider).value ?? Duration.zero;
+    // Position is intentionally NOT watched here: only the seek progress
+    // widget needs per-tick position updates. Watching it at the sheet root
+    // rebuilt the entire modal (hero/artwork, lyrics, visualizer, controls)
+    // ~5x/second during playback.
     final duration = audioPlayerService.player.duration ?? Duration.zero;
     final masterMode = ref.watch(studioMasterModeProvider);
     final displayMode = ref.watch(playerDisplayModeProvider);
@@ -309,7 +312,6 @@ class PlayerSheet extends ConsumerWidget {
                 PlayerControlsSection(
                   isDark: isDark,
                   isPlaying: isPlaying,
-                  position: position,
                   duration: duration,
                   volume: ref.watch(volumeStreamProvider).value ?? 1.0,
                   isShuffle: audioPlayerService.player.shuffleModeEnabled,

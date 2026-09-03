@@ -67,17 +67,26 @@ void main() async {
   } catch (e) {
     NoctraLogger.e('Repository init error', e);
   }
-  try {
-    await AudioPlayerService().restoreLastPlaybackSession();
-  } catch (e) {
-    NoctraLogger.e('Session restore error', e);
-  }
 
   // Restore persisted launcher icon state (no alias toggle needed —
   // Android already has the correct component enabled from last session).
   await DynamicIconService.init();
 
   runApp(const ProviderScope(child: NoctraApp()));
+
+  // Restore the last playback session AFTER the first frame so startup is
+  // never blocked on network URL resolution for the previously playing song.
+  // Deferred on purpose: the restoration is invisible until the user opens
+  // the player, so it must not gate first paint. Fire-and-forget + log.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.microtask(() async {
+      try {
+        await AudioPlayerService().restoreLastPlaybackSession();
+      } catch (e) {
+        NoctraLogger.e('Session restore error', e);
+      }
+    });
+  });
 
   // Silent background update check — fires a system notification if a newer
   // version is on GitHub. Runs 3 seconds after launch to not compete with

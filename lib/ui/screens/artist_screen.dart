@@ -251,6 +251,8 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
                                       width: 110,
                                       height: 95,
                                       fit: BoxFit.cover,
+                                      cacheWidth: 220,
+                                      cacheHeight: 190,
                                       errorBuilder: (c, e, s) => Container(
                                           color: Colors.grey.shade900))),
                               const SizedBox(height: 6),

@@ -26,8 +26,12 @@ class LibraryAllSongsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentSong = ref.watch(currentSongStreamProvider).value;
-    final isPlaying = ref.watch(isPlayingStreamProvider).value ?? false;
+    // NOTE: playback streams (currentSong / isPlaying) are intentionally NOT
+    // watched here. Watching them at the tab root rebuilt the ENTIRE library
+    // list — recomputing the dedupe merge of allSongs + downloads for every
+    // track — on each play/pause toggle and track change. Only the row
+    // widgets below subscribe to playback state, so a playback change
+    // rebuilds just the visible rows.
 
     final List<Song> displaySongs;
     if (downloads.isEmpty) {
@@ -133,9 +137,44 @@ class LibraryAllSongsTab extends ConsumerWidget {
               delegate: SliverChildBuilderDelegate(
                 (context, i) {
                   final s = displaySongs[i];
-                  final isCurrent = currentSong?.id == s.id;
+                  return _LibrarySongRow(
+                    song: s,
+                    isDark: isDark,
+                    repo: repo,
+                  );
+                },
+                childCount: displaySongs.length,
+              ),
+            ),
+          ),
+        const SliverToBoxAdapter(child: SizedBox(height: 160)),
+      ],
+    );
+  }
+}
 
-                  return Padding(
+/// One library row. Subscribes to playback state locally so play/pause
+/// toggles and track changes only rebuild the visible rows — the tab's
+/// sliver list and its (potentially large) displaySongs merge are untouched.
+class _LibrarySongRow extends ConsumerWidget {
+  final Song song;
+  final bool isDark;
+  final MusicRepository repo;
+
+  const _LibrarySongRow({
+    required this.song,
+    required this.isDark,
+    required this.repo,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentSong = ref.watch(currentSongStreamProvider).value;
+    final isPlaying = ref.watch(isPlayingStreamProvider).value ?? false;
+    final s = song;
+    final isCurrent = currentSong?.id == s.id;
+
+    return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: GlassCard(
                       radius: 14,
@@ -222,7 +261,7 @@ class LibraryAllSongsTab extends ConsumerWidget {
                               }
                               if (s.isDownloaded || s.localFilePath != null) {
                                 final isRealDownload =
-                                    downloads.any((d) => d.id == s.id);
+                                    repo.downloads.any((d) => d.id == s.id);
                                 if (!isRealDownload) {
                                   return Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -328,13 +367,5 @@ class LibraryAllSongsTab extends ConsumerWidget {
                       ),
                     ),
                   );
-                },
-                childCount: displaySongs.length,
-              ),
-            ),
-          ),
-        const SliverToBoxAdapter(child: SizedBox(height: 160)),
-      ],
-    );
   }
 }

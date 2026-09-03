@@ -166,6 +166,8 @@ class _AIRadioSheetState extends ConsumerState<AIRadioSheet> {
                                 width: 44,
                                 height: 44,
                                 fit: BoxFit.cover,
+                                cacheWidth: 100,
+                                cacheHeight: 100,
                                 errorBuilder: (context, error, stackTrace) => Container(
                                   width: 44,
                                   height: 44,

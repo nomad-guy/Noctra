@@ -22,6 +22,7 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
   int _lastActiveIndex = -2;
   bool _userIsScrolling = false;
   Timer? _resumeAutoScrollTimer;
+  StreamSubscription<Duration>? _positionSub;
   String _selectedScript = 'original';
   List<LyricLine> _cachedLines = [];
   bool _isSynced = false;
@@ -31,6 +32,26 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
   void initState() {
     super.initState();
     _loadLyrics();
+    // Subscribing to the position stream here (instead of watching it in
+    // build) means the lyrics list — transliteration output, ShaderMask,
+    // per-line text styles — only rebuilds when the ACTIVE line index
+    // actually changes, not on every ~200ms position tick.
+    _positionSub = ref
+        .read(audioPlayerServiceProvider)
+        .player
+        .positionStream
+        .listen((pos) {
+      if (!mounted || !_isSynced || _cachedLines.isEmpty) return;
+      final activeIndex = _findActiveIndex(_cachedLines, pos);
+      if (activeIndex == _lastActiveIndex) return;
+      setState(() {
+        _lastActiveIndex = activeIndex;
+        if (_userIsScrolling) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _scrollToIndex(activeIndex);
+        });
+      });
+    });
   }
 
   void _loadLyrics() {
@@ -50,8 +71,16 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
           _cachedLines = data.lines;
           _isSynced = data.isSynced;
           _plainText = data.plainText;
-          _lastActiveIndex = -2;
           _lineKeys.clear();
+          // Establish the active line immediately (instead of waiting for
+          // the next position tick) so paused songs still highlight the
+          // current line as soon as lyrics arrive.
+          if (data.isSynced && data.lines.isNotEmpty) {
+            final pos = ref.read(audioPlayerServiceProvider).player.position;
+            _lastActiveIndex = _findActiveIndex(data.lines, pos);
+          } else {
+            _lastActiveIndex = -2;
+          }
         });
       }
     });
@@ -100,6 +129,7 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
 
   @override
   void dispose() {
+    _positionSub?.cancel();
     _resumeAutoScrollTimer?.cancel();
     if (_scrollController.hasClients) _scrollController.dispose();
     super.dispose();
@@ -112,17 +142,10 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
     });
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
-    final currentPos = ref.watch(positionStreamProvider).value ?? Duration.zero;
-
-    // Compute active index — only triggers rebuild when line changes
-    final activeIndex = _findActiveIndex(_cachedLines, currentPos);
-
-    // Scroll to active line (debounced, no post-frame callback needed)
-    if (_isSynced && _cachedLines.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _scrollToIndex(activeIndex);
-      });
-    }
+    // The active line index is tracked by the position subscription in
+    // initState — reading it here means this build no longer re-runs on
+    // every position tick.
+    final activeIndex = _lastActiveIndex;
 
     return FutureBuilder<LyricsData>(
       future: _lyricsFuture,
