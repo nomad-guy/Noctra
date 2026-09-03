@@ -177,18 +177,21 @@ class NoctraSqliteDatabase {
           'timestamp': now,
       });
 
-      // Upsert track embedding with full per-song metadata
-      // First, get existing stats for this song
+      // Upsert track embedding — preserve independent favorite/download state.
+      // First, get existing row to retain fields this operation does NOT own.
       int existingReplays = 0;
       int existingListenTime = 0;
       int existingSkips = 0;
+      bool rowExists = false;
       try {
         final existing = await db.query('track_embeddings',
             where: 'song_id = ?', whereArgs: [song.id], limit: 1);
         if (existing.isNotEmpty) {
+          rowExists = true;
           existingReplays = (existing.first['replay_count'] as int?) ?? 0;
           existingListenTime = (existing.first['total_listen_time_ms'] as int?) ?? 0;
           existingSkips = (existing.first['skip_count'] as int?) ?? 0;
+
         }
       } catch (_) {}
 
@@ -204,9 +207,24 @@ class NoctraSqliteDatabase {
       }
       newListenTime += durationListenedMs;
 
-      await db.insert(
-        'track_embeddings',
-        {
+      if (rowExists) {
+        // UPDATE only the columns this operation owns — preserve favorite/download.
+        await db.update(
+          'track_embeddings',
+          {
+            'replay_count': newReplays,
+            'total_listen_time_ms': newListenTime,
+            'skip_count': newSkips,
+            'last_listened_at': now,
+            'audio_features_json': audioFeaturesJson,
+            'updated_at': now,
+          },
+          where: 'song_id = ?',
+          whereArgs: [song.id],
+        );
+      } else {
+        // INSERT new row with defaults for independent fields.
+        await db.insert('track_embeddings', {
           'song_id': song.id,
           'title': song.title,
           'artist': song.artist,
@@ -222,9 +240,8 @@ class NoctraSqliteDatabase {
           'audio_features_json': audioFeaturesJson,
           'vector_json': jsonEncode(song.featureVector),
           'updated_at': now,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+        });
+      }
     } catch (e) {
       NoctraLogger.w('SQLite event recording error', e);
     }

@@ -666,16 +666,14 @@ class AudioPlayerService {
       const totalSteps = 60;
       int step = 0;
       final stepMs = (duration.inMilliseconds / totalSteps).round().clamp(8, 200);
-      final completer = Completer<void>();
-
-      Timer.periodic(Duration(milliseconds: stepMs), (timer) {
+      final completer = Completer<void>();      Timer.periodic(Duration(milliseconds: stepMs), (timer) {
         step++;
         final progress = step / totalSteps;
         final eased = progress * progress;
 
-        // Non-blocking volume changes
-        oldPlayer.setVolume(targetVol * (1.0 - eased));
-        nextPlayer.setVolume(targetVol * eased);
+        // Non-blocking volume changes with error handling
+        unawaited(oldPlayer.setVolume(targetVol * (1.0 - eased)).catchError((_) {}));
+        unawaited(nextPlayer.setVolume(targetVol * eased).catchError((_) {}));
 
         if (step >= totalSteps ||
             _transitionEpoch != tEpoch ||
@@ -699,7 +697,17 @@ class AudioPlayerService {
         try { await nextPlayer.stop(); } catch (_) {}
         return CrossfadeResult.cancelled;
       }
-    } catch (_) {
+
+      // Post-condition: verify next player is actually healthy before commit
+      if (!nextPlayer.playing ||
+          nextPlayer.processingState == ProcessingState.idle) {
+        NoctraLogger.w('Crossfade: next player unhealthy at commit, aborting');
+        try { await oldPlayer.setVolume(targetVol); } catch (_) {}
+        try { await nextPlayer.stop(); } catch (_) {}
+        return CrossfadeResult.failed;
+      }
+    } catch (e) {
+
       // Exception: restore old player
       try { await oldPlayer.setVolume(targetVol); } catch (_) {}
       try { await nextPlayer.stop(); } catch (_) {}
@@ -1059,11 +1067,13 @@ class AudioPlayerService {
     return _serialize(() => _skipNextInternal());
   }
 
-  Future<void> resumeOrPlay() async {
+  Future<void> resumeOrPlay() => _serialize(() async {
     if (_player.playing) {
-      await _player.pause();
       _invalidatePlaybackOperations();
       _transitionEpoch++;
+      unawaited(_player.pause().catchError((e) {
+        NoctraLogger.w('pause failed in resumeOrPlay', e);
+      }));
     } else {
       if (_player.processingState == ProcessingState.idle &&
           _currentSong != null) {
@@ -1072,13 +1082,13 @@ class AudioPlayerService {
         _playNonBlocking(_player, 'resumeOrPlay');
       }
     }
-  }
+  });
 
   Future<void> togglePlayPause() => resumeOrPlay();
 
-  Future<void> skipPrevious() async {
+  Future<void> skipPrevious() => _serialize(() async {
     if (_player.position.inSeconds > 4) {
-      await _player.seek(Duration.zero);
+      try { await _player.seek(Duration.zero); } catch (_) {}
       _invalidatePlaybackOperations();
       _transitionEpoch++;
       return;
@@ -1087,35 +1097,39 @@ class AudioPlayerService {
       _currentIndex--;
       await playSong(_queue[_currentIndex]);
     }
-  }
+  });
 
-  Future<void> seek(Duration pos) async {
+  Future<void> seek(Duration pos) => _serialize(() async {
     _invalidatePlaybackOperations();
     _transitionEpoch++; // Invalidate active crossfade
     try {
       await _player.seek(pos);
     } catch (_) {}
-  }
+  });
 
   void pause() {
     _invalidatePlaybackOperations();
     _transitionEpoch++; // Cancel active crossfade
-    _player.pause();
+    unawaited(_player.pause().catchError((e) {
+      NoctraLogger.w('pause failed', e);
+    }));
   }
 
   Future<void> setVolume(double vol) {
-    _targetVolume = (vol.isNaN || vol.isInfinite) ? 1.0 : vol.clamp(0.0, 1.0);
-    return _player.setVolume(_targetVolume);
+    final newVol = (vol.isNaN || vol.isInfinite) ? 1.0 : vol.clamp(0.0, 1.0);
+    _targetVolume = newVol;
+    _volumeEpoch++; // Invalidate any active fade targeting old volume
+    return _player.setVolume(newVol);
   }
 
-  Future<void> stopAndDismiss() async {
+  Future<void> stopAndDismiss() => _serialize(() async {
     _invalidatePlaybackOperations();
     _transitionEpoch++;
     try { await _player.stop(); } catch (_) {}
     _invalidatePreload();
     _currentSong = null;
     _currentSongController.add(null);
-  }
+  });
 
   // ─── [23] Internal playback operations ─────────────────────────────────
 
@@ -1336,8 +1350,22 @@ class AudioPlayerService {
 
   void removeFromQueue(int index) {
     if (index < 0 || index >= _queue.length) { return; }
+    final removedCurrent = _currentSong != null &&
+        _queue[index].id == _currentSong!.id;
     _mutateQueue(() { _queue.removeAt(index); return true; });
-    _reconcileIndex(); // Reconcile by song ID
+    if (removedCurrent) {
+      // Current song was removed — play next if available, else stop
+      if (_queue.isNotEmpty) {
+        _currentIndex = index.clamp(0, _queue.length - 1);
+        playSong(_queue[_currentIndex]);
+      } else {
+        _currentIndex = 0;
+        _currentSong = null;
+        _currentSongController.add(null);
+      }
+    } else {
+      _reconcileIndex();
+    }
     _invalidatePreload();
   }
 

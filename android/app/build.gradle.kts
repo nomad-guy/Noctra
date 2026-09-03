@@ -17,9 +17,18 @@ android {
     signingConfigs {
         create("release") {
             storeFile = file("noctra-release.keystore")
-            storePassword = System.getenv("NOCTRA_KEYSTORE_PASSWORD") ?: ""
-            keyAlias = System.getenv("NOCTRA_KEY_ALIAS") ?: "noctra"
-            keyPassword = System.getenv("NOCTRA_KEY_PASSWORD") ?: ""
+            val ksPw = System.getenv("NOCTRA_KEYSTORE_PASSWORD")
+            val keyPw = System.getenv("NOCTRA_KEY_PASSWORD")
+            val keyAlias = System.getenv("NOCTRA_KEY_ALIAS") ?: "noctra"
+            if (ksPw.isNullOrBlank() || keyPw.isNullOrBlank()) {
+                throw GradleException(
+                    "Release signing requires NOCTRA_KEYSTORE_PASSWORD and NOCTRA_KEY_PASSWORD " +
+                    "environment variables. Set them in ~/.gradle/gradle.properties or CI secrets."
+                )
+            }
+            storePassword = ksPw
+            this.keyAlias = keyAlias
+            keyPassword = keyPw
         }
     }
 

@@ -393,15 +393,23 @@ class MusicService {
             final rawId = m['id'];
             if (rawId is! String || rawId.trim().isEmpty) continue;
             final vid = rawId.trim();
+            // YouTube video IDs are exactly 11 characters
+            if (vid.length != 11) continue;
             if (blocked.contains(vid) || !seen.add(vid)) continue;
+            // Extract duration from native response if available
+            final rawDur = m['duration'];
+            final durSecs = rawDur is num ? rawDur.toInt()
+                : int.tryParse(rawDur?.toString() ?? '') ?? 0;
             results.add(Song(
                 id: vid,
                 title: (m['title'] ?? 'Similar Track').toString(),
                 artist: (m['artist'] ?? currentSong.artist).toString(),
-                album: 'Auto Radio',
+                album: (m['album']?.toString().isNotEmpty == true)
+                    ? m['album'].toString() : 'Auto Radio',
                 artworkUrl: 'https://i.ytimg.com/vi/$vid/hqdefault.jpg',
                 streamUrl: null,
-                duration: const Duration(seconds: 210),
+                duration: durSecs > 0 ? Duration(seconds: durSecs)
+                    : const Duration(seconds: 210),
                 genre: currentSong.genre,
                 featureVector: _deriveFeatureVector(
                     m['title']?.toString() ?? '',
