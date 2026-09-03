@@ -226,18 +226,27 @@ void main() {
 
   group('isVerifiedInstallCandidate', () {
     const checkChannel = MethodChannel('com.nomadguy.noctra/installer_check');
+    const certDigest =
+        'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 
-    test('accepts matching package with signer continuity', () async {
-      messenger.setMockMethodCallHandler(checkChannel, (call) async {
-        return <String, dynamic>{
+    Map<String, dynamic> goodPayload(
+            {int versionCode = 42, int installed = 41}) =>
+        {
           'packageName': AppUpdateService.expectedApplicationId,
-          'versionCode': 42,
+          'versionCode': versionCode,
           'versionName': '2.0.0',
-          'signerDigests': <String>[
-            'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
-          ],
+          'signerDigests': <String>[certDigest],
           'matchesInstalledSigner': true,
+          'installedVersionCode': installed,
         };
+
+    setUp(() => AppUpdateService.pinnedSignerSha256 = '');
+    tearDown(() => AppUpdateService.pinnedSignerSha256 = '');
+
+    test('accepts matching package with signer continuity and a newer version',
+        () async {
+      messenger.setMockMethodCallHandler(checkChannel, (call) async {
+        return goodPayload();
       });
       expect(await AppUpdateService.isVerifiedInstallCandidate('/tmp/x.apk'),
           isTrue);
@@ -245,10 +254,7 @@ void main() {
 
     test('refuses a different package id', () async {
       messenger.setMockMethodCallHandler(checkChannel, (call) async {
-        return <String, dynamic>{
-          'packageName': 'com.evil.other',
-          'matchesInstalledSigner': true,
-        };
+        return goodPayload()..['packageName'] = 'com.evil.other';
       });
       expect(await AppUpdateService.isVerifiedInstallCandidate('/tmp/x.apk'),
           isFalse);
@@ -256,10 +262,51 @@ void main() {
 
     test('refuses when the signer does not match the installed app', () async {
       messenger.setMockMethodCallHandler(checkChannel, (call) async {
-        return <String, dynamic>{
-          'packageName': AppUpdateService.expectedApplicationId,
-          'matchesInstalledSigner': false,
-        };
+        return goodPayload()..['matchesInstalledSigner'] = false;
+      });
+      expect(await AppUpdateService.isVerifiedInstallCandidate('/tmp/x.apk'),
+          isFalse);
+    });
+
+    test('refuses equal or older versionCode (no silent downgrade)', () async {
+      messenger.setMockMethodCallHandler(checkChannel, (call) async {
+        return goodPayload(versionCode: 42, installed: 42); // equal
+      });
+      expect(await AppUpdateService.isVerifiedInstallCandidate('/tmp/x.apk'),
+          isFalse);
+
+      messenger.setMockMethodCallHandler(checkChannel, (call) async {
+        return goodPayload(versionCode: 40, installed: 42); // older
+      });
+      expect(await AppUpdateService.isVerifiedInstallCandidate('/tmp/x.apk'),
+          isFalse);
+    });
+
+    test('refuses when version data is missing (fail closed)', () async {
+      messenger.setMockMethodCallHandler(checkChannel, (call) async {
+        return goodPayload()..remove('installedVersionCode');
+      });
+      expect(await AppUpdateService.isVerifiedInstallCandidate('/tmp/x.apk'),
+          isFalse);
+    });
+
+    test('with a pin set: accepts archive signed by the pinned cert', () async {
+      AppUpdateService.pinnedSignerSha256 = certDigest;
+      messenger.setMockMethodCallHandler(checkChannel, (call) async {
+        return goodPayload();
+      });
+      expect(await AppUpdateService.isVerifiedInstallCandidate('/tmp/x.apk'),
+          isTrue);
+    });
+
+    test('with a pin set: refuses an archive signed by a different cert',
+        () async {
+      AppUpdateService.pinnedSignerSha256 = certDigest;
+      messenger.setMockMethodCallHandler(checkChannel, (call) async {
+        return goodPayload()
+          ..['signerDigests'] = <String>[
+            '9999999999999999999999999999999999999999999999999999999999999999'
+          ];
       });
       expect(await AppUpdateService.isVerifiedInstallCandidate('/tmp/x.apk'),
           isFalse);

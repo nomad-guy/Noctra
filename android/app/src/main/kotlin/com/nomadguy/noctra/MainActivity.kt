@@ -378,7 +378,9 @@ class MainActivity : AudioServiceActivity() {
                     "versionCode" to versionCode,
                     "versionName" to versionName,
                     "signerDigests" to signerDigests,
-                    "matchesInstalledSigner" to matchesInstalled
+                    "matchesInstalledSigner" to matchesInstalled,
+                    "installedVersionCode" to
+                        installedVersionCode(packageManager, packageName)
                 )
                 result.success(payload)
             } catch (e: Throwable) {
@@ -558,6 +560,18 @@ private fun certSha256(
  * single-signer case, so certificates from past key rotations remain
  * accepted); API 27 and below uses the legacy signatures field.
  */
+private fun installedVersionCode(
+    pm: android.content.pm.PackageManager,
+    pkgName: String
+): Long {
+    return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+        pm.getPackageInfo(pkgName, 0).longVersionCode
+    } else {
+        @Suppress("DEPRECATION")
+        pm.getPackageInfo(pkgName, 0).versionCode.toLong()
+    }
+}
+
 private fun installedSignerDigests(
     pm: android.content.pm.PackageManager,
     pkgName: String

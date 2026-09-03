@@ -75,6 +75,22 @@ class AppUpdateService {
   static const String expectedApplicationId = 'com.nomadguy.noctra';
   static const installerCheckChannel =
       MethodChannel('com.nomadguy.noctra/installer_check');
+
+  /// Absolute signer pin: lower-case SHA-256 of the signing certificate
+  /// that genuine Noctra release APKs MUST carry.
+  ///
+  /// Leave empty to rely on SIGNER CONTINUITY alone — every update must
+  /// be signed by the same key as the currently installed app. To enable
+  /// absolute pinning (so even the currently installed build must be
+  /// genuine and every update must match the pinned key), set this to
+  /// the production keystore certificate digest:
+  ///
+  ///     keytool -list -v -keystore noctra-release.keystore
+  ///     → "SHA256: ..." (colons/whitespace removed, lower-case)
+  ///
+  /// Mutable only so tests can exercise both modes; production ships
+  /// with the owner's chosen value.
+  static String pinnedSignerSha256 = '';
   static const notifyChannel =
       MethodChannel('com.nomadguy.noctra/update_notify');
   static const _signingCertChannel =
@@ -137,6 +153,25 @@ class AppUpdateService {
   }
 
   static Future<AppUpdateInfo> checkForUpdate() async {
+    // When an absolute pin is configured, refuse to even consult the
+    // release feed unless the RUNNING app is itself signed by the pinned
+    // certificate — a repackaged build must not be able to self-update.
+    if (!kIsWeb && pinnedSignerSha256.isNotEmpty) {
+      final pinned = await isSignaturePinned(pinnedSignerSha256);
+      if (!pinned) {
+        NoctraLogger.w(
+            'Refusing update check: installed app is not signed by the '
+            'pinned certificate');
+        return AppUpdateInfo(
+          hasUpdate: false,
+          currentVersion: await _resolveCurrentVersion(),
+          latestVersion: '',
+          releaseNotes: '',
+          downloadUrl: '',
+          expectedSha256: '',
+        );
+      }
+    }
     try {
       final res = await http.get(
         Uri.parse(_releaseApiUrl),
@@ -546,19 +581,24 @@ class AppUpdateService {
     return null;
   }
 
-  /// Verify the DOWNLOADED APK before it reaches the installer: the
+  /// Verify the DOWNLOADED APK before it reaches the installer. The
   /// platform inspects the archive itself (package name, version,
-  /// signing-cert digests) and reports whether it is signed by the same
-  /// key as the currently installed app. Install is refused unless the
-  /// package id is Noctra's AND the signer matches — an attacker who
-  /// somehow substituted a different signed APK (or a repackaged one)
-  /// cannot pass. Fail-closed on any platform error.
+  /// signing-cert digests, plus the installed version). Install is
+  /// refused unless ALL of these hold:
+  ///  1. package id is Noctra's;
+  ///  2. the archive's signer matches the currently installed app's
+  ///     signer (continuity), AND — when [pinnedSignerSha256] is set —
+  ///     matches that absolute pin;
+  ///  3. the archive versionCode is strictly newer than the installed
+  ///     versionCode (defence in depth; the OS enforces this too).
+  /// Fail-closed on any platform error or missing field.
   static Future<bool> isVerifiedInstallCandidate(String filePath) async {
     if (kIsWeb || filePath.isEmpty) return false;
     try {
       final raw = await installerCheckChannel.invokeMapMethod<String, dynamic>(
           'inspectDownloadedApk', {'filePath': filePath});
       if (raw == null) return false;
+
       final pkg = raw['packageName'];
       if (pkg != expectedApplicationId) {
         NoctraLogger.w('Refusing install: unexpected package "$pkg"');
@@ -569,12 +609,39 @@ class AppUpdateService {
             'Refusing install: APK signer does not match installed app');
         return false;
       }
+      if (!_signerDigestsMatchPin(raw['signerDigests'])) {
+        NoctraLogger.w(
+            'Refusing install: APK signer does not match the pinned cert');
+        return false;
+      }
+
+      final archiveVersion = _toInt(raw['versionCode']);
+      final installedVersion = _toInt(raw['installedVersionCode']);
+      if (archiveVersion == null || installedVersion == null) {
+        NoctraLogger.w('Refusing install: missing versionCode data');
+        return false;
+      }
+      if (archiveVersion <= installedVersion) {
+        NoctraLogger.w(
+            'Refusing install: not an upgrade (archive $archiveVersion '
+            '<= installed $installedVersion)');
+        return false;
+      }
       return true;
     } catch (e) {
       NoctraLogger.w('APK pre-install inspection failed: $e');
       return false;
     }
   }
+
+  static bool _signerDigestsMatchPin(dynamic signerDigests) {
+    if (pinnedSignerSha256.isEmpty) return true; // continuity only
+    if (signerDigests is! List) return false;
+    final want = pinnedSignerSha256.toLowerCase();
+    return signerDigests.any((d) => d is String && d.toLowerCase() == want);
+  }
+
+  static int? _toInt(dynamic v) => v is num ? v.toInt() : null;
 
   /// Release-tag comparison. Accepts an optional leading `v`, a
   /// `+build` suffix, a `-prerelease` suffix (pre-releases sort older
