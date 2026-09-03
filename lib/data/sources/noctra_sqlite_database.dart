@@ -6,7 +6,8 @@ import '../../core/utils/noctra_logger.dart';
 import '../models/song_model.dart';
 
 class NoctraSqliteDatabase {
-  static final NoctraSqliteDatabase _instance = NoctraSqliteDatabase._internal();
+  static final NoctraSqliteDatabase _instance =
+      NoctraSqliteDatabase._internal();
   factory NoctraSqliteDatabase() => _instance;
   NoctraSqliteDatabase._internal();
 
@@ -21,7 +22,8 @@ class NoctraSqliteDatabase {
   Future<Database> _initDatabase() async {
     if (kIsWeb) {
       // In-memory web fallback
-      return await openDatabase(inMemoryDatabasePath, version: 2, onCreate: _createDb, onUpgrade: _upgradeDb);
+      return await openDatabase(inMemoryDatabasePath,
+          version: 2, onCreate: _createDb, onUpgrade: _upgradeDb);
     }
     final dbPath = await getDatabasesPath();
     final path = p.join(dbPath, 'noctra_neural_store.db');
@@ -98,10 +100,14 @@ class NoctraSqliteDatabase {
       );
     ''');
 
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_events_timestamp ON listening_events(timestamp DESC);');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_events_artist ON listening_events(artist);');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_events_song ON listening_events(song_id);');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_embeddings_artist ON track_embeddings(artist);');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_events_timestamp ON listening_events(timestamp DESC);');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_events_artist ON listening_events(artist);');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_events_song ON listening_events(song_id);');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_embeddings_artist ON track_embeddings(artist);');
   }
 
   Future<void> _upgradeDb(Database db, int oldVersion, int newVersion) async {
@@ -117,7 +123,8 @@ class NoctraSqliteDatabase {
     if (oldVersion < 3) {
       // Add new columns to existing tables — each checked independently
       // so an interrupted migration does not prevent later columns.
-      Future<void> addColumnIfMissing(String table, String col, String typeDef) async {
+      Future<void> addColumnIfMissing(
+          String table, String col, String typeDef) async {
         final cols = await db.rawQuery('PRAGMA table_info($table)');
         final names = cols.map((c) => c['name'] as String).toSet();
         if (!names.contains(col)) {
@@ -125,26 +132,42 @@ class NoctraSqliteDatabase {
         }
       }
 
-      await addColumnIfMissing('listening_events', 'duration_listened_ms', 'INTEGER DEFAULT 0');
-      await addColumnIfMissing('listening_events', 'total_duration_ms', 'INTEGER DEFAULT 0');
-      await addColumnIfMissing('listening_events', 'is_in_favorites', 'INTEGER DEFAULT 0');
-      await addColumnIfMissing('listening_events', 'is_downloaded', 'INTEGER DEFAULT 0');
-      await addColumnIfMissing('listening_events', 'replay_count', 'INTEGER DEFAULT 0');
-      await addColumnIfMissing('listening_events', 'audio_features_json', 'TEXT');
+      await addColumnIfMissing(
+          'listening_events', 'duration_listened_ms', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing(
+          'listening_events', 'total_duration_ms', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing(
+          'listening_events', 'is_in_favorites', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing(
+          'listening_events', 'is_downloaded', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing(
+          'listening_events', 'replay_count', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing(
+          'listening_events', 'audio_features_json', 'TEXT');
 
       await addColumnIfMissing('track_embeddings', 'genre', 'TEXT');
       await addColumnIfMissing('track_embeddings', 'album', 'TEXT');
-      await addColumnIfMissing('track_embeddings', 'duration_ms', 'INTEGER DEFAULT 0');
-      await addColumnIfMissing('track_embeddings', 'is_in_favorites', 'INTEGER DEFAULT 0');
-      await addColumnIfMissing('track_embeddings', 'is_downloaded', 'INTEGER DEFAULT 0');
-      await addColumnIfMissing('track_embeddings', 'replay_count', 'INTEGER DEFAULT 0');
-      await addColumnIfMissing('track_embeddings', 'total_listen_time_ms', 'INTEGER DEFAULT 0');
-      await addColumnIfMissing('track_embeddings', 'skip_count', 'INTEGER DEFAULT 0');
-      await addColumnIfMissing('track_embeddings', 'last_listened_at', 'INTEGER');
-      await addColumnIfMissing('track_embeddings', 'audio_features_json', 'TEXT');
+      await addColumnIfMissing(
+          'track_embeddings', 'duration_ms', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing(
+          'track_embeddings', 'is_in_favorites', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing(
+          'track_embeddings', 'is_downloaded', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing(
+          'track_embeddings', 'replay_count', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing(
+          'track_embeddings', 'total_listen_time_ms', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing(
+          'track_embeddings', 'skip_count', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing(
+          'track_embeddings', 'last_listened_at', 'INTEGER');
+      await addColumnIfMissing(
+          'track_embeddings', 'audio_features_json', 'TEXT');
 
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_events_song ON listening_events(song_id);');
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_embeddings_artist ON track_embeddings(artist);');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_events_song ON listening_events(song_id);');
+      await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_embeddings_artist ON track_embeddings(artist);');
     }
   }
 
@@ -161,54 +184,76 @@ class NoctraSqliteDatabase {
       final db = await database;
       final now = DateTime.now().millisecondsSinceEpoch;
 
-      // Record the listening event with full metadata
-      await db.insert('listening_events', {
-        'song_id': song.id,
-        'title': song.title,
-        'artist': song.artist,
-        'genre': song.genre ?? 'Music',
-        'event_type': eventType,
-        'signal_score': signalScore,
-        'completion_rate': completionRate,
-        'duration_listened_ms': durationListenedMs,
-        'total_duration_ms': totalDurationMs,          'is_in_favorites': 0,
+      // Atomic increment counters — no read-modify-write race.
+      final replayInc = (eventType == 'complete_listen' ||
+              eventType == 'deep_listen' ||
+              eventType == 'replay')
+          ? 1
+          : 0;
+      final skipInc =
+          (eventType == 'fast_skip' || eventType == 'short_skip') ? 1 : 0;
+
+      // The event row and the embedding counter update are ONE logical
+      // operation: a crash between the two would leave an event whose counter
+      // increments never landed (or vice versa). Run both inside a single
+      // transaction so the pair commits or rolls back together.
+      await db.transaction((txn) async {
+        // Record the listening event with full metadata
+        await txn.insert('listening_events', {
+          'song_id': song.id,
+          'title': song.title,
+          'artist': song.artist,
+          'genre': song.genre ?? 'Music',
+          'event_type': eventType,
+          'signal_score': signalScore,
+          'completion_rate': completionRate,
+          'duration_listened_ms': durationListenedMs,
+          'total_duration_ms': totalDurationMs,
+          'is_in_favorites': 0,
           'is_downloaded': song.isDownloaded ? 1 : 0,
           'replay_count': song.replayCount,
           'audio_features_json': audioFeaturesJson,
           'timestamp': now,
+        });
+
+        // Single atomic UPSERT — no update-then-insert race window.
+        // Two concurrent events cannot both see "row missing" and race.
+        final vectorJson = jsonEncode(song.featureVector);
+        await txn.rawInsert(
+          'INSERT INTO track_embeddings ('
+          'song_id, title, artist, genre, album, duration_ms, '
+          'is_in_favorites, is_downloaded, replay_count, '
+          'total_listen_time_ms, skip_count, last_listened_at, '
+          'audio_features_json, vector_json, updated_at) '
+          'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) '
+          'ON CONFLICT(song_id) DO UPDATE SET '
+          'replay_count = track_embeddings.replay_count + excluded.replay_count, '
+          'skip_count = track_embeddings.skip_count + excluded.skip_count, '
+          'total_listen_time_ms = track_embeddings.total_listen_time_ms + '
+          'excluded.total_listen_time_ms, '
+          'last_listened_at = excluded.last_listened_at, '
+          'audio_features_json = COALESCE(excluded.audio_features_json, '
+          'track_embeddings.audio_features_json), '
+          'updated_at = excluded.updated_at',
+          [
+            song.id,
+            song.title,
+            song.artist,
+            song.genre,
+            song.album,
+            song.duration.inMilliseconds,
+            song.isFavorite ? 1 : 0,
+            song.isDownloaded ? 1 : 0,
+            replayInc,
+            durationListenedMs,
+            skipInc,
+            now,
+            audioFeaturesJson,
+            vectorJson,
+            now
+          ],
+        );
       });
-
-      // Atomic increment counters — no read-modify-write race.
-      final replayInc = (eventType == 'complete_listen' ||
-          eventType == 'deep_listen' || eventType == 'replay') ? 1 : 0;
-      final skipInc = (eventType == 'fast_skip' ||
-          eventType == 'short_skip') ? 1 : 0;
-
-      // Single atomic UPSERT — no update-then-insert race window.
-      // Two concurrent events cannot both see "row missing" and race.
-      final vectorJson = jsonEncode(song.featureVector);
-      await db.rawInsert(
-        'INSERT INTO track_embeddings ('
-        'song_id, title, artist, genre, album, duration_ms, '
-        'is_in_favorites, is_downloaded, replay_count, '
-        'total_listen_time_ms, skip_count, last_listened_at, '
-        'audio_features_json, vector_json, updated_at) '
-        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) '
-        'ON CONFLICT(song_id) DO UPDATE SET '
-        'replay_count = track_embeddings.replay_count + excluded.replay_count, '
-        'skip_count = track_embeddings.skip_count + excluded.skip_count, '
-        'total_listen_time_ms = track_embeddings.total_listen_time_ms + '
-        'excluded.total_listen_time_ms, '
-        'last_listened_at = excluded.last_listened_at, '
-        'audio_features_json = COALESCE(excluded.audio_features_json, '
-        'track_embeddings.audio_features_json), '
-        'updated_at = excluded.updated_at',
-        [song.id, song.title, song.artist, song.genre, song.album,
-         song.duration.inMilliseconds,
-         song.isFavorite ? 1 : 0, song.isDownloaded ? 1 : 0,
-         replayInc, durationListenedMs, skipInc, now,
-         audioFeaturesJson, vectorJson, now],
-      );
     } catch (e) {
       NoctraLogger.w('SQLite event recording error', e);
     }
@@ -230,17 +275,23 @@ class NoctraSqliteDatabase {
     try {
       final db = await database;
       final totalEvents = Sqflite.firstIntValue(
-          await db.rawQuery('SELECT COUNT(*) FROM listening_events')) ?? 0;
-      final totalSkips = Sqflite.firstIntValue(
-          await db.rawQuery("SELECT COUNT(*) FROM listening_events WHERE event_type IN ('fast_skip', 'short_skip')")) ?? 0;
-      final totalReplays = Sqflite.firstIntValue(
-          await db.rawQuery("SELECT COUNT(*) FROM listening_events WHERE event_type IN ('complete_listen', 'replay')")) ?? 0;
-      final totalListenTime = Sqflite.firstIntValue(
-          await db.rawQuery('SELECT SUM(duration_listened_ms) FROM listening_events')) ?? 0;
-      final uniqueArtists = Sqflite.firstIntValue(
-          await db.rawQuery('SELECT COUNT(DISTINCT artist) FROM listening_events')) ?? 0;
-      final uniqueGenres = Sqflite.firstIntValue(
-          await db.rawQuery('SELECT COUNT(DISTINCT genre) FROM listening_events')) ?? 0;
+              await db.rawQuery('SELECT COUNT(*) FROM listening_events')) ??
+          0;
+      final totalSkips = Sqflite.firstIntValue(await db.rawQuery(
+              "SELECT COUNT(*) FROM listening_events WHERE event_type IN ('fast_skip', 'short_skip')")) ??
+          0;
+      final totalReplays = Sqflite.firstIntValue(await db.rawQuery(
+              "SELECT COUNT(*) FROM listening_events WHERE event_type IN ('complete_listen', 'replay')")) ??
+          0;
+      final totalListenTime = Sqflite.firstIntValue(await db.rawQuery(
+              'SELECT SUM(duration_listened_ms) FROM listening_events')) ??
+          0;
+      final uniqueArtists = Sqflite.firstIntValue(await db.rawQuery(
+              'SELECT COUNT(DISTINCT artist) FROM listening_events')) ??
+          0;
+      final uniqueGenres = Sqflite.firstIntValue(await db.rawQuery(
+              'SELECT COUNT(DISTINCT genre) FROM listening_events')) ??
+          0;
 
       return {
         'total_events': totalEvents,
@@ -274,7 +325,8 @@ class NoctraSqliteDatabase {
   Future<List<double>?> loadNeuralUserVector() async {
     try {
       final db = await database;
-      final res = await db.query('neural_user_profile', where: 'id = 1', limit: 1);
+      final res =
+          await db.query('neural_user_profile', where: 'id = 1', limit: 1);
       if (res.isNotEmpty) {
         final jsonStr = res.first['user_vector_json'] as String?;
         if (jsonStr != null) {
@@ -288,7 +340,8 @@ class NoctraSqliteDatabase {
     return null;
   }
 
-  Future<void> saveNeuralUserVector(List<double> vector, int interactions) async {
+  Future<void> saveNeuralUserVector(
+      List<double> vector, int interactions) async {
     try {
       final db = await database;
       await db.insert(
@@ -309,7 +362,8 @@ class NoctraSqliteDatabase {
   Future<Map<String, dynamic>?> loadNeuralModelState() async {
     try {
       final db = await database;
-      final rows = await db.query('neural_model_state', where: 'id = 1', limit: 1);
+      final rows =
+          await db.query('neural_model_state', where: 'id = 1', limit: 1);
       if (rows.isEmpty) return null;
       final raw = rows.first['state_json'];
       if (raw is! String) return null;

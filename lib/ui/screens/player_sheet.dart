@@ -416,25 +416,46 @@ class PlayerSheet extends ConsumerWidget {
       onSelected: (value) {
         switch (value) {
           case 'output':
-            showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (_) => AudioOutputCastSheet(isDark: isDark));
+            showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => AudioOutputCastSheet(isDark: isDark));
           case 'jam':
-            showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (_) => const JamStudioSheet());
+            showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => const JamStudioSheet());
           case 'equalizer':
-            showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (_) => const EqualizerSheet());
+            showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => const EqualizerSheet());
           case 'stems':
             if (song != null) {
-              showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (_) => StemSeparationSheet(song: song));
+              showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => StemSeparationSheet(song: song));
             }
           case 'quality':
-            showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (_) => const StreamQualitySheet());
+            showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => const StreamQualitySheet());
         }
       },
       itemBuilder: (_) => [
         const PopupMenuItem(value: 'output', child: Text('Audio output')),
         const PopupMenuItem(value: 'jam', child: Text('Jam room')),
         const PopupMenuItem(value: 'equalizer', child: Text('Equalizer')),
-        const PopupMenuItem(value: 'quality', child: Text('CODEC & Resolution')),
-        const PopupMenuItem(value: 'stems', child: Text('Audio Stems')),      
+        const PopupMenuItem(
+            value: 'quality', child: Text('CODEC & Resolution')),
+        const PopupMenuItem(value: 'stems', child: Text('Audio Stems')),
       ],
     );
   }
@@ -516,9 +537,27 @@ class PlayerSheet extends ConsumerWidget {
       BuildContext context, Song song, bool isDownloaded) async {
     final sm = ScaffoldMessenger.of(context);
     if (isDownloaded) {
-      sm.showSnackBar(const SnackBar(
-          content: Text('Song already downloaded for offline playback.'),
-          duration: Duration(seconds: 2)));
+      // Tap on an already-downloaded song removes it from offline storage
+      // (list entry + local file) so downloads can actually be managed.
+      final shouldRemove = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Remove download?'),
+          content:
+              Text('"${song.title}" will be removed from offline playback.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Remove')),
+          ],
+        ),
+      );
+      if (shouldRemove == true) {
+        await MusicRepository().removeDownloadedSong(song.id);
+      }
       return;
     }
     sm.showSnackBar(SnackBar(

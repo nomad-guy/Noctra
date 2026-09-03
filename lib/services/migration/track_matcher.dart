@@ -19,9 +19,14 @@ class TrackNormalizer {
   static String _normalizeTitle(String title) {
     var s = title.trim();
     // Remove common suffixes that vary across services
-    s = s.replaceAll(RegExp(r'\s*\(feat\.?\s*[^)]*\)', caseSensitive: false), '');
+    s = s.replaceAll(
+        RegExp(r'\s*\(feat\.?\s*[^)]*\)', caseSensitive: false), '');
     s = s.replaceAll(RegExp(r'\s*ft\.?\s+.*', caseSensitive: false), '');
-    s = s.replaceAll(RegExp(r'\s*[-–—]\s*(Remaster(ed)?|Deluxe|Radio Edit|Clean|Explicit|Remix|Live|Acoustic|Version|Edit).*', caseSensitive: false), '');
+    s = s.replaceAll(
+        RegExp(
+            r'\s*[-–—]\s*(Remaster(ed)?|Deluxe|Radio Edit|Clean|Explicit|Remix|Live|Acoustic|Version|Edit).*',
+            caseSensitive: false),
+        '');
     s = s.replaceAll(RegExp(r'\s*\[Remaster(ed)?\]', caseSensitive: false), '');
     s = s.replaceAll(RegExp(r'\s*\(Remaster(ed)?\)', caseSensitive: false), '');
     // Unicode normalization
@@ -35,7 +40,8 @@ class TrackNormalizer {
 
   static String _normalizeArtist(String artist) {
     var s = artist.trim();
-    s = s.replaceAll(RegExp(r'\s*(feat\.?|ft\.?)\s+.*', caseSensitive: false), '');
+    s = s.replaceAll(
+        RegExp(r'\s*(feat\.?|ft\.?)\s+.*', caseSensitive: false), '');
     s = s.replaceAll(RegExp(r'\s*[,&/]\s+.*'), '');
     s = _normalizeUnicode(s);
     s = s.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
@@ -46,11 +52,31 @@ class TrackNormalizer {
   static String _normalizeUnicode(String s) {
     // NFC normalization + remove diacritics
     // Simple approach: common substitutions
-    s = s.replaceAll('é', 'e').replaceAll('è', 'e').replaceAll('ê', 'e').replaceAll('ë', 'e');
-    s = s.replaceAll('á', 'a').replaceAll('à', 'a').replaceAll('â', 'a').replaceAll('ä', 'a');
-    s = s.replaceAll('í', 'i').replaceAll('ì', 'i').replaceAll('î', 'i').replaceAll('ï', 'i');
-    s = s.replaceAll('ó', 'o').replaceAll('ò', 'o').replaceAll('ô', 'o').replaceAll('ö', 'o');
-    s = s.replaceAll('ú', 'u').replaceAll('ù', 'u').replaceAll('û', 'u').replaceAll('ü', 'u');
+    s = s
+        .replaceAll('é', 'e')
+        .replaceAll('è', 'e')
+        .replaceAll('ê', 'e')
+        .replaceAll('ë', 'e');
+    s = s
+        .replaceAll('á', 'a')
+        .replaceAll('à', 'a')
+        .replaceAll('â', 'a')
+        .replaceAll('ä', 'a');
+    s = s
+        .replaceAll('í', 'i')
+        .replaceAll('ì', 'i')
+        .replaceAll('î', 'i')
+        .replaceAll('ï', 'i');
+    s = s
+        .replaceAll('ó', 'o')
+        .replaceAll('ò', 'o')
+        .replaceAll('ô', 'o')
+        .replaceAll('ö', 'o');
+    s = s
+        .replaceAll('ú', 'u')
+        .replaceAll('ù', 'u')
+        .replaceAll('û', 'u')
+        .replaceAll('ü', 'u');
     s = s.replaceAll('ñ', 'n').replaceAll('ç', 'c').replaceAll('ß', 'ss');
     return s;
   }
@@ -61,7 +87,11 @@ class TrackMatcher {
   /// Match a list of normalized tracks against the local catalog.
   static List<MatchedTrack> matchAll(List<NormalizedTrack> tracks) {
     final repo = MusicRepository();
-    final catalog = [...repo.localLibrary, ...repo.downloads, ...repo.recentlyPlayed];
+    final catalog = [
+      ...repo.localLibrary,
+      ...repo.downloads,
+      ...repo.recentlyPlayed
+    ];
     final results = <MatchedTrack>[];
 
     for (final track in tracks) {
@@ -85,7 +115,8 @@ class TrackMatcher {
       final sTitle = song.title.toLowerCase().trim();
       final sArtist = song.artist.toLowerCase().trim();
       if (nTitle == sTitle && nArtist == sArtist) {
-        return _makeMatch(track, song, MatchConfidence.exact, 0.98, 'title_artist_exact');
+        return _makeMatch(
+            track, song, MatchConfidence.exact, 0.98, 'title_artist_exact');
       }
     }
 
@@ -94,7 +125,8 @@ class TrackMatcher {
       final sTitle = song.title.toLowerCase().trim();
       final sArtist = song.artist.toLowerCase().trim();
       if (sArtist == nArtist && _fuzzyMatch(nTitle, sTitle) > 0.85) {
-        return _makeMatch(track, song, MatchConfidence.high, 0.90, 'fuzzy_title_same_artist');
+        return _makeMatch(
+            track, song, MatchConfidence.high, 0.90, 'fuzzy_title_same_artist');
       }
     }
 
@@ -102,7 +134,8 @@ class TrackMatcher {
     for (final song in catalog) {
       final sTitle = song.title.toLowerCase().trim();
       if (nTitle == sTitle) {
-        return _makeMatch(track, song, MatchConfidence.medium, 0.75, 'title_exact_artist_differs');
+        return _makeMatch(track, song, MatchConfidence.medium, 0.75,
+            'title_exact_artist_differs');
       }
     }
 
@@ -111,7 +144,8 @@ class TrackMatcher {
     Song? bestSong;
     for (final song in catalog) {
       final titleScore = _fuzzyMatch(nTitle, song.title.toLowerCase().trim());
-      final artistScore = _fuzzyMatch(nArtist, song.artist.toLowerCase().trim());
+      final artistScore =
+          _fuzzyMatch(nArtist, song.artist.toLowerCase().trim());
       final combined = titleScore * 0.6 + artistScore * 0.4;
       if (combined > bestScore) {
         bestScore = combined;
@@ -120,17 +154,29 @@ class TrackMatcher {
     }
 
     if (bestScore > 0.75 && bestSong != null) {
-      return _makeMatch(track, bestSong, MatchConfidence.medium, bestScore * 0.85, 'fuzzy_combined');
+      return _makeMatch(track, bestSong, MatchConfidence.medium,
+          bestScore * 0.85, 'fuzzy_combined');
     } else if (bestScore > 0.55 && bestSong != null) {
-      return _makeMatch(track, bestSong, MatchConfidence.low, bestScore * 0.7, 'weak_fuzzy');
+      return _makeMatch(
+          track, bestSong, MatchConfidence.low, bestScore * 0.7, 'weak_fuzzy');
     }
 
     // No match found
-    return MatchedTrack(imported: track, confidence: MatchConfidence.none, score: 0, matchMethod: 'none');
+    return MatchedTrack(
+        imported: track,
+        confidence: MatchConfidence.none,
+        score: 0,
+        matchMethod: 'none');
   }
 
-  static MatchedTrack _makeMatch(NormalizedTrack track, Song song, MatchConfidence conf, double score, String method) {
-    return MatchedTrack(imported: track, matchedSong: song, confidence: conf, score: score, matchMethod: method);
+  static MatchedTrack _makeMatch(NormalizedTrack track, Song song,
+      MatchConfidence conf, double score, String method) {
+    return MatchedTrack(
+        imported: track,
+        matchedSong: song,
+        confidence: conf,
+        score: score,
+        matchMethod: method);
   }
 
   /// Simple Levenshtein-based fuzzy matching.
@@ -150,8 +196,12 @@ class TrackMatcher {
     final lenB = b.length;
     final dp = List.generate(lenA + 1, (i) => List<int>.filled(lenB + 1, 0));
 
-    for (int i = 0; i <= lenA; i++) { dp[i][0] = i; }
-    for (int j = 0; j <= lenB; j++) { dp[0][j] = j; }
+    for (int i = 0; i <= lenA; i++) {
+      dp[i][0] = i;
+    }
+    for (int j = 0; j <= lenB; j++) {
+      dp[0][j] = j;
+    }
 
     for (int i = 1; i <= lenA; i++) {
       for (int j = 1; j <= lenB; j++) {
@@ -167,11 +217,14 @@ class TrackMatcher {
 /// MigrationManager orchestrates the full import → match → import flow.
 class MigrationManager {
   /// Process a file import end-to-end.
-  static Future<MigrationReport> processImport(LibraryImporter importer, dynamic file) async {
+  static Future<MigrationReport> processImport(
+      LibraryImporter importer, dynamic file) async {
     final result = await importer.import(file);
     // Combine standalone tracks and playlist tracks with dedup
     final allTracks = <NormalizedTrack>[...result.tracks];
-    final seenKeys = allTracks.map((t) => '${t.title.toLowerCase()}::${t.artist.toLowerCase()}').toSet();
+    final seenKeys = allTracks
+        .map((t) => '${t.title.toLowerCase()}::${t.artist.toLowerCase()}')
+        .toSet();
     for (final pl in result.playlists) {
       for (final t in pl.tracks) {
         final key = '${t.title.toLowerCase()}::${t.artist.toLowerCase()}';
@@ -186,17 +239,28 @@ class MigrationManager {
     int exact = 0, high = 0, medium = 0, low = 0, none = 0;
     for (final m in matched) {
       switch (m.confidence) {
-        case MatchConfidence.exact: exact++; break;
-        case MatchConfidence.high: high++; break;
-        case MatchConfidence.medium: medium++; break;
-        case MatchConfidence.low: low++; break;
-        case MatchConfidence.none: none++; break;
+        case MatchConfidence.exact:
+          exact++;
+          break;
+        case MatchConfidence.high:
+          high++;
+          break;
+        case MatchConfidence.medium:
+          medium++;
+          break;
+        case MatchConfidence.low:
+          low++;
+          break;
+        case MatchConfidence.none:
+          none++;
+          break;
       }
     }
 
     final lookup = <String, MatchedTrack>{};
     for (final m in matched) {
-      lookup['${m.imported.title.toLowerCase()}::${m.imported.artist.toLowerCase()}'] = m;
+      lookup['${m.imported.title.toLowerCase()}::${m.imported.artist.toLowerCase()}'] =
+          m;
     }
 
     int fullyMatchedPlaylists = 0;
@@ -225,14 +289,23 @@ class MigrationManager {
   }
 
   /// Commit matched tracks to the local library.
-  static void commitImport(List<MatchedTrack> matched, {bool addToFavorites = false}) {
+  ///
+  /// Uses a single batched repository write per chunk rather than one
+  /// full-list snapshot per matched track — importing 10,000 songs must not
+  /// issue 10,000 serialized writes. Chunking keeps each persisted snapshot
+  /// bounded while remaining crash-recoverable: already-committed chunks stay
+  /// on disk, and re-running the commit is idempotent (by song ID).
+  static Future<void> commitImport(List<MatchedTrack> matched,
+      {bool addToFavorites = false, int chunkSize = 500}) async {
+    if (!addToFavorites) return;
     final repo = MusicRepository();
-    for (final m in matched) {
-      if (m.matchedSong != null) {
-        if (addToFavorites && !repo.isFavorite(m.matchedSong!.id)) {
-          repo.toggleFavorite(m.matchedSong!);
-        }
-      }
+    final songs = matched.map((m) => m.matchedSong).whereType<Song>().toList();
+    for (var i = 0; i < songs.length; i += chunkSize) {
+      final end = (i + chunkSize < songs.length) ? i + chunkSize : songs.length;
+      repo.addSongsToFavorites(songs.sublist(i, end));
+      // Yield so a very large import does not block the UI isolate between
+      // persisted checkpoints.
+      await Future<void>.delayed(Duration.zero);
     }
   }
 }
@@ -257,8 +330,10 @@ class LibraryRefreshService {
       for (final song in [...repo.favorites, ...repo.downloads]) {
         if (song.artworkUrl == null || song.artworkUrl!.isEmpty) {
           try {
-            final artistMeta = await ArtistMetadataService.fetchArtistInfo(song.artist);
-            if (artistMeta.imageUrl != null && artistMeta.imageUrl!.isNotEmpty) {
+            final artistMeta =
+                await ArtistMetadataService.fetchArtistInfo(song.artist);
+            if (artistMeta.imageUrl != null &&
+                artistMeta.imageUrl!.isNotEmpty) {
               final updated = song.copyWith(artworkUrl: artistMeta.imageUrl);
               if (repo.isFavorite(song.id)) {
                 repo.toggleFavorite(song);

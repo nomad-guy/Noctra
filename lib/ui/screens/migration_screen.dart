@@ -457,8 +457,12 @@ class _MigrationScreenState extends ConsumerState<MigrationScreen> {
     }
   }
 
-  void _commitImport() {
-    MigrationManager.commitImport(_matchedTracks, addToFavorites: true);
-    setState(() => _step = MigrationStep.complete);
+  Future<void> _commitImport() async {
+    try {
+      await MigrationManager.commitImport(_matchedTracks, addToFavorites: true);
+    } catch (e) {
+      _status = 'Import error: $e';
+    }
+    if (mounted) setState(() => _step = MigrationStep.complete);
   }
 }

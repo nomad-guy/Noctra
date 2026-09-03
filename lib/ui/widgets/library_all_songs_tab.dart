@@ -65,7 +65,8 @@ class LibraryAllSongsTab extends ConsumerWidget {
                       shape: BoxShape.circle,
                       color: isDark ? Colors.white12 : Colors.black12,
                     ),
-                    child: Icon(Icons.download_done_rounded, size: 20, color: isDark ? Colors.white : Colors.black),
+                    child: Icon(Icons.download_done_rounded,
+                        size: 20, color: isDark ? Colors.white : Colors.black),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -74,11 +75,16 @@ class LibraryAllSongsTab extends ConsumerWidget {
                       children: [
                         Text(
                           '${displaySongs.length} Tracks in Master Library',
-                          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black),
+                          style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? Colors.white : Colors.black),
                         ),
                         Text(
                           '${downloads.length} Downloaded Offline • High-Fidelity 320k Ready',
-                          style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54),
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? Colors.white54 : Colors.black54),
                         ),
                       ],
                     ),
@@ -99,11 +105,22 @@ class LibraryAllSongsTab extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.download_for_offline_outlined, size: 48, color: isDark ? Colors.white24 : Colors.black26),
+                    Icon(Icons.download_for_offline_outlined,
+                        size: 48,
+                        color: isDark ? Colors.white24 : Colors.black26),
                     const SizedBox(height: 14),
-                    Text('No Offline Tracks Yet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: isDark ? Colors.white70 : Colors.black87)),
+                    Text('No Offline Tracks Yet',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white70 : Colors.black87)),
                     const SizedBox(height: 6),
-                    Text('Songs you download will appear here for instant offline 320kbps playback.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: isDark ? Colors.white38 : Colors.black38)),
+                    Text(
+                        'Songs you download will appear here for instant offline 320kbps playback.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.white38 : Colors.black38)),
                   ],
                 ),
               ),
@@ -118,113 +135,204 @@ class LibraryAllSongsTab extends ConsumerWidget {
                   final s = displaySongs[i];
                   final isCurrent = currentSong?.id == s.id;
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: GlassCard(
-                    radius: 14,
-                    isHighlighted: isCurrent,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    onTap: () {
-                      ref.read(audioPlayerServiceProvider).playSong(s);
-                    },
-                    child: Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            s.artworkUrl ?? '',
-                            width: 44,
-                            height: 44,
-                            fit: BoxFit.cover,
-                            cacheWidth: 150,
-                            cacheHeight: 150,
-                            errorBuilder: (c, e, st) => Container(
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: GlassCard(
+                      radius: 14,
+                      isHighlighted: isCurrent,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      onTap: () {
+                        ref.read(audioPlayerServiceProvider).playSong(s);
+                      },
+                      child: Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              s.artworkUrl ?? '',
                               width: 44,
                               height: 44,
-                              color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE0E0E0),
-                              child: Icon(Icons.music_note_rounded, color: isDark ? Colors.white54 : Colors.black54),
+                              fit: BoxFit.cover,
+                              cacheWidth: 150,
+                              cacheHeight: 150,
+                              errorBuilder: (c, e, st) => Container(
+                                width: 44,
+                                height: 44,
+                                color: isDark
+                                    ? const Color(0xFF1E1E1E)
+                                    : const Color(0xFFE0E0E0),
+                                child: Icon(Icons.music_note_rounded,
+                                    color: isDark
+                                        ? Colors.white54
+                                        : Colors.black54),
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                s.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w600,
-                                  color: isDark ? Colors.white : Colors.black,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  s.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: isCurrent
+                                        ? FontWeight.w700
+                                        : FontWeight.w600,
+                                    color: isDark ? Colors.white : Colors.black,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                s.artist,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary,
+                                const SizedBox(height: 2),
+                                Text(
+                                  s.artist,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isDark
+                                        ? NoirColors.blackTextSecondary
+                                        : NoirColors.whiteTextSecondary,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        StreamBuilder<Map<String, double>>(
-                          stream: MusicService.downloadProgressStream,
-                          builder: (context, snap) {
-                            final p = snap.data?[s.id];
-                            if (p != null && p < 1.0) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 6),
-                                child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(value: p, strokeWidth: 2, color: isDark ? Colors.white70 : Colors.black87)),
-                              );
-                            }
-                            if (s.isDownloaded || s.localFilePath != null) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 6),
-                                child: Icon(Icons.download_done_rounded, size: 18, color: isDark ? Colors.greenAccent.shade200 : Colors.green.shade700),
-                              );
-                            }
-                            return IconButton(
-                              icon: Icon(Icons.download_rounded, size: 19, color: isDark ? Colors.white60 : Colors.black54),
-                              tooltip: 'Download Offline',
-                              onPressed: () async {
-                                ref.read(downloadingSongsProvider.notifier).update((set) => {...set, s.id});
-                                final dl = await MusicService.downloadTrack(s);
-                                if (dl != null) {
-                                  ref.read(musicRepositoryProvider).addDownloadedSong(dl);
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Downloaded "${s.title}"'), duration: const Duration(seconds: 2)),
-                                    );
-                                  }
+                          StreamBuilder<Map<String, double>>(
+                            stream: MusicService.downloadProgressStream,
+                            builder: (context, snap) {
+                              final p = snap.data?[s.id];
+                              if (p != null && p < 1.0) {
+                                return Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 6),
+                                  child: SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                          value: p,
+                                          strokeWidth: 2,
+                                          color: isDark
+                                              ? Colors.white70
+                                              : Colors.black87)),
+                                );
+                              }
+                              if (s.isDownloaded || s.localFilePath != null) {
+                                final isRealDownload =
+                                    downloads.any((d) => d.id == s.id);
+                                if (!isRealDownload) {
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6),
+                                    child: Icon(Icons.download_done_rounded,
+                                        size: 18,
+                                        color: isDark
+                                            ? Colors.greenAccent.shade200
+                                            : Colors.green.shade700),
+                                  );
                                 }
-                                ref.read(downloadingSongsProvider.notifier).update((set) => {...set}..remove(s.id));
-                              },
-                            );
-                          },
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.playlist_add_rounded, size: 20, color: isDark ? Colors.white70 : Colors.black87),
-                          tooltip: 'Add to Folder',
-                          onPressed: () => showModalBottomSheet(context: context, useRootNavigator: true, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (context) => AddToFolderSheet(song: s)),
-                        ),
-                        if (isCurrent && isPlaying)
-                          Container(width: 8, height: 8, margin: const EdgeInsets.only(left: 4), decoration: BoxDecoration(shape: BoxShape.circle, color: isDark ? Colors.white : Colors.black)),
-                      ],
+                                return IconButton(
+                                  icon: Icon(Icons.download_done_rounded,
+                                      size: 19,
+                                      color: isDark
+                                          ? Colors.greenAccent.shade200
+                                          : Colors.green.shade700),
+                                  tooltip: 'Remove download',
+                                  onPressed: () async {
+                                    final ok = await showDialog<bool>(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        title: const Text('Remove download?'),
+                                        content: Text(
+                                            '"${s.title}" will be removed from offline playback.'),
+                                        actions: [
+                                          TextButton(
+                                              onPressed: () =>
+                                                  Navigator.of(ctx).pop(false),
+                                              child: const Text('Cancel')),
+                                          TextButton(
+                                              onPressed: () =>
+                                                  Navigator.of(ctx).pop(true),
+                                              child: const Text('Remove')),
+                                        ],
+                                      ),
+                                    );
+                                    if (ok == true) {
+                                      await repo.removeDownloadedSong(s.id);
+                                    }
+                                  },
+                                );
+                              }
+                              return IconButton(
+                                icon: Icon(Icons.download_rounded,
+                                    size: 19,
+                                    color: isDark
+                                        ? Colors.white60
+                                        : Colors.black54),
+                                tooltip: 'Download Offline',
+                                onPressed: () async {
+                                  ref
+                                      .read(downloadingSongsProvider.notifier)
+                                      .update((set) => {...set, s.id});
+                                  final dl =
+                                      await MusicService.downloadTrack(s);
+                                  if (dl != null) {
+                                    ref
+                                        .read(musicRepositoryProvider)
+                                        .addDownloadedSong(dl);
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                            content:
+                                                Text('Downloaded "${s.title}"'),
+                                            duration:
+                                                const Duration(seconds: 2)),
+                                      );
+                                    }
+                                  }
+                                  ref
+                                      .read(downloadingSongsProvider.notifier)
+                                      .update((set) => {...set}..remove(s.id));
+                                },
+                              );
+                            },
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.playlist_add_rounded,
+                                size: 20,
+                                color:
+                                    isDark ? Colors.white70 : Colors.black87),
+                            tooltip: 'Add to Folder',
+                            onPressed: () => showModalBottomSheet(
+                                context: context,
+                                useRootNavigator: true,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (context) =>
+                                    AddToFolderSheet(song: s)),
+                          ),
+                          if (isCurrent && isPlaying)
+                            Container(
+                                width: 8,
+                                height: 8,
+                                margin: const EdgeInsets.only(left: 4),
+                                decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color:
+                                        isDark ? Colors.white : Colors.black)),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
-              childCount: displaySongs.length,
+                  );
+                },
+                childCount: displaySongs.length,
+              ),
             ),
           ),
-        ),
         const SliverToBoxAdapter(child: SizedBox(height: 160)),
       ],
     );

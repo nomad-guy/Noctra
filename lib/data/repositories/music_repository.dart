@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/song_model.dart';
 import '../models/ai_folder_model.dart';
@@ -56,6 +58,19 @@ class MusicRepository extends ChangeNotifier {
 
   MusicRepository._internal();
 
+  @visibleForTesting
+  void debugResetForTest() {
+    _isLoaded = false;
+    _initFuture = null;
+    _localLibrary.clear();
+    _downloads.clear();
+    _favorites.clear();
+    _recentlyPlayed.clear();
+    _customFolders.clear();
+    _userTasteVector = TasteVectorEngine.getDefaultVector();
+    _cachedTasteVector = List.unmodifiable(_userTasteVector);
+  }
+
   Future<void> init() async {
     if (_isLoaded) return;
     if (_initFuture != null) return _initFuture!;
@@ -76,6 +91,10 @@ class MusicRepository extends ChangeNotifier {
       final downs = await db.loadDownloads();
       _downloads.clear();
       _downloads.addAll(downs);
+      // Reconcile the DB against the filesystem: a download whose local file
+      // was deleted out-of-band (or that lost its path) is stale and must not
+      // keep masquerading as available offline.
+      await pruneMissingDownloadedFiles();
       final recents = await db.loadRecent();
       _recentlyPlayed.clear();
       _recentlyPlayed.addAll(recents);
@@ -115,14 +134,14 @@ class MusicRepository extends ChangeNotifier {
   }
 
   void _persistState() {
-    try {
-      final db = NoctraLocalDatabase();
-      db.saveFavorites(_favorites);
-      db.saveDownloads(_downloads);
-      db.saveRecent(_recentlyPlayed);
-      db.saveCustomFolders(_customFolders);
-      db.saveTasteVector(_userTasteVector);
-    } catch (_) {}
+    // Every save is individually wrapped inside NoctraLocalDatabase with its
+    // own error log, so a failure in one list never masks the others.
+    final db = NoctraLocalDatabase();
+    db.saveFavorites(_favorites);
+    db.saveDownloads(_downloads);
+    db.saveRecent(_recentlyPlayed);
+    db.saveCustomFolders(_customFolders);
+    db.saveTasteVector(_userTasteVector);
   }
 
   String getTimeOfDayGreeting() {
@@ -138,7 +157,24 @@ class MusicRepository extends ChangeNotifier {
     if (isFavorite(song.id)) {
       _favorites.removeWhere((s) => s.id == song.id);
     } else {
-      _favorites.insert(0, song.copyWith(isFavorite: true));
+      // Stamp the favorite with the current LOCAL download state so a Song
+      // arriving from a resolver with stale `isDownloaded=false` cannot
+      // persist a favorite row that loses its offline path. Presence in the
+      // downloads list IS the local truth (the download may predate this
+      // resolver copy), so it drives both flags.
+      final dl = _downloads.where((d) => d.id == song.id).firstOrNull;
+      final path = dl?.localFilePath;
+      _favorites.insert(
+        0,
+        song.copyWith(
+          isFavorite: true,
+          isDownloaded: dl != null,
+          localFilePath: path,
+          // Never fall back to a stale resolver path: only a path that
+          // matches the local downloads list may be persisted.
+          clearLocalFilePath: path == null,
+        ),
+      );
     }
     NoctraLocalDatabase().saveFavorites(_favorites);
     notifyListeners();
@@ -183,6 +219,114 @@ class MusicRepository extends ChangeNotifier {
     _downloads.insert(0, song);
     NoctraLocalDatabase().saveDownloads(_downloads);
     notifyListeners();
+  }
+
+  /// Removes a download from the offline library and (optionally) deletes its
+  /// local file. A download that was never persisted to disk (web / failed
+  /// rename) is still removed from the list so it stops appearing as offline.
+  Future<void> removeDownloadedSong(String songId,
+      {bool deleteFile = true}) async {
+    final target = _downloads.where((d) => d.id == songId).firstOrNull;
+    if (target == null) return;
+    _downloads.removeWhere((d) => d.id == songId);
+    // Un-stamp favorite rows that point at this download so they never keep
+    // advertising an offline file that no longer exists (state ownership).
+    var favoritesTouched = false;
+    for (var i = 0; i < _favorites.length; i++) {
+      final fav = _favorites[i];
+      if (fav.id == songId && (fav.isDownloaded || fav.localFilePath != null)) {
+        _favorites[i] = fav.copyWith(
+          isDownloaded: false,
+          clearLocalFilePath: true,
+        );
+        favoritesTouched = true;
+      }
+    }
+    NoctraLocalDatabase().saveDownloads(_downloads);
+    if (favoritesTouched) {
+      NoctraLocalDatabase().saveFavorites(_favorites);
+    }
+    notifyListeners();
+    if (deleteFile && !kIsWeb && target.localFilePath != null) {
+      try {
+        final f = File(target.localFilePath!);
+        if (f.existsSync()) await f.delete();
+      } catch (e) {
+        NoctraLogger.w('Failed to delete local file for $songId', e);
+      }
+    }
+  }
+
+  /// Removes downloaded entries whose backing file no longer exists (deleted
+  /// out-of-band, SD-card removal, failed download cleanup) or whose path was
+  /// lost. Returns how many entries were pruned. Never deletes files.
+  Future<int> pruneMissingDownloadedFiles() async {
+    if (_downloads.isEmpty) return 0;
+    if (kIsWeb) {
+      // No local filesystem on web: downloads are represented without a file
+      // path by design (MusicService.downloadTrack returns isDownloaded=true
+      // with no path on web). Never prune them here.
+      return 0;
+    }
+    final stale = <String>[];
+    for (final d in _downloads) {
+      final path = d.localFilePath;
+      if (path == null || path.isEmpty) {
+        stale.add(d.id);
+        continue;
+      }
+      try {
+        if (!File(path).existsSync()) stale.add(d.id);
+      } catch (_) {
+        stale.add(d.id); // unreadable/invalid path — treat as missing
+      }
+    }
+    if (stale.isEmpty) return 0;
+    _downloads.removeWhere((d) => stale.contains(d.id));
+    // Mirror the removal onto favorite rows that point at now-missing files.
+    var favoritesTouched = false;
+    for (var i = 0; i < _favorites.length; i++) {
+      final fav = _favorites[i];
+      if (stale.contains(fav.id) &&
+          (fav.isDownloaded || fav.localFilePath != null)) {
+        _favorites[i] =
+            fav.copyWith(isDownloaded: false, clearLocalFilePath: true);
+        favoritesTouched = true;
+      }
+    }
+    NoctraLocalDatabase().saveDownloads(_downloads);
+    if (favoritesTouched) {
+      NoctraLocalDatabase().saveFavorites(_favorites);
+    }
+    notifyListeners();
+    return stale.length;
+  }
+
+  /// Bulk-adds songs to favorites with a SINGLE full-state write. Import
+  /// flows (Spotify/Apple Music/YouTube Music exports) must not trigger one
+  /// serialized write per matched track — that is O(N) full-list snapshots.
+  /// Idempotent: songs already favorited (by ID) are skipped.
+  void addSongsToFavorites(Iterable<Song> songs) {
+    var added = false;
+    for (final song in songs) {
+      if (isFavorite(song.id)) continue;
+      final dl = _downloads.where((d) => d.id == song.id).firstOrNull;
+      final path = dl?.localFilePath;
+      _favorites.insert(
+        0,
+        song.copyWith(
+          isFavorite: true,
+          isDownloaded: dl != null,
+          localFilePath: path,
+          clearLocalFilePath: path == null,
+        ),
+      );
+      added = true;
+    }
+    if (added) {
+      NoctraLocalDatabase().saveFavorites(_favorites);
+      notifyListeners();
+    }
   }
 
   void updateTasteVector(Song song, String action) {

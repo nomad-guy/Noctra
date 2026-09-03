@@ -59,7 +59,10 @@ class SongManifest {
         totalListenSeconds: (map['totalListenSeconds'] as num?)?.toInt() ?? 0,
         completionRate: (map['completionRate'] as num?)?.toDouble() ?? 1.0,
         lastPlayedTimestamp: (map['lastPlayedTimestamp'] as num?)?.toInt() ?? 0,
-        featureVector: (map['featureVector'] as List?)?.map((e) => (e as num).toDouble()).toList() ?? List.filled(32, 0.5),
+        featureVector: (map['featureVector'] as List?)
+                ?.map((e) => (e as num).toDouble())
+                .toList() ??
+            List.filled(32, 0.5),
       );
 }
 
@@ -68,6 +71,14 @@ class NoctraManifestStore {
   final Map<String, int> artistWeights = {};
   final Map<String, int> genreWeights = {};
   final Map<String, int> languageWeights = {};
+
+  // Reset used by NoctraLocalDatabase.debugResetForTest() and tests.
+  void debugResetForTest() {
+    manifests.clear();
+    artistWeights.clear();
+    genreWeights.clear();
+    languageWeights.clear();
+  }
 
   void loadFromRawMap(Map<String, dynamic> rawMap) {
     manifests.clear();
@@ -83,15 +94,21 @@ class NoctraManifestStore {
   }
 
   void _rebuildWeights() {
-    artistWeights.clear(); genreWeights.clear(); languageWeights.clear();
+    artistWeights.clear();
+    genreWeights.clear();
+    languageWeights.clear();
     for (final m in manifests.values) {
       artistWeights[m.artist] = (artistWeights[m.artist] ?? 0) + m.playCount;
       genreWeights[m.genre] = (genreWeights[m.genre] ?? 0) + m.playCount;
-      languageWeights[m.language] = (languageWeights[m.language] ?? 0) + m.playCount;
+      languageWeights[m.language] =
+          (languageWeights[m.language] ?? 0) + m.playCount;
     }
   }
 
-  void recordManifest(Song song, {String action = 'play', int listenedSeconds = 0, double completionRate = 1.0}) {
+  void recordManifest(Song song,
+      {String action = 'play',
+      int listenedSeconds = 0,
+      double completionRate = 1.0}) {
     final existing = manifests[song.id];
     final plays = (existing?.playCount ?? 0) + (action == 'skip' ? 0 : 1);
     final skips = (existing?.skipCount ?? 0) + (action == 'skip' ? 1 : 0);
@@ -109,11 +126,20 @@ class NoctraManifestStore {
       inferredLang = 'Korean';
     } else if (lGenre.contains('japanese') || lGenre.contains('j-pop')) {
       inferredLang = 'Japanese';
-    } else if (RegExp(r'\b(tum|dil|pyaar|ishq|tere|hum|zindagi|saath|mera|meri)\b', caseSensitive: false).hasMatch(song.title) ||
-        RegExp(r'\b(arijit|pritam|shreya|atif|sonu|alka|kumar sanu|kk)\b', caseSensitive: false).hasMatch(song.artist)) {
+    } else if (RegExp(
+                r'\b(tum|dil|pyaar|ishq|tere|hum|zindagi|saath|mera|meri)\b',
+                caseSensitive: false)
+            .hasMatch(song.title) ||
+        RegExp(r'\b(arijit|pritam|shreya|atif|sonu|alka|kumar sanu|kk)\b',
+                caseSensitive: false)
+            .hasMatch(song.artist)) {
       inferredLang = 'Hindi';
-    } else if (RegExp(r'\b(jatt|pind|gabru|punjab|yaar|tere bina)\b', caseSensitive: false).hasMatch(song.title) ||
-        RegExp(r'\b(sidhu|diljit|karan aujla|ap dhillon|shubh|amrit maan)\b', caseSensitive: false).hasMatch(song.artist)) {
+    } else if (RegExp(r'\b(jatt|pind|gabru|punjab|yaar|tere bina)\b',
+                caseSensitive: false)
+            .hasMatch(song.title) ||
+        RegExp(r'\b(sidhu|diljit|karan aujla|ap dhillon|shubh|amrit maan)\b',
+                caseSensitive: false)
+            .hasMatch(song.artist)) {
       inferredLang = 'Punjabi';
     }
 
@@ -140,8 +166,12 @@ class NoctraManifestStore {
     try {
       if (manifests.length > 500) {
         final sortedKeys = manifests.keys.toList()
-          ..sort((a, b) => manifests[a]!.lastPlayedTimestamp.compareTo(manifests[b]!.lastPlayedTimestamp));
-        for (final k in sortedKeys.take(manifests.length - 500)) { manifests.remove(k); }
+          ..sort((a, b) => manifests[a]!
+              .lastPlayedTimestamp
+              .compareTo(manifests[b]!.lastPlayedTimestamp));
+        for (final k in sortedKeys.take(manifests.length - 500)) {
+          manifests.remove(k);
+        }
         _rebuildWeights();
       }
       final p = prefs ?? await SharedPreferences.getInstance();
