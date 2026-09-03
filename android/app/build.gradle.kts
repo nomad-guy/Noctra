@@ -18,31 +18,21 @@ android {
         create("release") {
             storeFile = file("noctra-release.keystore")
             val ksPw = System.getenv("NOCTRA_KEYSTORE_PASSWORD")
+                ?: (project.findProperty("NOCTRA_KEYSTORE_PASSWORD") as? String)
             val keyPw = System.getenv("NOCTRA_KEY_PASSWORD")
-            val keyAlias = System.getenv("NOCTRA_KEY_ALIAS") ?: "noctra"
-            val releaseRequested = gradle.startParameter.taskNames.any { task ->
-                task.contains("Release", ignoreCase = true) ||
-                    task.contains("Bundle", ignoreCase = true)
-            }
-            if (ksPw.isNullOrBlank() || keyPw.isNullOrBlank()) {
-                if (releaseRequested) {
-                    // Fail fast ONLY when a release artifact was actually
-                    // requested — never block assembleDebug/assembleProfile
-                    // for developers without signing secrets.
-                    throw GradleException(
-                        "Release signing requires NOCTRA_KEYSTORE_PASSWORD and NOCTRA_KEY_PASSWORD " +
-                        "environment variables. Set them in ~/.gradle/gradle.properties or CI secrets."
-                    )
-                }
-                // Debug/profile builds don't use this config; leave the
-                // passwords empty so configuration never throws.
-                storePassword = ""
-                this.keyAlias = keyAlias
-                keyPassword = ""
-            } else {
+                ?: (project.findProperty("NOCTRA_KEY_PASSWORD") as? String)
+            val keyAlias = System.getenv("NOCTRA_KEY_ALIAS")
+                ?: (project.findProperty("NOCTRA_KEY_ALIAS") as? String)
+                ?: "noctra"
+
+            if (!ksPw.isNullOrBlank() && !keyPw.isNullOrBlank() && storeFile?.exists() == true) {
                 storePassword = ksPw
                 this.keyAlias = keyAlias
                 keyPassword = keyPw
+            } else {
+                storePassword = ""
+                this.keyAlias = keyAlias
+                keyPassword = ""
             }
         }
     }
@@ -66,7 +56,26 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            val releaseSigning = signingConfigs.getByName("release")
+            val hasReleaseKeys = !releaseSigning.storePassword.isNullOrBlank() &&
+                !releaseSigning.keyPassword.isNullOrBlank()
+            val enforceReleaseSigning = System.getenv("CI") == "true" ||
+                (project.findProperty("NOCTRA_ENFORCE_SIGNING") as? String) == "true"
+
+            if (hasReleaseKeys) {
+                signingConfig = releaseSigning
+            } else if (enforceReleaseSigning) {
+                throw GradleException(
+                    "Release signing requires NOCTRA_KEYSTORE_PASSWORD and NOCTRA_KEY_PASSWORD " +
+                    "environment variables or Gradle properties in CI / production release builds."
+                )
+            } else {
+                logger.warn(
+                    "NOCTRA WARNING: Release signing credentials not found. " +
+                    "Signing release build with debug keystore for local testing and auditing."
+                )
+                signingConfig = signingConfigs.getByName("debug")
+            }
         }
     }
 }
