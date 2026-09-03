@@ -18,10 +18,11 @@ class AppUpdateInfo {
   final String releaseNotes;
   final String downloadUrl;
 
-  /// SHA-256 of the APK asset extracted from the GitHub release. Null if
-  /// the release did not publish a hash. Installers MUST refuse any APK
-  /// whose digest does not match.
-  final String? expectedSha256;
+  /// SHA-256 of the APK asset extracted from the GitHub release.
+  /// Required — install MUST be refused when this is missing. Trusting
+  /// an APK without a pinned digest would defeat the entire update
+  /// security model.
+  final String expectedSha256;
 
   const AppUpdateInfo({
     required this.hasUpdate,
@@ -29,7 +30,7 @@ class AppUpdateInfo {
     required this.latestVersion,
     required this.releaseNotes,
     required this.downloadUrl,
-    this.expectedSha256,
+    required this.expectedSha256,
   });
 }
 
@@ -126,13 +127,30 @@ class AppUpdateService {
 
         final current = await _resolveCurrentVersion();
         final isNewer = _isVersionNewer(latestTag, current);
+        // Refuse to advertise an update if no SHA-256 digest was
+        // published. Without a pinned hash, SHA-256 verification
+        // cannot be enforced, and a compromised release would bypass
+        // the entire trust model. `hasUpdate: false` here means the
+        // user will not see the in-app installer at all.
+        if (isNewer && (expectedSha == null || expectedSha.isEmpty)) {
+          NoctraLogger.w(
+              'Refusing update $latestTag: no SHA-256 digest published');
+          return AppUpdateInfo(
+            hasUpdate: false,
+            currentVersion: current,
+            latestVersion: current,
+            releaseNotes: '',
+            downloadUrl: fallbackDownloadUrl,
+            expectedSha256: expectedSha ?? '', // empty → never matches
+          );
+        }
         return AppUpdateInfo(
           hasUpdate: isNewer,
           currentVersion: current,
           latestVersion: latestTag,
           releaseNotes: notes,
           downloadUrl: downloadUrl,
-          expectedSha256: expectedSha,
+          expectedSha256: expectedSha ?? '',
         );
       }
     } catch (_) {}
@@ -144,6 +162,7 @@ class AppUpdateService {
       latestVersion: current,
       releaseNotes: '',
       downloadUrl: fallbackDownloadUrl,
+      expectedSha256: '',
     );
   }
 
@@ -184,6 +203,17 @@ class AppUpdateService {
         return null;
       }
 
+      // P0: refuse installs when no SHA-256 is published. The
+      // contract change to AppUpdateInfo.expectedSha256 makes the
+      // digest required at compile time, but we double-check here
+      // so that any future caller of this helper that constructs an
+      // AppUpdateInfo by hand still gets refused.
+      if (info.expectedSha256.isEmpty ||
+          !RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(info.expectedSha256)) {
+        NoctraLogger.w('APK install refused: missing or invalid SHA-256');
+        return null;
+      }
+
       final dir = await getTemporaryDirectory();
       final tmp =
           File('${dir.path}/noctra-update-${info.latestVersion}.apk.part');
@@ -209,8 +239,7 @@ class AppUpdateService {
         await sink.close();
         final hex = crypto.sha256.convert(accumulator).toString();
 
-        if (info.expectedSha256 != null &&
-            hex.toLowerCase() != info.expectedSha256!.toLowerCase()) {
+        if (hex.toLowerCase() != info.expectedSha256.toLowerCase()) {
           await tmp.delete();
           NoctraLogger.w(
               'APK SHA-256 mismatch (expected=${info.expectedSha256}, got=$hex)');
@@ -313,76 +342,66 @@ class _InAppUpdateModalContentState extends State<_InAppUpdateModalContent> {
   bool _isDownloading = false;
   double _progress = 0.0;
   double _downloadedMb = 0.0;
-  double _totalMb = 0.0;
+  // Nullable: null means the server did not send a Content-Length
+  // header, in which case the progress indicator must be indeterminate
+  // rather than dividing by a fabricated constant.
+  double? _totalMb;
   String? _errorMessage;
 
   Future<void> _startInAppUpdate() async {
     setState(() {
       _isDownloading = true;
       _progress = 0.0;
+      _downloadedMb = 0.0;
+      _totalMb = null;
       _errorMessage = null;
     });
 
-    try {
-      final client = http.Client();
-      final request = http.Request('GET', Uri.parse(widget.info.downloadUrl));
-      final streamedResponse = await client.send(request);
+    // P0 #1: route through the single verified download path. The
+    // previous version opened a raw http.Client here and wrote to
+    // disk without ever comparing the file's SHA-256 to the pinned
+    // digest. The button below is also wired to this same method.
+    final filePath = await AppUpdateService.downloadAndVerifyApk(
+      widget.info,
+      onProgress: (received, total) {
+        if (!mounted) return;
+        setState(() {
+          _downloadedMb = received / (1024 * 1024);
+          if (total < 0) {
+            _totalMb = null;
+            // Indeterminate: pulse the value. Without this the bar
+            // would have nothing to advance on a server that omits
+            // Content-Length.
+            _progress = (_progress + 0.04).clamp(0.0, 0.95);
+          } else {
+            _totalMb = total / (1024 * 1024);
+            _progress = (received / total).clamp(0.0, 1.0);
+          }
+        });
+      },
+    );
 
-      if (streamedResponse.statusCode != 200) {
-        throw Exception(
-            'Download server returned status ${streamedResponse.statusCode}');
-      }
+    if (!mounted) return;
 
-      final contentLength =
-          streamedResponse.contentLength ?? (60 * 1024 * 1024);
-      final dir = await getTemporaryDirectory();
-      final targetFile =
-          File('${dir.path}/noctra_update_${widget.info.latestVersion}.apk');
-      if (await targetFile.exists()) {
-        await targetFile.delete();
-      }
-
-      final sink = targetFile.openWrite();
-      int received = 0;
-
-      await streamedResponse.stream.listen((chunk) {
-        sink.add(chunk);
-        received += chunk.length;
-        if (mounted) {
-          setState(() {
-            _progress = (received / contentLength).clamp(0.0, 1.0);
-            _downloadedMb = received / (1024 * 1024);
-            _totalMb = contentLength / (1024 * 1024);
-          });
-        }
-      }).asFuture();
-
-      await sink.flush();
-      await sink.close();
-
-      if (!mounted) return;
-
-      // Trigger native package installer
-      final ok =
-          await AppUpdateService.notifyChannel.invokeMethod('installApk', {
-        'filePath': targetFile.path,
+    if (filePath == null) {
+      setState(() {
+        _isDownloading = false;
+        _errorMessage =
+            'Update verification failed or download was blocked. Tap external download below.';
       });
+      return;
+    }
 
-      if (ok != true && mounted) {
-        setState(() {
-          _isDownloading = false;
-          _errorMessage =
-              'Could not trigger native installer. Tap external download below.';
-        });
-      }
-    } catch (e) {
-      NoctraLogger.e('In-app update download error', e);
-      if (mounted) {
-        setState(() {
-          _isDownloading = false;
-          _errorMessage = 'Download failed: $e';
-        });
-      }
+    // Trigger native package installer
+    final ok = await AppUpdateService.notifyChannel
+        .invokeMethod('installApk', {'filePath': filePath});
+
+    if (ok != true && mounted) {
+      setState(() {
+        _isDownloading = false;
+        _errorMessage =
+            'Could not trigger native installer. Tap external download below.';
+      });
     }
   }
 
@@ -510,7 +529,9 @@ class _InAppUpdateModalContentState extends State<_InAppUpdateModalContent> {
                           color: isDark ? Colors.white70 : Colors.black87),
                     ),
                     Text(
-                      '${_downloadedMb.toStringAsFixed(1)} MB / ${_totalMb.toStringAsFixed(1)} MB',
+                      _totalMb == null
+                          ? '${_downloadedMb.toStringAsFixed(1)} MB'
+                          : '${_downloadedMb.toStringAsFixed(1)} MB / ${_totalMb!.toStringAsFixed(1)} MB',
                       style: TextStyle(
                           fontSize: 11.5,
                           fontFamily: 'monospace',
