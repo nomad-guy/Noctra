@@ -75,6 +75,13 @@ class AudioPlayerService {
   AudioPlayer get player => _player;
   AudioPlayer? _bufferedNext;
   Song? _bufferedNextSong;
+
+  /// Queue revision the current preload was prepared against. A preload
+  /// is only valid for the queue entry that existed at this revision:
+  /// after any mutation (remove/reorder/clear/shuffle) the entry the
+  /// preload belongs to may no longer be the one the user will play
+  /// next, even when a song with the same ID still exists.
+  int _bufferedNextRevision = -1;
   int _preloadingGeneration = 0;
   bool _preloading = false;
 
@@ -147,6 +154,26 @@ class AudioPlayerService {
   Song? get currentSong => _currentSong;
   int _queueRevision = 0;
 
+  /// Test seam — establishes an in-memory queue + current position WITHOUT
+  /// touching the platform player, so queue/transition invariants can be
+  /// exercised deterministically (the same production mutation helpers are
+  /// used as when a real song is playing).
+  @visibleForTesting
+  void debugSetPlaybackPosition({
+    required List<Song> queue,
+    required int index,
+    Song? currentSong,
+  }) {
+    _queue
+      ..clear()
+      ..addAll(queue);
+    _queueRevision++;
+    _queueController.add(List.unmodifiable(_queue));
+    _currentIndex = index.clamp(0, _queue.isEmpty ? 0 : _queue.length - 1);
+    _currentSong =
+        currentSong ?? (_queue.isEmpty ? null : _queue[_currentIndex]);
+  }
+
   void _mutateQueue(bool Function() mutate) {
     final changed = mutate();
     if (!changed) {
@@ -156,11 +183,22 @@ class AudioPlayerService {
     _queueController.add(List.unmodifiable(_queue));
   }
 
-  /// Reconcile _currentIndex to match _currentSong after any queue mutation.
+  /// Reconcile _currentIndex to match _currentSong after any queue
+  /// mutation. Prefers INSTANCE identity so a playing duplicate is not
+  /// re-pinned to an earlier copy with the same ID; falls back to ID only
+  /// when the exact playing instance is gone (e.g. a persisted copy).
   void _reconcileIndex() {
-    if (_currentSong != null) {
-      final idx = _queue.indexWhere((s) => s.id == _currentSong!.id);
-      if (idx >= 0) _currentIndex = idx;
+    final current = _currentSong;
+    if (current == null) {
+      return;
+    }
+    var idx = _queue.indexOf(current);
+    if (idx < 0) {
+      idx = _queue.indexWhere((s) => s.id == current.id);
+    }
+    if (idx >= 0) {
+      _currentIndex = idx;
+      _currentSong = _queue[idx]; // keep instance identity authoritative
     }
   }
 
@@ -499,21 +537,29 @@ class AudioPlayerService {
     } else if (!_isShuffleEnabled && _canonicalQueue != null) {
       final rebuilt =
           restoreCanonicalOrder(_canonicalQueue!, List<Song>.from(_queue));
-      final currentId = _currentSong?.id;
+      // The playing entry is the queue instance — find THAT instance in
+      // the rebuilt order. With duplicate song IDs, indexWhere by ID
+      // could pin _currentIndex to the wrong copy of the current song.
+      final playing = _currentSong;
+      final currentRef =
+          playing == null ? null : (rebuilt.contains(playing) ? playing : null);
+      final currentId = playing?.id;
       _mutateQueue(() {
         _queue
           ..clear()
           ..addAll(rebuilt);
-        // Restore currentIndex to the currently playing song.
-        if (currentId != null) {
-          _currentIndex = _queue.indexWhere((s) => s.id == currentId);
-        }
+        // Restore currentIndex to the currently playing entry: prefer
+        // instance identity (indexOf), fall back to ID.
+        _currentIndex = currentRef != null
+            ? _queue.indexOf(currentRef)
+            : (currentId != null
+                ? _queue.indexWhere((s) => s.id == currentId)
+                : -1);
         if (_currentIndex < 0 || _currentIndex >= _queue.length) {
           // Queue can be empty if every song was removed while
           // shuffled — keep index 0 as the empty-queue sentinel.
-          _currentIndex = _queue.isEmpty
-              ? 0
-              : _canonicalIndex.clamp(0, _queue.length - 1);
+          _currentIndex =
+              _queue.isEmpty ? 0 : _canonicalIndex.clamp(0, _queue.length - 1);
         }
         _canonicalQueue = null;
         return true;
@@ -823,6 +869,10 @@ class AudioPlayerService {
     }
 
     final oldPlayer = _player;
+    // Ramp target captured at start. If the user changes volume mid-fade,
+    // setVolume bumps _volumeEpoch which cancels this ramp — the cancel
+    // path below must then restore the CURRENT _targetVolume, never this
+    // stale capture (it would undo the user's change).
     final targetVol = _targetVolume;
     try {
       await nextPlayer.setVolume(0.0);
@@ -866,9 +916,12 @@ class AudioPlayerService {
           _playSessionEpoch != playEpoch ||
           _volumeEpoch != vEpoch ||
           !identical(oldPlayer, _player)) {
-        // Cancellation: restore old player volume
+        // Cancellation: restore the old player to the CURRENT user volume.
+        // targetVol is the stale pre-fade value — if the cancel was caused
+        // by setVolume mid-fade, restoring targetVol would undo the user's
+        // change.
         try {
-          await oldPlayer.setVolume(targetVol);
+          await oldPlayer.setVolume(_targetVolume);
         } catch (_) {}
         try {
           await nextPlayer.stop();
@@ -881,7 +934,7 @@ class AudioPlayerService {
           nextPlayer.processingState == ProcessingState.idle) {
         NoctraLogger.w('Crossfade: next player unhealthy at commit, aborting');
         try {
-          await oldPlayer.setVolume(targetVol);
+          await oldPlayer.setVolume(_targetVolume);
         } catch (_) {}
         try {
           await nextPlayer.stop();
@@ -889,9 +942,9 @@ class AudioPlayerService {
         return CrossfadeResult.failed;
       }
     } catch (e) {
-      // Exception: restore old player
+      // Exception: restore old player to the current user volume.
       try {
-        await oldPlayer.setVolume(targetVol);
+        await oldPlayer.setVolume(_targetVolume);
       } catch (_) {}
       try {
         await nextPlayer.stop();
@@ -1004,10 +1057,11 @@ class AudioPlayerService {
       }
 
       AudioPlayer? nextPlayer;
-      if (_bufferedNext != null && _bufferedNextSong?.id == nextSong.id) {
+      if (_bufferedMatches(nextSong)) {
         nextPlayer = _bufferedNext;
         _bufferedNext = null;
         _bufferedNextSong = null;
+        _bufferedNextRevision = -1;
       } else {
         nextPlayer = await _preparePlayer(nextSong, epoch);
       }
@@ -1050,12 +1104,14 @@ class AudioPlayerService {
     final epoch = _playSessionEpoch;
     _transitionEpoch++;
     final tEpoch = _transitionEpoch;
+    final rev = _queueRevision;
 
     AudioPlayer? nextPlayer;
-    if (_bufferedNext != null && _bufferedNextSong?.id == nextSong.id) {
+    if (_bufferedMatches(nextSong)) {
       nextPlayer = _bufferedNext;
       _bufferedNext = null;
       _bufferedNextSong = null;
+      _bufferedNextRevision = -1;
     } else {
       nextPlayer = await _preparePlayer(nextSong, epoch);
     }
@@ -1063,22 +1119,32 @@ class AudioPlayerService {
     if (nextPlayer == null ||
         epoch != _playSessionEpoch ||
         tEpoch != _transitionEpoch ||
+        rev != _queueRevision ||
         _transitionId != myId) {
       await _disposePlayer(nextPlayer);
-      await _playSongInternal(nextSong);
+      if (epoch == _playSessionEpoch &&
+          rev == _queueRevision &&
+          _transitionId == myId) {
+        // Session and queue are unchanged — prepare failed (e.g.
+        // transient resolve/load error), so fall back to a fresh load.
+        await _playSongInternal(nextSong);
+      }
       return;
     }
 
     final result = await _crossfadeTo(nextPlayer, nextSong);
     if (result != CrossfadeResult.completed) {
       await _disposePlayer(nextPlayer);
-      if (epoch == _playSessionEpoch && _transitionId == myId) {
+      if (epoch == _playSessionEpoch &&
+          rev == _queueRevision &&
+          _transitionId == myId) {
         await _playSongInternal(nextSong);
       }
       return;
     }
     if (epoch != _playSessionEpoch ||
         tEpoch != _transitionEpoch ||
+        rev != _queueRevision ||
         _transitionId != myId) {
       await _disposePlayer(nextPlayer);
       return;
@@ -1092,6 +1158,9 @@ class AudioPlayerService {
   Future<void> _commitPlayerSwap(
       AudioPlayer nextPlayer, Song nextSong, int epoch, int myId) async {
     final newIndex = _queue.indexWhere((s) => s.id == nextSong.id);
+    // The whole crossfade ran against the queue state at its start; if the
+    // queue was mutated meanwhile (revision moved) the index lookup above
+    // is stale and [nextSong] may no longer be the intended next entry.
     if (newIndex < 0 || epoch != _playSessionEpoch || _transitionId != myId) {
       await _disposePlayer(nextPlayer);
       return;
@@ -1117,6 +1186,7 @@ class AudioPlayerService {
     final player = _bufferedNext;
     _bufferedNext = null;
     _bufferedNextSong = null;
+    _bufferedNextRevision = -1;
     _preloadingGeneration++;
     _preloading = false;
     if (player != null) {
@@ -1218,6 +1288,7 @@ class AudioPlayerService {
       final oldBuffered = _bufferedNext;
       _bufferedNext = nextPlayer;
       _bufferedNextSong = song;
+      _bufferedNextRevision = revision;
       if (oldBuffered != null) {
         await _disposePlayer(oldBuffered);
       }
@@ -1226,6 +1297,16 @@ class AudioPlayerService {
       await _disposePlayer(nextPlayer);
     }
   }
+
+  /// True when a pre-buffered player is still valid for [song]: it must
+  /// belong to the current queue revision, otherwise the queue entry it
+  /// was prepared for may have been removed or re-created under the same
+  /// ID (duplicates / remove-then-add) and the preload is stale.
+  bool _bufferedMatches(Song song) =>
+      _bufferedNext != null &&
+      _bufferedNextSong != null &&
+      _bufferedNextSong!.id == song.id &&
+      _bufferedNextRevision == _queueRevision;
 
   // ─── [21] Radio / autoplay ─────────────────────────────────────────────
 
@@ -1414,6 +1495,7 @@ class AudioPlayerService {
       final oldBuffered = _bufferedNext;
       _bufferedNext = null;
       _bufferedNextSong = null;
+      _bufferedNextRevision = -1;
       _preloading = false;
       if (oldBuffered != null) {
         _disposePlayer(oldBuffered);
@@ -1428,10 +1510,21 @@ class AudioPlayerService {
       _currentIndex = _queue.indexWhere((s) => s.id == song.id);
     }
 
-    _currentSong = song;
+    // Canonical identity: the playing entry is the queue instance AT the
+    // selected index. Every branch above guarantees the queue holds a
+    // matching entry and _currentIndex points at it, so _currentSong is
+    // the queue's instance (NOT the caller-supplied object). With
+    // duplicate song IDs this makes position the source of truth — a
+    // caller-supplied Song with the same ID but a different instance must
+    // not become _currentSong (it would break removeFromQueue's instance
+    // check and preload matching).
+    final current = (_currentIndex >= 0 && _currentIndex < _queue.length)
+        ? _queue[_currentIndex]
+        : song;
+    _currentSong = current;
     _songStartTime = DateTime.now();
-    _currentSongController.add(song);
-    MusicRepository().recordSongPlayed(song);
+    _currentSongController.add(current);
+    MusicRepository().recordSongPlayed(current);
     try {
       await _player.stop();
     } catch (_) {}
@@ -1442,11 +1535,14 @@ class AudioPlayerService {
       return;
     }
 
-    // Try pre-buffered player
-    if (_bufferedNext != null && _bufferedNextSong?.id == song.id) {
+    // Try pre-buffered player — only when it was prepared against the
+    // CURRENT queue revision (the entry may have been removed, re-added or
+    // reordered under the same song ID since the preload began).
+    if (_bufferedMatches(song)) {
       final buffered = _bufferedNext!;
       _bufferedNext = null;
       _bufferedNextSong = null;
+      _bufferedNextRevision = -1;
       await _detachListeners();
       final oldPlayer = _player;
       _player = buffered;
@@ -1640,14 +1736,21 @@ class AudioPlayerService {
     if (index < 0 || index >= _queue.length) {
       return;
     }
-    final removedCurrent =
-        _currentSong != null && _queue[index].id == _currentSong!.id;
+    // A queue position identifies an entry. Duplicate song IDs are legal,
+    // so "removing the current song" must mean removing the entry AT the
+    // current position — never any entry that merely shares the current
+    // song's ID (that would stop playback and jump when a user removes a
+    // duplicate copy of the playing track).
+    final removedCurrent = _currentSong != null &&
+        index == _currentIndex &&
+        identical(_queue[index], _currentSong);
     _mutateQueue(() {
       _queue.removeAt(index);
       return true;
     });
     if (removedCurrent) {
-      // Current song was removed — play next if available, else stop
+      // Current entry was removed — play what now occupies that position
+      // (the old next entry), else stop cleanly.
       if (_queue.isNotEmpty) {
         _currentIndex = index.clamp(0, _queue.length - 1);
         playSong(_queue[_currentIndex]);
@@ -1657,6 +1760,11 @@ class AudioPlayerService {
         _currentSongController.add(null);
       }
     } else {
+      // Removing an entry before the current one shifts the current
+      // position down by one; removing a later entry leaves it as is.
+      if (index < _currentIndex) {
+        _currentIndex--;
+      }
       _reconcileIndex();
     }
     _invalidatePreload();
@@ -1666,13 +1774,26 @@ class AudioPlayerService {
     if (oldIndex < 0 || oldIndex >= _queue.length) {
       return;
     }
+    // Instance identity: with duplicate song IDs, ID-based reconciliation
+    // can pin _currentIndex to the WRONG copy of the current song. Track
+    // the moved entry by object identity and follow it.
+    final movedIsCurrent =
+        _currentSong != null && identical(_queue[oldIndex], _currentSong);
     _mutateQueue(() {
       final song = _queue.removeAt(oldIndex);
       final targetIndex = newIndex.clamp(0, _queue.length);
       _queue.insert(targetIndex, song);
       return true;
     });
-    _reconcileIndex(); // Always reconcile by song ID
+    if (movedIsCurrent && _currentSong != null) {
+      // Find the exact instance we moved — indexOf uses identity.
+      final newIdx = _queue.indexOf(_currentSong!);
+      if (newIdx >= 0) {
+        _currentIndex = newIdx;
+      }
+    } else {
+      _reconcileIndex();
+    }
     _invalidatePreload();
   }
 
