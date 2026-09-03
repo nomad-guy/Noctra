@@ -184,40 +184,31 @@ class NoctraSqliteDatabase {
       final skipInc = (eventType == 'fast_skip' ||
           eventType == 'short_skip') ? 1 : 0;
 
-      // Try atomic update first (no race window).
-      final updated = await db.rawUpdate(
-        'UPDATE track_embeddings SET '
-        'replay_count = replay_count + ?, '
-        'skip_count = skip_count + ?, '
-        'total_listen_time_ms = total_listen_time_ms + ?, '
-        'last_listened_at = ?, '
-        'audio_features_json = COALESCE(?, audio_features_json), '
-        'updated_at = ? '
-        'WHERE song_id = ?',
-        [replayInc, skipInc, durationListenedMs, now,
-         audioFeaturesJson, now, song.id],
+      // Single atomic UPSERT — no update-then-insert race window.
+      // Two concurrent events cannot both see "row missing" and race.
+      final vectorJson = jsonEncode(song.featureVector);
+      await db.rawInsert(
+        'INSERT INTO track_embeddings ('
+        'song_id, title, artist, genre, album, duration_ms, '
+        'is_in_favorites, is_downloaded, replay_count, '
+        'total_listen_time_ms, skip_count, last_listened_at, '
+        'audio_features_json, vector_json, updated_at) '
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) '
+        'ON CONFLICT(song_id) DO UPDATE SET '
+        'replay_count = track_embeddings.replay_count + excluded.replay_count, '
+        'skip_count = track_embeddings.skip_count + excluded.skip_count, '
+        'total_listen_time_ms = track_embeddings.total_listen_time_ms + '
+        'excluded.total_listen_time_ms, '
+        'last_listened_at = excluded.last_listened_at, '
+        'audio_features_json = COALESCE(excluded.audio_features_json, '
+        'track_embeddings.audio_features_json), '
+        'updated_at = excluded.updated_at',
+        [song.id, song.title, song.artist, song.genre, song.album,
+         song.duration.inMilliseconds,
+         song.isFavorite ? 1 : 0, song.isDownloaded ? 1 : 0,
+         replayInc, durationListenedMs, skipInc, now,
+         audioFeaturesJson, vectorJson, now],
       );
-
-      if (updated == 0) {
-        // No existing row — insert with defaults for independent fields.
-        await db.insert('track_embeddings', {
-          'song_id': song.id,
-          'title': song.title,
-          'artist': song.artist,
-          'genre': song.genre,
-          'album': song.album,
-          'duration_ms': song.duration.inMilliseconds,
-          'is_in_favorites': song.isFavorite ? 1 : 0,
-          'is_downloaded': song.isDownloaded ? 1 : 0,
-          'replay_count': replayInc,
-          'total_listen_time_ms': durationListenedMs,
-          'skip_count': skipInc,
-          'last_listened_at': now,
-          'audio_features_json': audioFeaturesJson,
-          'vector_json': jsonEncode(song.featureVector),
-          'updated_at': now,
-        });
-      }
     } catch (e) {
       NoctraLogger.w('SQLite event recording error', e);
     }

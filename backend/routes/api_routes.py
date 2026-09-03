@@ -278,9 +278,24 @@ def _stream_response(stream_url, headers):
             stream=True,
             timeout=15)
 
+        # Cap the proxy response to a sane upper bound to prevent a
+        # misbehaving upstream from pinning a worker thread.
+        max_proxy_bytes = 500 * 1024 * 1024  # 500 MB
+
         def generate():
+            nonlocal_max_bytes = max_proxy_bytes
+            sent = 0
             for chunk in upstream.iter_content(chunk_size=1024 * 64):
                 if chunk:
+                    if sent + len(chunk) > nonlocal_max_bytes:
+                        # Abort the upstream connection and stop the
+                        # iterator. The client will see a truncated
+                        # response; we deliberately avoid writing a
+                        # JSON body here to keep the audio stream
+                        # contract intact.
+                        upstream.close()
+                        return
+                    sent += len(chunk)
                     yield chunk
 
         resp_headers = {
@@ -370,24 +385,58 @@ def download_song():
         c_artist = "".join(
             c for c in artist if c.isalnum() or c in (
                 ' ', '_', '-')).strip()
+        # Collision-safe filename: include a short hash of the song
+        # id so two different songs with the same title/artist no
+        # longer overwrite each other. Also normalise length so the
+        # final path stays within POSIX limits.
+        import hashlib
+        id_hash = hashlib.sha256(song_id.encode('utf-8')).hexdigest()[:10]
+        base = f"{(c_artist or 'Unknown')[:32]} - {(c_title or 'track')[:48]}"
         filepath = os.path.join(
             DEFAULT_DOWNLOAD_DIR,
-            f"{c_artist} - {c_title}.m4a")
+            f"{base} [{id_hash}].m4a")
+        # Hard cap on a single download response to prevent disk
+        # exhaustion from a misbehaving upstream.
+        max_bytes = 200 * 1024 * 1024  # 200 MB
         if not os.path.exists(filepath):
             resp = requests.get(
-                stream_url, stream=True, timeout=30, allow_redirects=False)
+                stream_url,
+                stream=True,
+                timeout=30,
+                allow_redirects=False)
             if resp.status_code == 200:
-                with open(filepath, 'wb') as f:
+                # Write to a temp sibling and atomically rename so a
+                # partial download never leaves a corrupt .m4a behind.
+                tmp_path = filepath + '.part'
+                with open(tmp_path, 'wb') as f:
+                    received = 0
                     for chunk in resp.iter_content(
                             chunk_size=1024 * 64):
-                        f.write(chunk)
+                        if chunk:
+                            f.write(chunk)
+                            received += len(chunk)
+                            if received > max_bytes:
+                                f.close()
+                                os.remove(tmp_path)
+                                return jsonify(
+                                    {
+                                        "error":
+                                            "Download exceeded size limit"
+                                    }), 413
+                os.replace(tmp_path, filepath)
             else:
                 return jsonify(
-                    {"error": f"Download failed, status {resp.status_code}"}), 502
+                    {
+                        "error":
+                            f"Download failed, status {resp.status_code}"
+                    }), 502
+        # Do not leak the absolute server filesystem path to the
+        # client — the client only needs to know the download
+        # succeeded and how to identify the file.
         return jsonify({
             "status": "success",
             "message": "Downloaded lossless track",
-            "path": filepath,
+            "filename": os.path.basename(filepath),
         })
     except Exception as e:
         logger.error(f"Download error: {e}")

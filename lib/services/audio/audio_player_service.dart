@@ -149,7 +149,9 @@ class AudioPlayerService {
 
   void _mutateQueue(bool Function() mutate) {
     final changed = mutate();
-    if (!changed) { return; }
+    if (!changed) {
+      return;
+    }
     _queueRevision++;
     _queueController.add(List.unmodifiable(_queue));
   }
@@ -183,6 +185,7 @@ class AudioPlayerService {
       _isAutoplayEnabled = true,
       _isFadeEnabled = false;
   int _sleepFadeId = 0;
+
   /// Canonical (unshuffled) queue order — saved before first shuffle.
   List<Song>? _canonicalQueue;
   int _canonicalIndex = 0;
@@ -235,9 +238,15 @@ class AudioPlayerService {
   // ─── [07] Player disposal helpers ───────────────────────────────────────
 
   Future<void> _disposePlayer(AudioPlayer? p) async {
-    if (p == null) { return; }
-    try { await p.stop(); } catch (_) {}
-    try { await p.dispose(); } catch (_) {}
+    if (p == null) {
+      return;
+    }
+    try {
+      await p.stop();
+    } catch (_) {}
+    try {
+      await p.dispose();
+    } catch (_) {}
   }
 
   // ─── [08] Listener lifecycle ────────────────────────────────────────────
@@ -248,9 +257,15 @@ class AudioPlayerService {
     final attachedPlayer = _player;
 
     _stateSub = _player.playerStateStream.listen((s) {
-      if (gen != _listenerGeneration) { return; }
-      if (!identical(attachedPlayer, _player)) { return; }
-      if (_transitionInProgress) { return; }
+      if (gen != _listenerGeneration) {
+        return;
+      }
+      if (!identical(attachedPlayer, _player)) {
+        return;
+      }
+      if (_transitionInProgress) {
+        return;
+      }
 
       if (s.processingState == ProcessingState.completed) {
         final cbGen = gen;
@@ -258,9 +273,15 @@ class AudioPlayerService {
         final epoch = _playSessionEpoch;
         final player = _player;
         _enqueue(() async {
-          if (cbGen != _listenerGeneration) { return; }
-          if (epoch != _playSessionEpoch || _currentSong?.id != songId) { return; }
-          if (!identical(player, _player)) { return; }
+          if (cbGen != _listenerGeneration) {
+            return;
+          }
+          if (epoch != _playSessionEpoch || _currentSong?.id != songId) {
+            return;
+          }
+          if (!identical(player, _player)) {
+            return;
+          }
           await _onSongCompletedInternal();
         });
       }
@@ -277,13 +298,21 @@ class AudioPlayerService {
     });
 
     _errorSub = _player.errorStream.listen((e) {
-      if (gen != _listenerGeneration) { return; }
-      if (!identical(attachedPlayer, _player)) { return; }
-      if (_transitionInProgress) { return; }
+      if (gen != _listenerGeneration) {
+        return;
+      }
+      if (!identical(attachedPlayer, _player)) {
+        return;
+      }
+      if (_transitionInProgress) {
+        return;
+      }
       NoctraLogger.e('AudioPlayer error: ${e.toString()}', e);
 
       final active = _currentSong;
-      if (active == null) { return; }
+      if (active == null) {
+        return;
+      }
       final epoch = _playSessionEpoch;
       final failedPlayer = _player;
       final attempts = _recoveryAttemptsByEpoch[epoch] ?? 0;
@@ -291,16 +320,26 @@ class AudioPlayerService {
         NoctraLogger.w('Recovery limit reached for "${active.title}"', e);
         return;
       }
-      if (_recoveryInFlight) { return; }
+      if (_recoveryInFlight) {
+        return;
+      }
       _recoveryInFlight = true;
       final rGen = ++_recoveryGeneration;
       final cbGen = gen;
       _enqueue(() async {
         try {
-          if (cbGen != _listenerGeneration) { return; }
-          if (_recoveryGeneration != rGen) { return; }
-          if (_playSessionEpoch != epoch || _currentSong?.id != active.id) { return; }
-          if (!identical(failedPlayer, _player)) { return; }
+          if (cbGen != _listenerGeneration) {
+            return;
+          }
+          if (_recoveryGeneration != rGen) {
+            return;
+          }
+          if (_playSessionEpoch != epoch || _currentSong?.id != active.id) {
+            return;
+          }
+          if (!identical(failedPlayer, _player)) {
+            return;
+          }
           _recoveryAttemptsByEpoch[epoch] = attempts + 1;
           await _playSongInternal(active, initialPosition: _player.position);
           _recoveryAttemptsByEpoch.remove(epoch);
@@ -311,9 +350,15 @@ class AudioPlayerService {
     });
 
     _positionSub = _player.positionStream.listen((pos) {
-      if (gen != _listenerGeneration) { return; }
-      if (!identical(attachedPlayer, _player)) { return; }
-      if (_playSessionEpoch != _positionSaveEpoch) { return; }
+      if (gen != _listenerGeneration) {
+        return;
+      }
+      if (!identical(attachedPlayer, _player)) {
+        return;
+      }
+      if (_playSessionEpoch != _positionSaveEpoch) {
+        return;
+      }
       final activeSong = _currentSong;
       if (activeSong != null &&
           _loopMode != LoopMode.one &&
@@ -321,7 +366,9 @@ class AudioPlayerService {
         final bucket = pos.inSeconds ~/ 5;
         if (bucket > _lastSavedBucket) {
           _lastSavedBucket = bucket;
-          if (_restoredPositionUsed && pos.inSeconds < 15) { return; }
+          if (_restoredPositionUsed && pos.inSeconds < 15) {
+            return;
+          }
           _restoredPositionUsed = false;
           NoctraLocalDatabase()
               .savePlaybackPosition(activeSong, pos.inMilliseconds)
@@ -368,7 +415,9 @@ class AudioPlayerService {
       final epoch = _volumeEpoch;
       _enqueue(() async {
         if (_volumeEpoch == epoch && identical(p, _player)) {
-          try { await p.setVolume(_targetVolume); } catch (e) {
+          try {
+            await p.setVolume(_targetVolume);
+          } catch (e) {
             NoctraLogger.w('Failed to restore volume', e);
           }
         }
@@ -494,7 +543,9 @@ class AudioPlayerService {
       for (int i = steps; i >= 0; i--) {
         if (_sleepFadeId != fadeId ||
             _volumeEpoch != vEpoch ||
-            !identical(p, _player)) { return; }
+            !identical(p, _player)) {
+          return;
+        }
         final t = i / steps;
         await p.setVolume(t * t * originalVolume);
         await Future.delayed(const Duration(milliseconds: 100));
@@ -516,23 +567,33 @@ class AudioPlayerService {
       MethodChannel('com.nomadguy.noctra/audio_effects');
 
   Future<bool> attachNativeEffectsSession() async {
-    if (kIsWeb || !Platform.isAndroid) { return false; }
+    if (kIsWeb || !Platform.isAndroid) {
+      return false;
+    }
     try {
       final sid = _player.androidAudioSessionId;
-      if (sid == null || sid <= 0) { return false; }
+      if (sid == null || sid <= 0) {
+        return false;
+      }
       return (await _effectsChannel
               .invokeMethod<bool>('attachSession', {'sessionId': sid})) ??
           false;
-    } catch (_) { return false; }
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<bool> applyStudioMasterMode(String mode) async {
     try {
-      if (!await attachNativeEffectsSession()) { return false; }
+      if (!await attachNativeEffectsSession()) {
+        return false;
+      }
       final applied = (await _effectsChannel
               .invokeMethod<bool>('applyStudioMode', {'mode': mode})) ??
           false;
-      if (applied) { _studioMasterMode = mode; }
+      if (applied) {
+        _studioMasterMode = mode;
+      }
       return applied;
     } catch (e) {
       NoctraLogger.w('applyStudioMasterMode failed (mode=$mode)', e);
@@ -580,8 +641,17 @@ class AudioPlayerService {
         }
       } catch (_) {}
     }
-    if (song.streamUrl != null && song.streamUrl!.contains('saavncdn.com')) {
-      return 'JioSaavn320k:${song.streamUrl!}';
+    // Only return Song.streamUrl as a JioSaavn shortcut when its host
+    // is actually the JioSaavn CDN — substring matching is unsafe.
+    if (song.streamUrl != null && song.streamUrl!.isNotEmpty) {
+      final host = Uri.tryParse(song.streamUrl!)?.host.toLowerCase();
+      if (host == 'aac.saavncdn.com' ||
+          host == 'saavncdn.com' ||
+          host == 'www.jiosaavn.com' ||
+          host == 'jiosaavn.com' ||
+          (host != null && host.endsWith('.saavncdn.com'))) {
+        return 'JioSaavn320k:${song.streamUrl!}';
+      }
     }
     if (song.id.startsWith('jam_')) {
       return 'JamendoDirect:${song.streamUrl ?? ''}';
@@ -613,7 +683,9 @@ class AudioPlayerService {
     try {
       final resolved = await _resolveUrl(song);
       final url = _extractUrl(resolved);
-      if (url.isEmpty || epoch != _playSessionEpoch) { return null; }
+      if (url.isEmpty || epoch != _playSessionEpoch) {
+        return null;
+      }
       p = AudioPlayer(maxSkipsOnError: 6);
       final mediaItem = _createMediaItem(song);
       final src = url.startsWith('http')
@@ -639,7 +711,9 @@ class AudioPlayerService {
   // ─── [15] Fade-in ──────────────────────────────────────────────────────
 
   Future<void> _fadeIn({Duration? duration}) async {
-    if (!_isFadeEnabled) { return; }
+    if (!_isFadeEnabled) {
+      return;
+    }
     final dur = duration ?? const Duration(milliseconds: 400);
     const steps = 20;
     final stepDelay = Duration(
@@ -648,7 +722,9 @@ class AudioPlayerService {
     final p = _player;
     try {
       for (var i = 1; i <= steps; i++) {
-        if (_volumeEpoch != vEpoch || !identical(p, _player)) { return; }
+        if (_volumeEpoch != vEpoch || !identical(p, _player)) {
+          return;
+        }
         final t = i / steps;
         await p.setVolume(t * t * _targetVolume);
         await Future.delayed(stepDelay);
@@ -656,7 +732,9 @@ class AudioPlayerService {
     } catch (e) {
       NoctraLogger.w('Fade-in failed', e);
       if (_volumeEpoch == vEpoch && identical(p, _player)) {
-        try { await p.setVolume(_targetVolume); } catch (_) {}
+        try {
+          await p.setVolume(_targetVolume);
+        } catch (_) {}
       }
     }
   }
@@ -671,8 +749,8 @@ class AudioPlayerService {
     final vEpoch = ++_volumeEpoch;
 
     // Buffer check: bufferedAhead relative to player position
-    final requiredBuffer = Duration(
-        milliseconds: min(_crossfadeSeconds * 1000, 3000));
+    final requiredBuffer =
+        Duration(milliseconds: min(_crossfadeSeconds * 1000, 3000));
     const gracePeriod = Duration(milliseconds: 500);
     final readyDeadline = DateTime.now().add(gracePeriod);
 
@@ -688,9 +766,11 @@ class AudioPlayerService {
       }
       await Future.delayed(const Duration(milliseconds: 50));
     }
-    final finalBufferedAhead = nextPlayer.bufferedPosition - nextPlayer.position;
+    final finalBufferedAhead =
+        nextPlayer.bufferedPosition - nextPlayer.position;
     if (finalBufferedAhead < requiredBuffer) {
-      NoctraLogger.w('Crossfade buffer insufficient: ${finalBufferedAhead.inMilliseconds}ms');
+      NoctraLogger.w(
+          'Crossfade buffer insufficient: ${finalBufferedAhead.inMilliseconds}ms');
       return CrossfadeResult.failed;
     }
 
@@ -708,14 +788,17 @@ class AudioPlayerService {
       // Timer-based volume ramp — 60 steps for smoother crossfade
       const totalSteps = 60;
       int step = 0;
-      final stepMs = (duration.inMilliseconds / totalSteps).round().clamp(8, 200);
-      final completer = Completer<void>();      Timer.periodic(Duration(milliseconds: stepMs), (timer) {
+      final stepMs =
+          (duration.inMilliseconds / totalSteps).round().clamp(8, 200);
+      final completer = Completer<void>();
+      Timer.periodic(Duration(milliseconds: stepMs), (timer) {
         step++;
         final progress = step / totalSteps;
         final eased = progress * progress;
 
         // Non-blocking volume changes with error handling
-        unawaited(oldPlayer.setVolume(targetVol * (1.0 - eased)).catchError((_) {}));
+        unawaited(
+            oldPlayer.setVolume(targetVol * (1.0 - eased)).catchError((_) {}));
         unawaited(nextPlayer.setVolume(targetVol * eased).catchError((_) {}));
 
         if (step >= totalSteps ||
@@ -736,8 +819,12 @@ class AudioPlayerService {
           _volumeEpoch != vEpoch ||
           !identical(oldPlayer, _player)) {
         // Cancellation: restore old player volume
-        try { await oldPlayer.setVolume(targetVol); } catch (_) {}
-        try { await nextPlayer.stop(); } catch (_) {}
+        try {
+          await oldPlayer.setVolume(targetVol);
+        } catch (_) {}
+        try {
+          await nextPlayer.stop();
+        } catch (_) {}
         return CrossfadeResult.cancelled;
       }
 
@@ -745,32 +832,51 @@ class AudioPlayerService {
       if (!nextPlayer.playing ||
           nextPlayer.processingState == ProcessingState.idle) {
         NoctraLogger.w('Crossfade: next player unhealthy at commit, aborting');
-        try { await oldPlayer.setVolume(targetVol); } catch (_) {}
-        try { await nextPlayer.stop(); } catch (_) {}
+        try {
+          await oldPlayer.setVolume(targetVol);
+        } catch (_) {}
+        try {
+          await nextPlayer.stop();
+        } catch (_) {}
         return CrossfadeResult.failed;
       }
     } catch (e) {
-
       // Exception: restore old player
-      try { await oldPlayer.setVolume(targetVol); } catch (_) {}
-      try { await nextPlayer.stop(); } catch (_) {}
+      try {
+        await oldPlayer.setVolume(targetVol);
+      } catch (_) {}
+      try {
+        await nextPlayer.stop();
+      } catch (_) {}
       return CrossfadeResult.failed;
     }
-    try { await oldPlayer.stop(); } catch (_) {}
+    try {
+      await oldPlayer.stop();
+    } catch (_) {}
     return CrossfadeResult.completed;
   }
 
   // ─── [17] Auto-crossfade ───────────────────────────────────────────────
 
   void _checkAutoCrossfade(Duration pos) {
-    if (_transitionInProgress) { return; }
-    if (!_isFadeEnabled || _crossfadeSeconds <= 0) { return; }
-    if (_loopMode == LoopMode.one) { return; }
+    if (_transitionInProgress) {
+      return;
+    }
+    if (!_isFadeEnabled || _crossfadeSeconds <= 0) {
+      return;
+    }
+    if (_loopMode == LoopMode.one) {
+      return;
+    }
 
     final duration = _player.duration;
-    if (duration == null) { return; }
+    if (duration == null) {
+      return;
+    }
     final crossfadeDur = Duration(seconds: _crossfadeSeconds);
-    if (duration <= crossfadeDur) { return; }
+    if (duration <= crossfadeDur) {
+      return;
+    }
 
     final triggerPoint = duration - crossfadeDur;
     if (pos < triggerPoint) {
@@ -789,7 +895,9 @@ class AudioPlayerService {
     }
 
     // Prevent duplicate queueing
-    if (_autoCrossfadeQueued) { return; }
+    if (_autoCrossfadeQueued) {
+      return;
+    }
     _crossfadePending = false;
     _crossfadePendingSongId = null;
 
@@ -799,11 +907,17 @@ class AudioPlayerService {
     final epoch = _playSessionEpoch;
     _enqueue(() async {
       try {
-        if (gen != _autoCrossfadeGeneration) { return; }
-        if (epoch != _playSessionEpoch || _currentSong?.id != songId) { return; }
+        if (gen != _autoCrossfadeGeneration) {
+          return;
+        }
+        if (epoch != _playSessionEpoch || _currentSong?.id != songId) {
+          return;
+        }
         final d = _player.duration;
         final p = _player.position;
-        if (d == null || p < d - crossfadeDur) { return; }
+        if (d == null || p < d - crossfadeDur) {
+          return;
+        }
         await _autoCrossfadeNext();
       } finally {
         if (gen == _autoCrossfadeGeneration) {
@@ -814,7 +928,9 @@ class AudioPlayerService {
   }
 
   Future<void> _autoCrossfadeNext() async {
-    if (_transitionInProgress) { return; }
+    if (_transitionInProgress) {
+      return;
+    }
     _transitionInProgress = true;
     final myId = ++_transitionId;
     final epoch = _playSessionEpoch;
@@ -835,7 +951,9 @@ class AudioPlayerService {
       if (nextSong == null ||
           epoch != _playSessionEpoch ||
           tEpoch != _transitionEpoch ||
-          rev != _queueRevision) { return; }
+          rev != _queueRevision) {
+        return;
+      }
 
       AudioPlayer? nextPlayer;
       if (_bufferedNext != null && _bufferedNextSong?.id == nextSong.id) {
@@ -953,11 +1071,15 @@ class AudioPlayerService {
     _bufferedNextSong = null;
     _preloadingGeneration++;
     _preloading = false;
-    if (player != null) { await _disposePlayer(player); }
+    if (player != null) {
+      await _disposePlayer(player);
+    }
   }
 
   void _startPreloadNext() {
-    if (_preloading) { return; }
+    if (_preloading) {
+      return;
+    }
     final nextIndex = _currentIndex + 1;
     final gen = ++_preloadingGeneration;
 
@@ -968,17 +1090,24 @@ class AudioPlayerService {
         final rev = _queueRevision;
         _getRadioQueue(_currentSong!).then((similar) {
           if (gen != _preloadingGeneration ||
-              epoch != _playSessionEpoch || rev != _queueRevision) {
+              epoch != _playSessionEpoch ||
+              rev != _queueRevision) {
             _preloading = false;
             return;
           }
           // Check autoplay still enabled after async resolution
-          if (!_isAutoplayEnabled) { _preloading = false; return; }
+          if (!_isAutoplayEnabled) {
+            _preloading = false;
+            return;
+          }
           if (similar.isNotEmpty) {
             _mutateQueue(() {
               var added = false;
               for (final s in similar) {
-                if (!_queue.any((q) => q.id == s.id)) { _queue.add(s); added = true; }
+                if (!_queue.any((q) => q.id == s.id)) {
+                  _queue.add(s);
+                  added = true;
+                }
               }
               return added;
             });
@@ -986,7 +1115,9 @@ class AudioPlayerService {
             if (_currentIndex + 1 < _queue.length) {
               _prepareNextPlayer(_queue[_currentIndex + 1], epoch, rev)
                   .whenComplete(() {
-                if (gen == _preloadingGeneration) { _preloading = false; }
+                if (gen == _preloadingGeneration) {
+                  _preloading = false;
+                }
               });
             } else {
               _preloading = false;
@@ -994,7 +1125,10 @@ class AudioPlayerService {
           } else {
             _preloading = false;
           }
-        }).catchError((_) { _preloading = false; return null; });
+        }).catchError((_) {
+          _preloading = false;
+          return null;
+        });
       }
       return;
     }
@@ -1003,19 +1137,22 @@ class AudioPlayerService {
     final epoch = _playSessionEpoch;
     final rev = _queueRevision;
     _prepareNextPlayer(_queue[nextIndex], epoch, rev).whenComplete(() {
-      if (gen == _preloadingGeneration) { _preloading = false; }
+      if (gen == _preloadingGeneration) {
+        _preloading = false;
+      }
     });
   }
 
-  Future<void> _prepareNextPlayer(
-      Song song, int epoch, int revision) async {
+  Future<void> _prepareNextPlayer(Song song, int epoch, int revision) async {
     AudioPlayer? nextPlayer;
     try {
       final resolved = await _resolveUrl(song);
       final url = _extractUrl(resolved);
       if (url.isEmpty ||
           epoch != _playSessionEpoch ||
-          revision != _queueRevision) { return; }
+          revision != _queueRevision) {
+        return;
+      }
 
       nextPlayer = AudioPlayer(maxSkipsOnError: 6);
       final mediaItem = _createMediaItem(song);
@@ -1033,7 +1170,9 @@ class AudioPlayerService {
       final oldBuffered = _bufferedNext;
       _bufferedNext = nextPlayer;
       _bufferedNextSong = song;
-      if (oldBuffered != null) { await _disposePlayer(oldBuffered); }
+      if (oldBuffered != null) {
+        await _disposePlayer(oldBuffered);
+      }
     } catch (e) {
       NoctraLogger.w('Pre-buffer failed for: ${song.title}', e);
       await _disposePlayer(nextPlayer);
@@ -1044,28 +1183,43 @@ class AudioPlayerService {
 
   Future<void> _ensureAutoplayQueue(int epoch, int revision) async {
     final remaining = _queue.length - _currentIndex - 1;
-    if (remaining >= _minAutoplayBuffer) { return; }
-    if (_currentSong == null) { return; }
+    if (remaining >= _minAutoplayBuffer) {
+      return;
+    }
+    if (_currentSong == null) {
+      return;
+    }
 
     final seedId = _currentSong!.id;
     final similar = await _getRadioQueue(_currentSong!);
     if (similar.isEmpty ||
         epoch != _playSessionEpoch ||
-        revision != _queueRevision) { return; }
-    if (_currentSong?.id != seedId) { return; }
-    if (!_isAutoplayEnabled) { return; } // Recheck after async
+        revision != _queueRevision) {
+      return;
+    }
+    if (_currentSong?.id != seedId) {
+      return;
+    }
+    if (!_isAutoplayEnabled) {
+      return;
+    } // Recheck after async
 
     // Re-filter against current queue (may have changed during request)
     final currentIds = _queue.map((s) => s.id).toSet();
-    final safeResults = similar.where(
-      (s) => s.id != _currentSong?.id && !currentIds.contains(s.id),
-    ).toList();
+    final safeResults = similar
+        .where(
+          (s) => s.id != _currentSong?.id && !currentIds.contains(s.id),
+        )
+        .toList();
 
     if (safeResults.isNotEmpty) {
       _mutateQueue(() {
         var added = false;
         for (final s in safeResults) {
-          if (!_queue.any((q) => q.id == s.id)) { _queue.add(s); added = true; }
+          if (!_queue.any((q) => q.id == s.id)) {
+            _queue.add(s);
+            added = true;
+          }
         }
         return added;
       });
@@ -1075,11 +1229,14 @@ class AudioPlayerService {
 
   Future<List<Song>> _getRadioQueue(Song seed) async {
     final existing = _radioRequests[seed.id];
-    if (existing != null) { return existing; }
+    if (existing != null) {
+      return existing;
+    }
 
     final excludeIds = <String>{seed.id};
     for (int i = _currentIndex + 1;
-         i < min(_queue.length, _currentIndex + 4); i++) {
+        i < min(_queue.length, _currentIndex + 4);
+        i++) {
       excludeIds.add(_queue[i].id);
     }
     final gen = ++_radioGeneration;
@@ -1088,10 +1245,10 @@ class AudioPlayerService {
     _radioRequests[seed.id] = request;
     try {
       final results = await request;
-      if (gen != _radioGeneration) { return []; }
-      return results
-          .where((s) => !_queue.any((q) => q.id == s.id))
-          .toList();
+      if (gen != _radioGeneration) {
+        return [];
+      }
+      return results.where((s) => !_queue.any((q) => q.id == s.id)).toList();
     } finally {
       _radioRequests.remove(seed.id);
     }
@@ -1101,9 +1258,8 @@ class AudioPlayerService {
 
   Future<void> playSong(Song song,
       {List<Song>? newQueue, Duration? initialPosition}) {
-    return _serialize(() =>
-        _playSongInternal(song,
-            newQueue: newQueue, initialPosition: initialPosition));
+    return _serialize(() => _playSongInternal(song,
+        newQueue: newQueue, initialPosition: initialPosition));
   }
 
   Future<void> skipNext() {
@@ -1111,50 +1267,54 @@ class AudioPlayerService {
   }
 
   Future<void> resumeOrPlay() => _serialize(() async {
-    if (_player.playing) {
-      _invalidatePlaybackOperations();
-      _transitionEpoch++;
-      // Await pause — its completion matters for state correctness.
-      // DO NOT unawait here: the next serialized op could race the pause.
-      try { await _player.pause(); } catch (e) {
-        NoctraLogger.w('pause failed in resumeOrPlay', e);
-      }
-    } else {
-      if (_player.processingState == ProcessingState.idle &&
-          _currentSong != null) {
-        // Call internal directly — playSong() itself serializes and
-        // would deadlock nested inside _serialize().
-        await _playSongInternal(_currentSong!);
-      } else {
-        _playNonBlocking(_player, 'resumeOrPlay');
-      }
-    }
-  });
+        if (_player.playing) {
+          _invalidatePlaybackOperations();
+          _transitionEpoch++;
+          // Await pause — its completion matters for state correctness.
+          // DO NOT unawait here: the next serialized op could race the pause.
+          try {
+            await _player.pause();
+          } catch (e) {
+            NoctraLogger.w('pause failed in resumeOrPlay', e);
+          }
+        } else {
+          if (_player.processingState == ProcessingState.idle &&
+              _currentSong != null) {
+            // Call internal directly — playSong() itself serializes and
+            // would deadlock nested inside _serialize().
+            await _playSongInternal(_currentSong!);
+          } else {
+            _playNonBlocking(_player, 'resumeOrPlay');
+          }
+        }
+      });
 
   Future<void> togglePlayPause() => resumeOrPlay();
 
   Future<void> skipPrevious() => _serialize(() async {
-    if (_player.position.inSeconds > 4) {
-      try { await _player.seek(Duration.zero); } catch (_) {}
-      _invalidatePlaybackOperations();
-      _transitionEpoch++;
-      return;
-    }
-    if (_currentIndex > 0 && _queue.isNotEmpty) {
-      _currentIndex--;
-      // Call internal directly — playSong() itself serializes and
-      // would deadlock nested inside _serialize().
-      await _playSongInternal(_queue[_currentIndex]);
-    }
-  });
+        if (_player.position.inSeconds > 4) {
+          try {
+            await _player.seek(Duration.zero);
+          } catch (_) {}
+          _invalidatePlaybackOperations();
+          _transitionEpoch++;
+          return;
+        }
+        if (_currentIndex > 0 && _queue.isNotEmpty) {
+          _currentIndex--;
+          // Call internal directly — playSong() itself serializes and
+          // would deadlock nested inside _serialize().
+          await _playSongInternal(_queue[_currentIndex]);
+        }
+      });
 
   Future<void> seek(Duration pos) => _serialize(() async {
-    _invalidatePlaybackOperations();
-    _transitionEpoch++; // Invalidate active crossfade
-    try {
-      await _player.seek(pos);
-    } catch (_) {}
-  });
+        _invalidatePlaybackOperations();
+        _transitionEpoch++; // Invalidate active crossfade
+        try {
+          await _player.seek(pos);
+        } catch (_) {}
+      });
 
   void pause() {
     _invalidatePlaybackOperations();
@@ -1172,13 +1332,15 @@ class AudioPlayerService {
   }
 
   Future<void> stopAndDismiss() => _serialize(() async {
-    _invalidatePlaybackOperations();
-    _transitionEpoch++;
-    try { await _player.stop(); } catch (_) {}
-    _invalidatePreload();
-    _currentSong = null;
-    _currentSongController.add(null);
-  });
+        _invalidatePlaybackOperations();
+        _transitionEpoch++;
+        try {
+          await _player.stop();
+        } catch (_) {}
+        _invalidatePreload();
+        _currentSong = null;
+        _currentSongController.add(null);
+      });
 
   // ─── [23] Internal playback operations ─────────────────────────────────
 
@@ -1195,16 +1357,25 @@ class AudioPlayerService {
         _queue.clear();
         _queue.addAll(newQueue);
         _currentIndex = _queue.indexWhere((s) => s.id == song.id);
-        if (_currentIndex == -1) { _queue.insert(0, song); _currentIndex = 0; }
+        if (_currentIndex == -1) {
+          _queue.insert(0, song);
+          _currentIndex = 0;
+        }
         return true;
       });
       final oldBuffered = _bufferedNext;
       _bufferedNext = null;
       _bufferedNextSong = null;
       _preloading = false;
-      if (oldBuffered != null) { _disposePlayer(oldBuffered); }
+      if (oldBuffered != null) {
+        _disposePlayer(oldBuffered);
+      }
     } else if (!_queue.any((s) => s.id == song.id)) {
-      _mutateQueue(() { _queue.add(song); _currentIndex = _queue.length - 1; return true; });
+      _mutateQueue(() {
+        _queue.add(song);
+        _currentIndex = _queue.length - 1;
+        return true;
+      });
     } else {
       _currentIndex = _queue.indexWhere((s) => s.id == song.id);
     }
@@ -1213,11 +1384,15 @@ class AudioPlayerService {
     _songStartTime = DateTime.now();
     _currentSongController.add(song);
     MusicRepository().recordSongPlayed(song);
-    try { await _player.stop(); } catch (_) {}
+    try {
+      await _player.stop();
+    } catch (_) {}
     _positionSaveEpoch = _playSessionEpoch;
     _lastSavedBucket = -1;
     _invalidatePlaybackOperations();
-    if (epoch != _playSessionEpoch) { return; }
+    if (epoch != _playSessionEpoch) {
+      return;
+    }
 
     // Try pre-buffered player
     if (_bufferedNext != null && _bufferedNextSong?.id == song.id) {
@@ -1254,7 +1429,9 @@ class AudioPlayerService {
       resolverName = _extractResolver(resolved);
       url = _extractUrl(resolved);
       sw.stop();
-      if (epoch != _playSessionEpoch) { return; }
+      if (epoch != _playSessionEpoch) {
+        return;
+      }
       _lastResolution = StreamResolutionMetadata(
           songId: song.id,
           songTitle: song.title,
@@ -1263,7 +1440,9 @@ class AudioPlayerService {
           resolutionMs: sw.elapsedMilliseconds,
           timestamp: DateTime.now());
       _resolutionController.add(_lastResolution!);
-      if (epoch != _playSessionEpoch) { return; }
+      if (epoch != _playSessionEpoch) {
+        return;
+      }
 
       if (url.isEmpty) {
         NoctraLogger.w('playSong: no resolved URL for "${song.title}"');
@@ -1272,7 +1451,8 @@ class AudioPlayerService {
 
       final startPos = initialPosition ??
           ((_lastSavedPosition != null && _lastSavedSongId == song.id)
-              ? _lastSavedPosition! : Duration.zero);
+              ? _lastSavedPosition!
+              : Duration.zero);
       _restoredPositionUsed = startPos.inMilliseconds > 0;
       _lastSavedPosition = null;
       _lastSavedSongId = null;
@@ -1286,7 +1466,8 @@ class AudioPlayerService {
         await _player.setAudioSource(src, initialPosition: startPos);
         loaded = true;
       } catch (e) {
-        NoctraLogger.w('playSong: setAudioSource failed for "${song.title}"', e);
+        NoctraLogger.w(
+            'playSong: setAudioSource failed for "${song.title}"', e);
         CompositeStreamResolver.invalidateCache(song.id);
         if (epoch == _playSessionEpoch) {
           try {
@@ -1322,7 +1503,9 @@ class AudioPlayerService {
   }
 
   Future<void> _skipNextInternal() async {
-    if (_transitionInProgress) { return; }
+    if (_transitionInProgress) {
+      return;
+    }
     _transitionInProgress = true;
     final myId = ++_transitionId;
     try {
@@ -1338,7 +1521,8 @@ class AudioPlayerService {
       }
       if (_queue.isNotEmpty) {
         if (_currentIndex >= _queue.length - 1 &&
-            _isAutoplayEnabled && _currentSong != null) {
+            _isAutoplayEnabled &&
+            _currentSong != null) {
           await _ensureAutoplayQueue(_playSessionEpoch, _queueRevision);
         }
         _currentIndex = (_currentIndex + 1) % _queue.length;
@@ -1350,7 +1534,9 @@ class AudioPlayerService {
         }
       }
     } finally {
-      if (_transitionId == myId) { _transitionInProgress = false; }
+      if (_transitionId == myId) {
+        _transitionInProgress = false;
+      }
     }
   }
 
@@ -1376,7 +1562,9 @@ class AudioPlayerService {
         final delayGen = ++_autoplayDelayGeneration;
         await Future.delayed(Duration(seconds: _autoplayDelaySeconds));
         // Check if manual action cancelled the delay
-        if (delayGen != _autoplayDelayGeneration) { return; }
+        if (delayGen != _autoplayDelayGeneration) {
+          return;
+        }
       }
       await _skipNextInternal();
     }
@@ -1385,7 +1573,10 @@ class AudioPlayerService {
   // ─── [25] Queue management ─────────────────────────────────────────────
 
   void addToQueue(Song song) {
-    _mutateQueue(() { _queue.add(song); return true; });
+    _mutateQueue(() {
+      _queue.add(song);
+      return true;
+    });
   }
 
   void playNext(Song song) {
@@ -1398,10 +1589,15 @@ class AudioPlayerService {
   }
 
   void removeFromQueue(int index) {
-    if (index < 0 || index >= _queue.length) { return; }
-    final removedCurrent = _currentSong != null &&
-        _queue[index].id == _currentSong!.id;
-    _mutateQueue(() { _queue.removeAt(index); return true; });
+    if (index < 0 || index >= _queue.length) {
+      return;
+    }
+    final removedCurrent =
+        _currentSong != null && _queue[index].id == _currentSong!.id;
+    _mutateQueue(() {
+      _queue.removeAt(index);
+      return true;
+    });
     if (removedCurrent) {
       // Current song was removed — play next if available, else stop
       if (_queue.isNotEmpty) {
@@ -1419,7 +1615,9 @@ class AudioPlayerService {
   }
 
   void reorderQueue(int oldIndex, int newIndex) {
-    if (oldIndex < 0 || oldIndex >= _queue.length) { return; }
+    if (oldIndex < 0 || oldIndex >= _queue.length) {
+      return;
+    }
     _mutateQueue(() {
       final song = _queue.removeAt(oldIndex);
       final targetIndex = newIndex.clamp(0, _queue.length);
@@ -1431,7 +1629,9 @@ class AudioPlayerService {
   }
 
   void clearQueue() {
-    if (_currentSong == null || _queue.isEmpty) { return; }
+    if (_currentSong == null || _queue.isEmpty) {
+      return;
+    }
     _mutateQueue(() {
       final idx = _currentIndex.clamp(0, _queue.length - 1);
       final current = _queue[idx];
@@ -1454,20 +1654,30 @@ class AudioPlayerService {
       {bool autoPlay = false}) async {
     try {
       final saved = await NoctraLocalDatabase().loadPlaybackPosition();
-      if (saved == null || saved['song'] == null) { return; }
+      if (saved == null || saved['song'] == null) {
+        return;
+      }
       final restoredSong = saved['song'] as Song?;
-      if (restoredSong == null) { return; }
+      if (restoredSong == null) {
+        return;
+      }
       _currentSong = restoredSong;
       _lastSavedSongId = _currentSong!.id;
       _lastSavedPosition =
           Duration(milliseconds: (saved['positionMs'] as int?) ?? 0);
-      _mutateQueue(() { _queue.clear(); _queue.add(_currentSong!); _currentIndex = 0; return true; });
+      _mutateQueue(() {
+        _queue.clear();
+        _queue.add(_currentSong!);
+        _currentIndex = 0;
+        return true;
+      });
       _currentSongController.add(_currentSong);
       final resolved = await _resolveUrl(_currentSong!);
       final url = _extractUrl(resolved);
       if (url.isNotEmpty) {
         final src = url.startsWith('http')
-            ? AudioSource.uri(Uri.parse(url), tag: _createMediaItem(_currentSong!))
+            ? AudioSource.uri(Uri.parse(url),
+                tag: _createMediaItem(_currentSong!))
             : AudioSource.file(url, tag: _createMediaItem(_currentSong!));
         await _player.setAudioSource(src, initialPosition: _lastSavedPosition);
         if (autoPlay) {

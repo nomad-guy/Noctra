@@ -39,6 +39,45 @@ class MainActivity : AudioServiceActivity() {
     private var audioRouter: NoctraAudioRouter? = null
     private val effectsEngine = NoctraAudioEffectsEngine()
 
+    /**
+     * Coalesce waveform + FFT samples for the same audio frame so the
+     * platform thread receives at most ~30 events per second. Without
+     * throttling, Visualizer.getMaxCaptureRate() can fire at up to
+     * 24 kHz, which saturates the UI thread and the EventChannel queue.
+     * The latest waveform / FFT sample are kept and flushed together as
+     * a typed envelope so the Dart side can disambiguate the two.
+     */
+    private val visualizerHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    @Volatile private var visualizerWaveform: DoubleArray? = null
+    @Volatile private var visualizerFft: DoubleArray? = null
+    @Volatile private var visualizerTickQueued = false
+    @Volatile private var visualizerSink: EventChannel.EventSink? = null
+
+    private fun dispatchVisualizerFrame() {
+        visualizerTickQueued = false
+        val sink = visualizerSink ?: return
+        val wf = visualizerWaveform
+        val fft = visualizerFft
+        // Each frame sends a typed envelope so the consumer knows
+        // whether the array is a waveform or an FFT. We previously
+        // conflated both into the same channel and treated the result
+        // as an FFT stream, which broke the waveform visualizer.
+        if (wf != null) {
+            visualizerWaveform = null
+            try { sink.success(mapOf("type" to "waveform", "data" to wf.toList())) } catch (_: Throwable) {}
+        }
+        if (fft != null) {
+            visualizerFft = null
+            try { sink.success(mapOf("type" to "fft", "data" to fft.toList())) } catch (_: Throwable) {}
+        }
+    }
+
+    private fun scheduleVisualizerFlush() {
+        if (visualizerTickQueued) return
+        visualizerTickQueued = true
+        visualizerHandler.postDelayed({ dispatchVisualizerFrame() }, 33L) // ~30 Hz
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         launcherIconManager = LauncherIconManager(applicationContext)
@@ -47,12 +86,17 @@ class MainActivity : AudioServiceActivity() {
         }
 
         // ====== VISUALIZER ======
+        // Consumers must handle envelopes of shape:
+        //   { "type": "waveform", "data": [Double;32] }
+        //   { "type": "fft",      "data": [Double;32] }
+        // Frames are throttled to ~30 Hz via [scheduleVisualizerFlush].
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, VISUALIZER_CHANNEL).setStreamHandler(object : EventChannel.StreamHandler {
             override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
                 try {
                     val sessionId = (arguments as? Map<*, *>)?.get("sessionId") as? Int ?: 0
                     if (sessionId <= 0) return
                     effectsEngine.attachSession(sessionId)
+                    visualizerSink = events
                     visualizer?.release()
                     val ranges = Visualizer.getCaptureSizeRange()
                     val capSize = if (ranges.size > 1) ranges[1] else ranges[0]
@@ -60,7 +104,7 @@ class MainActivity : AudioServiceActivity() {
                         captureSize = capSize
                         setDataCaptureListener(object : Visualizer.OnDataCaptureListener {
                             override fun onWaveFormDataCapture(vis: Visualizer?, waveform: ByteArray?, samplingRate: Int) {
-                                if (waveform != null && events != null) {
+                                if (waveform != null) {
                                     val magnitudes = DoubleArray(32)
                                     val step = waveform.size / 32
                                     for (i in 0 until 32) {
@@ -68,11 +112,12 @@ class MainActivity : AudioServiceActivity() {
                                         val sample = (waveform[idx].toInt() and 0xFF) - 128
                                         magnitudes[i] = (Math.abs(sample) / 128.0).coerceIn(0.0, 1.0)
                                     }
-                                    runOnUiThread { try { events.success(magnitudes.toList()) } catch (e: Throwable) { Log.e(TAG, "Visualizer event failed", e) } }
+                                    visualizerWaveform = magnitudes
+                                    scheduleVisualizerFlush()
                                 }
                             }
                             override fun onFftDataCapture(vis: Visualizer?, fft: ByteArray?, samplingRate: Int) {
-                                if (fft != null && events != null) {
+                                if (fft != null) {
                                     val magnitudes = DoubleArray(32)
                                     val n = fft.size / 2
                                     for (i in 0 until 32) {
@@ -82,7 +127,8 @@ class MainActivity : AudioServiceActivity() {
                                         val raw = (Math.hypot(rk, ik) / 64.0).coerceIn(0.0, 1.0)
                                         magnitudes[i] = Math.pow(raw, 0.75)
                                     }
-                                    runOnUiThread { try { events.success(magnitudes.toList()) } catch (e: Throwable) { Log.e(TAG, "FFT event failed", e) } }
+                                    visualizerFft = magnitudes
+                                    scheduleVisualizerFlush()
                                 }
                             }
                         }, Visualizer.getMaxCaptureRate() / 2, true, true)
@@ -93,6 +139,11 @@ class MainActivity : AudioServiceActivity() {
 
             override fun onCancel(arguments: Any?) {
                 try {
+                    visualizerHandler.removeCallbacksAndMessages(null)
+                    visualizerTickQueued = false
+                    visualizerWaveform = null
+                    visualizerFft = null
+                    visualizerSink = null
                     visualizer?.enabled = false
                     visualizer?.release()
                     visualizer = null
@@ -355,6 +406,20 @@ class MainActivity : AudioServiceActivity() {
                         try { result.success(data) } catch (e: Throwable) {
                             Log.e(TAG, "MethodChannel result callback failed", e)
                         }
+                    } else {
+                        // Activity is gone — the Dart side may still be
+                        // awaiting the Future. Hand it back an explicit
+                        // error so callers can fall back to cached state
+                        // instead of being left pending forever.
+                        try {
+                            result.error(
+                                "ACTIVITY_DESTROYED",
+                                "Activity was destroyed before result was sent",
+                                data
+                            )
+                        } catch (e2: Throwable) {
+                            Log.e(TAG, "Failed to send ACTIVITY_DESTROYED error", e2)
+                        }
                     }
                 }
             } catch (e: Throwable) {
@@ -363,6 +428,12 @@ class MainActivity : AudioServiceActivity() {
                     if (!isFinishing && !isDestroyed) {
                         try { result.success(null) } catch (e2: Throwable) {
                             Log.e(TAG, "Failed to send null result", e2)
+                        }
+                    } else {
+                        try {
+                            result.error("ACTIVITY_DESTROYED", e.message, null)
+                        } catch (e2: Throwable) {
+                            Log.e(TAG, "Failed to send ACTIVITY_DESTROYED error", e2)
                         }
                     }
                 }

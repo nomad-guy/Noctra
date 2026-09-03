@@ -138,10 +138,16 @@ class NeuralRecommenderEngine {
   }
 
   static bool _restoreVector(dynamic raw, List<double> target) {
-    if (raw is! List || raw.any((v) => v is! num)) return false;
-    final len = min(raw.length, target.length);
-    for (int i = 0; i < len; i++) {
-      target[i] = (raw[i] as num).toDouble();
+    // Strict length equality — silently truncating a partial weight
+    // vector would corrupt the model without surfacing the problem.
+    if (raw is! List || raw.length != target.length) return false;
+    if (raw.any((v) => v is! num)) return false;
+    for (int i = 0; i < target.length; i++) {
+      final v = (raw[i] as num).toDouble();
+      // Reject non-finite values rather than silently restoring a
+      // poisoned model.
+      if (!v.isFinite) return false;
+      target[i] = v;
     }
     return true;
   }
@@ -191,8 +197,13 @@ class NeuralRecommenderEngine {
         : TasteVectorEngine.extractSongEmbedding(song);
 
     final input = _buildInput(
-      userVector, songVec, contextFeatures,
-      audioFeatures, temporalFeatures, patternFeatures, socialFeatures,
+      userVector,
+      songVec,
+      contextFeatures,
+      audioFeatures,
+      temporalFeatures,
+      patternFeatures,
+      socialFeatures,
     );
 
     // Layer 1: 120 → 64 (LeakyReLU)
@@ -274,13 +285,13 @@ class NeuralRecommenderEngine {
     final month = now.month;
 
     return [
-      sin(dayOfWeek / 7.0 * 2 * pi),       // [96] day_of_week_sin
-      cos(dayOfWeek / 7.0 * 2 * pi),       // [97] day_of_week_cos
-      sin(month / 12.0 * 2 * pi),           // [98] month_sin
-      cos(month / 12.0 * 2 * pi),           // [99] month_cos
-      sin(hour / 24.0 * 2 * pi),            // [100] hour_sin
-      cos(hour / 24.0 * 2 * pi),            // [101] hour_cos
-      dayOfWeek >= 6 ? 1.0 : 0.0,           // [102] is_weekend
+      sin(dayOfWeek / 7.0 * 2 * pi), // [96] day_of_week_sin
+      cos(dayOfWeek / 7.0 * 2 * pi), // [97] day_of_week_cos
+      sin(month / 12.0 * 2 * pi), // [98] month_sin
+      cos(month / 12.0 * 2 * pi), // [99] month_cos
+      sin(hour / 24.0 * 2 * pi), // [100] hour_sin
+      cos(hour / 24.0 * 2 * pi), // [101] hour_cos
+      dayOfWeek >= 6 ? 1.0 : 0.0, // [102] is_weekend
       (month == 12 || month == 1) ? 1.0 : 0.0, // [103] is_holiday_season
     ];
   }
@@ -316,8 +327,13 @@ class NeuralRecommenderEngine {
         : TasteVectorEngine.extractSongEmbedding(song);
 
     final input = _buildInput(
-      userVector, songVec, contextFeatures,
-      audioFeatures, temporalFeatures, patternFeatures, socialFeatures,
+      userVector,
+      songVec,
+      contextFeatures,
+      audioFeatures,
+      temporalFeatures,
+      patternFeatures,
+      socialFeatures,
     );
 
     // Forward pass — cache activations for backprop

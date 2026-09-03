@@ -9,6 +9,33 @@ import '../audio/audio_player_service.dart';
 import 'p2p_models.dart';
 import 'p2p_socket_engine.dart';
 
+/// Cryptographically strong room secret generator. Produces 8
+/// alphanumeric chunks separated by `-` for human-readable entry
+/// without sacrificing entropy. Total entropy ~190 bits — effectively
+/// unguessable on a LAN.
+String _generateRoomSecret() {
+  final rng = Random.secure();
+  // RFC4648 base32 alphabet (no I/L/O/U to avoid confusion).
+  const alphabet = 'ABCDEFGHJKMNPQRSTVWXYZ23456789';
+  String chunk() => List.generate(
+        5,
+        (_) => alphabet[rng.nextInt(alphabet.length)],
+      ).join();
+  return '${chunk()}-${chunk()}-${chunk()}-${chunk()}-${chunk()}-'
+      '${chunk()}-${chunk()}-${chunk()}';
+}
+
+/// Constant-time string equality to prevent timing oracles during
+/// room-secret verification.
+bool _constantTimeEquals(String a, String b) {
+  if (a.length != b.length) return false;
+  var diff = 0;
+  for (var i = 0; i < a.length; i++) {
+    diff |= a.codeUnitAt(i) ^ b.codeUnitAt(i);
+  }
+  return diff == 0;
+}
+
 enum SyncCastRole { idle, host, client }
 
 class P2PSyncService extends ChangeNotifier {
@@ -29,7 +56,8 @@ class P2PSyncService extends ChangeNotifier {
 
   HttpServer? _server;
   final List<dynamic> _connectedPeers = [];
-  int get connectedPeersCount => isHost ? (_connectedPeers.length + 1) : (isClient ? 2 : 0);
+  int get connectedPeersCount =>
+      isHost ? (_connectedPeers.length + 1) : (isClient ? 2 : 0);
 
   dynamic _clientSocket;
   String? _localIp;
@@ -38,6 +66,13 @@ class P2PSyncService extends ChangeNotifier {
   String? get connectedHostIp => _connectedHostIp;
   String _roomCode = 'JAM-8088';
   String get roomCode => _roomCode;
+
+  /// 40-character room secret. Displayed alongside the code, used as
+  /// the actual authentication credential for the WebSocket upgrade.
+  /// Replaces the 4-digit numeric code which had only 8000 possible
+  /// values and was brute-forceable on a LAN.
+  late final String _roomSecret;
+  String get roomSecret => _roomSecret;
   String _userName = 'Host';
   String get userName => _userName;
   int _port = 8099;
@@ -55,11 +90,21 @@ class P2PSyncService extends ChangeNotifier {
   int _clientRetryCount = 0;
 
   void initialize(AudioPlayerService audioPlayer) => _audioPlayer = audioPlayer;
-  void setUserName(String name) { _userName = name.trim().isEmpty ? 'Listener' : name.trim(); notifyListeners(); }
-  String _generateRoomCode() => 'JAM-${1000 + Random().nextInt(9000)}';
+  void setUserName(String name) {
+    _userName = name.trim().isEmpty ? 'Listener' : name.trim();
+    notifyListeners();
+  }
+
+  /// Legacy code generator kept for UI display. The actual auth is
+  /// the 40-char [roomSecret] produced alongside it.
+  String _generateRoomCode() {
+    final rng = Random.secure();
+    return 'JAM-${1000 + rng.nextInt(9000)}';
+  }
 
   bool _isValidHostOrIp(String host) {
-    if (host == 'localhost' || host == '127.0.0.1' || host == '::1') return true;
+    if (host == 'localhost' || host == '127.0.0.1' || host == '::1')
+      return true;
     // Hostnames (.local, .lan, alphanumeric)
     if (RegExp(r'^[a-zA-Z0-9._-]+$').hasMatch(host) && !host.contains('..')) {
       // If looks like IPv4, validate strictly
@@ -87,10 +132,15 @@ class P2PSyncService extends ChangeNotifier {
   Future<bool> startHost({int port = 8099, String? customRoomCode}) async {
     await stopParty();
     _roomCode = customRoomCode ?? _generateRoomCode();
+    _roomSecret = _generateRoomSecret();
     if (_userName == 'Listener') _userName = 'Host';
     _chatMessages.clear();
     _collaborativeQueue.clear();
-    _chatMessages.add(JamChatMessage(id: 'system_init', senderName: 'System', text: 'Noctra Jam Room "$_roomCode" online.', timestamp: DateTime.now()));
+    _chatMessages.add(JamChatMessage(
+        id: 'system_init',
+        senderName: 'System',
+        text: 'Noctra Jam Room "$_roomCode" online.',
+        timestamp: DateTime.now()));
 
     _port = port;
     if (kIsWeb) {
@@ -112,6 +162,19 @@ class P2PSyncService extends ChangeNotifier {
             request.response.close();
             return;
           }
+          // Reject the upgrade when the room secret is missing or
+          // mismatched. We accept the secret either as a query
+          // parameter or as a `X-Noctra-Room` header. The 4-digit
+          // numeric code is no longer sufficient on its own.
+          final presentedSecret = (request.uri.queryParameters['secret'] ??
+                  request.headers.value('X-Noctra-Room') ??
+                  '')
+              .trim();
+          if (!_constantTimeEquals(presentedSecret, _roomSecret)) {
+            request.response.statusCode = HttpStatus.unauthorized;
+            request.response.close();
+            return;
+          }
           WebSocketTransformer.upgrade(request).then((socket) {
             _connectedPeers.add(socket);
             notifyListeners();
@@ -119,6 +182,7 @@ class P2PSyncService extends ChangeNotifier {
             final statePayload = {
               'type': 'jam_full_state',
               'roomCode': _roomCode,
+              'roomSecret': _roomSecret,
               'hostControlsOnly': _hostControlsOnly,
               'queue': _collaborativeQueue.map((s) => s.toMap()).toList(),
               'chatMessages': _chatMessages.map((m) => m.toMap()).toList(),
@@ -126,14 +190,21 @@ class P2PSyncService extends ChangeNotifier {
             };
             if (_audioPlayer?.currentSong != null) {
               statePayload['song'] = _audioPlayer!.currentSong!.toMap();
-              statePayload['positionMs'] = _audioPlayer!.player.position.inMilliseconds;
+              statePayload['positionMs'] =
+                  _audioPlayer!.player.position.inMilliseconds;
               statePayload['isPlaying'] = _audioPlayer!.player.playing;
             }
             socket.add(jsonEncode(statePayload));
             socket.listen(
               (data) => _handleHostIncomingMessage(socket, data),
-              onDone: () { _connectedPeers.remove(socket); notifyListeners(); },
-              onError: (_) { _connectedPeers.remove(socket); notifyListeners(); },
+              onDone: () {
+                _connectedPeers.remove(socket);
+                notifyListeners();
+              },
+              onError: (_) {
+                _connectedPeers.remove(socket);
+                notifyListeners();
+              },
             );
           }).catchError((e) {
             NoctraLogger.w('WebSocket upgrade failed', e);
@@ -142,7 +213,9 @@ class P2PSyncService extends ChangeNotifier {
       });
       notifyListeners();
       return true;
-    } catch (_) { return false; }
+    } catch (_) {
+      return false;
+    }
   }
 
   void _handleHostIncomingMessage(dynamic socket, dynamic rawData) {
@@ -157,13 +230,19 @@ class P2PSyncService extends ChangeNotifier {
         if (cleanText.isNotEmpty) {
           final sanitizedMsg = JamChatMessage(
             id: rawMsg.id,
-            senderName: rawMsg.senderName.length > 40 ? rawMsg.senderName.substring(0, 40) : rawMsg.senderName,
-            text: cleanText.length > 500 ? cleanText.substring(0, 500) : cleanText,
+            senderName: rawMsg.senderName.length > 40
+                ? rawMsg.senderName.substring(0, 40)
+                : rawMsg.senderName,
+            text: cleanText.length > 500
+                ? cleanText.substring(0, 500)
+                : cleanText,
             timestamp: rawMsg.timestamp,
           );
           _chatMessages.add(sanitizedMsg);
-          if (_chatMessages.length > maxChatCount) _chatMessages.removeRange(0, _chatMessages.length - maxChatCount);
-          _broadcastToPeers(jsonEncode(P2PPacket.createChatPacket(sanitizedMsg)));
+          if (_chatMessages.length > maxChatCount)
+            _chatMessages.removeRange(0, _chatMessages.length - maxChatCount);
+          _broadcastToPeers(
+              jsonEncode(P2PPacket.createChatPacket(sanitizedMsg)));
           notifyListeners();
         }
       } else if (type == 'add_to_queue') {
@@ -182,12 +261,24 @@ class P2PSyncService extends ChangeNotifier {
   }
 
   static const List<String> _allowedUrlHosts = [
-    'saavncdn.com', 'jiosaavn.com', 'cdn.jiosaavn.com',
-    'i.ytimg.com', 'music.youtube.com', 'lh3.googleusercontent.com', 'googlevideo.com',
-    'is1-ssl.mzstatic.com', 'itunes.apple.com',
-    'jamendo.com', 'storage.googleapis.com', 'akamaized.net', 'cloudfront.net',
-    'images.unsplash.com', 'i.scdn.co', 'mosaic.scdn.co',
-    'lastfm.freetls.fastly.net', 'coverartarchive.org',
+    'saavncdn.com',
+    'jiosaavn.com',
+    'cdn.jiosaavn.com',
+    'i.ytimg.com',
+    'music.youtube.com',
+    'lh3.googleusercontent.com',
+    'googlevideo.com',
+    'is1-ssl.mzstatic.com',
+    'itunes.apple.com',
+    'jamendo.com',
+    'storage.googleapis.com',
+    'akamaized.net',
+    'cloudfront.net',
+    'images.unsplash.com',
+    'i.scdn.co',
+    'mosaic.scdn.co',
+    'lastfm.freetls.fastly.net',
+    'coverartarchive.org',
   ];
 
   Song _sanitizeSongUrls(Song song) {
@@ -196,14 +287,18 @@ class P2PSyncService extends ChangeNotifier {
       try {
         final host = Uri.parse(url).host;
         return _allowedUrlHosts.any((d) => host == d || host.endsWith('.$d'));
-      } catch (_) { return false; }
+      } catch (_) {
+        return false;
+      }
     }
+
     return Song(
       id: song.id, title: song.title, artist: song.artist, album: song.album,
       artworkUrl: isAllowed(song.artworkUrl) ? song.artworkUrl : null,
       streamUrl: isAllowed(song.streamUrl) ? song.streamUrl : null,
       localFilePath: null, // never accept local paths from remote peers
-      duration: song.duration, genre: song.genre, featureVector: song.featureVector,
+      duration: song.duration, genre: song.genre,
+      featureVector: song.featureVector,
     );
   }
 
@@ -228,23 +323,35 @@ class P2PSyncService extends ChangeNotifier {
       _clientSocket.listen(
         (data) => _handleClientIncomingMessage(data),
         onDone: () {
-          try { _clientSocket?.close(); } catch (_) {}
+          try {
+            _clientSocket?.close();
+          } catch (_) {}
           _clientSocket = null;
-          if (_role == SyncCastRole.client && _connectedHostIp != null && _clientRetryCount < 3) {
+          if (_role == SyncCastRole.client &&
+              _connectedHostIp != null &&
+              _clientRetryCount < 3) {
             _clientRetryCount++;
             _reconnectTimer?.cancel();
-            _reconnectTimer = Timer(Duration(milliseconds: 1200 * _clientRetryCount), () => joinParty(cleanIp, port: port));
-          } else { stopParty(); }
+            _reconnectTimer = Timer(
+                Duration(milliseconds: 1200 * _clientRetryCount),
+                () => joinParty(cleanIp, port: port));
+          } else {
+            stopParty();
+          }
         },
         onError: (_) {
-          try { _clientSocket?.close(); } catch (_) {}
+          try {
+            _clientSocket?.close();
+          } catch (_) {}
           _clientSocket = null;
           stopParty();
         },
       );
       notifyListeners();
       return true;
-    } catch (_) { return false; }
+    } catch (_) {
+      return false;
+    }
   }
 
   void _handleClientIncomingMessage(dynamic rawData) {
@@ -259,12 +366,17 @@ class P2PSyncService extends ChangeNotifier {
         if (cleanText.isNotEmpty) {
           final sanitizedMsg = JamChatMessage(
             id: rawMsg.id,
-            senderName: rawMsg.senderName.length > 40 ? rawMsg.senderName.substring(0, 40) : rawMsg.senderName,
-            text: cleanText.length > 500 ? cleanText.substring(0, 500) : cleanText,
+            senderName: rawMsg.senderName.length > 40
+                ? rawMsg.senderName.substring(0, 40)
+                : rawMsg.senderName,
+            text: cleanText.length > 500
+                ? cleanText.substring(0, 500)
+                : cleanText,
             timestamp: rawMsg.timestamp,
           );
           _chatMessages.add(sanitizedMsg);
-          if (_chatMessages.length > maxChatCount) _chatMessages.removeRange(0, _chatMessages.length - maxChatCount);
+          if (_chatMessages.length > maxChatCount)
+            _chatMessages.removeRange(0, _chatMessages.length - maxChatCount);
           notifyListeners();
         }
       } else if (type == 'sync' || type == 'jam_full_state') {
@@ -282,10 +394,15 @@ class P2PSyncService extends ChangeNotifier {
           final isPlaying = data['isPlaying'] ?? false;
           final posMs = data['positionMs'];
           if (_audioPlayer != null) {
-            if (_audioPlayer!.currentSong?.id != song.id) _audioPlayer!.playSong(song);
-            if (isPlaying && !_audioPlayer!.player.playing) _audioPlayer!.player.play();
-            if (!isPlaying && _audioPlayer!.player.playing) _audioPlayer!.player.pause();
-            final posMsInt = posMs is num ? posMs.toInt() : (int.tryParse(posMs?.toString() ?? '') ?? 0);
+            if (_audioPlayer!.currentSong?.id != song.id)
+              _audioPlayer!.playSong(song);
+            if (isPlaying && !_audioPlayer!.player.playing)
+              _audioPlayer!.player.play();
+            if (!isPlaying && _audioPlayer!.player.playing)
+              _audioPlayer!.player.pause();
+            final posMsInt = posMs is num
+                ? posMs.toInt()
+                : (int.tryParse(posMs?.toString() ?? '') ?? 0);
             _audioPlayer!.player.seek(Duration(milliseconds: posMsInt));
           }
         }
@@ -299,15 +416,18 @@ class P2PSyncService extends ChangeNotifier {
   void sendChatMessage(String text) {
     final cleanText = text.trim();
     if (cleanText.isEmpty) return;
-    final sanitizedText = cleanText.length > 500 ? cleanText.substring(0, 500) : cleanText;
+    final sanitizedText =
+        cleanText.length > 500 ? cleanText.substring(0, 500) : cleanText;
     final msg = JamChatMessage(
       id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
-      senderName: _userName.length > 40 ? _userName.substring(0, 40) : _userName,
+      senderName:
+          _userName.length > 40 ? _userName.substring(0, 40) : _userName,
       text: sanitizedText,
       timestamp: DateTime.now(),
     );
     _chatMessages.add(msg);
-    if (_chatMessages.length > maxChatCount) _chatMessages.removeRange(0, _chatMessages.length - maxChatCount);
+    if (_chatMessages.length > maxChatCount)
+      _chatMessages.removeRange(0, _chatMessages.length - maxChatCount);
     notifyListeners();
     final packet = jsonEncode(P2PPacket.createChatPacket(msg));
     if (isHost) _broadcastToPeers(packet);
@@ -320,7 +440,8 @@ class P2PSyncService extends ChangeNotifier {
       notifyListeners();
       if (isHost) broadcastSync();
       if (isClient && _clientSocket != null && !_hostControlsOnly) {
-        _clientSocket.add(jsonEncode({'type': 'add_to_queue', 'song': song.toMap()}));
+        _clientSocket
+            .add(jsonEncode({'type': 'add_to_queue', 'song': song.toMap()}));
       }
     }
   }
@@ -330,7 +451,8 @@ class P2PSyncService extends ChangeNotifier {
     notifyListeners();
     if (isHost) broadcastSync();
     if (isClient && _clientSocket != null && !_hostControlsOnly) {
-      _clientSocket.add(jsonEncode({'type': 'remove_from_queue', 'songId': songId}));
+      _clientSocket
+          .add(jsonEncode({'type': 'remove_from_queue', 'songId': songId}));
     }
   }
 
@@ -345,7 +467,8 @@ class P2PSyncService extends ChangeNotifier {
     // Sanitize currentSong before broadcast — prevent URL-laundering
     // if the host itself received a malicious song via peer add_to_queue.
     final current = _audioPlayer?.currentSong;
-    final sanitizedCurrent = current != null ? _sanitizeSongUrls(current) : null;
+    final sanitizedCurrent =
+        current != null ? _sanitizeSongUrls(current) : null;
     final packet = jsonEncode(P2PPacket.createSyncPacket(
       song: sanitizedCurrent,
       position: _audioPlayer?.player.position ?? Duration.zero,
@@ -379,10 +502,14 @@ class P2PSyncService extends ChangeNotifier {
     _role = SyncCastRole.idle;
     _connectedHostIp = null;
     _localIp = null;
-    try { await _server?.close(force: true); } catch (_) {}
+    try {
+      await _server?.close(force: true);
+    } catch (_) {}
     _server = null;
     _connectedPeers.clear();
-    try { await _clientSocket?.close(); } catch (_) {}
+    try {
+      await _clientSocket?.close();
+    } catch (_) {}
     _clientSocket = null;
     notifyListeners();
   }
