@@ -89,7 +89,8 @@ void main() {
       reason: 'LibraryAllSongsTab rebuilds its full sliver on play/pause',
     );
     // Playback state is consumed per-row so only visible rows rebuild.
-    final rowClass = _classSource(src, 'class _LibrarySongRow');
+    final rowSrc = read('lib/ui/widgets/library/library_song_row.dart');
+    final rowClass = _classSource(rowSrc, 'class LibrarySongRow');
     expect(
       rowClass.contains('watch(currentSongStreamProvider)'),
       isTrue,

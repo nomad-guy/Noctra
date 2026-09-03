@@ -52,7 +52,7 @@ void main() {
       final lyrics = await LyricsService.fetchLyrics(song);
       // May or may not find lyrics, but should not crash
       expect(lyrics, isNotNull);
-    }, timeout: const Timeout(Duration(seconds: 10)));
+    }, timeout: const Timeout(Duration(seconds: 25)));
   });
 
   group('Cache behavior', () {

@@ -7,14 +7,13 @@ import '../../data/models/song_model.dart';
 import '../../providers/app_providers.dart';
 import '../../services/lyrics/lyrics_service.dart';
 import '../../services/lyrics/universal_lyrics_transliteration_engine.dart';
+import 'lyrics/lyrics_script_selector.dart';
+import 'lyrics/lyrics_synced_list.dart';
 
 class LyricsView extends ConsumerStatefulWidget {
   final Song song;
   const LyricsView({super.key, required this.song});
 
-  /// Canonical single source of truth for active timed-lyric line resolution.
-  /// Returns the greatest index `i` where `lines[i].timestamp <= pos`.
-  /// Returns `-1` if [lines] is empty or [pos] is strictly before the first line.
   static int findActiveIndex(List<LyricLine> lines, Duration pos) {
     if (lines.isEmpty) return -1;
     if (pos < lines.first.timestamp) return -1;
@@ -51,9 +50,6 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
     super.initState();
     _loadLyrics();
 
-    // Position stream listener: single authoritative source of truth.
-    // Throttled: only triggers setState and viewport auto-scroll when
-    // the active line index ACTUALLY changes.
     _positionSub = ref
         .read(audioPlayerServiceProvider)
         .player
@@ -106,8 +102,6 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
           _lastActiveIndex = activeIndex;
         });
 
-        // Immediately follow active line as soon as lyrics load (even if
-        // playback was already underway before network response arrived).
         if (isSynced && activeIndex >= 0 && !_userIsScrolling) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted && currentGen == _lyricsGeneration) {
@@ -149,7 +143,6 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
 
     final lineContext = _lineKeys[index]?.currentContext;
     if (lineContext == null || !lineContext.mounted) {
-      // If layout has not finished yet, retry once on next frame.
       if (!isRetry) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && targetGen == _scrollGeneration) {
@@ -162,7 +155,7 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
 
     Scrollable.ensureVisible(
       lineContext,
-      alignment: 0.40, // Keeps current line comfortably near vertical center (40%)
+      alignment: 0.40,
       duration: const Duration(milliseconds: 280),
       curve: Curves.easeOutCubic,
     );
@@ -179,7 +172,7 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
         _lastActiveIndex = activeIndex;
       }
     });
-    _lastScrolledIndex = -1; // Reset to ensure viewport moves back to active line
+    _lastScrolledIndex = -1;
     final target = _lastActiveIndex >= 0 ? _lastActiveIndex : 0;
     _scrollToIndex(target);
   }
@@ -199,7 +192,6 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
     });
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
-    final activeIndex = _lastActiveIndex;
 
     return FutureBuilder<LyricsData>(
       future: _lyricsFuture,
@@ -238,107 +230,21 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
             Positioned.fill(
               child: isSynced && displayLines.isNotEmpty
                   ? NotificationListener<ScrollNotification>(
-                      onNotification: (notification) {
-                        if (notification is ScrollStartNotification &&
-                            notification.dragDetails != null) {
-                          if (!_userIsScrolling) {
-                            setState(() => _userIsScrolling = true);
-                          }
+                      onNotification: _handleScrollNotification,
+                      child: LyricsSyncedList(
+                        scrollController: _scrollController,
+                        displayLines: displayLines,
+                        activeIndex: _lastActiveIndex,
+                        isDark: isDark,
+                        lineKeys: _lineKeys,
+                        onLineTap: (line, index) {
+                          ref
+                              .read(audioPlayerServiceProvider)
+                              .seek(line.timestamp);
                           _resumeAutoScrollTimer?.cancel();
-                        } else if (notification is UserScrollNotification &&
-                            notification.direction != ScrollDirection.idle) {
-                          if (!_userIsScrolling) {
-                            setState(() => _userIsScrolling = true);
-                          }
-                          _resumeAutoScrollTimer?.cancel();
-                        } else if (notification is ScrollEndNotification) {
-                          _resumeAutoScrollTimer?.cancel();
-                          _resumeAutoScrollTimer = Timer(
-                              const Duration(milliseconds: 3500), () {
-                            _resumeAutoScroll();
-                          });
-                        }
-                        return false;
-                      },
-                      child: ShaderMask(
-                        shaderCallback: (Rect bounds) {
-                          return const LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              Colors.white,
-                              Colors.white,
-                              Colors.transparent
-                            ],
-                            stops: [0.0, 0.06, 0.92, 1.0],
-                          ).createShader(bounds);
+                          setState(() => _userIsScrolling = false);
+                          _scrollToIndex(index);
                         },
-                        blendMode: BlendMode.dstIn,
-                        child: SingleChildScrollView(
-                          controller: _scrollController,
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(20, 72, 20, 120),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: List.generate(displayLines.length, (index) {
-                              final line = displayLines[index];
-                              final isActive = index == activeIndex;
-                              final isPast =
-                                  activeIndex >= 0 && index < activeIndex;
-
-                              return GestureDetector(
-                                key: _lineKeys.putIfAbsent(
-                                    index, () => GlobalKey()),
-                                behavior: HitTestBehavior.opaque,
-                                onTap: () {
-                                  ref
-                                      .read(audioPlayerServiceProvider)
-                                      .seek(line.timestamp);
-                                  _resumeAutoScrollTimer?.cancel();
-                                  setState(() => _userIsScrolling = false);
-                                  _scrollToIndex(index);
-                                },
-                                child: Container(
-                                  margin: const EdgeInsets.symmetric(vertical: 4),
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 8, horizontal: 12),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: Colors.transparent,
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: AnimatedDefaultTextStyle(
-                                    duration: const Duration(milliseconds: 160),
-                                    curve: Curves.easeOutCubic,
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0,
-                                      height: 1.4,
-                                      color: isActive
-                                          ? (isDark ? Colors.white : Colors.black)
-                                          : (isDark
-                                              ? Colors.white.withValues(
-                                                  alpha: isPast ? 0.32 : 0.60)
-                                              : Colors.black.withValues(
-                                                  alpha: isPast ? 0.26 : 0.50)),
-                                    ),
-                                    child: AnimatedOpacity(
-                                      duration: const Duration(milliseconds: 160),
-                                      opacity: isActive
-                                          ? 1.0
-                                          : (isPast ? 0.72 : 0.9),
-                                      child: Text(line.text),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }),
-                          ),
-                        ),
                       ),
                     )
                   : SingleChildScrollView(
@@ -355,66 +261,28 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
                       ),
                     ),
             ),
-            if (options.length > 1)
-              Positioned(
-                top: 10,
-                right: 14,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: options.map((opt) {
-                    return Padding(
-                      padding: const EdgeInsets.only(left: 6),
-                      child: _scriptChip(opt.label, opt.code, isDark),
-                    );
-                  }).toList(),
-                ),
-              ),
+            LyricsScriptSelector(
+              options: options,
+              selectedScript: _selectedScript,
+              isDark: isDark,
+              onSelectScript: (code) {
+                if (_selectedScript != code) {
+                  setState(() {
+                    _selectedScript = code;
+                    _lineKeys.clear();
+                  });
+                  if (_lastActiveIndex >= 0 && !_userIsScrolling) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) _scrollToIndex(_lastActiveIndex);
+                    });
+                  }
+                }
+              },
+            ),
             if (_userIsScrolling && isSynced && displayLines.isNotEmpty)
-              Positioned(
-                bottom: 16,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: GestureDetector(
-                    onTap: _resumeAutoScroll,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.92)
-                            : Colors.black.withValues(alpha: 0.88),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.25),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.vertical_align_center_rounded,
-                            size: 14,
-                            color: isDark ? Colors.black : Colors.white,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Sync with Song',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: isDark ? Colors.black : Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+              LyricsSyncFloatingButton(
+                isDark: isDark,
+                onTap: _resumeAutoScroll,
               ),
           ],
         );
@@ -422,38 +290,25 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
     );
   }
 
-  Widget _scriptChip(String label, String code, bool isDark) {
-    final sel = _selectedScript == code;
-    return GestureDetector(
-      onTap: () {
-        if (_selectedScript != code) {
-          setState(() {
-            _selectedScript = code;
-            _lineKeys.clear();
-          });
-          if (_lastActiveIndex >= 0 && !_userIsScrolling) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _scrollToIndex(_lastActiveIndex);
-            });
-          }
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: sel
-              ? (isDark ? Colors.white : Colors.black)
-              : (isDark ? const Color(0x33FFFFFF) : const Color(0x1F000000)),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(label,
-            style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: sel
-                    ? (isDark ? Colors.black : Colors.white)
-                    : (isDark ? Colors.white70 : Colors.black87))),
-      ),
-    );
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollStartNotification &&
+        notification.dragDetails != null) {
+      if (!_userIsScrolling) {
+        setState(() => _userIsScrolling = true);
+      }
+      _resumeAutoScrollTimer?.cancel();
+    } else if (notification is UserScrollNotification &&
+        notification.direction != ScrollDirection.idle) {
+      if (!_userIsScrolling) {
+        setState(() => _userIsScrolling = true);
+      }
+      _resumeAutoScrollTimer?.cancel();
+    } else if (notification is ScrollEndNotification) {
+      _resumeAutoScrollTimer?.cancel();
+      _resumeAutoScrollTimer = Timer(const Duration(milliseconds: 3500), () {
+        _resumeAutoScroll();
+      });
+    }
+    return false;
   }
 }

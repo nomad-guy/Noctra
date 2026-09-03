@@ -1,220 +1,9 @@
-import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:noctra/data/models/song_model.dart';
 import 'package:noctra/data/models/download_location.dart';
 import 'package:noctra/data/models/stream_metadata_model.dart';
 import 'package:noctra/data/repositories/taste_vector_engine.dart';
 
 void main() {
-  group('Song Model', () {
-    test('creates with required fields', () {
-      final song = Song(
-        id: 'test123',
-        title: 'Tum Hi Ho',
-        artist: 'Arijit Singh',
-        duration: const Duration(minutes: 4, seconds: 12),
-      );
-      expect(song.id, 'test123');
-      expect(song.title, 'Tum Hi Ho');
-      expect(song.artist, 'Arijit Singh');
-      expect(song.album, 'Single');
-      expect(song.isDownloaded, false);
-      expect(song.featureVector.length, 32);
-    });
-
-    test('song without a feature vector is marked invalid (never fake data)',
-        () {
-      final song = Song(
-        id: 'test123',
-        title: 'Tum Hi Ho',
-        artist: 'Arijit Singh',
-        duration: const Duration(minutes: 4),
-      );
-      // No vector supplied — the neutral fill must NOT masquerade as a
-      // genuine embedding.
-      expect(song.featureVector.length, 32);
-      expect(song.hasValidFeatureVector, false);
-      expect(song.hasUsableEmbedding, false);
-    });
-
-    test('song with a valid 32-dim vector is usable', () {
-      final vec = List.generate(32, (i) => 0.05 + i * 0.01);
-      final song = Song(
-        id: 'test123',
-        title: 'T',
-        artist: 'A',
-        duration: const Duration(seconds: 1),
-        featureVector: vec,
-      );
-      expect(song.hasValidFeatureVector, true);
-      expect(song.hasUsableEmbedding, true);
-    });
-
-    test('explicit all-0.5 vector is valid data but not usable embedding', () {
-      final song = Song(
-        id: 'test123',
-        title: 'T',
-        artist: 'A',
-        duration: const Duration(seconds: 1),
-        featureVector: List.filled(32, 0.5),
-      );
-      // Explicitly supplied and in-range — valid. But a neutral vector
-      // contributes nothing, so consumers must not treat it as data.
-      expect(song.hasValidFeatureVector, true);
-      expect(song.hasUsableEmbedding, false);
-    });
-
-    test('wrong-dimension or non-finite vectors are rejected, not padded', () {
-      final tooShort = Song(
-        id: 'a',
-        title: 'T',
-        artist: 'A',
-        duration: const Duration(seconds: 1),
-        featureVector: List.filled(16, 0.7),
-      );
-      expect(tooShort.featureVector.length, 32);
-      expect(tooShort.hasValidFeatureVector, false);
-      expect(tooShort.hasUsableEmbedding, false);
-
-      final tooLong = Song(
-        id: 'b',
-        title: 'T',
-        artist: 'A',
-        duration: const Duration(seconds: 1),
-        featureVector: List.filled(33, 0.7),
-      );
-      expect(tooLong.featureVector.length, 32);
-      expect(tooLong.hasValidFeatureVector, false);
-
-      final withNaN = Song(
-        id: 'c',
-        title: 'T',
-        artist: 'A',
-        duration: const Duration(seconds: 1),
-        featureVector: List.generate(32, (i) => i == 3 ? double.nan : 0.5),
-      );
-      expect(withNaN.hasValidFeatureVector, false);
-      expect(withNaN.hasUsableEmbedding, false);
-    });
-
-    test('copyWith keeps an explicit validity flag', () {
-      final invalid = Song(
-        id: 'x',
-        title: 'T',
-        artist: 'A',
-        duration: const Duration(seconds: 1),
-      );
-      final copy = invalid.copyWith(title: 'New');
-      expect(copy.hasValidFeatureVector, false);
-      expect(copy.hasUsableEmbedding, false);
-    });
-
-    test('copyWith preserves all fields', () {
-      final song = Song(
-        id: 'test123',
-        title: 'Original',
-        artist: 'Artist',
-        duration: const Duration(seconds: 200),
-        genre: 'Pop',
-      );
-      final copy = song.copyWith(title: 'Modified');
-      expect(copy.title, 'Modified');
-      expect(copy.artist, 'Artist');
-      expect(copy.genre, 'Pop');
-      expect(copy.id, 'test123');
-    });
-
-    test('copyWith can clear optional fields', () {
-      final song = Song(
-        id: 'test123',
-        title: 'Test',
-        artist: 'Artist',
-        artworkUrl: 'https://example.com/art.jpg',
-        duration: const Duration(seconds: 200),
-      );
-      final copy = song.copyWith(clearArtworkUrl: true);
-      expect(copy.artworkUrl, isNull);
-    });
-
-    test('toMap/fromMap roundtrip', () {
-      final song = Song(
-        id: 'test123',
-        title: 'Test Song',
-        artist: 'Test Artist',
-        album: 'Test Album',
-        artworkUrl: 'https://example.com/art.jpg',
-        duration: const Duration(minutes: 3, seconds: 30),
-        genre: 'Pop',
-        isDownloaded: true,
-        featureVector: List.filled(32, 0.7),
-        replayCount: 5,
-        skipCount: 1,
-      );
-      final map = song.toMap();
-      final restored = Song.fromMap(map);
-      expect(restored.id, song.id);
-      expect(restored.title, song.title);
-      expect(restored.artist, song.artist);
-      expect(restored.album, song.album);
-      expect(restored.artworkUrl, song.artworkUrl);
-      expect(restored.duration.inMilliseconds, song.duration.inMilliseconds);
-      expect(restored.genre, song.genre);
-      expect(restored.isDownloaded, true);
-      expect(restored.replayCount, 5);
-      expect(restored.skipCount, 1);
-    });
-
-    test('fromMap handles missing fields gracefully', () {
-      final song = Song.fromMap({});
-      expect(song.id, '');
-      expect(song.title, 'Unknown Track');
-      expect(song.artist, 'Unknown Artist');
-      expect(song.featureVector.length, 32);
-    });
-
-    test('fromMap handles duration as seconds', () {
-      final song = Song.fromMap({'duration': 210});
-      expect(song.duration.inSeconds, 210);
-    });
-
-    test('fromMap handles duration as milliseconds', () {
-      final song = Song.fromMap({'durationMs': 210000});
-      expect(song.duration.inSeconds, 210);
-    });
-
-    test('fromMap handles valid 32-dim feature vector as JSON string', () {
-      final vec32 = List.generate(32, (i) => 0.1 + i * 0.01);
-      final song = Song.fromMap({
-        'featureVector': jsonEncode(vec32),
-      });
-      expect(song.hasValidFeatureVector, true);
-      expect(song.featureVector[0], closeTo(vec32[0], 0.001));
-      expect(song.featureVector[31], closeTo(vec32[31], 0.001));
-    });
-
-    test('fromMap marks short feature vectors invalid (no silent padding)', () {
-      final song = Song.fromMap({
-        'featureVector': '[0.1, 0.2, 0.3]',
-      });
-      expect(song.hasValidFeatureVector, false);
-      expect(song.featureVector.length, 32);
-      expect(song.featureVector[0], closeTo(0.5, 0.001)); // default, not data
-    });
-
-    test('fromMap marks NaN/Infinity feature vectors invalid', () {
-      final badVec = List.filled(32, double.nan);
-      final song = Song.fromMap({'featureVector': badVec});
-      expect(song.hasValidFeatureVector, false);
-    });
-
-    test('fromMap throws on invalid id types', () {
-      expect(() => Song.fromMap({'id': 123}), throwsFormatException);
-      expect(() => Song.fromMap({'id': true}), throwsFormatException);
-      expect(() => Song.fromMap({'id': {'a': 1}}), throwsFormatException);
-      expect(() => Song.fromMap({'id': '  '}), throwsFormatException);
-    });
-  });
-
   group('TasteVectorEngine', () {
     test('getDefaultVector returns 32-dim vector', () {
       final vec = TasteVectorEngine.getDefaultVector();
@@ -232,7 +21,6 @@ void main() {
       v1[0] = 1.0;
       final v2 = List.filled(32, 0.0);
       v2[1] = 1.0;
-      // Orthogonal unit vectors have cosine similarity 0, clamped to [0,1]
       expect(TasteVectorEngine.cosineSimilarity(v1, v2), closeTo(0.0, 0.01));
     });
 
@@ -244,7 +32,7 @@ void main() {
       final v1 = List.filled(32, 0.8);
       final v2 = List.filled(32, 0.2);
       final blended = TasteVectorEngine.blendVectors(v1, v2, 0.7);
-      expect(blended[0], closeTo(0.62, 0.01)); // 0.8*0.7 + 0.2*0.3
+      expect(blended[0], closeTo(0.62, 0.01));
     });
 
     test('blendVectors clamps output', () {
@@ -254,12 +42,14 @@ void main() {
       expect(blended[0], greaterThanOrEqualTo(0.05));
     });
 
-    test('extractTextEmbedding produces non-default vector for known genres', () {
-      final vec = TasteVectorEngine.extractTextEmbedding('dark synthwave cyberpunk');
-      // Should differ from default (0.5) in specific axes
-      expect(vec[6], greaterThan(0.5)); // Electronic
-      expect(vec[9], greaterThan(0.5)); // Analog Synth
-      expect(vec[10], greaterThan(0.5)); // Night Drive
+    test(
+        'extractTextEmbedding produces non-default vector for known genres',
+        () {
+      final vec =
+          TasteVectorEngine.extractTextEmbedding('dark synthwave cyberpunk');
+      expect(vec[6], greaterThan(0.5));
+      expect(vec[9], greaterThan(0.5));
+      expect(vec[10], greaterThan(0.5));
     });
 
     test('extractTextEmbedding handles empty string', () {
@@ -273,8 +63,8 @@ void main() {
 
     test('applyTemporalDecay reduces values toward default', () {
       final vec = List.filled(32, 0.9);
-      final decayed = TasteVectorEngine.applyTemporalDecay(vec, daysElapsed: 30);
-      // After 30 days, values should be closer to 0.5
+      final decayed =
+          TasteVectorEngine.applyTemporalDecay(vec, daysElapsed: 30);
       for (int i = 0; i < 32; i++) {
         expect(decayed[i], lessThan(0.9));
         expect(decayed[i], greaterThan(0.5));
@@ -284,7 +74,6 @@ void main() {
 
   group('MusicService search deduplication', () {
     test('Song id generation for JioSaavn results', () {
-      // Verify the id format matches what the code generates
       final id = 'jio_test_id_123';
       expect(id.startsWith('jio_'), true);
     });

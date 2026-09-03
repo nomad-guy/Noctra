@@ -9,8 +9,14 @@ import '../models/song_model.dart';
 import '../repositories/taste_vector_engine.dart';
 import 'noctra_manifest_store.dart';
 
+part 'parts/local_database_playback.dart';
+part 'parts/local_database_decoders.dart';
+part 'parts/local_database_manifests.dart';
+part 'parts/local_database_catalog_topics.dart';
+
 class NoctraLocalDatabase {
-  static final NoctraLocalDatabase _instance = NoctraLocalDatabase._internal();
+  static final NoctraLocalDatabase _instance =
+      NoctraLocalDatabase._internal();
   factory NoctraLocalDatabase() => _instance;
   NoctraLocalDatabase._internal();
 
@@ -27,17 +33,12 @@ class NoctraLocalDatabase {
   List<String> _onboardedGenres = [];
   List<String> _onboardedLanguages = [];
   bool _isLoaded = false;
-  Future<void>? _initFuture; // C3: cache to prevent concurrent init() calls
+  Future<void>? _initFuture;
 
-  /// Serializes full-snapshot prefs writes so they complete in CALL order.
-  /// Without this, two rapid async writes (favorite toggle, play recording,
-  /// position save) can land out of order and the OLDER snapshot can
-  /// overwrite the NEWER one on disk, losing user state on restart.
   Future<void> _prefsWriteQueue = Future.value();
 
   Future<T> _enqueuePrefsWrite<T>(Future<T> Function() op) {
     final result = _prefsWriteQueue.then((_) => op());
-    // Keep the chain alive even when an individual write fails.
     _prefsWriteQueue = result.then((_) {}, onError: (_) {});
     return result;
   }
@@ -48,9 +49,6 @@ class NoctraLocalDatabase {
   List<String> get onboardedLanguages => List.unmodifiable(_onboardedLanguages);
   String getCachedThemeMode() => _cachedThemeMode;
 
-  /// Strictly validates and normalizes persisted theme modes.
-  /// Only 'noirBlack', 'noirWhite', and 'liquidGlass' are valid.
-  /// Legacy 'amoled' / 'noirAmoled' and any invalid strings resolve to 'noirBlack'.
   static String normalizeThemeMode(String? raw) {
     if (raw == null) return 'noirBlack';
     final lower = raw.trim().toLowerCase();
@@ -80,7 +78,6 @@ class NoctraLocalDatabase {
     });
   }
 
-  /// Persists the active theme so it survives app restarts.
   Future<void> saveCachedThemeMode(String modeName) => saveThemeMode(modeName);
 
   @visibleForTesting
@@ -104,7 +101,7 @@ class NoctraLocalDatabase {
 
   Future<void> init() async {
     if (_isLoaded) return;
-    if (_initFuture != null) return _initFuture!; // C3: reuse in-flight init
+    if (_initFuture != null) return _initFuture!;
     _initFuture = _doInit();
     try {
       await _initFuture;
@@ -124,19 +121,19 @@ class NoctraLocalDatabase {
           prefs.getStringList('noctra_onboarded_languages') ?? [];
 
       _favorites.clear();
-      _favorites.addAll(_safeDecodeSongList(
+      _favorites.addAll(LocalDatabaseDecoders.safeDecodeSongList(
           prefs.getString('noctra_favs'), 'noctra_favs', prefs));
       _downloads.clear();
-      _downloads.addAll(_safeDecodeSongList(
+      _downloads.addAll(LocalDatabaseDecoders.safeDecodeSongList(
           prefs.getString('noctra_downloads'), 'noctra_downloads', prefs));
       _recent.clear();
-      _recent.addAll(_safeDecodeSongList(
+      _recent.addAll(LocalDatabaseDecoders.safeDecodeSongList(
           prefs.getString('noctra_recent'), 'noctra_recent', prefs));
       _customFolders.clear();
-      _customFolders.addAll(_safeDecodeCustomFolders(
+      _customFolders.addAll(LocalDatabaseDecoders.safeDecodeCustomFolders(
           prefs.getString('noctra_custom_folders'), prefs));
-      _cachedTasteVector =
-          _safeDecodeTasteVector(prefs.getString('noctra_taste_vector'), prefs);
+      _cachedTasteVector = LocalDatabaseDecoders.safeDecodeTasteVector(
+          prefs.getString('noctra_taste_vector'), prefs);
       final savedTheme = prefs.getString('noctra_theme_mode');
       _cachedThemeMode = normalizeThemeMode(savedTheme);
       if (savedTheme != _cachedThemeMode) {
@@ -157,7 +154,6 @@ class NoctraLocalDatabase {
     } catch (e) {
       NoctraLogger.e(
           'Database initialization failed; will retry on next access', e);
-      // Reset in-memory state and keep _isLoaded false so subsequent calls can retry
       _favorites.clear();
       _downloads.clear();
       _recent.clear();
@@ -166,204 +162,6 @@ class NoctraLocalDatabase {
       _isLoaded = false;
     }
   }
-
-  List<Song> _safeDecodeSongList(
-      String? jsonStr, String key, SharedPreferences prefs) {
-    if (jsonStr == null || jsonStr.trim().isEmpty) return [];
-    try {
-      final decoded = jsonDecode(jsonStr);
-      if (decoded is! List) throw const FormatException('Expected List');
-      // Dedupe on identity+content: a row is dropped ONLY when it repeats an
-      // already-loaded (id, title, artist) triple (re-import / double write).
-      // Two DIFFERENT recordings that happen to share an ID (cross-provider
-      // collision) must both survive — silently dropping one is data loss.
-      final seen = <String, Set<String>>{}; // id -> {title\u0000artist} seen
-      final list = <Song>[];
-      for (final item in decoded) {
-        if (item is Map) {
-          try {
-            final song = Song.fromMap(Map<String, dynamic>.from(item));
-            if (song.title.isEmpty) continue;
-            final effectiveId = song.id.isNotEmpty
-                ? song.id
-                : 'syn_${song.title.hashCode ^ song.artist.hashCode}';
-            final dedupSong =
-                song.id.isEmpty ? song.copyWith(id: effectiveId) : song;
-            final contentKey = '${dedupSong.title}\u0000${dedupSong.artist}';
-            final seenContent = seen.putIfAbsent(effectiveId, () => <String>{});
-            if (seenContent.add(contentKey)) list.add(dedupSong);
-          } catch (e) {
-            NoctraLogger.w('Skipping corrupt song in list for $key', e);
-          }
-        }
-      }
-      return list;
-    } catch (e) {
-      NoctraLogger.w('Corrupted JSON detected for key $key; backing up', e);
-      try {
-        prefs.setString('${key}_corrupt_bak', jsonStr);
-      } catch (_) {}
-      prefs.remove(key);
-      return [];
-    }
-  }
-
-  Map<String, List<Song>> _safeDecodeCustomFolders(
-      String? jsonStr, SharedPreferences prefs) {
-    if (jsonStr == null || jsonStr.trim().isEmpty) return {};
-    try {
-      final decoded = jsonDecode(jsonStr);
-      if (decoded is! Map) throw const FormatException('Expected Map');
-      final res = <String, List<Song>>{};
-      int syntheticId = 0;
-      decoded.forEach((rawK, v) {
-        final k = rawK?.toString();
-        if (k != null && k.isNotEmpty && v is List) {
-          // Content-aware dedupe, same policy as _safeDecodeSongList: only
-          // drop exact (id, title, artist) repeats, never a distinct
-          // recording that merely shares an ID.
-          final seen = <String, Set<String>>{};
-          final songs = <Song>[];
-          for (final item in v) {
-            if (item is Map) {
-              try {
-                final song = Song.fromMap(Map<String, dynamic>.from(item));
-                if (song.title.isEmpty) continue;
-                final effectiveId = song.id.isNotEmpty
-                    ? song.id
-                    : 'syn_f_${song.title.hashCode}_${syntheticId++}';
-                final dedupSong =
-                    song.id.isEmpty ? song.copyWith(id: effectiveId) : song;
-                final contentKey = '${dedupSong.title}\u0000${dedupSong.artist}';
-                final seenContent =
-                    seen.putIfAbsent(effectiveId, () => <String>{});
-                if (seenContent.add(contentKey)) songs.add(dedupSong);
-              } catch (e) {
-                NoctraLogger.w('Skipping corrupt song in folder $k', e);
-              }
-            }
-          }
-          res[k] = songs;
-        }
-      });
-      return res;
-    } catch (e) {
-      NoctraLogger.w('Corrupted JSON detected for custom folders; backing up', e);
-      try {
-        prefs.setString('noctra_custom_folders_corrupt_bak', jsonStr);
-      } catch (_) {}
-      prefs.remove('noctra_custom_folders');
-      return {};
-    }
-  }
-
-  List<double> _safeDecodeTasteVector(
-      String? jsonStr, SharedPreferences prefs) {
-    final def = TasteVectorEngine.getDefaultVector();
-    if (jsonStr == null || jsonStr.trim().isEmpty) return def;
-    try {
-      final decoded = jsonDecode(jsonStr);
-      if (decoded is! List) throw const FormatException('Expected List');
-      final list = <double>[];
-      for (final e in decoded) {
-        if (e is num) {
-          final val = e.toDouble();
-          list.add(val.isNaN || val.isInfinite ? 0.5 : val.clamp(0.05, 0.95));
-        } else {
-          list.add(0.5);
-        }
-      }
-      while (list.length < TasteVectorEngine.vectorDimension) {
-        list.add(0.5);
-      }
-      return list.take(TasteVectorEngine.vectorDimension).toList();
-    } catch (e) {
-      NoctraLogger.w('Self-healing corrupted taste vector', e);
-      try {
-        prefs.setString('noctra_taste_vector_corrupt_bak', jsonStr);
-      } catch (_) {}
-      prefs.remove('noctra_taste_vector');
-      return def;
-    }
-  }
-
-  Future<void> completeOnboarding(
-      {required List<String> languages,
-      required List<String> genres,
-      required List<String> artists}) {
-    _hasCompletedOnboarding = true;
-    _onboardedLanguages = languages;
-    _onboardedGenres = genres;
-    _onboardedArtists = artists;
-    return _enqueuePrefsWrite(() async {
-      final prefs = _prefs ?? await SharedPreferences.getInstance();
-      _prefs = prefs;
-      await prefs.setBool('noctra_onboarded', true);
-      await prefs.setStringList('noctra_onboarded_languages', languages);
-      await prefs.setStringList('noctra_onboarded_genres', genres);
-      await prefs.setStringList('noctra_onboarded_artists', artists);
-    });
-  }
-
-  Future<void> recordManifest(Song song,
-      {String action = 'play',
-      int listenedSeconds = 0,
-      double completionRate = 1.0}) async {
-    await init();
-    _manifestStore.recordManifest(song,
-        action: action,
-        listenedSeconds: listenedSeconds,
-        completionRate: completionRate);
-    // Persist through the same serialized queue so two rapid play records
-    // cannot land out of order and lose a counter increment on disk.
-    await _enqueuePrefsWrite(() => _manifestStore.persist());
-  }
-
-  List<String> getTopArtists({int limit = 6}) {
-    final sorted = _manifestStore.artistWeights.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final historyList = sorted
-        .take(limit)
-        .map((e) => e.key)
-        .where((a) => a.isNotEmpty)
-        .toList();
-    return <String>{..._onboardedArtists, ...historyList}.take(limit).toList();
-  }
-
-  double getArtistAffinity(String artist) {
-    if (artist.isEmpty || _manifestStore.artistWeights.isEmpty) return 0.0;
-    final w = _manifestStore.artistWeights[artist] ?? 0;
-    return (w / 10.0).clamp(0.0, 1.0);
-  }
-
-  List<String> getTopGenres({int limit = 4}) {
-    final sorted = _manifestStore.genreWeights.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final history = sorted
-        .take(limit)
-        .map((e) => e.key)
-        .where((g) => g.isNotEmpty)
-        .toList();
-    return <String>{..._onboardedGenres, ...history}.take(limit).toList();
-  }
-
-  List<String> getTopLanguages({int limit = 3}) {
-    final sorted = _manifestStore.languageWeights.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final history = sorted
-        .take(limit)
-        .map((e) => e.key)
-        .where((l) => l.isNotEmpty)
-        .toList();
-    return <String>{..._onboardedLanguages, ...history}.take(limit).toList();
-  }
-
-  Map<String, dynamic> getKnowledgeGraphSummary() => {
-        'totalTracksLearned': _manifestStore.manifests.length,
-        'topArtists': getTopArtists(limit: 4),
-        'topGenres': getTopGenres(limit: 3),
-        'topLanguages': getTopLanguages(limit: 2),
-      };
 
   Future<void> saveThemeMode(String mode) {
     final clean = normalizeThemeMode(mode);
@@ -378,111 +176,6 @@ class NoctraLocalDatabase {
       }
     });
   }
-
-  /// Persists full playback session including queue, position, index, and playback flags.
-  /// Supports duplicate tracks in queue (e.g. A B A C) with preserved order.
-  Future<void> savePlaybackSession({
-    required Song? currentSong,
-    required int positionMs,
-    List<Song> queue = const [],
-    int currentIndex = 0,
-    bool isShuffle = false,
-    String loopMode = 'off',
-  }) {
-    if (currentSong == null && queue.isEmpty) return Future.value();
-    return _enqueuePrefsWrite(() async {
-      try {
-        final prefs = _prefs ?? await SharedPreferences.getInstance();
-        _prefs = prefs;
-        final payload = jsonEncode({
-          'song': currentSong?.toMap(),
-          'positionMs': positionMs,
-          'queue': queue.map((e) => e.toMap()).toList(),
-          'currentIndex': currentIndex,
-          'isShuffle': isShuffle,
-          'loopMode': loopMode,
-        });
-        await prefs.setString('noctra_last_playback', payload);
-      } catch (e) {
-        NoctraLogger.w('Failed to save playback session', e);
-      }
-    });
-  }
-
-  Future<void> savePlaybackPosition(Song? song, int positionMs,
-      {List<Song>? queue, int? currentIndex, bool? isShuffle, String? loopMode}) {
-    return savePlaybackSession(
-      currentSong: song,
-      positionMs: positionMs,
-      queue: queue ?? (song != null ? [song] : []),
-      currentIndex: currentIndex ?? 0,
-      isShuffle: isShuffle ?? false,
-      loopMode: loopMode ?? 'off',
-    );
-  }
-
-  Future<Map<String, dynamic>?> loadPlaybackSession() async {
-    try {
-      final prefs = _prefs ?? await SharedPreferences.getInstance();
-      _prefs = prefs;
-      final combined = prefs.getString('noctra_last_playback');
-      if (combined != null) {
-        final decoded = jsonDecode(combined);
-        if (decoded is Map<String, dynamic>) {
-          Song? song;
-          if (decoded['song'] is Map) {
-            try {
-              song = Song.fromMap(
-                  Map<String, dynamic>.from(decoded['song'] as Map));
-            } catch (_) {}
-          }
-          final posMs = (decoded['positionMs'] as num?)?.toInt() ?? 0;
-          final queueList = <Song>[];
-          if (decoded['queue'] is List) {
-            for (final item in decoded['queue'] as List) {
-              if (item is Map) {
-                try {
-                  queueList
-                      .add(Song.fromMap(Map<String, dynamic>.from(item)));
-                } catch (_) {}
-              }
-            }
-          }
-          final currIdx = (decoded['currentIndex'] as num?)?.toInt() ?? 0;
-          final isShuffle = decoded['isShuffle'] == true;
-          final loopMode = decoded['loopMode']?.toString() ?? 'off';
-
-          return {
-            'song': song,
-            'positionMs': posMs,
-            'queue': queueList,
-            'currentIndex': currIdx,
-            'isShuffle': isShuffle,
-            'loopMode': loopMode,
-          };
-        }
-      }
-      final songJson = prefs.getString('noctra_last_song');
-      final posMs = prefs.getInt('noctra_last_pos_ms') ?? 0;
-      if (songJson != null) {
-        final decoded = jsonDecode(songJson);
-        final song = Song.fromMap(Map<String, dynamic>.from(decoded));
-        return {
-          'song': song,
-          'positionMs': posMs,
-          'queue': [song],
-          'currentIndex': 0,
-          'isShuffle': false,
-          'loopMode': 'off',
-        };
-      }
-    } catch (e) {
-      NoctraLogger.w('loadPlaybackSession error', e);
-    }
-    return null;
-  }
-
-  Future<Map<String, dynamic>?> loadPlaybackPosition() => loadPlaybackSession();
 
   Future<void> saveFavorites(List<Song> songs) {
     return _enqueuePrefsWrite(() async {
@@ -558,52 +251,6 @@ class NoctraLocalDatabase {
         _cachedTasteVector = List<double>.unmodifiable(vector);
       } catch (e) {
         NoctraLogger.w('Failed to save taste vector', e);
-      }
-    });
-  }
-
-  Future<List<CatalogTopic>> loadCatalogTopics() async {
-    try {
-      final prefs = _prefs ?? await SharedPreferences.getInstance();
-      _prefs = prefs;
-      final raw = prefs.getString('noctra_catalog_topics');
-      if (raw == null) return const [];
-      final decoded = jsonDecode(raw);
-      if (decoded is! List) throw const FormatException('Expected List');
-      return decoded
-          .whereType<Map>()
-          .map((item) => CatalogTopic(
-                title: item['title']?.toString() ?? '',
-                category: item['category']?.toString() ?? '',
-                query: item['query']?.toString() ?? '',
-              ))
-          .where((topic) => topic.title.isNotEmpty && topic.query.isNotEmpty)
-          .take(16)
-          .toList(growable: false);
-    } catch (e) {
-      NoctraLogger.w('Self-healing corrupted catalog topic cache', e);
-      return const [];
-    }
-  }
-
-  Future<void> saveCatalogTopics(List<CatalogTopic> topics) {
-    return _enqueuePrefsWrite(() async {
-      try {
-        final prefs = _prefs ?? await SharedPreferences.getInstance();
-        _prefs = prefs;
-        await prefs.setString(
-          'noctra_catalog_topics',
-          jsonEncode(topics
-              .take(16)
-              .map((topic) => {
-                    'title': topic.title,
-                    'category': topic.category,
-                    'query': topic.query,
-                  })
-              .toList()),
-        );
-      } catch (e) {
-        NoctraLogger.w('Failed to persist catalog topics', e);
       }
     });
   }

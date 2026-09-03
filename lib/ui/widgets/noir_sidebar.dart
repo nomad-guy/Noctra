@@ -7,10 +7,11 @@ import '../../services/updater/app_update_service.dart';
 import '../screens/settings_sheet.dart';
 import 'developer_panel_sheet.dart';
 import 'equalizer_sheet.dart';
-import 'glass_card.dart';
-import 'synccast_sheet.dart';
-import 'recently_played_sheet.dart';
 import 'noctra_app_logo.dart';
+import 'recently_played_sheet.dart';
+import 'sidebar/sidebar_item.dart';
+import 'sidebar/sidebar_theme_card.dart';
+import 'synccast_sheet.dart';
 
 class NoirSidebar extends ConsumerWidget {
   final VoidCallback? onClose;
@@ -32,13 +33,13 @@ class NoirSidebar extends ConsumerWidget {
         color: themeMode.isLiquidGlass
             ? tokens.surface.withValues(alpha: .72)
             : (isDark ? const Color(0xF80A0A0A) : const Color(0xF8F9F9F9)),
-        border: Border(right: BorderSide(color: tokens.subtleBorder, width: 1)),
+        border:
+            Border(right: BorderSide(color: tokens.subtleBorder, width: 1)),
       ),
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top Bar
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 16, 12, 16),
               child: Row(
@@ -63,27 +64,27 @@ class NoirSidebar extends ConsumerWidget {
                   ),
                   if (onClose != null)
                     IconButton(
-                      icon: Icon(Icons.chevron_left_rounded,
-                          size: 26,
-                          color: isDark ? Colors.white70 : Colors.black87),
+                      icon: Icon(
+                        Icons.chevron_left_rounded,
+                        size: 26,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
                       tooltip: 'Close Sidebar',
                       onPressed: onClose,
                     ),
                 ],
               ),
             ),
-
-            Divider(color: isDark ? Colors.white10 : Colors.black12, height: 1),
+            Divider(
+                color: isDark ? Colors.white10 : Colors.black12, height: 1),
             const SizedBox(height: 6),
-
-            // Scrollable Navigation & Actions
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _sidebarItem(
+                    SidebarItem(
                       icon: Icons.home_filled,
                       label: 'Home',
                       isSelected: currentIndex == 0,
@@ -95,7 +96,7 @@ class NoirSidebar extends ConsumerWidget {
                         onClose?.call();
                       },
                     ),
-                    _sidebarItem(
+                    SidebarItem(
                       icon: Icons.search_rounded,
                       label: NoctraLocalization.tr('search_explore'),
                       isSelected: currentIndex == 1,
@@ -107,7 +108,7 @@ class NoirSidebar extends ConsumerWidget {
                         onClose?.call();
                       },
                     ),
-                    _sidebarItem(
+                    SidebarItem(
                       icon: Icons.my_library_music_rounded,
                       label: NoctraLocalization.tr('library_title'),
                       isSelected: currentIndex == 2,
@@ -119,7 +120,7 @@ class NoirSidebar extends ConsumerWidget {
                         onClose?.call();
                       },
                     ),
-                    _sidebarItem(
+                    SidebarItem(
                       icon: Icons.auto_awesome_rounded,
                       label: NoctraLocalization.tr('ai_studio_title'),
                       isSelected: currentIndex == 3,
@@ -136,7 +137,7 @@ class NoirSidebar extends ConsumerWidget {
                         color: isDark ? Colors.white10 : Colors.black12,
                         height: 1),
                     const SizedBox(height: 8),
-                    _sidebarItem(
+                    SidebarItem(
                       icon: Icons.history_rounded,
                       label: 'Recently Played',
                       isSelected: false,
@@ -144,13 +145,14 @@ class NoirSidebar extends ConsumerWidget {
                       onTap: () {
                         onClose?.call();
                         showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (c) => const RecentlyPlayedSheet());
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (c) => const RecentlyPlayedSheet(),
+                        );
                       },
                     ),
-                    _sidebarItem(
+                    SidebarItem(
                       icon: Icons.podcasts_rounded,
                       label: NoctraLocalization.tr('party_mode'),
                       isSelected: false,
@@ -158,13 +160,14 @@ class NoirSidebar extends ConsumerWidget {
                       onTap: () {
                         onClose?.call();
                         showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (c) => const SyncCastSheet());
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (c) => const SyncCastSheet(),
+                        );
                       },
                     ),
-                    _sidebarItem(
+                    SidebarItem(
                       icon: Icons.equalizer_rounded,
                       label: 'Equalizer FX',
                       isSelected: false,
@@ -172,12 +175,13 @@ class NoirSidebar extends ConsumerWidget {
                       onTap: () {
                         onClose?.call();
                         showModalBottomSheet(
-                            context: context,
-                            backgroundColor: Colors.transparent,
-                            builder: (c) => const EqualizerSheet());
+                          context: context,
+                          backgroundColor: Colors.transparent,
+                          builder: (c) => const EqualizerSheet(),
+                        );
                       },
                     ),
-                    _sidebarItem(
+                    SidebarItem(
                       icon: Icons.terminal_rounded,
                       label: 'Developer Suite',
                       isSelected: false,
@@ -185,13 +189,14 @@ class NoirSidebar extends ConsumerWidget {
                       onTap: () {
                         onClose?.call();
                         showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (c) => const DeveloperPanelSheet());
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (c) => const DeveloperPanelSheet(),
+                        );
                       },
                     ),
-                    _sidebarItem(
+                    SidebarItem(
                       icon: Icons.tune_rounded,
                       label: NoctraLocalization.tr('settings'),
                       isSelected: false,
@@ -199,13 +204,14 @@ class NoirSidebar extends ConsumerWidget {
                       onTap: () {
                         onClose?.call();
                         showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (c) => const SettingsSheet());
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (c) => const SettingsSheet(),
+                        );
                       },
                     ),
-                    _sidebarItem(
+                    SidebarItem(
                       icon: Icons.system_update_rounded,
                       label: 'Check for Updates',
                       isSelected: false,
@@ -219,75 +225,15 @@ class NoirSidebar extends ConsumerWidget {
                 ),
               ),
             ),
-
-            // Theme Switcher — tap button to cycle themes
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              child: GestureDetector(
-                onTap: () {
-                  // Cycle: Noir Black -> Noir White -> Liquid Glass -> Noir Black
-                  final next = switch (themeMode) {
-                    NoirThemeMode.noirBlack => NoirThemeMode.noirWhite,
-                    NoirThemeMode.noirWhite => NoirThemeMode.liquidGlass,
-                    NoirThemeMode.liquidGlass => NoirThemeMode.noirBlack,
-                  };
-                  ref.read(themeModeProvider.notifier).state = next;
-                },
-                child: GlassCard(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  radius: 14,
-                  child: Row(
-                    children: [
-                      Icon(
-                        themeMode.isDark
-                            ? Icons.nightlight_round
-                            : Icons.light_mode_rounded,
-                        size: 18,
-                        color: tokens.accent,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('THEME',
-                                style: TextStyle(
-                                    fontSize: 10,
-                                    letterSpacing: 1.1,
-                                    fontWeight: FontWeight.w800,
-                                    color: tokens.secondaryText)),
-                            const SizedBox(height: 2),
-                            Text(
-                              switch (themeMode) {
-                                NoirThemeMode.noirBlack => 'Noir Black',
-                                NoirThemeMode.noirWhite => 'Noir White',
-                                NoirThemeMode.liquidGlass => 'Liquid Glass',
-                              },
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: tokens.primaryText,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(Icons.swap_horiz_rounded,
-                          size: 16, color: tokens.secondaryText),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
+            SidebarThemeCard(tokens: tokens),
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
               child: Text(
                 'On-Device Knowledge Graph • ${repo.downloads.length + repo.favorites.length + repo.recentlyPlayed.length} tracks',
                 style: TextStyle(
-                    fontSize: 10,
-                    color: isDark ? Colors.white38 : Colors.black38),
+                  fontSize: 10,
+                  color: isDark ? Colors.white38 : Colors.black38,
+                ),
               ),
             ),
           ],
@@ -295,56 +241,4 @@ class NoirSidebar extends ConsumerWidget {
       ),
     );
   }
-
-  Widget _sidebarItem({
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required bool isDark,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2.5),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9.5),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? (isDark ? Colors.white : Colors.black)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Icon(icon,
-                  size: 19,
-                  color: isSelected
-                      ? (isDark ? Colors.black : Colors.white)
-                      : (isDark ? Colors.white70 : Colors.black87)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected
-                        ? (isDark ? Colors.black : Colors.white)
-                        : (isDark
-                            ? NoirColors.blackTextPrimary
-                            : NoirColors.whiteTextPrimary),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
 }

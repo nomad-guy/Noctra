@@ -21,8 +21,11 @@ export 'audio_player_models.dart';
 part 'parts/audio_player_service_base.dart';
 part 'parts/player_queue_manager.dart';
 part 'parts/player_stream_resolver.dart';
+part 'parts/player_crossfade_ramp.dart';
 part 'parts/player_crossfade_engine.dart';
 part 'parts/player_effects_and_settings.dart';
+part 'parts/player_session_loader.dart';
+part 'parts/player_autoplay_manager.dart';
 part 'parts/player_playback_controller.dart';
 part 'parts/player_lifecycle_and_session.dart';
 
@@ -33,9 +36,12 @@ part 'parts/player_lifecycle_and_session.dart';
 ///   • [AudioPlayerServiceBase]      — State variables, locks, and cross-mixin contracts
 ///   • [PlayerQueueMixin]           — Queue manipulation, reorder, and shuffle
 ///   • [PlayerStreamResolverMixin]  — URL resolution, audio source, and preloading
+///   • [PlayerCrossfadeRampMixin]   — Logarithmic volume ramp algorithm
 ///   • [PlayerCrossfadeMixin]       — Crossfade engine, auto-crossfade, and player swap
 ///   • [PlayerEffectsMixin]         — Equalizer, Studio Master, sleep timer, settings
-///   • [PlayerPlaybackMixin]        — Public play/pause/skip APIs, completion, and radio
+///   • [PlayerSessionLoaderMixin]   — Session init, pre-buffered player handoff, URL stream loading
+///   • [PlayerAutoplayMixin]        — Radio discovery, autoplay buffer, song completion
+///   • [PlayerPlaybackMixin]        — Public play/pause/skip APIs and skip sequencing
 ///   • [PlayerLifecycleMixin]       — AudioSession, listeners, persistence, and teardown
 /// ═══════════════════════════════════════════════════════════════════════════
 class AudioPlayerService extends AudioPlayerServiceBase
@@ -43,9 +49,12 @@ class AudioPlayerService extends AudioPlayerServiceBase
         PlayerQueueMixin,
         PlayerEffectsMixin,
         PlayerStreamResolverMixin,
+        PlayerCrossfadeRampMixin,
         PlayerCrossfadeMixin,
-        PlayerLifecycleMixin,
-        PlayerPlaybackMixin {
+        PlayerSessionLoaderMixin,
+        PlayerAutoplayMixin,
+        PlayerPlaybackMixin,
+        PlayerLifecycleMixin {
   static final AudioPlayerService _instance = AudioPlayerService._internal();
   factory AudioPlayerService() => _instance;
   static AudioPlayerService get instance => _instance;
