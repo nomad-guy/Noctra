@@ -16,9 +16,11 @@ class JamStudioSheet extends ConsumerStatefulWidget {
   ConsumerState<JamStudioSheet> createState() => _JamStudioSheetState();
 }
 
-class _JamStudioSheetState extends ConsumerState<JamStudioSheet> with SingleTickerProviderStateMixin {
+class _JamStudioSheetState extends ConsumerState<JamStudioSheet>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _hostIpCtrl = TextEditingController();
+  final TextEditingController _roomSecretCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -30,6 +32,7 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet> with SingleTick
   void dispose() {
     _tabController.dispose();
     _hostIpCtrl.dispose();
+    _roomSecretCtrl.dispose();
     super.dispose();
   }
 
@@ -78,7 +81,9 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet> with SingleTick
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
-                          color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
+                          color: isDark
+                              ? NoirColors.blackTextPrimary
+                              : NoirColors.whiteTextPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -88,14 +93,17 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet> with SingleTick
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 11.5,
-                          color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary,
+                          color: isDark
+                              ? NoirColors.blackTextSecondary
+                              : NoirColors.whiteTextSecondary,
                         ),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close_rounded, color: isDark ? Colors.white : Colors.black),
+                  icon: Icon(Icons.close_rounded,
+                      color: isDark ? Colors.white : Colors.black),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -109,7 +117,9 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet> with SingleTick
               Container(
                 height: 38,
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.05),
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.06)
+                      : Colors.black.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: TabBar(
@@ -120,8 +130,10 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet> with SingleTick
                     borderRadius: BorderRadius.circular(10),
                   ),
                   labelColor: isDark ? Colors.black : Colors.white,
-                  unselectedLabelColor: isDark ? Colors.white60 : Colors.black54,
-                  labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  unselectedLabelColor:
+                      isDark ? Colors.white60 : Colors.black54,
+                  labelStyle: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w700),
                   tabs: const [
                     Tab(text: 'Shared Queue'),
                     Tab(text: 'Live P2P Chat'),
@@ -137,7 +149,8 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet> with SingleTick
                   children: [
                     JamQueueTab(isDark: isDark, syncService: syncService),
                     JamChatTab(isDark: isDark, syncService: syncService),
-                    JamHostControlsTab(isDark: isDark, syncService: syncService),
+                    JamHostControlsTab(
+                        isDark: isDark, syncService: syncService),
                   ],
                 ),
               ),
@@ -163,12 +176,17 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet> with SingleTick
               children: [
                 Text(
                   'Host a Jam Session',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black),
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : Colors.black),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Start a room over your local Wi-Fi / Hotspot. Other devices can join without any cloud server.',
-                  style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.black54),
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white60 : Colors.black54),
                 ),
                 const SizedBox(height: 14),
                 SizedBox(
@@ -178,12 +196,22 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet> with SingleTick
                       backgroundColor: isDark ? Colors.white : Colors.black,
                       foregroundColor: isDark ? Colors.black : Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () async {
-                      await syncService.startHost();
+                      final started = await syncService.startHost();
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(started
+                              ? 'Jam room started. Share the room secret with your listeners.'
+                              : 'Could not start Jam room. Check your network and try again.'),
+                        ),
+                      );
                     },
-                    child: const Text('Start Hosting Jam Session', style: TextStyle(fontWeight: FontWeight.w700)),
+                    child: const Text('Start Hosting Jam Session',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
               ],
@@ -198,18 +226,41 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet> with SingleTick
               children: [
                 Text(
                   'Join an Existing Jam Room',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black),
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : Colors.black),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Enter the host device IP displayed on their screen.',
-                  style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.black54),
+                  'Enter the host device IP and the room secret shown on their screen.',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white60 : Colors.black54),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _hostIpCtrl,
-                  decoration: const InputDecoration(hintText: '192.168.43.1 or 127.0.0.1'),
-                  style: TextStyle(fontFamily: 'monospace', color: isDark ? Colors.white : Colors.black),
+                  decoration: const InputDecoration(
+                      hintText: '192.168.43.1 or 127.0.0.1'),
+                  style: TextStyle(
+                      fontFamily: 'monospace',
+                      color: isDark ? Colors.white : Colors.black),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _roomSecretCtrl,
+                  obscureText: true,
+                  enableSuggestions: false,
+                  autocorrect: false,
+                  decoration: const InputDecoration(
+                    hintText: 'Room secret',
+                    helperText: 'Required — authenticates you to the host.',
+                  ),
+                  style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 13,
+                      color: isDark ? Colors.white : Colors.black),
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
@@ -217,15 +268,38 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet> with SingleTick
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 13),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () async {
                       final ip = _hostIpCtrl.text.trim();
-                      if (ip.isNotEmpty) {
-                        await syncService.joinParty(ip);
+                      final secret = _roomSecretCtrl.text.trim();
+                      if (ip.isEmpty || secret.isEmpty) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                                    'Enter both the host IP and the room secret.')),
+                          );
+                        }
+                        return;
+                      }
+                      final joined =
+                          await syncService.joinParty(ip, roomSecret: secret);
+                      if (!mounted) return;
+                      if (!joined) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Could not join. Check the IP and room secret, and confirm the host is online.'),
+                          ),
+                        );
                       }
                     },
-                    child: Text('Connect & Sync Audio', style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.w700)),
+                    child: Text('Connect & Sync Audio',
+                        style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black,
+                            fontWeight: FontWeight.w700)),
                   ),
                 ),
               ],

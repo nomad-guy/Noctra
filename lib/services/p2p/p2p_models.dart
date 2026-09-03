@@ -14,18 +14,11 @@ class JamChatMessage {
   });
 
   Map<String, dynamic> toMap() => {
-    'id': id,
-    'senderName': senderName,
-    'text': text,
-    'timestamp': timestamp.millisecondsSinceEpoch,
-  };
-
-  factory JamChatMessage.fromMap(Map<String, dynamic> map) => JamChatMessage(
-    id: map['id'] ?? '',
-    senderName: map['senderName'] ?? 'Peer',
-    text: map['text'] ?? '',
-    timestamp: DateTime.fromMillisecondsSinceEpoch(map['timestamp'] ?? DateTime.now().millisecondsSinceEpoch),
-  );
+        'id': id,
+        'senderName': senderName,
+        'text': text,
+        'timestamp': timestamp.millisecondsSinceEpoch,
+      };
 }
 
 class P2PPacket {

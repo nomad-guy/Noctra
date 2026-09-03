@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import '../../core/utils/noctra_logger.dart';
 import '../../data/models/song_model.dart';
@@ -36,6 +37,39 @@ bool _constantTimeEquals(String a, String b) {
   return diff == 0;
 }
 
+/// HMAC-SHA256 of [message] keyed by [key], hex-encoded. Used by the
+/// challenge/response authentication handshake so the raw room secret is
+/// never transmitted over the wire and a captured response is bound to the
+/// server-issued one-time nonce (not replayable against a later challenge).
+String _hmacHex(String key, String message) {
+  final hmac = Hmac(sha256, utf8.encode(key));
+  return hmac.convert(utf8.encode(message)).toString();
+}
+
+/// Random 32-byte challenge nonce (base64url). Generated per connection by
+/// the host; the client proves knowledge of the room secret by MACing it.
+String _randomNonce() {
+  final rng = Random.secure();
+  final bytes = List<int>.generate(32, (_) => rng.nextInt(256));
+  return base64UrlEncode(bytes);
+}
+
+/// Sliding-window rate state. Windows are fixed-size and reset lazily on
+/// the first tick after expiry, so entries cost constant memory.
+class _RateState {
+  int startMs = 0;
+  int count = 0;
+}
+
+bool _tickRate(_RateState st, int limit, int windowMs, int nowMs) {
+  if (nowMs - st.startMs >= windowMs) {
+    st.startMs = nowMs;
+    st.count = 0;
+  }
+  st.count++;
+  return st.count <= limit;
+}
+
 enum SyncCastRole { idle, host, client }
 
 class P2PSyncService extends ChangeNotifier {
@@ -43,9 +77,47 @@ class P2PSyncService extends ChangeNotifier {
   factory P2PSyncService() => _instance;
   P2PSyncService._internal();
 
+  /// Create an independent instance for tests. Production code must keep
+  /// using the [P2PSyncService] singleton so a single room state exists.
+  @visibleForTesting
+  static P2PSyncService newForTest() => P2PSyncService._internal();
+
   static const int maxPeers = 8;
   static const int maxChatCount = 100;
+  static const int maxQueueLength = 200;
+
+  /// Hard cap on a single inbound WebSocket payload. The cap is applied to
+  /// the raw frame BEFORE JSON parsing, so a hostile peer cannot make the
+  /// host allocate an unbounded string or a deep parse tree.
   static const int maxPayloadBytes = 65536;
+
+  /// Maximum allowed JSON nesting depth (defense against depth bombs that
+  /// could otherwise overflow the recursive decoder on a 64 KiB frame).
+  static const int _maxJsonDepth = 64;
+
+  /// Per-peer inbound message rate (defaults, overridable in tests).
+  @visibleForTesting
+  static int inboundWindowMs = 2000;
+  @visibleForTesting
+  static int inboundLimitPerWindow = 40;
+  @visibleForTesting
+  static int chatWindowMs = 2000;
+  @visibleForTesting
+  static int chatLimitPerWindow = 12;
+
+  /// Per-IP failed-authentication throttle. Bounded map (entries expire and
+  /// the table itself is capped), so attacker-controlled IPs cannot grow it.
+  @visibleForTesting
+  static int authFailLimit = 6;
+  @visibleForTesting
+  static int authFailWindowMs = 30000;
+  static const int _authTrackMaxEntries = 64;
+
+  /// Cap on WebSocket connections that have upgraded but NOT yet completed
+  /// the authentication challenge. Bounds the pre-auth resource window so a
+  /// LAN flooder cannot hold unlimited half-open sockets.
+  static const int _maxPendingAuth = 16;
+  static const Duration _authChallengeTimeout = Duration(seconds: 12);
 
   SyncCastRole _role = SyncCastRole.idle;
   SyncCastRole get role => _role;
@@ -59,6 +131,10 @@ class P2PSyncService extends ChangeNotifier {
   int get connectedPeersCount =>
       isHost ? (_connectedPeers.length + 1) : (isClient ? 2 : 0);
 
+  /// Actual bound port when the host asked for port 0 (random); used by
+  /// tests and for display of a host-started room.
+  int? get boundPort => _server?.port;
+
   dynamic _clientSocket;
   String? _localIp;
   String? get localIp => _localIp;
@@ -67,18 +143,28 @@ class P2PSyncService extends ChangeNotifier {
   String _roomCode = 'JAM-8088';
   String get roomCode => _roomCode;
 
-  /// 40-character room secret. Displayed alongside the code, used as
-  /// the actual authentication credential for the WebSocket upgrade.
-  /// Replaces the 4-digit numeric code which had only 8000 possible
-  /// values and was brute-forceable on a LAN.
-  late final String _roomSecret;
+  /// 40-character room secret. Displayed to the host for out-of-band
+  /// sharing and used as the actual authentication credential for the
+  /// WebSocket upgrade. Cleared whenever the room ends so a previous
+  /// credential can never authenticate a later room.
+  String _roomSecret = '';
   String get roomSecret => _roomSecret;
+
+  /// Secret the client used to join; retained only so automatic reconnects
+  /// can re-authenticate without re-prompting the user. Cleared on leave.
+  String _clientRoomSecret = '';
   String _userName = 'Host';
   String get userName => _userName;
   int _port = 8099;
   int get port => _port;
   bool _hostControlsOnly = false;
   bool get hostControlsOnly => _hostControlsOnly;
+
+  /// Monotonic session generation. Every state-mutating async continuation
+  /// (reconnect timers, server request handlers, socket listeners) captures
+  /// the epoch it belongs to and discards itself when it no longer matches,
+  /// so an old session can never mutate a newer one.
+  int _sessionEpoch = 0;
 
   final List<Song> _collaborativeQueue = [];
   List<Song> get collaborativeQueue => List.unmodifiable(_collaborativeQueue);
@@ -89,14 +175,24 @@ class P2PSyncService extends ChangeNotifier {
   Timer? _reconnectTimer;
   int _clientRetryCount = 0;
 
+  /// Bounded per-peer inbound trackers. Peers are limited to [maxPeers]
+  /// authenticated sockets, so this map cannot grow without bound.
+  final Map<dynamic, _PeerInboundTrack> _peerTracks = {};
+
+  /// Connections that upgraded but have not yet passed the auth challenge.
+  /// Bounded by [_maxPendingAuth].
+  final Map<dynamic, _PendingAuth> _pendingAuth = {};
+
+  /// Per-IP failed-auth tracking; bounded by [_authTrackMaxEntries].
+  final Map<String, _AuthTrack> _authFailures = {};
+
   void initialize(AudioPlayerService audioPlayer) => _audioPlayer = audioPlayer;
   void setUserName(String name) {
     _userName = name.trim().isEmpty ? 'Listener' : name.trim();
     notifyListeners();
   }
 
-  /// Legacy code generator kept for UI display. The actual auth is
-  /// the 40-char [roomSecret] produced alongside it.
+  /// Legacy display-only room code. Authentication uses [_roomSecret].
   String _generateRoomCode() {
     final rng = Random.secure();
     return 'JAM-${1000 + rng.nextInt(9000)}';
@@ -132,140 +228,443 @@ class P2PSyncService extends ChangeNotifier {
 
   Future<bool> startHost({int port = 8099, String? customRoomCode}) async {
     await stopParty();
+    final epoch = _sessionEpoch;
+
     _roomCode = customRoomCode ?? _generateRoomCode();
-    _roomSecret = _generateRoomSecret();
+    final secret = _generateRoomSecret();
+    _roomSecret = secret;
     if (_userName == 'Listener') _userName = 'Host';
     _chatMessages.clear();
     _collaborativeQueue.clear();
+    _authFailures.clear();
     _chatMessages.add(JamChatMessage(
         id: 'system_init',
         senderName: 'System',
         text: 'Noctra Jam Room "$_roomCode" online.',
         timestamp: DateTime.now()));
 
-    _port = port;
     if (kIsWeb) {
-      _role = SyncCastRole.host;
-      _localIp = '127.0.0.1';
-      notifyListeners();
-      return true;
+      // No real WebSocket transport exists on web: fail closed instead of
+      // reporting a fake "hosted" room with no synchronization channel.
+      NoctraLogger.w('Jam hosting is not supported on the web platform.');
+      _roomSecret = '';
+      return false;
     }
 
-    try {
-      _server = await P2PSocketEngine.bindServer(port);
-      _role = SyncCastRole.host;
-      _localIp = await P2PSocketEngine.findLocalIp();
-
-      _server?.listen((request) {
-        if (request.uri.path == '/ws') {
-          if (_connectedPeers.length >= maxPeers) {
-            request.response.statusCode = HttpStatus.serviceUnavailable;
-            request.response.close();
-            return;
-          }
-          // Reject the upgrade when the room secret is missing or
-          // mismatched. The secret is accepted ONLY via the
-          // `X-Noctra-Room` header, never as a URL query parameter.
-          // Putting it in the URL would expose it to any reverse
-          // proxy or web server access log, defeating the purpose
-          // of replacing the brute-forceable 4-digit code.
-          final presentedSecret =
-              (request.headers.value('X-Noctra-Room') ?? '').trim();
-          if (!_constantTimeEquals(presentedSecret, _roomSecret)) {
-            request.response.statusCode = HttpStatus.unauthorized;
-            request.response.close();
-            return;
-          }
-          WebSocketTransformer.upgrade(request).then((socket) {
-            _connectedPeers.add(socket);
-            notifyListeners();
-
-            final statePayload = {
-              'type': 'jam_full_state',
-              'roomCode': _roomCode,
-              'hostControlsOnly': _hostControlsOnly,
-              'queue': _collaborativeQueue.map((s) => s.toMap()).toList(),
-              'chatMessages': _chatMessages.map((m) => m.toMap()).toList(),
-              'serverTime': DateTime.now().millisecondsSinceEpoch,
-            };
-            // The room secret is NEVER sent in the post-auth
-            // state payload. The client already proved possession
-            // of the secret during the WebSocket upgrade; sending
-            // it back over the wire only widens the window for
-            // accidental capture (logs, memory dumps, packet
-            // captures). The client retains its own copy locally
-            // and uses it for any future re-auth, if needed.
-            if (_audioPlayer?.currentSong != null) {
-              statePayload['song'] = _audioPlayer!.currentSong!.toMap();
-              statePayload['positionMs'] =
-                  _audioPlayer!.player.position.inMilliseconds;
-              statePayload['isPlaying'] = _audioPlayer!.player.playing;
-            }
-            socket.add(jsonEncode(statePayload));
-            socket.listen(
-              (data) => _handleHostIncomingMessage(socket, data),
-              onDone: () {
-                _connectedPeers.remove(socket);
-                notifyListeners();
-              },
-              onError: (_) {
-                _connectedPeers.remove(socket);
-                notifyListeners();
-              },
-            );
-          }).catchError((e) {
-            NoctraLogger.w('WebSocket upgrade failed', e);
-          });
-        }
-      });
-      notifyListeners();
-      return true;
-    } catch (_) {
+    final server = await P2PSocketEngine.bindServer(port);
+    if (server == null || epoch != _sessionEpoch) {
+      _roomSecret = '';
+      await server?.close(force: true);
       return false;
+    }
+    _server = server;
+    _port = port;
+    _role = SyncCastRole.host;
+    _localIp = await P2PSocketEngine.findLocalIp();
+    if (epoch != _sessionEpoch) {
+      // Another session began while we awaited network calls.
+      await stopParty();
+      return false;
+    }
+
+    server.listen((request) {
+      // Requests racing in from a previous (closed) room must never be
+      // processed against the new room's state.
+      if (epoch != _sessionEpoch || _server != server) {
+        try {
+          request.response.statusCode = HttpStatus.serviceUnavailable;
+          request.response.close();
+        } catch (_) {}
+        return;
+      }
+      if (request.uri.path != '/ws') {
+        request.response.statusCode = HttpStatus.notFound;
+        request.response.close();
+        return;
+      }
+      final ip = request.connectionInfo?.remoteAddress.address ?? '';
+      // Fail-closed: an IP that exhausted its failed-auth budget is refused
+      // at the HTTP layer before any upgrade/challenge work happens.
+      if (_isAuthThrottled(ip)) {
+        request.response.statusCode = HttpStatus.tooManyRequests;
+        request.response.close();
+        return;
+      }
+      if (_connectedPeers.length >= maxPeers ||
+          _pendingAuth.length >= _maxPendingAuth) {
+        request.response.statusCode = HttpStatus.serviceUnavailable;
+        request.response.close();
+        return;
+      }
+      WebSocketTransformer.upgrade(request).then((socket) {
+        _startAuthChallenge(socket, epoch, ip);
+      }).catchError((e) {
+        NoctraLogger.w('WebSocket upgrade failed', e);
+      });
+    }, onError: (Object e) {
+      NoctraLogger.w('Jam host server error', e);
+    });
+    notifyListeners();
+    return true;
+  }
+
+  // ---- Peer authentication & registration ------------------------------
+
+  /// Begin the challenge/response handshake for a newly-upgraded socket.
+  ///
+  /// The room secret itself is NEVER sent over the wire: the host issues a
+  /// random one-time nonce and the peer must MAC it with the secret. A
+  /// captured response is worthless against a different nonce, so a passive
+  /// LAN sniffer cannot replay authentication or recover the credential.
+  void _startAuthChallenge(dynamic socket, int epoch, String ip) {
+    if (epoch != _sessionEpoch) {
+      try {
+        socket.close();
+      } catch (_) {}
+      return;
+    }
+    final nonce = _randomNonce();
+    final pending = _PendingAuth(ip, nonce);
+    _pendingAuth[socket] = pending;
+    try {
+      socket.add(jsonEncode({'type': 'jam_auth_challenge', 'nonce': nonce}));
+    } catch (_) {
+      _cancelPendingAuth(socket);
+      return;
+    }
+    // Connections that never complete the challenge are closed and count
+    // as a failed attempt for their IP (bounded by the auth throttle).
+    pending.deadline = Timer(_authChallengeTimeout, () {
+      if (_pendingAuth.remove(socket) == pending) {
+        _recordAuthFailure(ip);
+        try {
+          socket.close();
+        } catch (_) {}
+      }
+    });
+    socket.listen(
+      (data) => _handlePeerSocketMessage(socket, data, epoch, ip),
+      onDone: () {
+        // Only count teardown as a failed attempt while this room session
+        // is still live (never during stopParty of the same instance).
+        if (epoch == _sessionEpoch) _onPeerSocketClosed(socket, ip);
+      },
+      onError: (_) {
+        if (epoch == _sessionEpoch) _onPeerSocketClosed(socket, ip);
+      },
+    );
+  }
+
+  void _handlePeerSocketMessage(
+      dynamic socket, dynamic rawData, int epoch, String ip) {
+    if (epoch != _sessionEpoch) return;
+    final pending = _pendingAuth[socket];
+    if (pending != null) {
+      // Not yet authenticated: this frame is the auth response.
+      _attemptAuth(socket, pending, rawData, epoch, ip);
+      return;
+    }
+    _handleHostIncomingMessage(socket, rawData, epoch);
+  }
+
+  void _attemptAuth(dynamic socket, _PendingAuth pending, dynamic rawData,
+      int epoch, String ip) {
+    final data = _decodeWireObject(rawData);
+    final type = data?['type'];
+    final response = type == 'jam_auth_response' ? data!['response'] : null;
+    if (response is! String || response.isEmpty) {
+      _failAuth(socket, pending, ip);
+      return;
+    }
+    final expected = _hmacHex(_roomSecret, pending.nonce);
+    if (!_constantTimeEquals(response, expected)) {
+      _failAuth(socket, pending, ip);
+      return;
+    }
+    // Authenticated: promote to a full peer and send the room state.
+    _cancelPendingAuth(socket);
+    _clearAuthFailures(ip);
+    _grantPeer(socket, epoch);
+  }
+
+  void _failAuth(dynamic socket, _PendingAuth pending, String ip) {
+    _cancelPendingAuth(socket);
+    _recordAuthFailure(ip);
+    try {
+      socket.close();
+    } catch (_) {}
+  }
+
+  void _cancelPendingAuth(dynamic socket) {
+    final pending = _pendingAuth.remove(socket);
+    pending?.deadline?.cancel();
+  }
+
+  void _onPeerSocketClosed(dynamic socket, String ip) {
+    // If the socket still owed us an auth response, its departure counts as
+    // a failed authentication attempt for that IP.
+    if (_pendingAuth.remove(socket) != null) {
+      _recordAuthFailure(ip);
+      return;
+    }
+    _unregisterPeer(socket);
+  }
+
+  /// Promote an authenticated socket to a registered peer and send it the
+  /// current room state. The listener was attached by [_startAuthChallenge]
+  /// and keeps dispatching through [_handlePeerSocketMessage].
+  void _grantPeer(dynamic socket, int epoch) {
+    if (epoch != _sessionEpoch) {
+      try {
+        socket.close();
+      } catch (_) {}
+      return;
+    }
+    _connectedPeers.add(socket);
+    _peerTracks[socket] = _PeerInboundTrack();
+    notifyListeners();
+
+    final statePayload = <String, dynamic>{
+      'type': 'jam_full_state',
+      'roomCode': _roomCode,
+      'hostControlsOnly': _hostControlsOnly,
+      'queue': _wireQueueSlice(),
+      'chatMessages': _chatMessages.map((m) => m.toMap()).toList(),
+      'serverTime': DateTime.now().millisecondsSinceEpoch,
+    };
+    if (_audioPlayer?.currentSong != null) {
+      statePayload['song'] =
+          _sanitizeSongForWire(_audioPlayer!.currentSong!).toMap();
+      statePayload['positionMs'] = _audioPlayer!.player.position.inMilliseconds;
+      statePayload['isPlaying'] = _audioPlayer!.player.playing;
+    }
+    try {
+      socket.add(jsonEncode(statePayload));
+    } catch (_) {
+      // Dead-on-arrival socket; the onDone/onError listener cleans it up.
     }
   }
 
-  void _handleHostIncomingMessage(dynamic socket, dynamic rawData) {
+  void _unregisterPeer(dynamic socket) {
+    final wasPresent = _connectedPeers.remove(socket);
+    _peerTracks.remove(socket);
+    if (wasPresent) notifyListeners();
+  }
+
+  /// Drop a peer that violated protocol-level limits. The socket is closed
+  /// and fully unregistered so a single hostile peer cannot block the room.
+  void _dropPeer(dynamic socket) {
+    _unregisterPeer(socket);
     try {
-      final str = rawData.toString();
-      if (str.length > maxPayloadBytes) return;
-      final data = jsonDecode(str) as Map<String, dynamic>;
-      final type = data['type'];
-      if (type == 'chat') {
-        final rawMsg = JamChatMessage.fromMap(data['message']);
-        final cleanText = rawMsg.text.trim();
-        if (cleanText.isNotEmpty) {
-          final sanitizedMsg = JamChatMessage(
-            id: rawMsg.id,
-            senderName: rawMsg.senderName.length > 40
-                ? rawMsg.senderName.substring(0, 40)
-                : rawMsg.senderName,
-            text: cleanText.length > 500
-                ? cleanText.substring(0, 500)
-                : cleanText,
-            timestamp: rawMsg.timestamp,
-          );
-          _chatMessages.add(sanitizedMsg);
-          if (_chatMessages.length > maxChatCount) {
-            _chatMessages.removeRange(0, _chatMessages.length - maxChatCount);
-          }
-          _broadcastToPeers(
-              jsonEncode(P2PPacket.createChatPacket(sanitizedMsg)));
-          notifyListeners();
-        }
-      } else if (type == 'add_to_queue') {
-        if (!_hostControlsOnly) {
-          final rawSong = Song.fromMap(data['song']);
-          // Only accept stream/artwork URLs from known-safe CDN domains.
-          final sanitized = _sanitizeSongUrls(rawSong);
-          addToCollaborativeQueue(sanitized);
-        }
-      } else if (type == 'remove_from_queue') {
-        if (!_hostControlsOnly) removeFromCollaborativeQueue(data['songId']);
-      }
-    } catch (e) {
-      NoctraLogger.w('handleHostIncomingMessage error', e);
+      socket.close();
+    } catch (_) {}
+  }
+
+  // ---- Host inbound handling -------------------------------------------
+
+  void _handleHostIncomingMessage(dynamic socket, dynamic rawData, int epoch) {
+    if (epoch != _sessionEpoch) return; // stale room
+
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    final track = _peerTracks[socket];
+    if (track == null) return;
+    if (!_tickRate(track.general, P2PSyncService.inboundLimitPerWindow,
+        P2PSyncService.inboundWindowMs, nowMs)) {
+      NoctraLogger.w('Jam peer dropped: inbound message rate exceeded');
+      _dropPeer(socket);
+      return;
     }
+
+    final data = _decodeWireObject(rawData);
+    if (data == null) return; // malformed/oversized/deep — rejected silently
+    final type = data['type'];
+    if (type is! String || type.isEmpty) return;
+
+    switch (type) {
+      case 'chat':
+        final chatTrack = track.chat;
+        if (!_tickRate(chatTrack, P2PSyncService.chatLimitPerWindow,
+            P2PSyncService.chatWindowMs, nowMs)) {
+          NoctraLogger.w('Jam peer dropped: chat rate exceeded');
+          _dropPeer(socket);
+          return;
+        }
+        _handlePeerChat(socket, data['message']);
+        break;
+      case 'add_to_queue':
+        // Authorization is enforced server-side. Listeners may only mutate
+        // the shared queue when the host has not enabled host-controls-only.
+        if (!_hostControlsOnly) {
+          final song = _decodeRemoteSong(data['song']);
+          if (song != null) addToCollaborativeQueue(song);
+        }
+        break;
+      case 'remove_from_queue':
+        if (!_hostControlsOnly) {
+          final id = data['songId'];
+          if (id is String && id.trim().isNotEmpty && id.length <= 128) {
+            removeFromCollaborativeQueue(id.trim());
+          }
+        }
+        break;
+      default:
+        // Unknown packet types are ignored (never mutate state).
+        break;
+    }
+  }
+
+  void _handlePeerChat(dynamic socket, dynamic raw) {
+    final msg = _decodeChatMessage(raw);
+    if (msg == null) return;
+    // Sender identity is host-assigned at the relay: strip control
+    // characters and prevent peers from impersonating the room's system or
+    // the host's own display name.
+    final sanitized = JamChatMessage(
+      id: msg.id,
+      senderName: _safePeerSenderName(msg.senderName),
+      text: msg.text,
+      timestamp: msg.timestamp,
+    );
+    _appendChat(sanitized);
+    _broadcastToPeers(jsonEncode(P2PPacket.createChatPacket(sanitized)));
+  }
+
+  /// Rewrites claimed sender names that would collide with privileged or
+  /// self-identity labels ("System", or the host's own name).
+  String _safePeerSenderName(String claimed) {
+    final name = claimed.trim();
+    if (name.isEmpty) return 'Listener';
+    final lower = name.toLowerCase();
+    final hostName = _userName.trim();
+    if (lower == 'system' ||
+        (hostName.isNotEmpty && lower == hostName.toLowerCase())) {
+      return 'Listener';
+    }
+    return name;
+  }
+
+  // ---- Wire decoding / strict validation -------------------------------
+
+  /// Decode one inbound payload into a Map, enforcing the byte cap and the
+  /// JSON nesting cap BEFORE parsing. Returns null for anything invalid.
+  Map<String, dynamic>? _decodeWireObject(dynamic rawData) {
+    try {
+      String str;
+      if (rawData is List<int>) {
+        if (rawData.length > maxPayloadBytes) return null;
+        str = utf8.decode(rawData, allowMalformed: false);
+      } else if (rawData is String) {
+        if (rawData.length > maxPayloadBytes) return null;
+        str = rawData;
+      } else {
+        return null;
+      }
+      if (_jsonNestingDepth(str) > _maxJsonDepth) return null;
+      final decoded = jsonDecode(str);
+      if (decoded is! Map<String, dynamic>) return null;
+      return decoded;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Cheap pre-parse scan for JSON nesting depth, ignoring string contents.
+  static int _jsonNestingDepth(String s) {
+    var depth = 0;
+    var maxDepth = 0;
+    var inString = false;
+    var escaped = false;
+    for (var i = 0; i < s.length; i++) {
+      final ch = s.codeUnitAt(i);
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (ch == 0x5C) {
+          escaped = true;
+        } else if (ch == 0x22) {
+          inString = false;
+        }
+        continue;
+      }
+      if (ch == 0x22) {
+        inString = true;
+      } else if (ch == 0x7B || ch == 0x5B) {
+        depth++;
+        if (depth > maxDepth) maxDepth = depth;
+      } else if (ch == 0x7D || ch == 0x5D) {
+        depth--;
+        if (depth < 0) return _maxJsonDepth + 1; // malformed
+      }
+    }
+    return maxDepth;
+  }
+
+  static const int _maxIdLen = 128;
+  static const int _maxTitleLen = 300;
+  static const int _maxArtistLen = 200;
+  static const int _maxAlbumLen = 200;
+  static const int _maxGenreLen = 100;
+  static const int _maxMoodLen = 100;
+  static const int _maxNameLen = 40;
+  static const int _maxChatLen = 500;
+  static const int _maxUrlLen = 2048;
+
+  /// Remove C0 control characters, DEL and Unicode bidi-override characters
+  /// (log-injection / UI-spoofing vectors) from untrusted text.
+  static String _stripControlChars(String s) =>
+      s.replaceAll(RegExp(r'[\x00-\x1F\x7F\u202A-\u202E]'), '');
+
+  static String _cap(String s, int maxLen) {
+    if (s.length <= maxLen) return s;
+    var cut = s.substring(0, maxLen);
+    // Avoid splitting a UTF-16 surrogate pair at the cut boundary.
+    final last = cut.codeUnitAt(cut.length - 1);
+    if (last >= 0xD800 && last <= 0xDBFF) {
+      cut = cut.substring(0, cut.length - 1);
+    }
+    return cut;
+  }
+
+  /// Clean an optional free-text field: strip control chars, trim, cap.
+  String? _cleanStr(dynamic v, {required int maxLen}) {
+    if (v == null) return null;
+    final s = _stripControlChars(v.toString()).trim();
+    if (s.isEmpty) return null;
+    return _cap(s, maxLen);
+  }
+
+  static double? _readNum(dynamic v) {
+    if (v is num) return v.isFinite ? v.toDouble() : null;
+    if (v is String) {
+      final n = num.tryParse(v.trim());
+      if (n == null || !n.isFinite) return null;
+      return n.toDouble();
+    }
+    return null;
+  }
+
+  /// Validate an externally-supplied HTTP(S) URL against the trusted-host
+  /// allowlist. Returns the cleaned URL, or null when untrusted/malformed.
+  static String? _allowedRemoteUrl(dynamic v) {
+    if (v == null) return null;
+    final s = _stripControlChars(v.toString()).trim();
+    if (s.isEmpty || s.length > _maxUrlLen) return null;
+    final uri = Uri.tryParse(s);
+    if (uri == null) return null;
+    final scheme = uri.scheme.toLowerCase();
+    if (scheme != 'http' && scheme != 'https') return null;
+    // Credentials embedded in the URL are always rejected.
+    if (uri.userInfo.isNotEmpty) return null;
+    // Only default ports are acceptable for remote media hosts.
+    if (uri.port != 80 && uri.port != 443) return null;
+    final host = uri.host.toLowerCase();
+    // Trailing-dot DNS forms and empty hosts are rejected (the allowlist
+    // check below would reject them anyway, but keep the failure explicit).
+    if (host.isEmpty || host.endsWith('.')) return null;
+    final allowed =
+        _allowedUrlHosts.any((d) => host == d || host.endsWith('.$d'));
+    if (!allowed) return null;
+    return s;
   }
 
   static const List<String> _allowedUrlHosts = [
@@ -289,183 +688,412 @@ class P2PSyncService extends ChangeNotifier {
     'coverartarchive.org',
   ];
 
-  Song _sanitizeSongUrls(Song song) {
-    bool isAllowed(String? url) {
-      if (url == null || url.isEmpty) return true;
+  /// Strict decoder for Song objects received over the wire. Remote input
+  /// is hostile: field lengths are capped, control characters stripped,
+  /// local filesystem paths dropped, local-state flags forced off, and only
+  /// allowlisted HTTP(S) media hosts survive. Returns null for anything that
+  /// cannot form a valid identity.
+  Song? _decodeRemoteSong(dynamic raw) {
+    if (raw is! Map) return null;
+    final map = raw.cast<String, dynamic>();
+    // Identity must be a genuine, non-empty string. Coercing other JSON
+    // types (numbers, maps, lists) into IDs creates anonymous collisions
+    // and ambiguous queue entries, so they are rejected outright.
+    final rawId = map['id'];
+    if (rawId is! String) return null;
+    final id = _cleanStr(rawId, maxLen: _maxIdLen);
+    if (id == null || id.isEmpty) return null; // identity required
+    final title =
+        _cleanStr(map['title'], maxLen: _maxTitleLen) ?? 'Unknown Track';
+    final artist =
+        _cleanStr(map['artist'], maxLen: _maxArtistLen) ?? 'Unknown Artist';
+    final album = _cleanStr(map['album'], maxLen: _maxAlbumLen);
+    final genre = _cleanStr(map['genre'], maxLen: _maxGenreLen);
+    final mood = _cleanStr(map['mood'], maxLen: _maxMoodLen);
+
+    // Duration: durationMs (milliseconds) preferred; legacy 'duration' is
+    // seconds. Bounded to 1ms..24h; anything outside is treated as unknown.
+    var durationMs = _readNum(map['durationMs']);
+    if (durationMs == null) {
+      final sec = _readNum(map['duration']);
+      if (sec != null) durationMs = sec * 1000;
+    }
+    final duration = (durationMs != null &&
+            durationMs > 0 &&
+            durationMs <= 24 * 60 * 60 * 1000)
+        ? Duration(milliseconds: durationMs.round())
+        : Duration.zero;
+
+    // Feature vector: exactly 32 finite values within [0.0, 1.0], nothing
+    // else is ever accepted as real embedding data.
+    List<double> vec = List.filled(32, 0.5);
+    var hasValidVector = false;
+    final rawVec = map['featureVector'];
+    if (rawVec != null) {
       try {
-        final host = Uri.parse(url).host;
-        return _allowedUrlHosts.any((d) => host == d || host.endsWith('.$d'));
-      } catch (_) {
-        return false;
-      }
+        List<dynamic> rawList;
+        if (rawVec is List) {
+          rawList = rawVec;
+        } else {
+          final decoded = jsonDecode(rawVec.toString());
+          rawList = decoded is List ? decoded : <dynamic>[];
+        }
+        if (rawList.length == 32 && rawList.every((e) => e is num)) {
+          final parsed =
+              rawList.map<double>((e) => (e as num).toDouble()).toList();
+          if (parsed.every((v) => v >= 0.0 && v <= 1.0)) {
+            vec = parsed;
+            hasValidVector = true;
+          }
+        }
+      } catch (_) {}
     }
 
     return Song(
-      id: song.id, title: song.title, artist: song.artist, album: song.album,
-      artworkUrl: isAllowed(song.artworkUrl) ? song.artworkUrl : null,
-      streamUrl: isAllowed(song.streamUrl) ? song.streamUrl : null,
-      localFilePath: null, // never accept local paths from remote peers
-      duration: song.duration, genre: song.genre,
-      featureVector: song.featureVector,
+      id: id,
+      title: title,
+      artist: artist,
+      album: album ?? 'Single',
+      artworkUrl: _allowedRemoteUrl(map['artworkUrl']),
+      streamUrl: _allowedRemoteUrl(map['streamUrl']),
+      // localFilePath is NEVER accepted from a remote peer.
+      duration: duration,
+      genre: genre,
+      mood: mood,
+      featureVector: vec,
+      hasValidFeatureVector: hasValidVector,
     );
   }
 
-  Future<bool> joinParty(String hostIp, {int port = 8099}) async {
-    final cleanIp = hostIp.trim();
-    if (!_isValidHostOrIp(cleanIp)) return false;
-    await stopParty();
-    _connectedHostIp = cleanIp;
-    _userName = 'Listener';
-
-    if (kIsWeb) {
-      _role = SyncCastRole.client;
-      notifyListeners();
-      return true;
-    }
-
-    try {
-      _clientSocket = await P2PSocketEngine.connectClient(cleanIp, port);
-      if (_clientSocket == null) return false;
-      _role = SyncCastRole.client;
-      _clientRetryCount = 0;
-      _clientSocket.listen(
-        (data) => _handleClientIncomingMessage(data),
-        onDone: () {
-          try {
-            _clientSocket?.close();
-          } catch (_) {}
-          _clientSocket = null;
-          if (_role == SyncCastRole.client &&
-              _connectedHostIp != null &&
-              _clientRetryCount < 3) {
-            _clientRetryCount++;
-            _reconnectTimer?.cancel();
-            _reconnectTimer = Timer(
-                Duration(milliseconds: 1200 * _clientRetryCount),
-                () => joinParty(cleanIp, port: port));
-          } else {
-            stopParty();
-          }
-        },
-        onError: (_) {
-          try {
-            _clientSocket?.close();
-          } catch (_) {}
-          _clientSocket = null;
-          stopParty();
-        },
+  /// Sanitize a local (trusted-origin) Song before putting it on the wire:
+  /// drop local paths and re-validate URLs/lengths so no internal detail
+  /// (file paths, machine metadata) leaks to peers.
+  Song _sanitizeSongForWire(Song s) => Song(
+        id: _cap(_stripControlChars(s.id), _maxIdLen),
+        title: _cap(_stripControlChars(s.title), _maxTitleLen),
+        artist: _cap(_stripControlChars(s.artist), _maxArtistLen),
+        album: _cap(_stripControlChars(s.album), _maxAlbumLen),
+        artworkUrl: _allowedRemoteUrl(s.artworkUrl),
+        streamUrl: _allowedRemoteUrl(s.streamUrl),
+        localFilePath: null, // never leak local paths to peers
+        duration: s.duration,
+        genre: _cleanStr(s.genre, maxLen: _maxGenreLen),
+        mood: _cleanStr(s.mood, maxLen: _maxMoodLen),
+        featureVector: s.featureVector,
+        hasValidFeatureVector: s.hasValidFeatureVector,
       );
-      notifyListeners();
-      return true;
-    } catch (_) {
-      return false;
-    }
+
+  List<Map<String, dynamic>> _wireQueueSlice() => _collaborativeQueue
+      .take(maxQueueLength)
+      .map((s) => _sanitizeSongForWire(s).toMap())
+      .toList();
+
+  /// Strict chat-message decoder. All fields validated/bounded; returns null
+  /// when the payload cannot form a usable message.
+  JamChatMessage? _decodeChatMessage(dynamic raw) {
+    if (raw is! Map) return null;
+    final map = raw.cast<String, dynamic>();
+    // senderName/text must genuinely be strings; coercing other JSON types
+    // (maps, lists, numbers) into display text invites confusion attacks.
+    final rawSender = map['senderName'];
+    final rawText = map['text'];
+    if (rawSender is! String || rawText is! String) return null;
+    final sender = _cleanStr(rawSender, maxLen: _maxNameLen) ?? 'Listener';
+    final text = _cleanStr(rawText, maxLen: _maxChatLen);
+    if (text == null || text.isEmpty) return null;
+    final id = _cleanStr(map['id'], maxLen: 64) ?? '';
+    final tsNum = _readNum(map['timestamp']);
+    final timestamp = (tsNum != null && tsNum > 0)
+        ? DateTime.fromMillisecondsSinceEpoch(tsNum.round())
+        : DateTime.now();
+    return JamChatMessage(
+        id: id, senderName: sender, text: text, timestamp: timestamp);
   }
 
-  void _handleClientIncomingMessage(dynamic rawData) {
-    try {
-      final str = rawData.toString();
-      if (str.length > maxPayloadBytes) return;
-      final data = jsonDecode(str) as Map<String, dynamic>;
-      final type = data['type'];
-      if (type == 'chat') {
-        final rawMsg = JamChatMessage.fromMap(data['message']);
-        final cleanText = rawMsg.text.trim();
-        if (cleanText.isNotEmpty) {
-          final sanitizedMsg = JamChatMessage(
-            id: rawMsg.id,
-            senderName: rawMsg.senderName.length > 40
-                ? rawMsg.senderName.substring(0, 40)
-                : rawMsg.senderName,
-            text: cleanText.length > 500
-                ? cleanText.substring(0, 500)
-                : cleanText,
-            timestamp: rawMsg.timestamp,
-          );
-          _chatMessages.add(sanitizedMsg);
-          if (_chatMessages.length > maxChatCount) {
-            _chatMessages.removeRange(0, _chatMessages.length - maxChatCount);
-          }
-          notifyListeners();
-        }
-      } else if (type == 'sync' || type == 'jam_full_state') {
-        _hostControlsOnly = data['hostControlsOnly'] ?? false;
-        if (data.containsKey('queue')) {
-          _collaborativeQueue.clear();
-          // Sanitize every URL in the queue — a malicious host could inject arbitrary streamUrls
-          for (final item in data['queue']) {
-            _collaborativeQueue.add(_sanitizeSongUrls(Song.fromMap(item)));
-          }
-        }
-        if (data.containsKey('song') && data['song'] != null) {
-          // Sanitize before playing — prevent URL injection from host sync packet
-          final song = _sanitizeSongUrls(Song.fromMap(data['song']));
-          final isPlaying = data['isPlaying'] ?? false;
-          final posMs = data['positionMs'];
-          if (_audioPlayer != null) {
-            if (_audioPlayer!.currentSong?.id != song.id) {
-              _audioPlayer!.playSong(song);
-            }
-            if (isPlaying && !_audioPlayer!.player.playing) {
-              _audioPlayer!.player.play();
-            }
-            if (!isPlaying && _audioPlayer!.player.playing) {
-              _audioPlayer!.player.pause();
-            }
-            final posMsInt = posMs is num
-                ? posMs.toInt()
-                : (int.tryParse(posMs?.toString() ?? '') ?? 0);
-            _audioPlayer!.player.seek(Duration(milliseconds: posMsInt));
-          }
-        }
-        notifyListeners();
-      }
-    } catch (e) {
-      NoctraLogger.w('handleClientIncomingMessage error', e);
-    }
-  }
-
-  void sendChatMessage(String text) {
-    final cleanText = text.trim();
-    if (cleanText.isEmpty) return;
-    final sanitizedText =
-        cleanText.length > 500 ? cleanText.substring(0, 500) : cleanText;
-    final msg = JamChatMessage(
-      id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
-      senderName:
-          _userName.length > 40 ? _userName.substring(0, 40) : _userName,
-      text: sanitizedText,
-      timestamp: DateTime.now(),
-    );
+  void _appendChat(JamChatMessage msg) {
     _chatMessages.add(msg);
     if (_chatMessages.length > maxChatCount) {
       _chatMessages.removeRange(0, _chatMessages.length - maxChatCount);
     }
     notifyListeners();
+  }
+
+  // ---- Client side ------------------------------------------------------
+
+  Future<bool> joinParty(String hostIp,
+      {int port = 8099, String? roomSecret}) async {
+    final cleanIp = hostIp.trim();
+    final secret = (roomSecret ?? '').trim();
+    if (!_isValidHostOrIp(cleanIp)) return false;
+    if (secret.isEmpty) {
+      NoctraLogger.w('joinParty refused: room secret is required.');
+      return false;
+    }
+    await stopParty();
+    final epoch = _sessionEpoch;
+    _connectedHostIp = cleanIp;
+    _clientRoomSecret = secret;
+    _userName = 'Listener';
+
+    if (kIsWeb) {
+      NoctraLogger.w(
+          'Joining a Jam room is not supported on the web platform.');
+      _connectedHostIp = null;
+      _clientRoomSecret = '';
+      return false;
+    }
+
+    dynamic socket;
+    try {
+      socket = await P2PSocketEngine.connectClient(cleanIp, port);
+    } catch (_) {
+      socket = null;
+    }
+    if (socket == null || epoch != _sessionEpoch) {
+      try {
+        socket?.close();
+      } catch (_) {}
+      if (epoch == _sessionEpoch) {
+        // Genuine failure (refused/timeout): end the client session state
+        // cleanly rather than leaving a phantom connection.
+        _connectedHostIp = null;
+        _clientRoomSecret = '';
+        notifyListeners();
+      }
+      return false;
+    }
+
+    // In-band challenge/response authentication: answer the host's one-time
+    // nonce with HMAC(secret, nonce). The raw secret is never transmitted.
+    var authed = false;
+    final established = Completer<bool>();
+    _clientSocket = socket;
+    socket.listen(
+      (data) {
+        if (epoch != _sessionEpoch) return;
+        if (!authed) {
+          final obj = _decodeWireObject(data);
+          if (obj != null && obj['type'] == 'jam_auth_challenge') {
+            final nonce = obj['nonce'];
+            if (nonce is String && nonce.isNotEmpty) {
+              authed = true;
+              try {
+                socket.add(jsonEncode({
+                  'type': 'jam_auth_response',
+                  'response': _hmacHex(secret, nonce),
+                }));
+              } catch (_) {}
+            } else if (!established.isCompleted) {
+              established.complete(false);
+            }
+          } else if (!established.isCompleted) {
+            // The first frame must be a challenge; anything else is a
+            // protocol violation from the host.
+            established.complete(false);
+          }
+          return;
+        }
+        _handleClientIncomingMessage(data);
+        if (!established.isCompleted) established.complete(true);
+      },
+      onDone: () {
+        if (epoch != _sessionEpoch) return;
+        try {
+          socket.close();
+        } catch (_) {}
+        _clientSocket = null;
+        if (!established.isCompleted) {
+          // Rejected or dropped before the room state arrived.
+          established.complete(false);
+          _role = SyncCastRole.idle;
+          notifyListeners();
+          return;
+        }
+        _onClientSocketClosed(epoch, cleanIp, port);
+      },
+      onError: (_) {
+        if (epoch != _sessionEpoch) return;
+        try {
+          socket.close();
+        } catch (_) {}
+        _clientSocket = null;
+        if (!established.isCompleted) {
+          established.complete(false);
+          _role = SyncCastRole.idle;
+          notifyListeners();
+          return;
+        }
+        _onClientSocketError(epoch);
+      },
+    );
+
+    final ok = await established.future
+        .timeout(const Duration(seconds: 8), onTimeout: () => false);
+    if (epoch != _sessionEpoch) return false; // session changed meanwhile
+    if (!ok) {
+      // Handshake failed (wrong secret, protocol violation, or timeout).
+      try {
+        socket.close();
+      } catch (_) {}
+      _clientSocket = null;
+      _connectedHostIp = null;
+      _clientRoomSecret = '';
+      notifyListeners();
+      return false;
+    }
+    _role = SyncCastRole.client;
+    _clientRetryCount = 0;
+    notifyListeners();
+    return true;
+  }
+
+  void _onClientSocketClosed(int epoch, String hostIp, int port) {
+    if (epoch != _sessionEpoch) return; // a newer session already took over
+    try {
+      _clientSocket?.close();
+    } catch (_) {}
+    _clientSocket = null;
+    if (_role == SyncCastRole.client &&
+        _connectedHostIp != null &&
+        _clientRetryCount < 3) {
+      _clientRetryCount++;
+      _reconnectTimer?.cancel();
+      final retrySecret = _clientRoomSecret;
+      _reconnectTimer = Timer(
+        Duration(milliseconds: 1200 * _clientRetryCount),
+        () {
+          // Only reconnect if the room session is still the one that
+          // scheduled this retry and we still hold a credential.
+          if (epoch != _sessionEpoch) return;
+          if (retrySecret.isEmpty) {
+            stopParty();
+            return;
+          }
+          joinParty(hostIp, port: port, roomSecret: retrySecret);
+        },
+      );
+    } else {
+      stopParty();
+    }
+  }
+
+  void _onClientSocketError(int epoch) {
+    if (epoch != _sessionEpoch) return;
+    try {
+      _clientSocket?.close();
+    } catch (_) {}
+    _clientSocket = null;
+    stopParty();
+  }
+
+  void _handleClientIncomingMessage(dynamic rawData) {
+    final data = _decodeWireObject(rawData);
+    if (data == null) return;
+    final type = data['type'];
+    if (type is! String) return;
+
+    if (type == 'chat') {
+      final msg = _decodeChatMessage(data['message']);
+      if (msg != null) _appendChat(msg);
+      return;
+    }
+    if (type == 'sync' || type == 'jam_full_state') {
+      final controls = data['hostControlsOnly'];
+      _hostControlsOnly = controls == true;
+      if (data.containsKey('queue')) {
+        _applyQueueFromHost(data['queue']);
+      }
+      if (data.containsKey('song') && data['song'] != null) {
+        final song = _decodeRemoteSong(data['song']);
+        if (song != null && _audioPlayer != null) {
+          final isPlaying = data['isPlaying'] == true;
+          final posMs = _readNum(data['positionMs']);
+          final position =
+              (posMs != null && posMs >= 0 && posMs <= 24 * 60 * 60 * 1000)
+                  ? Duration(milliseconds: posMs.round())
+                  : Duration.zero;
+          try {
+            if (_audioPlayer!.currentSong?.id != song.id) {
+              unawaited(_audioPlayer!.playSong(song));
+            }
+            if (isPlaying && !_audioPlayer!.player.playing) {
+              unawaited(_audioPlayer!.player.play());
+            }
+            if (!isPlaying && _audioPlayer!.player.playing) {
+              unawaited(_audioPlayer!.player.pause());
+            }
+            unawaited(_audioPlayer!.player.seek(position));
+          } catch (e) {
+            NoctraLogger.w('apply host sync failed', e);
+          }
+        }
+      }
+      notifyListeners();
+    }
+  }
+
+  void _applyQueueFromHost(dynamic rawQueue) {
+    _collaborativeQueue.clear();
+    if (rawQueue is! List) return;
+    for (final item in rawQueue) {
+      if (_collaborativeQueue.length >= maxQueueLength) break;
+      final song = _decodeRemoteSong(item);
+      if (song != null && !_collaborativeQueue.any((s) => s.id == song.id)) {
+        _collaborativeQueue.add(song);
+      }
+    }
+  }
+
+  // ---- Shared actions ---------------------------------------------------
+
+  void sendChatMessage(String text) {
+    final cleanText = _stripControlChars(text.trim());
+    if (cleanText.isEmpty) return;
+    final msg = JamChatMessage(
+      id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
+      senderName: _cap(_stripControlChars(_userName), _maxNameLen),
+      text: _cap(cleanText, _maxChatLen),
+      timestamp: DateTime.now(),
+    );
+    _appendChat(msg);
     final packet = jsonEncode(P2PPacket.createChatPacket(msg));
     if (isHost) _broadcastToPeers(packet);
-    if (isClient && _clientSocket != null) _clientSocket.add(packet);
+    if (isClient && _clientSocket != null) {
+      try {
+        _clientSocket.add(packet);
+      } catch (_) {}
+    }
   }
 
   void addToCollaborativeQueue(Song song) {
+    if (_collaborativeQueue.length >= maxQueueLength) return;
     if (!_collaborativeQueue.any((s) => s.id == song.id)) {
       _collaborativeQueue.add(song);
       notifyListeners();
       if (isHost) broadcastSync();
       if (isClient && _clientSocket != null && !_hostControlsOnly) {
-        _clientSocket
-            .add(jsonEncode({'type': 'add_to_queue', 'song': song.toMap()}));
+        try {
+          // Sanitize before sending so no local path/metadata ever leaves
+          // the device (the host re-validates strictly on receipt).
+          _clientSocket.add(jsonEncode({
+            'type': 'add_to_queue',
+            'song': _sanitizeSongForWire(song).toMap()
+          }));
+        } catch (_) {}
       }
     }
   }
 
   void removeFromCollaborativeQueue(String songId) {
+    if (_hostControlsOnly && !isHost) return; // listeners cannot mutate
     _collaborativeQueue.removeWhere((s) => s.id == songId);
     notifyListeners();
     if (isHost) broadcastSync();
     if (isClient && _clientSocket != null && !_hostControlsOnly) {
-      _clientSocket
-          .add(jsonEncode({'type': 'remove_from_queue', 'songId': songId}));
+      try {
+        _clientSocket
+            .add(jsonEncode({'type': 'remove_from_queue', 'songId': songId}));
+      } catch (_) {}
     }
   }
 
@@ -477,17 +1105,18 @@ class P2PSyncService extends ChangeNotifier {
 
   void broadcastSync() {
     if (!isHost) return;
-    // Sanitize currentSong before broadcast — prevent URL-laundering
-    // if the host itself received a malicious song via peer add_to_queue.
     final current = _audioPlayer?.currentSong;
     final sanitizedCurrent =
-        current != null ? _sanitizeSongUrls(current) : null;
+        current != null ? _sanitizeSongForWire(current) : null;
     final packet = jsonEncode(P2PPacket.createSyncPacket(
       song: sanitizedCurrent,
       position: _audioPlayer?.player.position ?? Duration.zero,
       isPlaying: _audioPlayer?.player.playing ?? false,
       timestamp: DateTime.now().millisecondsSinceEpoch,
-      queue: _collaborativeQueue.map((s) => _sanitizeSongUrls(s)).toList(),
+      queue: _collaborativeQueue
+          .take(maxQueueLength)
+          .map(_sanitizeSongForWire)
+          .toList(),
       hostControlsOnly: _hostControlsOnly,
     ));
     _broadcastToPeers(packet);
@@ -499,31 +1128,124 @@ class P2PSyncService extends ChangeNotifier {
     for (final peer in peersSnapshot) {
       try {
         peer.add(message);
-      } catch (_) {
+      } catch (e) {
         dead.add(peer);
       }
     }
     if (dead.isNotEmpty) {
-      _connectedPeers.removeWhere((p) => dead.contains(p));
-      notifyListeners();
+      for (final peer in dead) {
+        _unregisterPeer(peer);
+      }
     }
   }
 
   Future<void> stopParty() async {
+    _sessionEpoch++; // invalidate every in-flight continuation
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     _role = SyncCastRole.idle;
     _connectedHostIp = null;
     _localIp = null;
+    _clientRetryCount = 0;
+    _roomSecret = ''; // previous credential must never remain valid
+    _clientRoomSecret = '';
     try {
       await _server?.close(force: true);
     } catch (_) {}
     _server = null;
+    final peers = List<dynamic>.from(_connectedPeers);
     _connectedPeers.clear();
+    _peerTracks.clear();
+    for (final peer in peers) {
+      try {
+        peer.close();
+      } catch (_) {}
+    }
+    // Close half-open (not yet authenticated) connections too.
+    final pending = List<dynamic>.from(_pendingAuth.keys);
+    for (final socket in pending) {
+      _cancelPendingAuth(socket);
+      try {
+        socket.close();
+      } catch (_) {}
+    }
     try {
       await _clientSocket?.close();
     } catch (_) {}
     _clientSocket = null;
     notifyListeners();
   }
+
+  // ---- Auth-failure throttling (bounded) --------------------------------
+
+  bool _isAuthThrottled(String ip) {
+    if (ip.isEmpty) return false;
+    final track = _authFailures[ip];
+    if (track == null) return false;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (now - track.windowStartMs >= P2PSyncService.authFailWindowMs) {
+      _authFailures.remove(ip);
+      return false;
+    }
+    return track.failures >= P2PSyncService.authFailLimit;
+  }
+
+  void _recordAuthFailure(String ip) {
+    if (ip.isEmpty) return;
+    _pruneAuthTracks();
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final track = _authFailures[ip];
+    if (track == null) {
+      if (_authFailures.length >= _authTrackMaxEntries) {
+        // Bound the table: evict the oldest entry before adding a new IP.
+        String? oldestKey;
+        int oldestStart = now;
+        _authFailures.forEach((key, value) {
+          if (value.windowStartMs <= oldestStart) {
+            oldestStart = value.windowStartMs;
+            oldestKey = key;
+          }
+        });
+        if (oldestKey != null) _authFailures.remove(oldestKey);
+      }
+      _authFailures[ip] = _AuthTrack(now);
+      return;
+    }
+    if (now - track.windowStartMs >= P2PSyncService.authFailWindowMs) {
+      track.windowStartMs = now;
+      track.failures = 1;
+      return;
+    }
+    track.failures++;
+  }
+
+  void _clearAuthFailures(String ip) {
+    if (ip.isNotEmpty) _authFailures.remove(ip);
+  }
+
+  void _pruneAuthTracks() {
+    if (_authFailures.length < _authTrackMaxEntries) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    _authFailures.removeWhere(
+        (_, t) => now - t.windowStartMs >= P2PSyncService.authFailWindowMs);
+  }
+}
+
+class _PeerInboundTrack {
+  final _RateState general = _RateState();
+  final _RateState chat = _RateState();
+}
+
+/// A connection that upgraded but has not yet answered the auth challenge.
+class _PendingAuth {
+  final String ip;
+  final String nonce;
+  Timer? deadline;
+  _PendingAuth(this.ip, this.nonce);
+}
+
+class _AuthTrack {
+  int windowStartMs;
+  int failures = 1;
+  _AuthTrack(this.windowStartMs);
 }

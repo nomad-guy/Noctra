@@ -11,7 +11,9 @@ class P2PSocketEngine {
       );
       for (final interface in interfaces) {
         for (final addr in interface.addresses) {
-          if (!addr.isLoopback && !addr.isLinkLocal && addr.address != '0.0.0.0') {
+          if (!addr.isLoopback &&
+              !addr.isLinkLocal &&
+              addr.address != '0.0.0.0') {
             return addr.address;
           }
         }
@@ -29,13 +31,22 @@ class P2PSocketEngine {
     }
   }
 
+  /// Open a raw WebSocket to a host's Jam endpoint.
+  ///
+  /// Authentication happens AFTER the upgrade via an in-band
+  /// challenge/response handshake (see [P2PSyncService]); the room secret
+  /// is therefore NEVER placed in a header or URL, where it could be
+  /// captured from logs or sniffed off the wire in reusable form. Returns
+  /// the socket on success, or null on refusal/timeout/failure.
   static Future<dynamic> connectClient(String host, int port) async {
     if (kIsWeb) return null;
     try {
-      final clean = host.trim().replaceAll(RegExp(r'[^\w\.-]'), '');
-      if (clean.isEmpty) return null;
-      final url = 'ws://$clean:$port/ws';
-      return await WebSocket.connect(url).timeout(const Duration(seconds: 4));
+      final trimmed = host.trim();
+      if (trimmed.isEmpty) return null;
+      final isIpv6 = trimmed.contains(':');
+      final url =
+          isIpv6 ? 'ws://[$trimmed]:$port/ws' : 'ws://$trimmed:$port/ws';
+      return await WebSocket.connect(url).timeout(const Duration(seconds: 5));
     } catch (_) {
       return null;
     }

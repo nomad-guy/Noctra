@@ -37,7 +37,9 @@ class JamQueueTab extends ConsumerWidget {
               ),
               Text(
                 'Live Synced Across Peers',
-                style: TextStyle(fontSize: 11, color: isDark ? Colors.white38 : Colors.black38),
+                style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? Colors.white38 : Colors.black38),
               ),
             ],
           ),
@@ -52,12 +54,18 @@ class JamQueueTab extends ConsumerWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.queue_music_rounded, size: 36, color: isDark ? Colors.white24 : Colors.black26),
+                        Icon(Icons.queue_music_rounded,
+                            size: 36,
+                            color: isDark ? Colors.white24 : Colors.black26),
                         const SizedBox(height: 12),
                         Text(
-                          'No tracks in the collaborative queue.\nAny listener in this room can add songs here.',
+                          syncService.hostControlsOnly && !syncService.isHost
+                              ? 'The host has restricted the queue.\nOnly the host can change tracks right now.'
+                              : 'No tracks in the collaborative queue.\nAny listener in this room can add songs here.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 12.5, color: isDark ? Colors.white38 : Colors.black38),
+                          style: TextStyle(
+                              fontSize: 12.5,
+                              color: isDark ? Colors.white38 : Colors.black38),
                         ),
                       ],
                     ),
@@ -69,7 +77,8 @@ class JamQueueTab extends ConsumerWidget {
                   itemBuilder: (context, i) {
                     final song = queue[i];
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 4),
                       child: GlassCard(
                         radius: 12,
                         padding: const EdgeInsets.all(10),
@@ -85,8 +94,13 @@ class JamQueueTab extends ConsumerWidget {
                                 errorBuilder: (c, e, st) => Container(
                                   width: 42,
                                   height: 42,
-                                  color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE5E5E5),
-                                  child: Icon(Icons.music_note_rounded, color: isDark ? Colors.white54 : Colors.black54),
+                                  color: isDark
+                                      ? const Color(0xFF1E1E1E)
+                                      : const Color(0xFFE5E5E5),
+                                  child: Icon(Icons.music_note_rounded,
+                                      color: isDark
+                                          ? Colors.white54
+                                          : Colors.black54),
                                 ),
                               ),
                             ),
@@ -99,23 +113,39 @@ class JamQueueTab extends ConsumerWidget {
                                     song.title,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black),
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark
+                                            ? Colors.white
+                                            : Colors.black),
                                   ),
                                   Text(
                                     song.artist,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(fontSize: 11, color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary),
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: isDark
+                                            ? NoirColors.blackTextSecondary
+                                            : NoirColors.whiteTextSecondary),
                                   ),
                                 ],
                               ),
                             ),
-                            IconButton(
-                              icon: Icon(Icons.remove_circle_outline_rounded, size: 18, color: isDark ? Colors.white54 : Colors.black54),
-                              onPressed: () {
-                                syncService.removeFromCollaborativeQueue(song.id);
-                              },
-                            ),
+                            if (!(syncService.hostControlsOnly &&
+                                !syncService.isHost))
+                              IconButton(
+                                icon: Icon(Icons.remove_circle_outline_rounded,
+                                    size: 18,
+                                    color: isDark
+                                        ? Colors.white54
+                                        : Colors.black54),
+                                onPressed: () {
+                                  syncService
+                                      .removeFromCollaborativeQueue(song.id);
+                                },
+                              ),
                           ],
                         ),
                       ),

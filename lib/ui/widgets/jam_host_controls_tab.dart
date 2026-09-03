@@ -33,7 +33,11 @@ class JamHostControlsTab extends ConsumerWidget {
               children: [
                 Text(
                   'ROOM CODE',
-                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: isDark ? Colors.white60 : Colors.black54),
+                  style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                      color: isDark ? Colors.white60 : Colors.black54),
                 ),
                 const SizedBox(height: 6),
                 Row(
@@ -41,26 +45,96 @@ class JamHostControlsTab extends ConsumerWidget {
                   children: [
                     Text(
                       syncService.roomCode,
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 3, color: isDark ? Colors.white : Colors.black),
+                      style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 3,
+                          color: isDark ? Colors.white : Colors.black),
                     ),
                     IconButton(
-                      icon: Icon(Icons.copy_rounded, color: isDark ? Colors.white : Colors.black),
+                      icon: Icon(Icons.copy_rounded,
+                          color: isDark ? Colors.white : Colors.black),
                       onPressed: () {
-                        Clipboard.setData(ClipboardData(text: syncService.roomCode));
+                        Clipboard.setData(
+                            ClipboardData(text: syncService.roomCode));
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Room code copied: ${syncService.roomCode}')),
+                          SnackBar(
+                              content: Text(
+                                  'Room code copied: ${syncService.roomCode}')),
                         );
                       },
                     ),
                   ],
                 ),
                 Text(
-                  'Host IP: ${syncService.localIp ?? "127.0.0.1"}:${syncService.port}',
-                  style: TextStyle(fontSize: 12, fontFamily: 'monospace', color: isDark ? Colors.white70 : Colors.black87),
+                  isHost
+                      ? 'Host IP: ${syncService.localIp ?? "127.0.0.1"}:${syncService.port}'
+                      : 'Host IP: ${syncService.connectedHostIp ?? "127.0.0.1"}:${syncService.port}',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                      color: isDark ? Colors.white70 : Colors.black87),
                 ),
               ],
             ),
           ),
+
+          // Room Secret Card (host only) — this is the real credential
+          // listeners must enter when joining.
+          if (isHost) ...[
+            const SizedBox(height: 14),
+            GlassCard(
+              radius: 16,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'ROOM SECRET (REQUIRED TO JOIN)',
+                    style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.0,
+                        color: isDark ? Colors.white60 : Colors.black54),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          syncService.roomSecret,
+                          style: TextStyle(
+                              fontSize: 12.5,
+                              fontFamily: 'monospace',
+                              height: 1.5,
+                              color: isDark ? Colors.white : Colors.black),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.copy_rounded,
+                            color: isDark ? Colors.white : Colors.black),
+                        onPressed: () {
+                          Clipboard.setData(
+                              ClipboardData(text: syncService.roomSecret));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                                    'Room secret copied — share it privately with your listeners.')),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  Text(
+                    'Keep this secret private. Anyone who has it can join your room.',
+                    style: TextStyle(
+                        fontSize: 10.5,
+                        color: isDark ? Colors.white38 : Colors.black45),
+                  ),
+                ],
+              ),
+            ),
+          ],
 
           const SizedBox(height: 14),
 
@@ -73,11 +147,16 @@ class JamHostControlsTab extends ConsumerWidget {
                 contentPadding: EdgeInsets.zero,
                 title: Text(
                   'Host Controls Playback Only',
-                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black),
+                  style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : Colors.black),
                 ),
                 subtitle: Text(
                   'When enabled, listeners can only add to queue and cannot pause/skip the song',
-                  style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54),
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? Colors.white54 : Colors.black54),
                 ),
                 value: syncService.hostControlsOnly,
                 activeThumbColor: isDark ? Colors.white : Colors.black,
@@ -94,9 +173,11 @@ class JamHostControlsTab extends ConsumerWidget {
             width: double.infinity,
             child: OutlinedButton(
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: isDark ? Colors.white24 : Colors.black26),
+                side:
+                    BorderSide(color: isDark ? Colors.white24 : Colors.black26),
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
               ),
               onPressed: () async {
                 await syncService.stopParty();
