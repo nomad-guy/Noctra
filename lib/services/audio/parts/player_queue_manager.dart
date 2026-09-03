@@ -5,6 +5,26 @@ part of '../audio_player_service.dart';
 mixin PlayerQueueMixin on AudioPlayerServiceBase {
   // ─── [03] & [25] Queue Management & State ────────────────────────────────
 
+  Timer? _queuePersistenceTimer;
+
+  void _scheduleQueuePersistence() {
+    _queuePersistenceTimer?.cancel();
+    _queuePersistenceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (_currentSong != null || _queue.isNotEmpty) {
+        NoctraLocalDatabase()
+            .savePlaybackSession(
+              currentSong: _currentSong,
+              positionMs: _player.position.inMilliseconds,
+              queue: _queue,
+              currentIndex: _currentIndex,
+              isShuffle: _isShuffleEnabled,
+              loopMode: _loopMode.name,
+            )
+            .catchError((e) => NoctraLogger.w('Debounced queue save failed', e));
+      }
+    });
+  }
+
   @override
   void _mutateQueue(bool Function() mutate) {
     final changed = mutate();
@@ -15,6 +35,7 @@ mixin PlayerQueueMixin on AudioPlayerServiceBase {
     if (!_queueController.isClosed) {
       _queueController.add(List.unmodifiable(_queue));
     }
+    _scheduleQueuePersistence();
   }
 
   /// Reconcile _currentIndex to match _currentSong after any queue

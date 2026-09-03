@@ -154,7 +154,14 @@ mixin PlayerLifecycleMixin on AudioPlayerServiceBase {
           }
           _restoredPositionUsed = false;
           NoctraLocalDatabase()
-              .savePlaybackPosition(activeSong, pos.inMilliseconds)
+              .savePlaybackSession(
+                currentSong: activeSong,
+                positionMs: pos.inMilliseconds,
+                queue: _queue,
+                currentIndex: _currentIndex,
+                isShuffle: _isShuffleEnabled,
+                loopMode: _loopMode.name,
+              )
               .catchError((e) => NoctraLogger.w('Position save failed', e));
         }
       }
@@ -185,24 +192,44 @@ mixin PlayerLifecycleMixin on AudioPlayerServiceBase {
   Future<void> _restoreLastPlaybackSessionInternal(
       {bool autoPlay = false}) async {
     try {
-      final saved = await NoctraLocalDatabase().loadPlaybackPosition();
-      if (saved == null || saved['song'] == null) {
-        return;
-      }
+      final saved = await NoctraLocalDatabase().loadPlaybackSession();
+      if (saved == null) return;
       final restoredSong = saved['song'] as Song?;
-      if (restoredSong == null) {
-        return;
-      }
-      _currentSong = restoredSong;
+      final restoredQueue = (saved['queue'] as List<Song>?) ?? [];
+      final restoredIndex = (saved['currentIndex'] as int?) ?? 0;
+      final isShuffle = saved['isShuffle'] == true;
+      final loopModeStr = saved['loopMode'] as String? ?? 'off';
+
+      if (restoredSong == null && restoredQueue.isEmpty) return;
+
+      _mutateQueue(() {
+        _queue.clear();
+        if (restoredQueue.isNotEmpty) {
+          _queue.addAll(restoredQueue);
+          _currentIndex = restoredIndex.clamp(0, _queue.length - 1);
+          _currentSong = _queue[_currentIndex];
+        } else if (restoredSong != null) {
+          _queue.add(restoredSong);
+          _currentIndex = 0;
+          _currentSong = restoredSong;
+        }
+        return true;
+      });
+
+      if (_currentSong == null) return;
       _lastSavedSongId = _currentSong!.id;
       _lastSavedPosition =
           Duration(milliseconds: (saved['positionMs'] as int?) ?? 0);
-      _mutateQueue(() {
-        _queue.clear();
-        _queue.add(_currentSong!);
-        _currentIndex = 0;
-        return true;
-      });
+
+      _isShuffleEnabled = isShuffle;
+      if (loopModeStr == 'one') {
+        _loopMode = LoopMode.one;
+      } else if (loopModeStr == 'all') {
+        _loopMode = LoopMode.all;
+      } else {
+        _loopMode = LoopMode.off;
+      }
+
       if (!_currentSongController.isClosed) {
         _currentSongController.add(_currentSong);
       }

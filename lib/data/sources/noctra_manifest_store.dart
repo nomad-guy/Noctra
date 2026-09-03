@@ -87,8 +87,16 @@ class NoctraManifestStore {
     languageWeights.clear();
 
     rawMap.forEach((k, v) {
-      final m = SongManifest.fromMap(Map<String, dynamic>.from(v));
-      manifests[k] = m;
+      if (v is Map) {
+        try {
+          final m = SongManifest.fromMap(Map<String, dynamic>.from(v));
+          if (m.songId.isNotEmpty) {
+            manifests[k] = m;
+          }
+        } catch (e) {
+          NoctraLogger.w('Skipping corrupt manifest record $k', e);
+        }
+      }
     });
     _rebuildWeights();
   }

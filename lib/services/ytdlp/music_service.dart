@@ -585,6 +585,9 @@ class MusicService {
     return searchTracks(q);
   }
 
+  static Future<Directory> getMusicDirectory() async =>
+      const DownloadLocationResolver().resolve(_selectedDownloadLocationKey());
+
   static Future<String?> resolveStreamUrl(Song song) async =>
       CompositeStreamResolver.resolve(song);
 

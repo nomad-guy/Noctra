@@ -183,7 +183,8 @@ class Song {
       artworkUrl: map['artworkUrl']?.toString(),
       localFilePath: map['localFilePath']?.toString(),
       streamUrl: map['streamUrl']?.toString(),
-      duration: Duration(milliseconds: parsedDurationMs),
+      duration: Duration(
+          milliseconds: parsedDurationMs.clamp(0, 24 * 3600 * 1000)),
       genre: map['genre']?.toString(),
       mood: map['mood']?.toString(),
       isDownloaded: map['isDownloaded'] == 1 || map['isDownloaded'] == true,
@@ -200,8 +201,8 @@ class Song {
   // Type-safe parsing helpers for external data
   /// Parse a required string field.
   /// - missing (null): returns '' so callers can synthesize an ID
-  /// - non-String values (int, bool, Map, List): throws FormatException
-  /// - empty or whitespace-only strings: throws FormatException
+  /// - numeric values (e.g. 123456): converted via toString()
+  /// - non-String/non-num values (bool, Map, List): throws FormatException
   static String _parseRequiredStr(dynamic v, String field) {
     if (v == null) return ''; // missing key — caller decides
     if (v is! String || v.trim().isEmpty) {
