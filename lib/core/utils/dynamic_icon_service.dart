@@ -47,6 +47,13 @@ extension NoctraAppIconX on NoctraAppIcon {
   };
 }
 
+/// Internal request with its own completer for latest-wins queue.
+class _IconRequest {
+  final NoctraAppIcon icon;
+  final Completer<IconChangeResult> completer;
+  _IconRequest(this.icon, this.completer);
+}
+
 /// Manages the Android launcher icon independently from the Flutter theme.
 ///
 /// Architecture:
@@ -68,11 +75,8 @@ class DynamicIconService {
 
   // ---- Worker state ----
   static bool _workerRunning = false;
-  static NoctraAppIcon? _desiredIcon;
-  /// The latest requested icon — worker processes this, then loops.
-  static Completer<IconChangeResult>? _latestCompleter;
-  /// All pending completers that need resolution when the batch finishes.
-  static final List<Completer<IconChangeResult>> _pendingCompleters = [];
+  /// Queue of icon requests with their completers. Worker pops from front.
+  static final List<_IconRequest> _requestQueue = [];
 
   /// Initialize on app startup — single native call that reconciles state
   /// and returns the actual icon. Android is the source of truth.
@@ -112,86 +116,55 @@ class DynamicIconService {
     if (_actualIcon == icon) return IconChangeResult.applied;
     if (!Platform.isAndroid) return IconChangeResult.failed;
 
-    // Set desired state — worker will pick it up
-    _desiredIcon = icon;
-
-    // Create a completer for THIS request
     final completer = Completer<IconChangeResult>();
+    _requestQueue.add(_IconRequest(icon, completer));
 
     if (!_workerRunning) {
-      // No worker running — start one
-      _latestCompleter = completer;
       _startWorker();
-    } else {
-      // Worker is running — add to pending list
-      // When batch completes, all pending callers get resolved
-      _pendingCompleters.add(completer);
     }
+    // If worker is already running, it will pick up the new request
+    // when it finishes the current one (latest-wins: intermediate
+    // requests are superseded).
 
     return completer.future;
   }
 
-  /// Worker loop: processes the latest desired icon, repeats if more arrive.
-  /// Uses clean state transitions to avoid races at shutdown.
+  /// Worker loop: processes requests from the queue with latest-wins semantics.
+  /// When multiple requests arrive during processing, only the most recent
+  /// one that hasn't started yet gets applied; the rest are superseded.
   static void _startWorker() async {
     _workerRunning = true;
 
-    while (true) {
-      final icon = _desiredIcon;
-      if (icon == null) {
-        // No pending request — worker is done
-        break;
-      }
+    while (_requestQueue.isNotEmpty) {
+      // Take the latest request (discard earlier pending ones)
+      final request = _requestQueue.removeLast();
 
-      // Clear desired before starting the operation (single-threaded Dart — safe)
-      _desiredIcon = null;
+      // Supersede any remaining queued requests
+      for (final stale in _requestQueue) {
+        if (!stale.completer.isCompleted) {
+          stale.completer.complete(IconChangeResult.superseded);
+        }
+      }
+      _requestQueue.clear();
 
       final previousIcon = _actualIcon;
 
       try {
-        await _channel.invokeMethod('setIcon', {'icon': icon.key});
-        _actualIcon = icon;
+        await _channel.invokeMethod('setIcon', {'icon': request.icon.key});
+        _actualIcon = request.icon;
 
-        // Complete the active request
-        if (_latestCompleter != null && !_latestCompleter!.isCompleted) {
-          _latestCompleter!.complete(IconChangeResult.applied);
-          _latestCompleter = null;
+        if (!request.completer.isCompleted) {
+          request.completer.complete(IconChangeResult.applied);
         }
       } catch (e) {
         _actualIcon = previousIcon;
         debugPrint('DynamicIconService: icon switch failed — $e');
 
-        // Complete the active request as failed
-        if (_latestCompleter != null && !_latestCompleter!.isCompleted) {
-          _latestCompleter!.complete(IconChangeResult.failed);
-          _latestCompleter = null;
+        if (!request.completer.isCompleted) {
+          request.completer.complete(IconChangeResult.failed);
         }
-
-        // Complete all pending as failed too (they were for the same attempt)
-        for (final c in _pendingCompleters) {
-          if (!c.isCompleted) {
-            c.complete(IconChangeResult.failed);
-          }
-        }
-        _pendingCompleters.clear();
-
-        _workerRunning = false;
-        return;
-      }
-
-      // After success, loop back to check if _desiredIcon was updated
-      // while we were executing (another request may have arrived)
-    }
-
-    // Worker finished — resolve pending completers
-    // The active completer was already completed above.
-    // Pending completers were superseded by the latest successful request.
-    for (final c in _pendingCompleters) {
-      if (!c.isCompleted) {
-        c.complete(IconChangeResult.superseded);
       }
     }
-    _pendingCompleters.clear();
 
     _workerRunning = false;
   }

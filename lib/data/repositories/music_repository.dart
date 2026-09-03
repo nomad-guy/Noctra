@@ -171,71 +171,64 @@ class MusicRepository extends ChangeNotifier {
 
   // Build deduplicated seed track pool from all available sources.
   // Used as initial tracks for AI mix cards before live recommendations load.
-  List<Song> _seedTrackPool() {
-    final seen = <String>{};
-    final pool = <Song>[];
-    for (final src in [_favorites, _downloads, _recentlyPlayed]) {
-      for (final s in src) {
-        if (seen.add(s.id)) pool.add(s);
-      }
-    }
-    return pool;
-  }
-
   List<AIPlaylist> _buildAIPlaylists() {
     final v = _userTasteVector;
     final playlists = <AIPlaylist>[];
-    final pool = _seedTrackPool();
 
-    // Always include a "For You Today" mix
+    // Each playlist independently curated via its own vibe/prompt target.
+    List<Song> curatedTracks(String vibe, [String? prompt]) {
+      return curateByVibe(vibeKey: vibe, naturalPrompt: prompt)
+          .map((e) => e['song'] as Song)
+          .toList();
+    }
+
     playlists.add(AIPlaylist(
       id: 'ai_for_you',
       title: 'For You Today',
       subtitle: 'Personalized mix based on your taste',
       artworkUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500',
       vibeKey: 'late_night',
-      tracks: pool,
+      tracks: curatedTracks('late_night'),
     ));
 
     if (v.length > 10 && v[10] >= 0.60) {
       playlists.add(AIPlaylist(id: 'ai_late_night', title: 'Late Night Drive',
         subtitle: 'Dark atmosphere for the night hours',
         artworkUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500',
-        vibeKey: 'noir_night', tracks: pool));
+        vibeKey: 'noir_night', tracks: curatedTracks('noir_night')));
     }
     if (v.length > 9 && v[9] >= 0.60) {
       playlists.add(AIPlaylist(id: 'ai_retro', title: 'Retro Synth Session',
         subtitle: 'Analog warmth and synthwave energy',
         artworkUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500',
-        vibeKey: 'retro_synth', tracks: pool));
+        vibeKey: 'retro_synth', tracks: curatedTracks('retro_synth')));
     }
     if (v.length > 2 && v[2] >= 0.65) {
       playlists.add(AIPlaylist(id: 'ai_energy', title: 'High Energy',
         subtitle: 'Kinetic tracks to keep you moving',
         artworkUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500',
-        vibeKey: 'high_energy', tracks: pool));
+        vibeKey: 'high_energy', tracks: curatedTracks('high_energy')));
     }
     if (v.length > 19 && v[19] >= 0.60) {
       playlists.add(AIPlaylist(id: 'ai_bollywood', title: 'Desi Vibes',
         subtitle: 'Bollywood and South Asian favorites',
         artworkUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=500',
-        vibeKey: 'bollywood', tracks: pool));
+        vibeKey: 'bollywood', tracks: curatedTracks('bollywood')));
     }
     if (v.length > 3 && v[3] >= 0.65) {
       playlists.add(AIPlaylist(id: 'ai_chill', title: 'Chill & Unwind',
         subtitle: 'Calm tracks for easy listening',
         artworkUrl: 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=500',
-        vibeKey: 'ambient_chill', tracks: pool));
+        vibeKey: 'ambient_chill', tracks: curatedTracks('ambient_chill')));
     }
 
-    // New Discoveries: always included
     playlists.add(AIPlaylist(
       id: 'ai_discovery',
       title: 'New Discoveries',
       subtitle: 'Fresh tracks outside your usual rotation',
       artworkUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=500',
       vibeKey: 'discovery',
-      tracks: pool,
+      tracks: curatedTracks('late_night', 'deep cut underground hidden gem'),
     ));
 
     return playlists;
@@ -245,71 +238,82 @@ class MusicRepository extends ChangeNotifier {
   List<AIFolder> getAICuratedFolders() {
     final v = _userTasteVector;
     final folders = <AIFolder>[];
-    // Top artists data available via NoctraLocalDatabase().getTopArtists()
     final recentCount = _recentlyPlayed.length;
+    // Track counts are derived from actual library size, not hardcoded.
+    final librarySize = _localLibrary.length;
+    int trackCountFor(double fraction) =>
+        (librarySize * fraction).round().clamp(5, 30);
 
-    // Heavy Rotation: songs replayed often (proxy: recent play count > 10)
     if (recentCount >= 10) {
       folders.add(AIFolder(
         id: 'folder_rotation', name: 'Heavy Rotation',
         description: 'Songs you keep coming back to',
-        vibeKey: 'late_night', icon: Icons.repeat_rounded, trackCount: recentCount.clamp(5, 30),
+        vibeKey: 'late_night', icon: Icons.repeat_rounded,
+        trackCount: recentCount.clamp(5, 30),
       ));
     }
     if (v.length > 10 && v[10] >= 0.62) {
       folders.add(AIFolder(
         id: 'folder_night', name: 'Late Night',
         description: 'Dark and atmospheric for quiet hours',
-        vibeKey: 'noir_night', icon: Icons.nightlight_round, trackCount: 15,
+        vibeKey: 'noir_night', icon: Icons.nightlight_round,
+        trackCount: trackCountFor(0.15),
       ));
     }
     if (v.length > 19 && v[19] >= 0.62) {
       folders.add(AIFolder(
         id: 'folder_bollywood', name: 'Bollywood Favorites',
         description: 'Your top Bollywood and Desi picks',
-        vibeKey: 'bollywood', icon: Icons.music_note_rounded, trackCount: 18,
+        vibeKey: 'bollywood', icon: Icons.music_note_rounded,
+        trackCount: trackCountFor(0.18),
       ));
     }
     if (v.length > 2 && v[2] >= 0.68) {
       folders.add(AIFolder(
         id: 'folder_energy', name: 'High Energy',
         description: 'Maximum energy, maximum output',
-        vibeKey: 'high_energy', icon: Icons.bolt_rounded, trackCount: 12,
+        vibeKey: 'high_energy', icon: Icons.bolt_rounded,
+        trackCount: trackCountFor(0.12),
       ));
     }
     if (v.length > 9 && v[9] >= 0.65) {
       folders.add(AIFolder(
         id: 'folder_synth', name: 'Synthwave & Electronic',
         description: 'Retro analog and electronic sounds',
-        vibeKey: 'retro_synth', icon: Icons.graphic_eq_rounded, trackCount: 14,
+        vibeKey: 'retro_synth', icon: Icons.graphic_eq_rounded,
+        trackCount: trackCountFor(0.14),
       ));
     }
     if (v.length > 3 && v[3] >= 0.68) {
       folders.add(AIFolder(
         id: 'folder_chill', name: 'Chill Sessions',
         description: 'Relaxed and ambient listening',
-        vibeKey: 'ambient_chill', icon: Icons.spa_rounded, trackCount: 16,
+        vibeKey: 'ambient_chill', icon: Icons.spa_rounded,
+        trackCount: trackCountFor(0.16),
       ));
     }
     if (v.length > 16 && v[16] >= 0.65) {
       folders.add(AIFolder(
         id: 'folder_sufi', name: 'Sufi & Spiritual',
         description: 'Devotional and soul-stirring music',
-        vibeKey: 'late_night', icon: Icons.self_improvement_rounded, trackCount: 10,
+        vibeKey: 'late_night', icon: Icons.self_improvement_rounded,
+        trackCount: trackCountFor(0.10),
       ));
     }
     if (v.length > 21 && v[21] >= 0.65) {
       folders.add(AIFolder(
         id: 'folder_rock', name: 'Rock Discoveries',
         description: 'Guitar-driven intensity',
-        vibeKey: 'high_energy', icon: Icons.electric_bolt_rounded, trackCount: 12,
+        vibeKey: 'high_energy', icon: Icons.electric_bolt_rounded,
+        trackCount: trackCountFor(0.12),
       ));
     }
     if (v.length > 5 && v[5] >= 0.65) {
       folders.add(AIFolder(
         id: 'folder_acoustic', name: 'Acoustic & Folk',
         description: 'Warm, intimate, and unplugged',
-        vibeKey: 'acoustic_warm', icon: Icons.library_music_rounded, trackCount: 13,
+        vibeKey: 'acoustic_warm', icon: Icons.library_music_rounded,
+        trackCount: trackCountFor(0.13),
       ));
     }
 

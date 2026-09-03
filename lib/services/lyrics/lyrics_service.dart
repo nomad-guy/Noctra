@@ -240,12 +240,12 @@ class LyricsService {
         for (final item in songsList) {
           final songId = item['id']?.toString() ?? '';
           final jiosaavnTitle = (item['title'] as String?) ?? '';
-          // Verify JioSaavn title matches our song, or take first result as last resort
+          // Verify JioSaavn title matches our song.
+          // Never fall back to last result — wrong lyrics are worse than no lyrics.
           final titleMatch = songId.isNotEmpty &&
-              (jiosaavnTitle.isEmpty ||
-                  _titlesMatch(song.title, jiosaavnTitle));
-          final isLastResult = songsList.last == item;
-          if (songId.isNotEmpty && (titleMatch || isLastResult)) {
+              jiosaavnTitle.isNotEmpty &&
+              _titlesMatch(song.title, jiosaavnTitle);
+          if (titleMatch) {
             final lyrUri = Uri.parse(
                 'https://www.jiosaavn.com/api.php?__call=lyrics.getLyrics&_format=json&_marker=0&cc=in&lyrics_id=$songId');
             final lRes = await http.get(lyrUri, headers: {

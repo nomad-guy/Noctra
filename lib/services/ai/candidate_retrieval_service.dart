@@ -98,11 +98,13 @@ class CandidateRetrievalService {
       affinityFeatures: session.topArtistAffinityFeatures(),
     );
 
-    // Check if user wants deep cuts / unpopular tracks
+    // Check if user wants deep cuts / unpopular tracks (case-insensitive)
+    final normalizedPrompt = naturalPrompt?.toLowerCase() ?? '';
     final wantsDeepCuts = preferDeepCuts ||
-        (naturalPrompt != null &&
-            (naturalPrompt.contains('deep cut') || naturalPrompt.contains('less popular') ||
-             naturalPrompt.contains('underground') || naturalPrompt.contains('hidden gem')));
+        normalizedPrompt.contains('deep cut') ||
+        normalizedPrompt.contains('less popular') ||
+        normalizedPrompt.contains('underground') ||
+        normalizedPrompt.contains('hidden gem');
 
     // Stage 3: Neural MLP scoring (with audio features from Deezer)
     final List<ScoredCandidate> scored = [];
