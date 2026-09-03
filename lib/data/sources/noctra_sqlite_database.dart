@@ -177,53 +177,28 @@ class NoctraSqliteDatabase {
           'timestamp': now,
       });
 
-      // Upsert track embedding — preserve independent favorite/download state.
-      // First, get existing row to retain fields this operation does NOT own.
-      int existingReplays = 0;
-      int existingListenTime = 0;
-      int existingSkips = 0;
-      bool rowExists = false;
-      try {
-        final existing = await db.query('track_embeddings',
-            where: 'song_id = ?', whereArgs: [song.id], limit: 1);
-        if (existing.isNotEmpty) {
-          rowExists = true;
-          existingReplays = (existing.first['replay_count'] as int?) ?? 0;
-          existingListenTime = (existing.first['total_listen_time_ms'] as int?) ?? 0;
-          existingSkips = (existing.first['skip_count'] as int?) ?? 0;
+      // Atomic increment counters — no read-modify-write race.
+      final replayInc = (eventType == 'complete_listen' ||
+          eventType == 'deep_listen' || eventType == 'replay') ? 1 : 0;
+      final skipInc = (eventType == 'fast_skip' ||
+          eventType == 'short_skip') ? 1 : 0;
 
-        }
-      } catch (_) {}
+      // Try atomic update first (no race window).
+      final updated = await db.rawUpdate(
+        'UPDATE track_embeddings SET '
+        'replay_count = replay_count + ?, '
+        'skip_count = skip_count + ?, '
+        'total_listen_time_ms = total_listen_time_ms + ?, '
+        'last_listened_at = ?, '
+        'audio_features_json = COALESCE(?, audio_features_json), '
+        'updated_at = ? '
+        'WHERE song_id = ?',
+        [replayInc, skipInc, durationListenedMs, now,
+         audioFeaturesJson, now, song.id],
+      );
 
-      // Update counters based on event type
-      int newReplays = existingReplays;
-      int newListenTime = existingListenTime;
-      int newSkips = existingSkips;
-      if (eventType == 'complete_listen' || eventType == 'deep_listen' || eventType == 'replay') {
-        newReplays++;
-      }
-      if (eventType == 'fast_skip' || eventType == 'short_skip') {
-        newSkips++;
-      }
-      newListenTime += durationListenedMs;
-
-      if (rowExists) {
-        // UPDATE only the columns this operation owns — preserve favorite/download.
-        await db.update(
-          'track_embeddings',
-          {
-            'replay_count': newReplays,
-            'total_listen_time_ms': newListenTime,
-            'skip_count': newSkips,
-            'last_listened_at': now,
-            'audio_features_json': audioFeaturesJson,
-            'updated_at': now,
-          },
-          where: 'song_id = ?',
-          whereArgs: [song.id],
-        );
-      } else {
-        // INSERT new row with defaults for independent fields.
+      if (updated == 0) {
+        // No existing row — insert with defaults for independent fields.
         await db.insert('track_embeddings', {
           'song_id': song.id,
           'title': song.title,
@@ -231,11 +206,11 @@ class NoctraSqliteDatabase {
           'genre': song.genre,
           'album': song.album,
           'duration_ms': song.duration.inMilliseconds,
-          'is_in_favorites': 0,
+          'is_in_favorites': song.isFavorite ? 1 : 0,
           'is_downloaded': song.isDownloaded ? 1 : 0,
-          'replay_count': newReplays,
-          'total_listen_time_ms': newListenTime,
-          'skip_count': newSkips,
+          'replay_count': replayInc,
+          'total_listen_time_ms': durationListenedMs,
+          'skip_count': skipInc,
           'last_listened_at': now,
           'audio_features_json': audioFeaturesJson,
           'vector_json': jsonEncode(song.featureVector),

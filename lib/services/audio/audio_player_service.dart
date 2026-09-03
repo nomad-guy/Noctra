@@ -1085,9 +1085,11 @@ class AudioPlayerService {
     if (_player.playing) {
       _invalidatePlaybackOperations();
       _transitionEpoch++;
-      unawaited(_player.pause().catchError((e) {
+      // Await pause — its completion matters for state correctness.
+      // DO NOT unawait here: the next serialized op could race the pause.
+      try { await _player.pause(); } catch (e) {
         NoctraLogger.w('pause failed in resumeOrPlay', e);
-      }));
+      }
     } else {
       if (_player.processingState == ProcessingState.idle &&
           _currentSong != null) {

@@ -338,37 +338,31 @@ class MusicService {
                 thumb = thumbnails.last['url']?.toString();
               }
             } catch (_) {}
-            String? navId;
-            try {
-              navId = twoRow['navigationEndpoint']?['browseEndpoint']
-                      ?['browseId']
-                  ?.toString();
-            } catch (_) {}
-            // For artists, the subtitle often says "Artist"
+            // Skip artist/album/playlist cards — browse IDs are not playable.
+            // Only actual track videos (with watchEndpoint) should become Songs.
             if (t.isNotEmpty && subText.toLowerCase().contains('artist')) {
-              // Artist card — search for their top tracks
-              addSong(Song(
-                  id: 'yt_artist_${t.hashCode}',
-                  title: t,
-                  artist: t,
-                  album: 'Artist',
-                  artworkUrl: thumb,
-                  streamUrl: null,
-                  duration: const Duration(seconds: 210),
-                  genre: 'Artist Match',
-                  featureVector: _deriveFeatureVector(t, artist: t)));
+              // Artist card — skip, not a playable track.
+              continue;
             } else if (t.isNotEmpty) {
-              // Album, playlist, or video
-              addSong(Song(
-                  id: navId ?? 'yt_${t.hashCode}',
-                  title: t,
-                  artist: subText.isNotEmpty ? subText : 'YouTube Music',
-                  album: 'Global Catalog',
-                  artworkUrl: thumb,
-                  streamUrl: null,
-                  duration: const Duration(seconds: 210),
-                  genre: 'Global Audio',
-                  featureVector: _deriveFeatureVector(t, artist: subText)));
+              // Check if this has a watchEndpoint (actual playable video)
+              String? watchId;
+              try {
+                watchId = twoRow['navigationEndpoint']?['watchEndpoint']
+                    ?['videoId']?.toString();
+              } catch (_) {}
+              if (watchId != null && watchId.length == 11) {
+                addSong(Song(
+                    id: watchId,
+                    title: t,
+                    artist: subText.isNotEmpty ? subText : 'YouTube Music',
+                    album: 'Global Catalog',
+                    artworkUrl: thumb ?? 'https://i.ytimg.com/vi/$watchId/hqdefault.jpg',
+                    streamUrl: null,
+                    duration: const Duration(seconds: 210),
+                    genre: 'Global Audio',
+                    featureVector: _deriveFeatureVector(t, artist: subText)));
+              }
+              // Albums, playlists, browse IDs → skip (not playable).
             }
             continue;
           }

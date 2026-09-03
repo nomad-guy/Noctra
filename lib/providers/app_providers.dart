@@ -37,12 +37,7 @@ final themeModeProvider = StateProvider<NoirThemeMode>((ref) {
   if (saved == 'noirWhite' || saved == 'light') {
     return NoirThemeMode.noirWhite;
   }
-  if (saved == 'noirAmoled' || saved == 'amoled') {
-    return NoirThemeMode.noirAmoled;
-  }
-  if (saved == 'liquidGlass' || saved == 'liquid_glass') {
-    return NoirThemeMode.liquidGlass;
-  }
+  // Migrate removed themes to noirBlack
   return NoirThemeMode.noirBlack;
 });
 
