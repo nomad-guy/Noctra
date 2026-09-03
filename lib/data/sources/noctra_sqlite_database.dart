@@ -107,7 +107,13 @@ class NoctraSqliteDatabase {
     await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_events_song ON listening_events(song_id);');
     await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_events_type ON listening_events(event_type);');
+    await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_embeddings_artist ON track_embeddings(artist);');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_embeddings_genre ON track_embeddings(genre);');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_embeddings_last_listened ON track_embeddings(last_listened_at DESC);');
   }
 
   Future<void> _upgradeDb(Database db, int oldVersion, int newVersion) async {
@@ -270,39 +276,42 @@ class NoctraSqliteDatabase {
     return null;
   }
 
-  /// Get aggregate listening stats for pattern features.
+  /// Get aggregate listening stats for pattern features in a single SQL pass.
   Future<Map<String, dynamic>> getListeningStats() async {
     try {
       final db = await database;
-      final totalEvents = Sqflite.firstIntValue(
-              await db.rawQuery('SELECT COUNT(*) FROM listening_events')) ??
-          0;
-      final totalSkips = Sqflite.firstIntValue(await db.rawQuery(
-              "SELECT COUNT(*) FROM listening_events WHERE event_type IN ('fast_skip', 'short_skip')")) ??
-          0;
-      final totalReplays = Sqflite.firstIntValue(await db.rawQuery(
-              "SELECT COUNT(*) FROM listening_events WHERE event_type IN ('complete_listen', 'replay')")) ??
-          0;
-      final totalListenTime = Sqflite.firstIntValue(await db.rawQuery(
-              'SELECT SUM(duration_listened_ms) FROM listening_events')) ??
-          0;
-      final uniqueArtists = Sqflite.firstIntValue(await db.rawQuery(
-              'SELECT COUNT(DISTINCT artist) FROM listening_events')) ??
-          0;
-      final uniqueGenres = Sqflite.firstIntValue(await db.rawQuery(
-              'SELECT COUNT(DISTINCT genre) FROM listening_events')) ??
-          0;
+      final rows = await db.rawQuery('''
+        SELECT 
+          COUNT(*) AS total_events,
+          SUM(CASE WHEN event_type IN ('fast_skip', 'short_skip') THEN 1 ELSE 0 END) AS total_skips,
+          SUM(CASE WHEN event_type IN ('complete_listen', 'replay') THEN 1 ELSE 0 END) AS total_replays,
+          COALESCE(SUM(duration_listened_ms), 0) AS total_listen_time_ms,
+          COUNT(DISTINCT artist) AS unique_artists,
+          COUNT(DISTINCT genre) AS unique_genres
+        FROM listening_events
+      ''');
+      if (rows.isNotEmpty) {
+        final r = rows.first;
+        final totalEvents = (r['total_events'] as num?)?.toInt() ?? 0;
+        final totalSkips = (r['total_skips'] as num?)?.toInt() ?? 0;
+        final totalReplays = (r['total_replays'] as num?)?.toInt() ?? 0;
+        final totalListenTime =
+            (r['total_listen_time_ms'] as num?)?.toInt() ?? 0;
+        final uniqueArtists = (r['unique_artists'] as num?)?.toInt() ?? 0;
+        final uniqueGenres = (r['unique_genres'] as num?)?.toInt() ?? 0;
 
-      return {
-        'total_events': totalEvents,
-        'total_skips': totalSkips,
-        'total_replays': totalReplays,
-        'total_listen_time_ms': totalListenTime,
-        'unique_artists': uniqueArtists,
-        'unique_genres': uniqueGenres,
-        'skip_rate': totalEvents > 0 ? totalSkips / totalEvents : 0.0,
-        'replay_ratio': totalEvents > 0 ? totalReplays / totalEvents : 0.0,
-      };
+        return {
+          'total_events': totalEvents,
+          'total_skips': totalSkips,
+          'total_replays': totalReplays,
+          'total_listen_time_ms': totalListenTime,
+          'unique_artists': uniqueArtists,
+          'unique_genres': uniqueGenres,
+          'skip_rate': totalEvents > 0 ? totalSkips / totalEvents : 0.0,
+          'replay_ratio': totalEvents > 0 ? totalReplays / totalEvents : 0.0,
+        };
+      }
+      return {};
     } catch (_) {
       return {};
     }

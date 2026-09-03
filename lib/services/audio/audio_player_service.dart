@@ -883,11 +883,12 @@ class AudioPlayerService {
       // Non-blocking play — DO NOT await
       _playNonBlocking(nextPlayer, 'Crossfade new player');
 
-      // Timer-based volume ramp — 60 steps for smoother crossfade
-      const totalSteps = 60;
+      // Timer-based volume ramp — 24 smooth logarithmic steps (ExoPlayer internally
+      // interpolates volume between platform calls, avoiding IPC channel overload)
+      const totalSteps = 24;
       int step = 0;
       final stepMs =
-          (duration.inMilliseconds / totalSteps).round().clamp(8, 200);
+          (duration.inMilliseconds / totalSteps).round().clamp(35, 200);
       final completer = Completer<void>();
       Timer.periodic(Duration(milliseconds: stepMs), (timer) {
         step++;

@@ -83,6 +83,7 @@ class TrackNormalizer {
 }
 
 /// Matches imported tracks against the app's music catalog.
+/// Matches imported tracks against the app's music catalog.
 class TrackMatcher {
   /// Match a list of normalized tracks against the local catalog.
   static List<MatchedTrack> matchAll(List<NormalizedTrack> tracks) {
@@ -90,58 +91,80 @@ class TrackMatcher {
     final catalog = [
       ...repo.localLibrary,
       ...repo.downloads,
-      ...repo.recentlyPlayed
+      ...repo.recentlyPlayed,
+      ...repo.favorites,
     ];
-    final results = <MatchedTrack>[];
 
+    // Pre-index the catalog for O(1) exact and O(k) filtered lookups
+    final exactMap = <String, Song>{};
+    final artistMap = <String, List<Song>>{};
+    final titleMap = <String, List<Song>>{};
+
+    for (final song in catalog) {
+      final sTitle = song.title.toLowerCase().trim();
+      final sArtist = song.artist.toLowerCase().trim();
+      final exactKey = '$sTitle\u0000$sArtist';
+      exactMap.putIfAbsent(exactKey, () => song);
+      artistMap.putIfAbsent(sArtist, () => <Song>[]).add(song);
+      titleMap.putIfAbsent(sTitle, () => <Song>[]).add(song);
+    }
+
+    final results = <MatchedTrack>[];
     for (final track in tracks) {
       final normalized = TrackNormalizer.normalize(track);
-      final match = _matchSingle(normalized, catalog);
+      final match = _matchSingleIndexed(
+        normalized,
+        exactMap,
+        artistMap,
+        titleMap,
+        catalog,
+      );
       results.add(match);
     }
     return results;
   }
 
-  static MatchedTrack _matchSingle(NormalizedTrack track, List<Song> catalog) {
-    // 1. ISRC exact match
-    if (track.isrc != null && track.isrc!.isNotEmpty) {
-      // ISRC match — songs don't store ISRC in current model, reserved for future
-    }
-
-    // 2. Exact title + artist (normalized)
+  static MatchedTrack _matchSingleIndexed(
+    NormalizedTrack track,
+    Map<String, Song> exactMap,
+    Map<String, List<Song>> artistMap,
+    Map<String, List<Song>> titleMap,
+    List<Song> catalog,
+  ) {
     final nTitle = track.title.toLowerCase().trim();
     final nArtist = track.artist.toLowerCase().trim();
-    for (final song in catalog) {
-      final sTitle = song.title.toLowerCase().trim();
-      final sArtist = song.artist.toLowerCase().trim();
-      if (nTitle == sTitle && nArtist == sArtist) {
-        return _makeMatch(
-            track, song, MatchConfidence.exact, 0.98, 'title_artist_exact');
+
+    // 1. Exact title + artist (O(1) hash lookup)
+    final exactKey = '$nTitle\u0000$nArtist';
+    final exactSong = exactMap[exactKey];
+    if (exactSong != null) {
+      return _makeMatch(
+          track, exactSong, MatchConfidence.exact, 0.98, 'title_artist_exact');
+    }
+
+    // 2. Fuzzy title match with same artist (O(k) where k is songs by this artist)
+    final artistSongs = artistMap[nArtist];
+    if (artistSongs != null && artistSongs.isNotEmpty) {
+      for (final song in artistSongs) {
+        final sTitle = song.title.toLowerCase().trim();
+        if (_fuzzyMatch(nTitle, sTitle) > 0.85) {
+          return _makeMatch(track, song, MatchConfidence.high, 0.90,
+              'fuzzy_title_same_artist');
+        }
       }
     }
 
-    // 3. Fuzzy title match with same artist
-    for (final song in catalog) {
-      final sTitle = song.title.toLowerCase().trim();
-      final sArtist = song.artist.toLowerCase().trim();
-      if (sArtist == nArtist && _fuzzyMatch(nTitle, sTitle) > 0.85) {
-        return _makeMatch(
-            track, song, MatchConfidence.high, 0.90, 'fuzzy_title_same_artist');
-      }
+    // 3. Strong title match, any artist (O(1) lookup on title)
+    final titleSongs = titleMap[nTitle];
+    if (titleSongs != null && titleSongs.isNotEmpty) {
+      return _makeMatch(track, titleSongs.first, MatchConfidence.medium, 0.75,
+          'title_exact_artist_differs');
     }
 
-    // 4. Strong title match, any artist
-    for (final song in catalog) {
-      final sTitle = song.title.toLowerCase().trim();
-      if (nTitle == sTitle) {
-        return _makeMatch(track, song, MatchConfidence.medium, 0.75,
-            'title_exact_artist_differs');
-      }
-    }
-
-    // 5. Fuzzy title + fuzzy artist
+    // 4. Fuzzy title + fuzzy artist on candidate pool
     double bestScore = 0;
     Song? bestSong;
+    // Bounded search on catalog for fuzzy candidates
     for (final song in catalog) {
       final titleScore = _fuzzyMatch(nTitle, song.title.toLowerCase().trim());
       final artistScore =
@@ -191,26 +214,32 @@ class TrackMatcher {
     return 1.0 - (distance / maxLen);
   }
 
+  /// Memory-optimized Levenshtein using 2 flat row buffers instead of 2D matrix.
   static int _levenshtein(String a, String b) {
     final lenA = a.length;
     final lenB = b.length;
-    final dp = List.generate(lenA + 1, (i) => List<int>.filled(lenB + 1, 0));
+    if (lenA == 0) return lenB;
+    if (lenB == 0) return lenA;
 
-    for (int i = 0; i <= lenA; i++) {
-      dp[i][0] = i;
-    }
-    for (int j = 0; j <= lenB; j++) {
-      dp[0][j] = j;
-    }
+    var v0 = List<int>.generate(lenB + 1, (i) => i);
+    var v1 = List<int>.filled(lenB + 1, 0);
 
-    for (int i = 1; i <= lenA; i++) {
-      for (int j = 1; j <= lenB; j++) {
-        final cost = a[i - 1] == b[j - 1] ? 0 : 1;
-        dp[i][j] = [dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost]
-            .reduce((a, b) => a < b ? a : b);
+    for (int i = 0; i < lenA; i++) {
+      v1[0] = i + 1;
+      for (int j = 0; j < lenB; j++) {
+        final cost = a.codeUnitAt(i) == b.codeUnitAt(j) ? 0 : 1;
+        final insertion = v1[j] + 1;
+        final deletion = v0[j + 1] + 1;
+        final substitution = v0[j] + cost;
+        var minVal = insertion < deletion ? insertion : deletion;
+        if (substitution < minVal) minVal = substitution;
+        v1[j + 1] = minVal;
       }
+      final temp = v0;
+      v0 = v1;
+      v1 = temp;
     }
-    return dp[lenA][lenB];
+    return v0[lenB];
   }
 }
 

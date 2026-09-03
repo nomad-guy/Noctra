@@ -24,11 +24,22 @@ class ArtistDiscography {
       required this.similarArtists});
 }
 
+class _SearchCacheEntry {
+  final List<Song> results;
+  final int expiresAt;
+  _SearchCacheEntry(this.results, this.expiresAt);
+}
+
 class MusicService {
   static final downloadProgressController =
       StreamController<Map<String, double>>.broadcast();
   static Stream<Map<String, double>> get downloadProgressStream =>
       downloadProgressController.stream;
+
+  static final Map<String, _SearchCacheEntry> _searchCache = {};
+  static final Map<String, Future<List<Song>>> _searchInFlight = {};
+  static const int _maxSearchCacheSize = 60;
+  static const int _searchCacheTtlMs = 5 * 60 * 1000; // 5 minutes
 
   static Future<List<Song>> search(String query, {String source = 'all'}) =>
       searchTracks(query, source: source);
@@ -38,6 +49,43 @@ class MusicService {
     final clean = query.trim();
     if (clean.isEmpty) return fetchTrendingTracks();
 
+    final cacheKey = '$source:${clean.toLowerCase()}';
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    if (_searchCache.containsKey(cacheKey)) {
+      final entry = _searchCache[cacheKey]!;
+      if (now < entry.expiresAt) {
+        // Move to most recent for LRU
+        _searchCache.remove(cacheKey);
+        _searchCache[cacheKey] = entry;
+        return entry.results;
+      } else {
+        _searchCache.remove(cacheKey);
+      }
+    }
+
+    if (_searchInFlight.containsKey(cacheKey)) {
+      return _searchInFlight[cacheKey]!;
+    }
+
+    final future = _searchTracksUncached(clean, source: source);
+    _searchInFlight[cacheKey] = future;
+    try {
+      final results = await future;
+      if (results.isNotEmpty) {
+        if (_searchCache.length >= _maxSearchCacheSize) {
+          _searchCache.remove(_searchCache.keys.first);
+        }
+        _searchCache[cacheKey] = _SearchCacheEntry(results, now + _searchCacheTtlMs);
+      }
+      return results;
+    } finally {
+      _searchInFlight.remove(cacheKey);
+    }
+  }
+
+  static Future<List<Song>> _searchTracksUncached(String clean,
+      {String source = 'all'}) async {
     if (SpotifyOEmbedService.isSpotifyUrl(clean)) {
       final spotifyMeta = await SpotifyOEmbedService.fetchMetadata(clean);
       if (spotifyMeta != null) {

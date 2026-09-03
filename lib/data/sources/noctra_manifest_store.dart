@@ -105,6 +105,19 @@ class NoctraManifestStore {
     }
   }
 
+  static final RegExp _hindiTitleRegex = RegExp(
+      r'\b(tum|dil|pyaar|ishq|tere|hum|zindagi|saath|mera|meri)\b',
+      caseSensitive: false);
+  static final RegExp _hindiArtistRegex = RegExp(
+      r'\b(arijit|pritam|shreya|atif|sonu|alka|kumar sanu|kk)\b',
+      caseSensitive: false);
+  static final RegExp _punjabiTitleRegex = RegExp(
+      r'\b(jatt|pind|gabru|punjab|yaar|tere bina)\b',
+      caseSensitive: false);
+  static final RegExp _punjabiArtistRegex = RegExp(
+      r'\b(sidhu|diljit|karan aujla|ap dhillon|shubh|amrit maan)\b',
+      caseSensitive: false);
+
   void recordManifest(Song song,
       {String action = 'play',
       int listenedSeconds = 0,
@@ -126,20 +139,11 @@ class NoctraManifestStore {
       inferredLang = 'Korean';
     } else if (lGenre.contains('japanese') || lGenre.contains('j-pop')) {
       inferredLang = 'Japanese';
-    } else if (RegExp(
-                r'\b(tum|dil|pyaar|ishq|tere|hum|zindagi|saath|mera|meri)\b',
-                caseSensitive: false)
-            .hasMatch(song.title) ||
-        RegExp(r'\b(arijit|pritam|shreya|atif|sonu|alka|kumar sanu|kk)\b',
-                caseSensitive: false)
-            .hasMatch(song.artist)) {
+    } else if (_hindiTitleRegex.hasMatch(song.title) ||
+        _hindiArtistRegex.hasMatch(song.artist)) {
       inferredLang = 'Hindi';
-    } else if (RegExp(r'\b(jatt|pind|gabru|punjab|yaar|tere bina)\b',
-                caseSensitive: false)
-            .hasMatch(song.title) ||
-        RegExp(r'\b(sidhu|diljit|karan aujla|ap dhillon|shubh|amrit maan)\b',
-                caseSensitive: false)
-            .hasMatch(song.artist)) {
+    } else if (_punjabiTitleRegex.hasMatch(song.title) ||
+        _punjabiArtistRegex.hasMatch(song.artist)) {
       inferredLang = 'Punjabi';
     }
 

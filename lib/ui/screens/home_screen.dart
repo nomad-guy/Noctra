@@ -14,6 +14,7 @@ import '../widgets/dynamic_vibe_stream_section.dart';
 import '../widgets/top_artists_carousel.dart';
 import '../widgets/noctra_app_logo.dart';
 import '../widgets/glass_shard_icon.dart';
+import '../../data/repositories/music_repository.dart';
 import 'settings_sheet.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -24,7 +25,6 @@ class HomeScreen extends ConsumerWidget {
     ref.watch(appLanguageProvider);
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
-    final repo = ref.watch(musicRepositoryProvider);
     final syncService = ref.watch(p2pSyncServiceProvider);
     final currentSong = ref.watch(currentSongStreamProvider).value;
     final isPlaying = ref.watch(isPlayingStreamProvider).value ?? false;
@@ -154,7 +154,7 @@ class HomeScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        repo.getTimeOfDayGreeting(),
+                        MusicRepository.instance.getTimeOfDayGreeting(),
                         style: TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.w800,

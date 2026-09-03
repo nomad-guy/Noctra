@@ -58,8 +58,13 @@ app.*.map.json
 *.aab
 
 # Widget Preview
+.widget-preview/
 .widget_preview/
-.idea/
+
+# Vendor
 /vendor/
+
+# Local editor / agent config
+opencode.json
 get_preview/
 android/app/noctra-release.keystore

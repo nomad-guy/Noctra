@@ -36,6 +36,8 @@ class MusicRepository extends ChangeNotifier {
   final List<Song> _localLibrary = [];
   final List<Song> _downloads = [];
   final List<Song> _favorites = [];
+  final Set<String> _downloadIds = {};
+  final Set<String> _favoriteIds = {};
   final List<Song> _recentlyPlayed = [];
   final Map<String, List<Song>> _customFolders = {};
   List<double> _userTasteVector = TasteVectorEngine.getDefaultVector();
@@ -65,6 +67,8 @@ class MusicRepository extends ChangeNotifier {
     _localLibrary.clear();
     _downloads.clear();
     _favorites.clear();
+    _downloadIds.clear();
+    _favoriteIds.clear();
     _recentlyPlayed.clear();
     _customFolders.clear();
     _userTasteVector = TasteVectorEngine.getDefaultVector();
@@ -88,9 +92,13 @@ class MusicRepository extends ChangeNotifier {
       final favs = await db.loadFavorites();
       _favorites.clear();
       _favorites.addAll(favs);
+      _favoriteIds.clear();
+      _favoriteIds.addAll(favs.map((s) => s.id));
       final downs = await db.loadDownloads();
       _downloads.clear();
       _downloads.addAll(downs);
+      _downloadIds.clear();
+      _downloadIds.addAll(downs.map((s) => s.id));
       // Reconcile the DB against the filesystem: a download whose local file
       // was deleted out-of-band (or that lost its path) is stale and must not
       // keep masquerading as available offline.
@@ -151,11 +159,13 @@ class MusicRepository extends ChangeNotifier {
     return NoctraLocalization.tr('good_evening');
   }
 
-  bool isFavorite(String songId) => _favorites.any((s) => s.id == songId);
+  bool isFavorite(String songId) => _favoriteIds.contains(songId);
+  bool isDownloaded(String songId) => _downloadIds.contains(songId);
 
   void toggleFavorite(Song song) {
     if (isFavorite(song.id)) {
       _favorites.removeWhere((s) => s.id == song.id);
+      _favoriteIds.remove(song.id);
     } else {
       // Stamp the favorite with the current LOCAL download state so a Song
       // arriving from a resolver with stale `isDownloaded=false` cannot
@@ -175,6 +185,7 @@ class MusicRepository extends ChangeNotifier {
           clearLocalFilePath: path == null,
         ),
       );
+      _favoriteIds.add(song.id);
     }
     NoctraLocalDatabase().saveFavorites(_favorites);
     notifyListeners();
@@ -190,7 +201,7 @@ class MusicRepository extends ChangeNotifier {
     // analytics that join on `is_in_favorites`.
     final stamped = song.copyWith(
       isFavorite: isFavorite(song.id),
-      isDownloaded: _downloads.any((d) => d.id == song.id),
+      isDownloaded: _downloadIds.contains(song.id),
     );
     _recentlyPlayed.insert(0, stamped);
     if (_recentlyPlayed.length > 50) _recentlyPlayed.removeLast();
@@ -217,6 +228,7 @@ class MusicRepository extends ChangeNotifier {
   void addDownloadedSong(Song song) {
     _downloads.removeWhere((s) => s.id == song.id);
     _downloads.insert(0, song);
+    _downloadIds.add(song.id);
     NoctraLocalDatabase().saveDownloads(_downloads);
     notifyListeners();
   }
@@ -229,6 +241,7 @@ class MusicRepository extends ChangeNotifier {
     final target = _downloads.where((d) => d.id == songId).firstOrNull;
     if (target == null) return;
     _downloads.removeWhere((d) => d.id == songId);
+    _downloadIds.remove(songId);
     // Un-stamp favorite rows that point at this download so they never keep
     // advertising an offline file that no longer exists (state ownership).
     var favoritesTouched = false;
@@ -283,6 +296,7 @@ class MusicRepository extends ChangeNotifier {
     }
     if (stale.isEmpty) return 0;
     _downloads.removeWhere((d) => stale.contains(d.id));
+    _downloadIds.removeAll(stale);
     // Mirror the removal onto favorite rows that point at now-missing files.
     var favoritesTouched = false;
     for (var i = 0; i < _favorites.length; i++) {
@@ -321,6 +335,7 @@ class MusicRepository extends ChangeNotifier {
           clearLocalFilePath: path == null,
         ),
       );
+      _favoriteIds.add(song.id);
       added = true;
     }
     if (added) {

@@ -106,35 +106,45 @@ class CandidateRetrievalService {
         normalizedPrompt.contains('underground') ||
         normalizedPrompt.contains('hidden gem');
 
-    // Stage 3: Neural MLP scoring (with audio features from Deezer)
+    // Stage 3: Neural MLP scoring (with bounded parallel audio features lookup)
     final List<ScoredCandidate> scored = [];
-    for (final song in pool) {
-      // Fetch audio features for this song (cached after first lookup)
-      AudioFeatures audioFeats;
-      try {
-        audioFeats = await DeezerAudioFeaturesService.fetchFeatures(
-            song.title, song.artist);
-      } catch (_) {
-        audioFeats = AudioFeatures.defaults;
+    const chunkSize = 8;
+    for (int i = 0; i < pool.length; i += chunkSize) {
+      final chunk = pool.skip(i).take(chunkSize).toList();
+      final featureList = await Future.wait(chunk.map((song) async {
+        try {
+          return await DeezerAudioFeaturesService.fetchFeatures(
+                  song.title, song.artist)
+              .timeout(const Duration(milliseconds: 1200));
+        } catch (_) {
+          return AudioFeatures.defaults;
+        }
+      }));
+
+      for (int j = 0; j < chunk.length; j++) {
+        final song = chunk[j];
+        final audioFeats = featureList[j];
+
+        double mlpProb = NeuralRecommenderEngine.predictScore(
+          userVector: targetVector,
+          song: song,
+          contextFeatures: contextFeatures,
+          audioFeatures: audioFeats.toFeatureVector(),
+        );
+
+        // Deep cuts: penalize songs from frequently played artists
+        if (wantsDeepCuts) {
+          final artistKey = song.artist.toLowerCase();
+          final topArtists = session.artistAffinity;
+          if ((topArtists[artistKey] ?? 0.0) > 0.7) mlpProb *= 0.6;
+        }
+
+        final int score = ((mlpProb * 85) + 14).round().clamp(10, 99);
+        final explanation = TasteVectorEngine.generateExplanation(
+            song, score, vibeKey, naturalPrompt);
+        scored.add(ScoredCandidate(
+            song: song, score: score / 100.0, explanation: explanation));
       }
-
-      double mlpProb = NeuralRecommenderEngine.predictScore(
-        userVector: targetVector,
-        song: song,
-        contextFeatures: contextFeatures,
-        audioFeatures: audioFeats.toFeatureVector(),
-      );
-
-      // Deep cuts: penalize songs from frequently played artists
-      if (wantsDeepCuts) {
-        final artistKey = song.artist.toLowerCase();
-        final topArtists = session.artistAffinity;
-        if ((topArtists[artistKey] ?? 0.0) > 0.7) mlpProb *= 0.6;
-      }
-
-      final int score = ((mlpProb * 85) + 14).round().clamp(10, 99);
-      final explanation = TasteVectorEngine.generateExplanation(song, score, vibeKey, naturalPrompt);
-      scored.add(ScoredCandidate(song: song, score: score / 100.0, explanation: explanation));
     }
 
     scored.sort((a, b) => b.score.compareTo(a.score));

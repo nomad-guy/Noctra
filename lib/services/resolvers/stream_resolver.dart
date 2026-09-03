@@ -485,6 +485,7 @@ class _TrustedAudioHosts {
 
 class CompositeStreamResolver {
   static final Map<String, _CacheEntry> _cache = {};
+  static final Map<String, Future<String?>> _inFlight = {};
   // Signed CDN URLs (YouTube / JioSaavn) are short-lived; cap cache
   // lifetime to 30 minutes to avoid returning a URL that has already
   // expired upstream.
@@ -517,6 +518,25 @@ class CompositeStreamResolver {
       }
     }
 
+    if (startTier == 0 && _inFlight.containsKey(song.id)) {
+      return _inFlight[song.id]!;
+    }
+
+    final future = _resolveUncached(song, startTier: startTier);
+    if (startTier == 0) {
+      _inFlight[song.id] = future;
+    }
+    try {
+      return await future;
+    } finally {
+      if (startTier == 0) {
+        _inFlight.remove(song.id);
+      }
+    }
+  }
+
+  static Future<String?> _resolveUncached(Song song, {int startTier = 0}) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
     for (int i = startTier; i < _resolvers.length; i++) {
       final resolver = _resolvers[i];
       try {
