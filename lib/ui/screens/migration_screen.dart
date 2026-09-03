@@ -436,7 +436,7 @@ class _MigrationScreenState extends ConsumerState<MigrationScreen> {
           .map((e) => e.replaceFirst('.', ''))
           .toList(),
     );
-    if (files.isEmpty) return;
+    if (!mounted || files.isEmpty) return;
 
     setState(() {
       _step = MigrationStep.loading;
@@ -446,10 +446,12 @@ class _MigrationScreenState extends ConsumerState<MigrationScreen> {
     try {
       final file = File(files.first.path!);
       final report = await MigrationManager.processImport(importer, file);
+      if (!mounted) return;
       _report = report;
       _matchedTracks = report.matchedTracks;
       setState(() => _step = MigrationStep.preview);
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _step = MigrationStep.choose;
         _status = 'Error: $e';
@@ -460,9 +462,18 @@ class _MigrationScreenState extends ConsumerState<MigrationScreen> {
   Future<void> _commitImport() async {
     try {
       await MigrationManager.commitImport(_matchedTracks, addToFavorites: true);
+      if (mounted) {
+        setState(() => _step = MigrationStep.complete);
+      }
     } catch (e) {
-      _status = 'Import error: $e';
+      if (mounted) {
+        setState(() {
+          _status = 'Import error: $e';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to import library: $e')),
+        );
+      }
     }
-    if (mounted) setState(() => _step = MigrationStep.complete);
   }
 }

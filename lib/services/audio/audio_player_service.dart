@@ -108,6 +108,7 @@ class AudioPlayerService {
     _autoCrossfadeQueued = false;
     _crossfadePending = false;
     _crossfadePendingSongId = null;
+    _autoplayDelayGeneration++;
   }
 
   // ─── [02] Serialization (state lock + async work) ──────────────────────
@@ -168,7 +169,9 @@ class AudioPlayerService {
       ..clear()
       ..addAll(queue);
     _queueRevision++;
-    _queueController.add(List.unmodifiable(_queue));
+    if (!_queueController.isClosed) {
+      _queueController.add(List.unmodifiable(_queue));
+    }
     _currentIndex = index.clamp(0, _queue.isEmpty ? 0 : _queue.length - 1);
     _currentSong =
         currentSong ?? (_queue.isEmpty ? null : _queue[_currentIndex]);
@@ -180,7 +183,9 @@ class AudioPlayerService {
       return;
     }
     _queueRevision++;
-    _queueController.add(List.unmodifiable(_queue));
+    if (!_queueController.isClosed) {
+      _queueController.add(List.unmodifiable(_queue));
+    }
   }
 
   /// Reconcile _currentIndex to match _currentSong after any queue
@@ -585,15 +590,17 @@ class AudioPlayerService {
   }
 
   void _emitSettings() {
-    _playbackSettingsController.add({
-      'shuffle': _isShuffleEnabled,
-      'loopMode': _loopMode,
-      'autoplay': _isAutoplayEnabled,
-      'delay': _autoplayDelaySeconds,
-      'crossfade': _crossfadeSeconds,
-      'sleepTimer': _sleepTimerRemainingMinutes,
-      'fade': _isFadeEnabled,
-    });
+    if (!_playbackSettingsController.isClosed) {
+      _playbackSettingsController.add({
+        'shuffle': _isShuffleEnabled,
+        'loopMode': _loopMode,
+        'autoplay': _isAutoplayEnabled,
+        'delay': _autoplayDelaySeconds,
+        'crossfade': _crossfadeSeconds,
+        'sleepTimer': _sleepTimerRemainingMinutes,
+        'fade': _isFadeEnabled,
+      });
+    }
   }
 
   // ─── [10] Sleep timer ───────────────────────────────────────────────────
@@ -1123,10 +1130,12 @@ class AudioPlayerService {
         rev != _queueRevision ||
         _transitionId != myId) {
       await _disposePlayer(nextPlayer);
-      if (epoch == _playSessionEpoch &&
+      if (nextPlayer == null &&
+          tEpoch == _transitionEpoch &&
+          epoch == _playSessionEpoch &&
           rev == _queueRevision &&
           _transitionId == myId) {
-        // Session and queue are unchanged — prepare failed (e.g.
+        // Session and queue are unchanged and transition was NOT cancelled/invalidated — prepare failed (e.g.
         // transient resolve/load error), so fall back to a fresh load.
         await _playSongInternal(nextSong);
       }
@@ -1136,7 +1145,9 @@ class AudioPlayerService {
     final result = await _crossfadeTo(nextPlayer, nextSong);
     if (result != CrossfadeResult.completed) {
       await _disposePlayer(nextPlayer);
-      if (epoch == _playSessionEpoch &&
+      if (result == CrossfadeResult.failed &&
+          tEpoch == _transitionEpoch &&
+          epoch == _playSessionEpoch &&
           rev == _queueRevision &&
           _transitionId == myId) {
         await _playSongInternal(nextSong);
@@ -1158,7 +1169,10 @@ class AudioPlayerService {
 
   Future<void> _commitPlayerSwap(
       AudioPlayer nextPlayer, Song nextSong, int epoch, int myId) async {
-    final newIndex = _queue.indexWhere((s) => s.id == nextSong.id);
+    var newIndex = _queue.indexOf(nextSong);
+    if (newIndex < 0) {
+      newIndex = _queue.indexWhere((s) => s.id == nextSong.id);
+    }
     // The whole crossfade ran against the queue state at its start; if the
     // queue was mutated meanwhile (revision moved) the index lookup above
     // is stale and [nextSong] may no longer be the intended next entry.
@@ -1176,7 +1190,11 @@ class AudioPlayerService {
     _currentIndex = newIndex;
     _currentSong = nextSong;
     _songStartTime = DateTime.now();
-    _currentSongController.add(nextSong);
+    _positionSaveEpoch = _playSessionEpoch;
+    _lastSavedBucket = -1;
+    if (!_currentSongController.isClosed) {
+      _currentSongController.add(nextSong);
+    }
     MusicRepository().recordSongPlayed(nextSong);
     _startPreloadNext();
   }
@@ -1469,7 +1487,9 @@ class AudioPlayerService {
         } catch (_) {}
         _invalidatePreload();
         _currentSong = null;
-        _currentSongController.add(null);
+        if (!_currentSongController.isClosed) {
+          _currentSongController.add(null);
+        }
       });
 
   // ─── [23] Internal playback operations ─────────────────────────────────
@@ -1524,7 +1544,9 @@ class AudioPlayerService {
         : song;
     _currentSong = current;
     _songStartTime = DateTime.now();
-    _currentSongController.add(current);
+    if (!_currentSongController.isClosed) {
+      _currentSongController.add(current);
+    }
     MusicRepository().recordSongPlayed(current);
     try {
       await _player.stop();
@@ -1584,7 +1606,9 @@ class AudioPlayerService {
           resolverUsed: resolverName,
           resolutionMs: sw.elapsedMilliseconds,
           timestamp: DateTime.now());
-      _resolutionController.add(_lastResolution!);
+      if (!_resolutionController.isClosed) {
+        _resolutionController.add(_lastResolution!);
+      }
       if (epoch != _playSessionEpoch) {
         return;
       }
@@ -1702,6 +1726,13 @@ class AudioPlayerService {
     if (_loopMode == LoopMode.one && _currentSong != null) {
       await _player.seek(Duration.zero);
       _playNonBlocking(_player, 'LoopMode.one replay');
+    } else if (_loopMode == LoopMode.off &&
+        !_isAutoplayEnabled &&
+        _currentIndex >= _queue.length - 1) {
+      // Natural completion at the end of queue with repeat-off and autoplay-off:
+      // Stop playback cleanly and do not loop back to the start.
+      await _player.stop();
+      _invalidatePlaybackOperations();
     } else {
       if (_autoplayDelaySeconds > 0) {
         final delayGen = ++_autoplayDelayGeneration;

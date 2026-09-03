@@ -1014,15 +1014,19 @@ class P2PSyncService extends ChangeNotifier {
                   : Duration.zero;
           try {
             if (_audioPlayer!.currentSong?.id != song.id) {
-              unawaited(_audioPlayer!.playSong(song));
+              unawaited(
+                  _audioPlayer!.playSong(song, initialPosition: position));
+            } else {
+              if (isPlaying && !_audioPlayer!.player.playing) {
+                unawaited(_audioPlayer!.resumeOrPlay());
+              } else if (!isPlaying && _audioPlayer!.player.playing) {
+                _audioPlayer!.pause();
+              }
+              final currentPos = _audioPlayer!.player.position;
+              if ((currentPos - position).abs() > const Duration(seconds: 2)) {
+                unawaited(_audioPlayer!.player.seek(position));
+              }
             }
-            if (isPlaying && !_audioPlayer!.player.playing) {
-              unawaited(_audioPlayer!.player.play());
-            }
-            if (!isPlaying && _audioPlayer!.player.playing) {
-              unawaited(_audioPlayer!.player.pause());
-            }
-            unawaited(_audioPlayer!.player.seek(position));
           } catch (e) {
             NoctraLogger.w('apply host sync failed', e);
           }

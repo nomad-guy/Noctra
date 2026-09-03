@@ -20,6 +20,7 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
   final Map<int, GlobalKey> _lineKeys = {};
   late Future<LyricsData> _lyricsFuture;
   int _lastActiveIndex = -2;
+  int _lyricsGeneration = 0;
   bool _userIsScrolling = false;
   Timer? _resumeAutoScrollTimer;
   StreamSubscription<Duration>? _positionSub;
@@ -63,9 +64,13 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
     final preferredScript = preferenceKey.contains('romanized')
         ? 'roman'
         : (preferenceKey.contains('devanagari') ? 'devanagari' : 'original');
+    final currentGen = ++_lyricsGeneration;
+    final targetSongId = widget.song.id;
     _lyricsFuture = LyricsService.fetchLyrics(widget.song, preference: pref);
     _lyricsFuture.then((data) {
-      if (mounted) {
+      if (mounted &&
+          currentGen == _lyricsGeneration &&
+          widget.song.id == targetSongId) {
         setState(() {
           _selectedScript = preferredScript;
           _cachedLines = data.lines;
@@ -131,7 +136,7 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
   void dispose() {
     _positionSub?.cancel();
     _resumeAutoScrollTimer?.cancel();
-    if (_scrollController.hasClients) _scrollController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 

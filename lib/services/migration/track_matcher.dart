@@ -364,9 +364,9 @@ class LibraryRefreshService {
             if (artistMeta.imageUrl != null &&
                 artistMeta.imageUrl!.isNotEmpty) {
               final updated = song.copyWith(artworkUrl: artistMeta.imageUrl);
-              if (repo.isFavorite(song.id)) {
-                repo.toggleFavorite(song);
-                repo.toggleFavorite(updated);
+              if (repo.isFavorite(song.id) ||
+                  repo.downloads.any((d) => d.id == song.id)) {
+                repo.updateSongMetadata(updated);
                 updatedArtwork++;
                 updatedMetadata++;
               }

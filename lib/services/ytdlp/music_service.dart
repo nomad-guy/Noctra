@@ -38,6 +38,7 @@ class MusicService {
 
   static final Map<String, _SearchCacheEntry> _searchCache = {};
   static final Map<String, Future<List<Song>>> _searchInFlight = {};
+  static final Map<String, Future<Song?>> _downloadInFlight = {};
   static const int _maxSearchCacheSize = 60;
   static const int _searchCacheTtlMs = 5 * 60 * 1000; // 5 minutes
 
@@ -589,6 +590,19 @@ class MusicService {
 
   static Future<Song?> downloadTrack(Song song) async {
     if (kIsWeb) return song.copyWith(isDownloaded: true);
+    if (_downloadInFlight.containsKey(song.id)) {
+      return _downloadInFlight[song.id]!;
+    }
+    final future = _doDownloadTrack(song);
+    _downloadInFlight[song.id] = future;
+    try {
+      return await future;
+    } finally {
+      _downloadInFlight.remove(song.id);
+    }
+  }
+
+  static Future<Song?> _doDownloadTrack(Song song) async {
     try {
       final musicDir = await const DownloadLocationResolver()
           .resolve(_selectedDownloadLocationKey());
@@ -606,12 +620,20 @@ class MusicService {
       final file = File('${musicDir.path}/$fileName');
       final tempFile = File('${musicDir.path}/$fileName.tmp');
       final resolvedUrl = await resolveStreamUrl(song);
-      if (resolvedUrl == null || resolvedUrl.isEmpty) return null;
+      if (resolvedUrl == null || resolvedUrl.isEmpty) {
+        if (!downloadProgressController.isClosed) {
+          downloadProgressController.add({song.id: 1.0});
+        }
+        return null;
+      }
       final parsedUri = Uri.tryParse(resolvedUrl);
       if (parsedUri == null ||
           (parsedUri.scheme != 'https' && parsedUri.scheme != 'file')) {
         NoctraLogger.w(
             'downloadTrack: Insecure or invalid URI scheme for ${song.title}');
+        if (!downloadProgressController.isClosed) {
+          downloadProgressController.add({song.id: 1.0});
+        }
         return null;
       }
       final req = http.Request('GET', parsedUri)
@@ -626,12 +648,14 @@ class MusicService {
           await resp.stream.forEach((chunk) {
             sink.add(chunk);
             received += chunk.length;
-            if (total > 0) {
-              downloadProgressController
-                  .add({song.id: (received / total).clamp(0.0, 0.99)});
-            } else {
-              downloadProgressController
-                  .add({song.id: (received / 4000000.0).clamp(0.05, 0.95)});
+            if (!downloadProgressController.isClosed) {
+              if (total > 0) {
+                downloadProgressController
+                    .add({song.id: (received / total).clamp(0.0, 0.99)});
+              } else {
+                downloadProgressController
+                    .add({song.id: (received / 4000000.0).clamp(0.05, 0.95)});
+              }
             }
           });
           await sink.flush();
@@ -668,13 +692,19 @@ class MusicService {
           }
           rethrow;
         }
-        downloadProgressController.add({song.id: 1.0});
+        if (!downloadProgressController.isClosed) {
+          downloadProgressController.add({song.id: 1.0});
+        }
         return song.copyWith(isDownloaded: true, localFilePath: file.path);
       } finally {
         client.close();
       }
     } catch (e) {
       NoctraLogger.e('Track download failed for "${song.title}"', e);
+      if (!downloadProgressController.isClosed) {
+        // Reset progress indicator so UI does not spin indefinitely
+        downloadProgressController.add({song.id: 1.0});
+      }
       return null;
     }
   }

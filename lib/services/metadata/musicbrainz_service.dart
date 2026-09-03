@@ -9,14 +9,18 @@ class MusicBrainzService {
   static final Map<String, Map<String, dynamic>> _cache = {};
   static DateTime _lastRequest = DateTime.fromMillisecondsSinceEpoch(0);
   static const Duration _rateLimit = Duration(milliseconds: 1100); // ~1 req/sec
+  static Future<void> _throttleChain = Future.value();
 
-  /// Rate-limit all MusicBrainz requests.
-  static Future<void> _throttle() async {
-    final elapsed = DateTime.now().difference(_lastRequest);
-    if (elapsed < _rateLimit) {
-      await Future.delayed(_rateLimit - elapsed);
-    }
-    _lastRequest = DateTime.now();
+  /// Rate-limit all MusicBrainz requests sequentially.
+  static Future<void> _throttle() {
+    _throttleChain = _throttleChain.then((_) async {
+      final elapsed = DateTime.now().difference(_lastRequest);
+      if (elapsed < _rateLimit) {
+        await Future.delayed(_rateLimit - elapsed);
+      }
+      _lastRequest = DateTime.now();
+    });
+    return _throttleChain;
   }
 
   /// Search MusicBrainz for recording metadata (title, artist, ISRC, tags).

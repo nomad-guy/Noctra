@@ -42,15 +42,25 @@ class SessionContextTracker {
     if (genre != null && genre.isNotEmpty) _adjustGenreAffinity(genre, weight * 0.12);
   }
 
+  static const int _maxAffinityEntries = 100;
+
   void _adjustArtistAffinity(String artist, double delta) {
     final key = artist.toLowerCase().trim();
     if (key.isEmpty) return;
+    if (_artistAffinity.length >= _maxAffinityEntries &&
+        !_artistAffinity.containsKey(key)) {
+      _artistAffinity.remove(_artistAffinity.keys.first);
+    }
     _artistAffinity[key] = ((_artistAffinity[key] ?? 0.5) + delta).clamp(0.0, 1.0);
   }
 
   void _adjustGenreAffinity(String genre, double delta) {
     final key = genre.toLowerCase().trim();
     if (key.isEmpty) return;
+    if (_genreAffinity.length >= _maxAffinityEntries &&
+        !_genreAffinity.containsKey(key)) {
+      _genreAffinity.remove(_genreAffinity.keys.first);
+    }
     _genreAffinity[key] = ((_genreAffinity[key] ?? 0.5) + delta).clamp(0.0, 1.0);
   }
 

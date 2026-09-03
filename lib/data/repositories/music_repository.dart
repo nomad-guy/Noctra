@@ -233,6 +233,40 @@ class MusicRepository extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Updates song metadata (artwork, title, artist, album, genre) in-place
+  /// across favorites and downloads without altering list ordering or index positions.
+  void updateSongMetadata(Song updatedSong) {
+    var favTouched = false;
+    for (var i = 0; i < _favorites.length; i++) {
+      if (_favorites[i].id == updatedSong.id) {
+        _favorites[i] = _favorites[i].copyWith(
+          title: updatedSong.title,
+          artist: updatedSong.artist,
+          album: updatedSong.album,
+          artworkUrl: updatedSong.artworkUrl,
+          genre: updatedSong.genre,
+        );
+        favTouched = true;
+      }
+    }
+    var dlTouched = false;
+    for (var i = 0; i < _downloads.length; i++) {
+      if (_downloads[i].id == updatedSong.id) {
+        _downloads[i] = _downloads[i].copyWith(
+          title: updatedSong.title,
+          artist: updatedSong.artist,
+          album: updatedSong.album,
+          artworkUrl: updatedSong.artworkUrl,
+          genre: updatedSong.genre,
+        );
+        dlTouched = true;
+      }
+    }
+    if (favTouched) NoctraLocalDatabase().saveFavorites(_favorites);
+    if (dlTouched) NoctraLocalDatabase().saveDownloads(_downloads);
+    if (favTouched || dlTouched) notifyListeners();
+  }
+
   /// Removes a download from the offline library and (optionally) deletes its
   /// local file. A download that was never persisted to disk (web / failed
   /// rename) is still removed from the list so it stops appearing as offline.

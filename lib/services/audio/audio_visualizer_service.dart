@@ -115,7 +115,9 @@ class AudioVisualizerService {
           }
         }
         _latestFft = bins;
-        _fftController.add(_latestFft);
+        if (!_fftController.isClosed) {
+          _fftController.add(_latestFft);
+        }
       }
     });
   }
@@ -147,11 +149,15 @@ class AudioVisualizerService {
     _lastHardwarePacketMs = DateTime.now().millisecondsSinceEpoch;
     if (type == 'fft') {
       _latestFft = _resample32(parsed);
-      _fftController.add(_latestFft);
+      if (!_fftController.isClosed) {
+        _fftController.add(_latestFft);
+      }
       return true;
     } else if (type == 'waveform') {
       _latestWaveform = _resample32(parsed);
-      _waveformController.add(_latestWaveform);
+      if (!_waveformController.isClosed) {
+        _waveformController.add(_latestWaveform);
+      }
       return true;
     }
     return false;

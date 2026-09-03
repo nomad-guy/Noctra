@@ -39,8 +39,10 @@ class LiveTransliterationController {
 
   Timer? _debounceTimer;
   String _lastRawInput = '';
+  bool _isDisposed = false;
 
   void onTextChanged(String rawInput) {
+    if (_isDisposed) return;
     _lastRawInput = rawInput;
     _debounceTimer?.cancel();
     _debounceTimer = Timer(debounce, () => _convertNow(rawInput));
@@ -49,24 +51,27 @@ class LiveTransliterationController {
   /// Force an immediate conversion, bypassing the debounce — call this on
   /// submit/blur so the field is never left showing a stale conversion.
   void flush() {
+    if (_isDisposed) return;
     _debounceTimer?.cancel();
     _convertNow(_lastRawInput);
   }
 
   void _convertNow(String rawInput) {
-    // Guard against a stale timer firing after newer input arrived.
-    if (rawInput != _lastRawInput) return;
+    // Guard against a stale timer firing after newer input arrived or after disposal.
+    if (_isDisposed || rawInput != _lastRawInput) return;
     output.value = engine.toDevanagari(rawInput);
   }
 
   /// Call when the user manually corrects a word in the Devanagari output —
   /// wires straight into the engine's learning so it's right from then on.
   void learnCorrection(String romanWord, String correctedDevanagari) {
+    if (_isDisposed) return;
     engine.learnWord(romanWord, correctedDevanagari);
     flush();
   }
 
   void dispose() {
+    _isDisposed = true;
     _debounceTimer?.cancel();
     output.dispose();
   }

@@ -205,36 +205,50 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
     final scaffoldKey = ref.watch(rootScaffoldKeyProvider);
     final themeMode = ref.watch(themeModeProvider);
 
-    return Scaffold(
-      key: scaffoldKey,
-      // Transparent only in Liquid Glass so normal themes retain their own
-      // canvas instead of exposing the platform's default black surface.
-      backgroundColor: themeMode.isLiquidGlass
-          ? Colors.transparent
-          : context.noctraTokens.canvas,
-      drawer: const NoirSidebar(),
-      body: Stack(
-        children: [
-          IndexedStack(
-            index: currentIndex,
-            children: _screens,
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: SafeArea(
-              top: false,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const NoirMiniPlayer(),
-                  const _CustomBottomNavBar(),
-                ],
+    final canPop = currentIndex == 0 &&
+        !(scaffoldKey.currentState?.isDrawerOpen ?? false);
+
+    return PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (scaffoldKey.currentState?.isDrawerOpen ?? false) {
+          scaffoldKey.currentState?.closeDrawer();
+        } else if (currentIndex != 0) {
+          ref.read(bottomNavIndexProvider.notifier).state = 0;
+        }
+      },
+      child: Scaffold(
+        key: scaffoldKey,
+        // Transparent only in Liquid Glass so normal themes retain their own
+        // canvas instead of exposing the platform's default black surface.
+        backgroundColor: themeMode.isLiquidGlass
+            ? Colors.transparent
+            : context.noctraTokens.canvas,
+        drawer: const NoirSidebar(),
+        body: Stack(
+          children: [
+            IndexedStack(
+              index: currentIndex,
+              children: _screens,
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const NoirMiniPlayer(),
+                    const _CustomBottomNavBar(),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
