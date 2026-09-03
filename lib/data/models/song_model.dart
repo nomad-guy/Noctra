@@ -97,7 +97,7 @@ class Song {
   Map<String, dynamic> toJson() => toMap();
 
   factory Song.fromMap(Map<String, dynamic> map) {
-    // Feature vector: validate dimensions, finiteness, range
+    // Feature vector: validate dimensions, finiteness, range [0.0, 1.0]
     List<double> vec = List.filled(32, 0.5);
     if (map['featureVector'] != null) {
       try {
@@ -110,15 +110,14 @@ class Song {
         }
         if (raw.isNotEmpty && raw.every((e) => e is num)) {
           final parsed = raw.map<double>((e) => (e as num).toDouble()).toList();
-          if (parsed.every((v) => v.isFinite)) {
+          // All values must be finite and within [0.0, 1.0]
+          if (parsed.every((v) => v.isFinite && v >= 0.0 && v <= 1.0)) {
             vec = parsed;
-            // Pad to 32 dimensions if shorter
             while (vec.length < 32) { vec.add(0.5); }
             if (vec.length > 32) { vec = vec.sublist(0, 32); }
           }
-          // else: NaN/Infinity values — keep default 0.5 vector
+          // else: out-of-range or NaN/Infinity — keep default 0.5 vector
         }
-        // else: non-numeric elements — keep default 0.5 vector
       } catch (_) {}
     }
 
@@ -138,10 +137,10 @@ class Song {
     }
 
     return Song(
-      id: _parseStr(map['id']),
-      title: _parseStr(map['title'], 'Unknown Track'),
-      artist: _parseStr(map['artist'], 'Unknown Artist'),
-      album: _parseStr(map['album'], 'Single'),
+      id: _parseRequiredStr(map['id'], 'id'),
+      title: _parseOptStr(map['title']) ?? 'Unknown Track',
+      artist: _parseOptStr(map['artist']) ?? 'Unknown Artist',
+      album: _parseOptStr(map['album']) ?? 'Single',
       artworkUrl: map['artworkUrl']?.toString(),
       localFilePath: map['localFilePath']?.toString(),
       streamUrl: map['streamUrl']?.toString(),
@@ -159,8 +158,20 @@ class Song {
   factory Song.fromJson(Map<String, dynamic> json) => Song.fromMap(json);
 
   // Type-safe parsing helpers for external data
-  static String _parseStr(dynamic v, [String fallback = '']) =>
-      v?.toString().trim() ?? fallback;
+  /// Parse a required string field. Rejects non-String values and empty strings.
+  static String _parseRequiredStr(dynamic v, String field) {
+    if (v is! String || v.trim().isEmpty) {
+      // Required identity field is missing or wrong type — return empty
+      // to signal invalidity to the caller.
+      return '';
+    }
+    return v.trim();
+  }
+
+  /// Parse an optional string field. Converts non-String values via toString().
+  static String? _parseOptStr(dynamic v) =>
+      v?.toString().trim().isEmpty == true ? null : v?.toString().trim();
+
   static int _parseInt(dynamic v, [int fallback = 0]) {
     if (v is int) return v;
     if (v is num) return v.toInt();

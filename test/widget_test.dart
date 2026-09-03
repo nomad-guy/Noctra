@@ -85,9 +85,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(NoctraLocalization.tr('settings')), findsOneWidget);
-    // Theme chips: verify both Noir Black and Noir White are present
+    // Theme chips: Noir Black, Noir White, Liquid Glass
     expect(find.text('Noir Black'), findsAtLeastNWidgets(1));
     expect(find.text('Noir White'), findsAtLeastNWidgets(1));
+    expect(find.text('Liquid Glass'), findsAtLeastNWidgets(1));
     expect(find.text('Language / भाषा'), findsOneWidget);
   });
 }

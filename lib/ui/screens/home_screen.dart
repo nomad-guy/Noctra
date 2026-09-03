@@ -292,37 +292,28 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _themeMenuButton(
       BuildContext context, WidgetRef ref, NoirThemeMode current, bool isDark) {
+    // Cycle: Noir Black → Noir White → Liquid Glass → Noir Black
+    final themes = [NoirThemeMode.noirBlack, NoirThemeMode.noirWhite, NoirThemeMode.liquidGlass];
+    NoirThemeMode nextTheme() {
+      final idx = themes.indexOf(current);
+      return themes[(idx + 1) % themes.length];
+    }
+
     final icon = current == NoirThemeMode.liquidGlass
-        ? null
+        ? GlassShardIcon(size: 20, color: context.noctraTokens.accent, isActive: true)
         : current == NoirThemeMode.noirWhite
-            ? Icons.light_mode_outlined
-            : (current == NoirThemeMode.noirAmoled
-                ? Icons.brightness_medium_outlined
-                : Icons.dark_mode_outlined);
-    return PopupMenuButton<NoirThemeMode>(
-      tooltip: 'Theme',
-      iconSize: 20,
-      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-      icon: icon == null
-          ? GlassShardIcon(size: 20, color: context.noctraTokens.accent, isActive: true)
-          : Icon(icon, color: isDark ? Colors.white60 : Colors.black54),
-      onSelected: (mode) {
-        ref.read(themeModeProvider.notifier).state = mode;
+            ? Icon(Icons.light_mode_outlined, color: isDark ? Colors.white60 : Colors.black54)
+            : Icon(Icons.dark_mode_outlined, color: isDark ? Colors.white60 : Colors.black54);
+
+    return GestureDetector(
+      onTap: () {
+        ref.read(themeModeProvider.notifier).state = nextTheme();
       },
-      itemBuilder: (context) => [
-        const PopupMenuItem(
-            value: NoirThemeMode.noirBlack,
-            child: Text('Noir Black', style: TextStyle(fontSize: 13))),
-        const PopupMenuItem(
-            value: NoirThemeMode.noirAmoled,
-            child: Text('AMOLED', style: TextStyle(fontSize: 13))),
-        const PopupMenuItem(
-            value: NoirThemeMode.noirWhite,
-            child: Text('Noir White', style: TextStyle(fontSize: 13))),
-        const PopupMenuItem(
-            value: NoirThemeMode.liquidGlass,
-            child: Text('Liquid Glass', style: TextStyle(fontSize: 13))),
-      ],
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+        child: icon,
+      ),
     );
   }
 }

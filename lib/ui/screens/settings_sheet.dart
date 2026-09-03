@@ -41,7 +41,15 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.88,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0D0D0D) : const Color(0xFFFAFAFA),
+        color: themeMode.isLiquidGlass
+            ? tokens.surface.withValues(alpha: .90)
+            : (isDark ? const Color(0xFF0D0D0D) : const Color(0xFFFAFAFA)),
+        gradient: themeMode.isLiquidGlass
+            ? LinearGradient(colors: [
+                tokens.surfaceVariant.withValues(alpha: .94),
+                tokens.canvas.withValues(alpha: .88)
+              ])
+            : null,
         border: Border.all(color: tokens.subtleBorder),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -98,6 +106,11 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                     Expanded(
                       child: _themeChip(context, ref, 'Noir White',
                           NoirThemeMode.noirWhite, themeMode, isDark),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _themeChip(context, ref, 'Liquid Glass',
+                          NoirThemeMode.liquidGlass, themeMode, isDark),
                     ),
                   ],
                 ),

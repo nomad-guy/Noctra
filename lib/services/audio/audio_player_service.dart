@@ -183,6 +183,9 @@ class AudioPlayerService {
       _isAutoplayEnabled = true,
       _isFadeEnabled = false;
   int _sleepFadeId = 0;
+  /// Canonical (unshuffled) queue order — saved before first shuffle.
+  List<Song>? _canonicalQueue;
+  int _canonicalIndex = 0;
   bool get isShuffleEnabled => _isShuffleEnabled;
   bool get isAutoplayEnabled => _isAutoplayEnabled;
   bool get isFadeEnabled => _isFadeEnabled;
@@ -378,18 +381,41 @@ class AudioPlayerService {
     _isShuffleEnabled = !_isShuffleEnabled;
     _invalidatePlaybackOperations();
     if (_isShuffleEnabled && _queue.length > 2) {
+      // Save canonical order before first shuffle.
+      _canonicalQueue = List<Song>.from(_queue);
+      _canonicalIndex = _currentIndex;
       // Shuffle at Noctra level — just_audio shuffle is meaningless
       // without ConcatenatingAudioSource.
-      final currentSong = _queue.isNotEmpty ? _queue[_currentIndex] : null;
-      final others = _queue.where((s) => s != currentSong).toList();
+      // Use index-based identity to avoid object identity issues.
+      final currentIdx = _currentIndex.clamp(0, _queue.length - 1);
+      final others = <Song>[];
+      for (int i = 0; i < _queue.length; i++) {
+        if (i != currentIdx) others.add(_queue[i]);
+      }
       others.shuffle();
       _mutateQueue(() {
         _queue.clear();
-        if (currentSong != null) {
-          _queue.add(currentSong);
-          _currentIndex = 0;
-        }
+        _queue.add(_queue.isNotEmpty ? _canonicalQueue![_canonicalIndex] : others.first);
         _queue.addAll(others);
+        _currentIndex = 0;
+        return true;
+      });
+    } else if (!_isShuffleEnabled && _canonicalQueue != null) {
+      // Restore canonical order when shuffle is disabled.
+      final currentId = _queue.isNotEmpty
+          ? _queue[_currentIndex.clamp(0, _queue.length - 1)].id
+          : null;
+      _mutateQueue(() {
+        _queue.clear();
+        _queue.addAll(_canonicalQueue!);
+        // Restore currentIndex to the currently playing song.
+        if (currentId != null) {
+          _currentIndex = _queue.indexWhere((s) => s.id == currentId);
+          if (_currentIndex == -1) _currentIndex = 0;
+        } else {
+          _currentIndex = _canonicalIndex.clamp(0, _queue.length - 1);
+        }
+        _canonicalQueue = null;
         return true;
       });
     }

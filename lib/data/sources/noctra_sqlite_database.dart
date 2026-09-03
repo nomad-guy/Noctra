@@ -115,32 +115,33 @@ class NoctraSqliteDatabase {
       ''');
     }
     if (oldVersion < 3) {
-      // Add new columns to existing tables (safe — ignores if already exists)
-      final eventCols = await db.rawQuery("PRAGMA table_info(listening_events)");
-      final eventColNames = eventCols.map((c) => c['name'] as String).toSet();
-      if (!eventColNames.contains('duration_listened_ms')) {
-        await db.execute('ALTER TABLE listening_events ADD COLUMN duration_listened_ms INTEGER DEFAULT 0');
-        await db.execute('ALTER TABLE listening_events ADD COLUMN total_duration_ms INTEGER DEFAULT 0');
-        await db.execute('ALTER TABLE listening_events ADD COLUMN is_in_favorites INTEGER DEFAULT 0');
-        await db.execute('ALTER TABLE listening_events ADD COLUMN is_downloaded INTEGER DEFAULT 0');
-        await db.execute('ALTER TABLE listening_events ADD COLUMN replay_count INTEGER DEFAULT 0');
-        await db.execute('ALTER TABLE listening_events ADD COLUMN audio_features_json TEXT');
+      // Add new columns to existing tables — each checked independently
+      // so an interrupted migration does not prevent later columns.
+      Future<void> addColumnIfMissing(String table, String col, String typeDef) async {
+        final cols = await db.rawQuery('PRAGMA table_info($table)');
+        final names = cols.map((c) => c['name'] as String).toSet();
+        if (!names.contains(col)) {
+          await db.execute('ALTER TABLE $table ADD COLUMN $col $typeDef');
+        }
       }
 
-      final embedCols = await db.rawQuery("PRAGMA table_info(track_embeddings)");
-      final embedColNames = embedCols.map((c) => c['name'] as String).toSet();
-      if (!embedColNames.contains('genre')) {
-        await db.execute('ALTER TABLE track_embeddings ADD COLUMN genre TEXT');
-        await db.execute('ALTER TABLE track_embeddings ADD COLUMN album TEXT');
-        await db.execute('ALTER TABLE track_embeddings ADD COLUMN duration_ms INTEGER DEFAULT 0');
-        await db.execute('ALTER TABLE track_embeddings ADD COLUMN is_in_favorites INTEGER DEFAULT 0');
-        await db.execute('ALTER TABLE track_embeddings ADD COLUMN is_downloaded INTEGER DEFAULT 0');
-        await db.execute('ALTER TABLE track_embeddings ADD COLUMN replay_count INTEGER DEFAULT 0');
-        await db.execute('ALTER TABLE track_embeddings ADD COLUMN total_listen_time_ms INTEGER DEFAULT 0');
-        await db.execute('ALTER TABLE track_embeddings ADD COLUMN skip_count INTEGER DEFAULT 0');
-        await db.execute('ALTER TABLE track_embeddings ADD COLUMN last_listened_at INTEGER');
-        await db.execute('ALTER TABLE track_embeddings ADD COLUMN audio_features_json TEXT');
-      }
+      await addColumnIfMissing('listening_events', 'duration_listened_ms', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing('listening_events', 'total_duration_ms', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing('listening_events', 'is_in_favorites', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing('listening_events', 'is_downloaded', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing('listening_events', 'replay_count', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing('listening_events', 'audio_features_json', 'TEXT');
+
+      await addColumnIfMissing('track_embeddings', 'genre', 'TEXT');
+      await addColumnIfMissing('track_embeddings', 'album', 'TEXT');
+      await addColumnIfMissing('track_embeddings', 'duration_ms', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing('track_embeddings', 'is_in_favorites', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing('track_embeddings', 'is_downloaded', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing('track_embeddings', 'replay_count', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing('track_embeddings', 'total_listen_time_ms', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing('track_embeddings', 'skip_count', 'INTEGER DEFAULT 0');
+      await addColumnIfMissing('track_embeddings', 'last_listened_at', 'INTEGER');
+      await addColumnIfMissing('track_embeddings', 'audio_features_json', 'TEXT');
 
       await db.execute('CREATE INDEX IF NOT EXISTS idx_events_song ON listening_events(song_id);');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_embeddings_artist ON track_embeddings(artist);');
