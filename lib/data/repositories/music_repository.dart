@@ -58,6 +58,8 @@ class MusicRepository extends ChangeNotifier {
   bool _isLoaded = false;
   Future<void>? _initFuture;
 
+  void Function(Song)? onSongDownloadedCallback;
+
   MusicRepository._internal();
 
   @visibleForTesting
@@ -260,6 +262,7 @@ class MusicRepository extends ChangeNotifier {
     if (favTouched) NoctraLocalDatabase().saveFavorites(_favorites);
     if (foldersTouched) NoctraLocalDatabase().saveCustomFolders(_customFolders);
     notifyListeners();
+    onSongDownloadedCallback?.call(song);
   }
 
   /// Updates song metadata (artwork, title, artist, album, genre) in-place

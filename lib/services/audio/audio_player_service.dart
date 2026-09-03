@@ -53,6 +53,7 @@ class AudioPlayerService extends AudioPlayerServiceBase
   AudioPlayerService._internal() {
     _initAudioSession();
     _attachListeners();
+    MusicRepository().onSongDownloadedCallback = onSongDownloaded;
   }
 
   /// Pure helper: current-first playback order for shuffle. The current

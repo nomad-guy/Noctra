@@ -93,15 +93,39 @@ object JioSaavnNativeEngine {
         return results
     }
 
-    private fun isMatch(targetTitle: String, candidateTitle: String): Boolean {
+    private fun isMatch(targetTitle: String, targetArtist: String, candidateTitle: String, candidateArtist: String): Boolean {
+        val tLower = targetTitle.lowercase()
+        val cLower = candidateTitle.lowercase()
+
+        // Check version modifier tags (remix, live, acoustic, instrumental, etc.)
+        val modifierTags = listOf("remix", "live", "acoustic", "instrumental", "karaoke", "slowed", "sped up", "cover")
+        val targetMods = modifierTags.filter { tLower.contains(it) }
+        val candMods = modifierTags.filter { cLower.contains(it) }
+
+        if (targetMods.isNotEmpty()) {
+            if (candMods.none { targetMods.contains(it) }) return false
+        } else {
+            if (candMods.isNotEmpty()) return false // candidate is remix/live when user wanted studio version
+        }
+
+        // Artist matching: primary artist must match or be in candidate text
+        val primaryTargetArtist = sanitizeText(targetArtist.split(Regex("[,&/]")).firstOrNull() ?: "").lowercase().trim()
+        val candCombined = "${sanitizeText(candidateArtist).lowercase()} $cLower"
+        if (primaryTargetArtist.isNotEmpty() && !candCombined.contains(primaryTargetArtist)) {
+            val aTokens = primaryTargetArtist.split(" ").filter { it.length > 2 }
+            if (aTokens.isNotEmpty() && !aTokens.any { candCombined.contains(it) }) {
+                return false
+            }
+        }
+
         val tTokens = sanitizeText(targetTitle).lowercase().split(" ").filter { it.length > 1 }
         val cTokens = sanitizeText(candidateTitle).lowercase().split(" ").filter { it.length > 1 }
         if (tTokens.isEmpty() || cTokens.isEmpty()) return false
         val tFull = tTokens.joinToString(" ")
         val cFull = cTokens.joinToString(" ")
-        if (tFull == cFull || cFull.contains(tFull) || tFull.contains(cFull)) return true
-        val matchCount = tTokens.count { token -> cTokens.any { it.contains(token) || token.contains(it) } }
-        return (matchCount.toDouble() / tTokens.size.toDouble()) >= 0.5
+        if (tFull == cFull) return true
+        val matchCount = tTokens.count { token -> cTokens.any { it == token || it.contains(token) } }
+        return (matchCount.toDouble() / tTokens.size.toDouble()) >= 0.75
     }
 
     fun resolveTrackStream(title: String, artist: String): String? {
@@ -118,8 +142,9 @@ object JioSaavnNativeEngine {
             val songs = searchSongs(p, 6)
             for (s in songs) {
                 val sTitle = s["title"] as? String ?: ""
+                val sArtist = s["artist"] as? String ?: ""
                 val sUrl = s["stream_url"] as? String
-                if (!sUrl.isNullOrEmpty() && isMatch(title, sTitle)) {
+                if (!sUrl.isNullOrEmpty() && isMatch(title, artist, sTitle, sArtist)) {
                     return sUrl
                 }
             }

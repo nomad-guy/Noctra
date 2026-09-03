@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 // handle YouTube resolution via the Kotlin engine — no Dart-side library needed.
 import '../../data/models/song_model.dart';
 import '../audio/stream_quality_service.dart';
+import 'track_matching_guard.dart';
 
 abstract class StreamResolver {
   String get sourceId;
@@ -175,56 +176,57 @@ class InnerTubeMusicResolver implements StreamResolver {
     }
   ];
 
-  /// Deep extraction of videoId from any YTMusic result format.
-  static String? _extractVideoId(dynamic item) {
+  /// Extracts candidate metadata (title, artist, duration, videoId) for
+  /// strict matching against the requested song.
+  static Map<String, dynamic>? _extractCandidateInfo(dynamic item) {
     if (item == null || item is! Map) return null;
-    // 1. musicResponsiveListItemRenderer (songs, top result)
     final responsive = item['musicResponsiveListItemRenderer'] as Map?;
-    if (responsive != null) {
-      final vid = responsive['playlistItemData']?['videoId']?.toString() ??
-          responsive['navigationEndpoint']?['watchEndpoint']?['videoId']
-              ?.toString();
-      if (vid != null && vid.length == 11) return vid;
-    }
-    // 2. musicTwoRowItemRenderer (artist cards, album cards, playlists)
-    final twoRow = item['musicTwoRowItemRenderer'] as Map?;
-    if (twoRow != null) {
-      final vid = twoRow['navigationEndpoint']?['watchEndpoint']?['videoId']
-              ?.toString() ??
-          twoRow['navigationEndpoint']?['browseEndpoint']?['browseId']
-              ?.toString();
-      // For watchEndpoint, videoId should be 11 chars; browseEndpoint is longer
-      if (vid != null && vid.length == 11) return vid;
-    }
-    // 3. musicShelfRenderer contents (search shelves)
-    final shelf = item['musicShelfRenderer'] as Map?;
-    if (shelf != null) {
-      final shelfItems = shelf['contents'] as List?;
-      if (shelfItems != null && shelfItems.isNotEmpty) {
-        final nestedVid = _extractVideoId(shelfItems[0]);
-        if (nestedVid != null) return nestedVid;
+    if (responsive == null) return null;
+    final vid = responsive['playlistItemData']?['videoId']?.toString() ??
+        responsive['navigationEndpoint']?['watchEndpoint']?['videoId']
+            ?.toString();
+    if (vid == null || vid.length != 11) return null;
+
+    String candTitle = '';
+    String candArtist = '';
+    Duration? candDuration;
+
+    final flexCols = responsive['flexColumns'] as List?;
+    if (flexCols != null && flexCols.isNotEmpty) {
+      final col0Runs = (flexCols[0]
+              as Map?)?['musicResponsiveListItemFlexColumnRenderer']?['text']
+          ?['runs'] as List?;
+      if (col0Runs != null && col0Runs.isNotEmpty) {
+        candTitle = col0Runs
+            .map((r) => (r as Map?)?['text']?.toString() ?? '')
+            .join();
       }
-    }
-    // 4. musicResponsiveListItemRenderer flexColumn fallback (some formats)
-    if (responsive != null) {
-      final flexCols = responsive['flexColumns'] as List?;
-      if (flexCols != null) {
-        for (final col in flexCols) {
-          final runs =
-              (col as Map?)?['musicResponsiveListItemFlexColumnRenderer']
-                  ?['text']?['runs'] as List?;
-          if (runs != null) {
-            for (final run in runs) {
-              final navEndpoint =
-                  (run as Map?)?['navigationEndpoint']?['watchEndpoint'];
-              final vid = navEndpoint?['videoId']?.toString();
-              if (vid != null && vid.length == 11) return vid;
+      if (flexCols.length > 1) {
+        final col1Runs = (flexCols[1]
+                as Map?)?['musicResponsiveListItemFlexColumnRenderer']?['text']
+            ?['runs'] as List?;
+        if (col1Runs != null && col1Runs.isNotEmpty) {
+          final texts = col1Runs
+              .map((r) => (r as Map?)?['text']?.toString() ?? '')
+              .where((t) => t != ' • ')
+              .toList();
+          if (texts.isNotEmpty) {
+            candArtist = texts[0];
+          }
+          for (final t in texts) {
+            if (t.contains(':')) {
+              candDuration = TrackMatchingGuard.parseDurationString(t);
             }
           }
         }
       }
     }
-    return null;
+    return {
+      'videoId': vid,
+      'title': candTitle,
+      'artist': candArtist,
+      'duration': candDuration,
+    };
   }
 
   @override
@@ -232,10 +234,8 @@ class InnerTubeMusicResolver implements StreamResolver {
     try {
       String videoId = song.id;
       if (videoId.length != 11 || videoId.contains('_')) {
-        final cleanTitle = song.title
-            .replaceAll(RegExp(r'\(.*?\)'), '')
-            .replaceAll(RegExp(r'\[.*?\]'), '')
-            .trim();
+        // Query preserving remix/live modifiers
+        final cleanTitle = song.title.replaceAll(RegExp(r'\[.*?\]'), '').trim();
         final cleanArtist = song.artist.split(RegExp(r'[,&/]')).first.trim();
         final sUri = Uri.parse('https://music.youtube.com/youtubei/v1/search');
         final sBody = jsonEncode({
@@ -267,13 +267,27 @@ class InnerTubeMusicResolver implements StreamResolver {
                   secMap['musicShelfRenderer']?['contents'] as List?;
               final allItems = [...?itemSections, ...?shelfItems];
               for (final item in allItems) {
-                final vid = _extractVideoId(item);
-                if (vid != null) {
-                  videoId = vid;
-                  break;
+                final cand = _extractCandidateInfo(item);
+                if (cand != null) {
+                  final candTitle = cand['title'] as String;
+                  final candArtist = cand['artist'] as String;
+                  final candDur = cand['duration'] as Duration?;
+                  if (TrackMatchingGuard.isSafeMatch(
+                    targetTitle: song.title,
+                    targetArtist: song.artist,
+                    targetDuration: song.duration,
+                    candidateTitle:
+                        candTitle.isNotEmpty ? candTitle : song.title,
+                    candidateArtist:
+                        candArtist.isNotEmpty ? candArtist : song.artist,
+                    candidateDuration: candDur,
+                  )) {
+                    videoId = cand['videoId'] as String;
+                    break;
+                  }
                 }
               }
-              if (videoId.length == 11) break;
+              if (videoId.length == 11 && !videoId.contains('_')) break;
             }
           }
         }
@@ -352,10 +366,7 @@ class YoutubeWebSearchResolver implements StreamResolver {
   @override
   Future<String?> resolveStreamUrl(Song song) async {
     try {
-      final cleanTitle = song.title
-          .replaceAll(RegExp(r'\(.*?\)'), '')
-          .replaceAll(RegExp(r'\[.*?\]'), '')
-          .trim();
+      final cleanTitle = song.title.replaceAll(RegExp(r'\[.*?\]'), '').trim();
       final cleanArtist = song.artist.split(RegExp(r'[,&/]')).first.trim();
       // Use regular YouTube search (non-music) as fallback
       final sUri = Uri.parse('https://www.youtube.com/youtubei/v1/search');
@@ -390,8 +401,23 @@ class YoutubeWebSearchResolver implements StreamResolver {
               final vr = (item as Map?)?['videoRenderer'] as Map?;
               final vid = vr?['videoId']?.toString();
               if (vid != null && vid.length == 11) {
-                videoId = vid;
-                break;
+                final candTitle = vr?['title']?['runs']?[0]?['text']?.toString() ??
+                    vr?['title']?['simpleText']?.toString() ?? '';
+                final candArtist = vr?['ownerText']?['runs']?[0]?['text']?.toString() ?? '';
+                final durationText = vr?['lengthText']?['simpleText']?.toString();
+                final candDuration = TrackMatchingGuard.parseDurationString(durationText);
+
+                if (TrackMatchingGuard.isSafeMatch(
+                  targetTitle: song.title,
+                  targetArtist: song.artist,
+                  targetDuration: song.duration,
+                  candidateTitle: candTitle.isNotEmpty ? candTitle : song.title,
+                  candidateArtist: candArtist.isNotEmpty ? candArtist : song.artist,
+                  candidateDuration: candDuration,
+                )) {
+                  videoId = vid;
+                  break;
+                }
               }
             }
           }
@@ -462,6 +488,8 @@ class _TrustedAudioHosts {
     'akamaized.net',
     'cloudfront.net',
     'cdn.jsdelivr.net',
+    'jamendo.com',
+    'jamendocdn.com',
   };
 
   static bool isTrusted(String? url) {
@@ -500,42 +528,83 @@ class CompositeStreamResolver {
     YoutubeWebSearchResolver(),
   ];
 
+  @visibleForTesting
+  static void setResolversForTesting(List<StreamResolver>? custom) {
+    _resolvers.clear();
+    if (custom != null) {
+      _resolvers.addAll(custom);
+    } else {
+      _resolvers.addAll([
+        LocalFileResolver(),
+        DirectOpenStreamResolver(),
+        JioSaavnDirectResolver(),
+        NativeKotlinResolver(),
+        InnerTubeMusicResolver(),
+        YoutubeWebSearchResolver(),
+      ]);
+    }
+  }
+
+  @visibleForTesting
+  static void clearCacheForTesting() {
+    _cache.clear();
+    _inFlight.clear();
+  }
+
+  static String _cacheKey(Song song) {
+    if (song.id.isNotEmpty) return song.id;
+    return '${song.title.toLowerCase().trim()}__${song.artist.toLowerCase().trim()}';
+  }
+
+  static bool _isOfflineException(Object e) {
+    if (e is SocketException) return true;
+    final msg = e.toString().toLowerCase();
+    return msg.contains('failed host lookup') ||
+        msg.contains('network is unreachable') ||
+        msg.contains('no address associated with hostname') ||
+        msg.contains('connection refused') ||
+        msg.contains('no route to host');
+  }
+
   static void invalidateCache(String songId) {
     _cache.remove(songId);
+    _cache.removeWhere((key, _) => key.startsWith(songId));
   }
 
   static Future<String?> resolve(Song song, {int startTier = 0}) async {
+    final key = _cacheKey(song);
     final now = DateTime.now().millisecondsSinceEpoch;
-    if (startTier == 0 && _cache.containsKey(song.id)) {
-      final entry = _cache[song.id]!;
+    if (startTier == 0 && _cache.containsKey(key)) {
+      final entry = _cache[key]!;
       if (now < entry.expiresAt) {
         // Move to most recent for true LRU
-        _cache.remove(song.id);
-        _cache[song.id] = entry;
+        _cache.remove(key);
+        _cache[key] = entry;
         return entry.url;
       } else {
-        _cache.remove(song.id);
+        _cache.remove(key);
       }
     }
 
-    if (startTier == 0 && _inFlight.containsKey(song.id)) {
-      return _inFlight[song.id]!;
+    if (startTier == 0 && _inFlight.containsKey(key)) {
+      return _inFlight[key]!;
     }
 
     final future = _resolveUncached(song, startTier: startTier);
     if (startTier == 0) {
-      _inFlight[song.id] = future;
+      _inFlight[key] = future;
     }
     try {
       return await future;
     } finally {
       if (startTier == 0) {
-        _inFlight.remove(song.id);
+        _inFlight.remove(key);
       }
     }
   }
 
   static Future<String?> _resolveUncached(Song song, {int startTier = 0}) async {
+    final key = _cacheKey(song);
     final now = DateTime.now().millisecondsSinceEpoch;
     for (int i = startTier; i < _resolvers.length; i++) {
       final resolver = _resolvers[i];
@@ -550,15 +619,20 @@ class CompositeStreamResolver {
             // Evict least-recently-inserted (oldest) entry. LRU
             // ordering on read is preserved by re-inserting on hits
             // above; this is FIFO on size pressure, not strict LRU.
-            _cache.remove(song.id);
+            _cache.remove(key);
             if (_cache.length >= 200) {
               _cache.remove(_cache.keys.first);
             }
-            _cache[song.id] = _CacheEntry(url, now, now + _ttlMs);
+            _cache[key] = _CacheEntry(url, now, now + _ttlMs);
             return url;
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        if (_isOfflineException(e)) {
+          // Device is offline / network unreachable: fail-fast to prevent 50+ sec hanging
+          break;
+        }
+      }
     }
     // Final fallback is the Song's own streamUrl, but only when it
     // passes the same host allowlist the resolver chain uses. An

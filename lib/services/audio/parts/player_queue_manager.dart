@@ -135,6 +135,36 @@ mixin PlayerQueueMixin on AudioPlayerServiceBase {
     _invalidatePreload();
   }
 
+  /// Updates currently playing song and queued items with newly downloaded local file path
+  /// so that subsequent playback or repeats immediately use the local file without network.
+  void onSongDownloaded(Song downloaded) {
+    if (_currentSong?.id == downloaded.id) {
+      _currentSong = _currentSong!.copyWith(
+        isDownloaded: true,
+        localFilePath: downloaded.localFilePath,
+      );
+      if (!_currentSongController.isClosed) {
+        _currentSongController.add(_currentSong);
+      }
+    }
+    bool queueUpdated = false;
+    for (int i = 0; i < _queue.length; i++) {
+      if (_queue[i].id == downloaded.id) {
+        _queue[i] = _queue[i].copyWith(
+          isDownloaded: true,
+          localFilePath: downloaded.localFilePath,
+        );
+        queueUpdated = true;
+      }
+    }
+    if (queueUpdated) {
+      _queueRevision++;
+      if (!_queueController.isClosed) {
+        _queueController.add(List.unmodifiable(_queue));
+      }
+    }
+  }
+
   /// Test seam — establishes an in-memory queue + current position WITHOUT
   /// touching the platform player, so queue/transition invariants can be
   /// exercised deterministically.

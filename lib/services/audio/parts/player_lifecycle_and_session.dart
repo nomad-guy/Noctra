@@ -123,6 +123,7 @@ mixin PlayerLifecycleMixin on AudioPlayerServiceBase {
             return;
           }
           _recoveryAttemptsByEpoch[epoch] = attempts + 1;
+          CompositeStreamResolver.invalidateCache(active.id);
           await _playSongInternal(active, initialPosition: _player.position);
           _recoveryAttemptsByEpoch.remove(epoch);
         } finally {
