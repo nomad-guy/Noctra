@@ -6,11 +6,60 @@ part of '../audio_player_service.dart';
 mixin PlayerLifecycleMixin on AudioPlayerServiceBase {
   // ─── [06] Constructor & audio session ───────────────────────────────────
 
+  StreamSubscription<void>? _becomingNoisySub;
+  StreamSubscription<AudioInterruptionEvent>? _interruptionSub;
+  bool _resumeOnInterruptionEnd = false;
+
   Future<void> _initAudioSession() async {
     try {
       final s = await AudioSession.instance;
       await s.configure(const AudioSessionConfiguration.music());
-    } catch (_) {}
+
+      // Auto-pause when audio output changes abruptly (headphones unplugged / BT disconnected)
+      _becomingNoisySub?.cancel();
+      _becomingNoisySub = s.becomingNoisyEventStream.listen((_) {
+        NoctraLogger.d('Audio becoming noisy: pausing playback');
+        pause();
+      });
+
+      // Handle phone calls and transient audio focus interruptions
+      _interruptionSub?.cancel();
+      _interruptionSub = s.interruptionEventStream.listen((event) {
+        NoctraLogger.d(
+            'Audio interruption: ${event.type}, begin=${event.begin}');
+        if (event.begin) {
+          switch (event.type) {
+            case AudioInterruptionType.duck:
+              if (_player.playing) {
+                _player.setVolume(0.2);
+              }
+              break;
+            case AudioInterruptionType.pause:
+            case AudioInterruptionType.unknown:
+              _resumeOnInterruptionEnd = _player.playing;
+              pause();
+              break;
+          }
+        } else {
+          switch (event.type) {
+            case AudioInterruptionType.duck:
+              _player.setVolume(_targetVolume);
+              break;
+            case AudioInterruptionType.pause:
+              if (_resumeOnInterruptionEnd) {
+                _resumeOnInterruptionEnd = false;
+                _playNonBlocking(_player, 'interruption ended resume');
+              }
+              break;
+            case AudioInterruptionType.unknown:
+              _resumeOnInterruptionEnd = false;
+              break;
+          }
+        }
+      });
+    } catch (e) {
+      NoctraLogger.w('Failed to initialize AudioSession listeners', e);
+    }
   }
 
   // ─── [07] Player disposal helpers ───────────────────────────────────────
@@ -255,6 +304,8 @@ mixin PlayerLifecycleMixin on AudioPlayerServiceBase {
 
   void dispose() {
     _isDisposed = true;
+    _becomingNoisySub?.cancel();
+    _interruptionSub?.cancel();
     _sleepTimer?.cancel();
     _detachListeners();
     _player.dispose();

@@ -118,8 +118,14 @@ object JioSaavnNativeEngine {
             }
         }
 
-        val tTokens = sanitizeText(targetTitle).lowercase().split(" ").filter { it.length > 1 }
-        val cTokens = sanitizeText(candidateTitle).lowercase().split(" ").filter { it.length > 1 }
+        var tTokens = sanitizeText(targetTitle).lowercase().split(" ").filter { it.length > 1 }
+        if (tTokens.isEmpty()) {
+            tTokens = sanitizeText(targetTitle).lowercase().split(" ").filter { it.isNotEmpty() }
+        }
+        var cTokens = sanitizeText(candidateTitle).lowercase().split(" ").filter { it.length > 1 }
+        if (cTokens.isEmpty()) {
+            cTokens = sanitizeText(candidateTitle).lowercase().split(" ").filter { it.isNotEmpty() }
+        }
         if (tTokens.isEmpty() || cTokens.isEmpty()) return false
         val tFull = tTokens.joinToString(" ")
         val cFull = cTokens.joinToString(" ")
@@ -138,7 +144,7 @@ object JioSaavnNativeEngine {
         if (title.isNotEmpty() && artist.isNotEmpty()) permutations.add("$title $artist")
         if (title.isNotEmpty()) permutations.add(title)
 
-        for (p in permutations) {
+        for (p in permutations.distinct()) {
             val songs = searchSongs(p, 6)
             for (s in songs) {
                 val sTitle = s["title"] as? String ?: ""
@@ -207,7 +213,9 @@ object JioSaavnNativeEngine {
                 val reader = BufferedReader(InputStreamReader(conn.inputStream, "UTF-8"))
                 val sb = StringBuilder()
                 var line: String?
+                val maxChars = 2 * 1024 * 1024 // 2 MB limit
                 while (reader.readLine().also { line = it } != null) {
+                    if (sb.length + (line?.length ?: 0) > maxChars) break
                     sb.append(line)
                 }
                 reader.close()

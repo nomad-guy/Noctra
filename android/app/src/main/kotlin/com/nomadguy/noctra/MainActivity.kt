@@ -400,7 +400,7 @@ class MainActivity : AudioServiceActivity() {
                         try {
                             val iconResult = launcherIconManager.reconcileAndGetCurrentIcon()
                             runOnUiThread {
-                                if (!isFinishing && !isDestroyed) {
+                                try {
                                     iconResult.fold(
                                         onSuccess = { icon -> result.success(icon) },
                                         onFailure = { error ->
@@ -408,13 +408,17 @@ class MainActivity : AudioServiceActivity() {
                                             result.error("ICON_STATE_UNRECOVERABLE", error.message, null)
                                         }
                                     )
+                                } catch (e: Throwable) {
+                                    Log.e(TAG, "Failed to deliver icon result", e)
                                 }
                             }
                         } catch (e: Throwable) {
                             Log.e(TAG, "reconcileAndInit crashed", e)
                             runOnUiThread {
-                                if (!isFinishing && !isDestroyed) {
+                                try {
                                     result.error("ICON_INIT_ERROR", e.message, null)
+                                } catch (e2: Throwable) {
+                                    Log.e(TAG, "Failed to deliver icon init error", e2)
                                 }
                             }
                         }
@@ -429,7 +433,7 @@ class MainActivity : AudioServiceActivity() {
                     iconExecutor.execute {
                         val operation = launcherIconManager.setIcon(iconKey)
                         runOnUiThread {
-                            if (!isFinishing && !isDestroyed) {
+                            try {
                                 operation.fold(
                                     onSuccess = { result.success(true) },
                                     onFailure = { error ->
@@ -437,6 +441,8 @@ class MainActivity : AudioServiceActivity() {
                                         result.error("ICON_CHANGE_FAILED", error.message, null)
                                     }
                                 )
+                            } catch (e: Throwable) {
+                                Log.e(TAG, "Failed to deliver icon change result", e)
                             }
                         }
                     }
@@ -483,6 +489,15 @@ class MainActivity : AudioServiceActivity() {
     }
 
     override fun onDestroy() {
+        try { visualizerHandler.removeCallbacksAndMessages(null) } catch (_: Throwable) {}
+        try {
+            visualizer?.enabled = false
+            visualizer?.release()
+            visualizer = null
+        } catch (_: Throwable) {}
+        try { audioRouter?.stopListening() } catch (_: Throwable) {}
+        try { effectsEngine.release() } catch (_: Throwable) {}
+        visualizerSink = null
         iconExecutor.shutdownNow()
         nativeExecutor.shutdownNow()
         super.onDestroy()
@@ -493,39 +508,19 @@ class MainActivity : AudioServiceActivity() {
             try {
                 val data = block()
                 runOnUiThread {
-                    if (!isFinishing && !isDestroyed) {
-                        try { result.success(data) } catch (e: Throwable) {
-                            Log.e(TAG, "MethodChannel result callback failed", e)
-                        }
-                    } else {
-                        // Activity is gone — the Dart side may still be
-                        // awaiting the Future. Hand it back an explicit
-                        // error so callers can fall back to cached state
-                        // instead of being left pending forever.
-                        try {
-                            result.error(
-                                "ACTIVITY_DESTROYED",
-                                "Activity was destroyed before result was sent",
-                                data
-                            )
-                        } catch (e2: Throwable) {
-                            Log.e(TAG, "Failed to send ACTIVITY_DESTROYED error", e2)
-                        }
+                    try {
+                        result.success(data)
+                    } catch (e: Throwable) {
+                        Log.e(TAG, "MethodChannel result callback failed", e)
                     }
                 }
             } catch (e: Throwable) {
                 Log.e(TAG, "Native resolver block failed", e)
                 runOnUiThread {
-                    if (!isFinishing && !isDestroyed) {
-                        try { result.success(null) } catch (e2: Throwable) {
-                            Log.e(TAG, "Failed to send null result", e2)
-                        }
-                    } else {
-                        try {
-                            result.error("ACTIVITY_DESTROYED", e.message, null)
-                        } catch (e2: Throwable) {
-                            Log.e(TAG, "Failed to send ACTIVITY_DESTROYED error", e2)
-                        }
+                    try {
+                        result.success(null)
+                    } catch (e2: Throwable) {
+                        Log.e(TAG, "Failed to send null result", e2)
                     }
                 }
             }

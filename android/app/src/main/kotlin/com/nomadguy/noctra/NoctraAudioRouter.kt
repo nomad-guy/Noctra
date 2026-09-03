@@ -240,8 +240,14 @@ class NoctraAudioRouter(private val context: Context) {
         }
     }
 
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
     private fun notifyDeviceChange() {
-        val list = getConnectedAudioDevices()
-        eventSink?.success(list)
+        mainHandler.post {
+            try {
+                val list = getConnectedAudioDevices()
+                eventSink?.success(list)
+            } catch (_: Throwable) {}
+        }
     }
 }

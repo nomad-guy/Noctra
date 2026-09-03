@@ -65,14 +65,17 @@ object NoctraAudioStemEngine {
     private data class PcmData(val pcm: ShortArray, val sampleRate: Int, val channels: Int)
 
     private fun decodeToPcm(path: String): PcmData? {
+        var extractor: MediaExtractor? = null
+        var codec: MediaCodec? = null
         return try {
-            val extractor = MediaExtractor()
-            extractor.setDataSource(path)
+            val ext = MediaExtractor()
+            extractor = ext
+            ext.setDataSource(path)
 
             var audioTrackIndex = -1
             var format: MediaFormat? = null
-            for (i in 0 until extractor.trackCount) {
-                val f = extractor.getTrackFormat(i)
+            for (i in 0 until ext.trackCount) {
+                val f = ext.getTrackFormat(i)
                 val mime = f.getString(MediaFormat.KEY_MIME) ?: continue
                 if (mime.startsWith("audio/")) {
                     audioTrackIndex = i
@@ -82,14 +85,15 @@ object NoctraAudioStemEngine {
             }
             if (audioTrackIndex < 0 || format == null) return null
 
-            extractor.selectTrack(audioTrackIndex)
+            ext.selectTrack(audioTrackIndex)
             val sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
             val channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
             val mime = format.getString(MediaFormat.KEY_MIME) ?: return null
 
-            val codec = MediaCodec.createDecoderByType(mime)
-            codec.configure(format, null, null, 0)
-            codec.start()
+            val c = MediaCodec.createDecoderByType(mime)
+            codec = c
+            c.configure(format, null, null, 0)
+            c.start()
 
             val pcmChunks = mutableListOf<ShortArray>()
             val info = MediaCodec.BufferInfo()
@@ -98,31 +102,30 @@ object NoctraAudioStemEngine {
 
             while (!outputDone) {
                 if (!inputDone) {
-                    val inputIndex = codec.dequeueInputBuffer(10_000)
+                    val inputIndex = c.dequeueInputBuffer(10_000)
                     if (inputIndex >= 0) {
-                        val inputBuffer = codec.getInputBuffer(inputIndex) ?: continue
-                        val sampleSize = extractor.readSampleData(inputBuffer, 0)
+                        val inputBuffer = c.getInputBuffer(inputIndex) ?: continue
+                        val sampleSize = ext.readSampleData(inputBuffer, 0)
                         if (sampleSize < 0) {
-                            codec.queueInputBuffer(inputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                            c.queueInputBuffer(inputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                             inputDone = true
                         } else {
-                            codec.queueInputBuffer(inputIndex, 0, sampleSize, extractor.sampleTime, 0)
-                            extractor.advance()
+                            c.queueInputBuffer(inputIndex, 0, sampleSize, ext.sampleTime, 0)
+                            ext.advance()
                         }
                     }
                 }
-                val outputIndex = codec.dequeueOutputBuffer(info, 10_000)
+                val outputIndex = c.dequeueOutputBuffer(info, 10_000)
                 if (outputIndex >= 0) {
                     if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) outputDone = true
-                    val outputBuffer = codec.getOutputBuffer(outputIndex) ?: continue
+                    val outputBuffer = c.getOutputBuffer(outputIndex) ?: continue
                     val shortBuffer = outputBuffer.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
                     val shorts = ShortArray(shortBuffer.remaining())
                     shortBuffer.get(shorts)
                     pcmChunks.add(shorts)
-                    codec.releaseOutputBuffer(outputIndex, false)
+                    c.releaseOutputBuffer(outputIndex, false)
                 }
             }
-            codec.stop(); codec.release(); extractor.release()
 
             val totalSize = pcmChunks.sumOf { it.size }
             val pcm = ShortArray(totalSize)
@@ -134,6 +137,10 @@ object NoctraAudioStemEngine {
             PcmData(pcm, sampleRate, channels)
         } catch (e: Exception) {
             null
+        } finally {
+            try { codec?.stop() } catch (_: Throwable) {}
+            try { codec?.release() } catch (_: Throwable) {}
+            try { extractor?.release() } catch (_: Throwable) {}
         }
     }
 

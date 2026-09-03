@@ -107,7 +107,20 @@ object NoctraNativeStreamEngine {
             }
             OutputStreamWriter(conn.outputStream).use { it.write(jsonBody); it.flush() }
             if (conn.responseCode == 200) {
-                BufferedReader(InputStreamReader(conn.inputStream, "UTF-8")).use { it.readText() }
+                BufferedReader(InputStreamReader(conn.inputStream, "UTF-8")).use { reader ->
+                    val sb = StringBuilder()
+                    val buffer = CharArray(4096)
+                    var read: Int
+                    val maxChars = 2 * 1024 * 1024
+                    while (reader.read(buffer).also { read = it } != -1) {
+                        if (sb.length + read > maxChars) {
+                            sb.append(buffer, 0, maxChars - sb.length)
+                            break
+                        }
+                        sb.append(buffer, 0, read)
+                    }
+                    sb.toString()
+                }
             } else null
         } catch (_: Throwable) { null } finally { conn?.disconnect() }
     }

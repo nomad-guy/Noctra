@@ -144,6 +144,7 @@ abstract class AudioPlayerServiceBase {
   void _reconcileIndex();
   Future<void> playSong(Song song,
       {List<Song>? newQueue, Duration? initialPosition, int? queueIndex});
+  void pause();
   Future<void> _playSongInternal(Song song, {Duration? initialPosition});
   Future<void> _crossfadeToNext(Song nextSong, int myId);
   Future<void> _onSongCompletedInternal();

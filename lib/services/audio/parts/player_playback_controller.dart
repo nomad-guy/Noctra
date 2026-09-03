@@ -138,6 +138,7 @@ mixin PlayerPlaybackMixin on AudioPlayerServiceBase {
         } catch (_) {}
       });
 
+  @override
   void pause() {
     _invalidatePlaybackOperations();
     _transitionEpoch++;

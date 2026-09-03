@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 class P2PSocketEngine {
@@ -48,7 +50,71 @@ class P2PSocketEngine {
           isIpv6 ? 'ws://[$trimmed]:$port/ws' : 'ws://$trimmed:$port/ws';
       return await WebSocket.connect(url).timeout(const Duration(seconds: 5));
     } catch (_) {
-      return null;
+      try {
+        return await _connectRawWebSocket(host, port)
+            .timeout(const Duration(seconds: 5));
+      } catch (_) {
+        return null;
+      }
     }
+  }
+
+  static Future<WebSocket?> _connectRawWebSocket(String host, int port) async {
+    final trimmed = host.trim();
+    if (trimmed.isEmpty) return null;
+    final socket = await Socket.connect(trimmed, port);
+    final rng = Random.secure();
+    final keyBytes = List<int>.generate(16, (_) => rng.nextInt(256));
+    final secKey = base64Encode(keyBytes);
+
+    final request = 'GET /ws HTTP/1.1\r\n'
+        'Host: $trimmed:$port\r\n'
+        'Upgrade: websocket\r\n'
+        'Connection: Upgrade\r\n'
+        'Sec-WebSocket-Key: $secKey\r\n'
+        'Sec-WebSocket-Version: 13\r\n\r\n';
+
+    socket.add(utf8.encode(request));
+    await socket.flush();
+
+    final buffer = <int>[];
+    final completer = Completer<WebSocket?>();
+
+    late StreamSubscription<List<int>> sub;
+    sub = socket.listen(
+      (data) {
+        buffer.addAll(data);
+        final str = String.fromCharCodes(buffer);
+        final headerEnd = str.indexOf('\r\n\r\n');
+        if (headerEnd != -1) {
+          sub.cancel();
+          final headerPart = str.substring(0, headerEnd);
+          if (headerPart.contains('101 Switching Protocols') ||
+              headerPart.contains('101 Web Socket Protocol Handshake')) {
+            try {
+              final ws =
+                  WebSocket.fromUpgradedSocket(socket, serverSide: false);
+              if (!completer.isCompleted) completer.complete(ws);
+            } catch (_) {
+              socket.destroy();
+              if (!completer.isCompleted) completer.complete(null);
+            }
+          } else {
+            socket.destroy();
+            if (!completer.isCompleted) completer.complete(null);
+          }
+        }
+      },
+      onError: (_) {
+        socket.destroy();
+        if (!completer.isCompleted) completer.complete(null);
+      },
+      onDone: () {
+        if (!completer.isCompleted) completer.complete(null);
+      },
+      cancelOnError: true,
+    );
+
+    return completer.future;
   }
 }
