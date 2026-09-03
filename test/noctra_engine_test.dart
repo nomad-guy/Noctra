@@ -45,11 +45,9 @@ void main() {
   group('Dynamic theme tokens', () {
     test('each built-in theme exposes distinct semantic tokens', () {
       final black = NoirTheme.getTheme(NoirThemeMode.noirBlack);
-      final amoled = NoirTheme.getTheme(NoirThemeMode.noirAmoled);
       final white = NoirTheme.getTheme(NoirThemeMode.noirWhite);
       final glass = NoirTheme.getTheme(NoirThemeMode.liquidGlass);
       expect(black.extension<NoctraThemeTokens>()?.canvas, isNotNull);
-      expect(amoled.scaffoldBackgroundColor, const Color(0xFF000000));
       expect(white.brightness, Brightness.light);
       expect(glass.extension<NoctraThemeTokens>()?.glassBlurSigma, 18);
       expect(black.extension<NoctraThemeTokens>()?.surface,

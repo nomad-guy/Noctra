@@ -63,11 +63,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
     return Scaffold(
       backgroundColor: themeMode.isLiquidGlass
           ? Colors.transparent
-          : (isDark
-              ? (themeMode.isAmoled
-                  ? const Color(0xFF000000)
-                  : const Color(0xFF070709))
-              : const Color(0xFFFFFFFF)),
+          : (isDark ? const Color(0xFF070709) : const Color(0xFFFFFFFF)),
       body: SafeArea(
         bottom: false,
         child: CustomScrollView(

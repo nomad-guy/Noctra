@@ -44,9 +44,6 @@ class NoctraAppLogo extends ConsumerWidget {
       case NoirThemeMode.liquidGlass:
         logoAsset = 'assets/images/logo_noctra_liquid_glass.png';
         break;
-      case NoirThemeMode.noirAmoled:
-        logoAsset = 'assets/images/logo_noctra_amoled.png';
-        break;
       case NoirThemeMode.noirBlack:
         logoAsset = 'assets/images/logo_noctra_noir_black.png';
         break;

@@ -388,15 +388,18 @@ class AudioPlayerService {
       // without ConcatenatingAudioSource.
       // Use index-based identity to avoid object identity issues.
       final currentIdx = _currentIndex.clamp(0, _queue.length - 1);
+      // Capture the current song BEFORE clearing the queue.
+      final currentSong = _queue[currentIdx];
       final others = <Song>[];
       for (int i = 0; i < _queue.length; i++) {
         if (i != currentIdx) others.add(_queue[i]);
       }
       others.shuffle();
+      final shuffled = <Song>[currentSong, ...others];
       _mutateQueue(() {
-        _queue.clear();
-        _queue.add(_queue.isNotEmpty ? _canonicalQueue![_canonicalIndex] : others.first);
-        _queue.addAll(others);
+        _queue
+          ..clear()
+          ..addAll(shuffled);
         _currentIndex = 0;
         return true;
       });
@@ -1119,7 +1122,9 @@ class AudioPlayerService {
     } else {
       if (_player.processingState == ProcessingState.idle &&
           _currentSong != null) {
-        await playSong(_currentSong!);
+        // Call internal directly — playSong() itself serializes and
+        // would deadlock nested inside _serialize().
+        await _playSongInternal(_currentSong!);
       } else {
         _playNonBlocking(_player, 'resumeOrPlay');
       }
@@ -1137,7 +1142,9 @@ class AudioPlayerService {
     }
     if (_currentIndex > 0 && _queue.isNotEmpty) {
       _currentIndex--;
-      await playSong(_queue[_currentIndex]);
+      // Call internal directly — playSong() itself serializes and
+      // would deadlock nested inside _serialize().
+      await _playSongInternal(_queue[_currentIndex]);
     }
   });
 

@@ -14,6 +14,10 @@ class Song {
   final bool isDownloaded;
   final bool isFavorite;
   final List<double> featureVector;
+  /// False when the source feature vector was missing/corrupt (wrong
+  /// dimension, non-finite, out of range) — consumers should treat the
+  /// default 0.5 vector as "unknown embedding", never as real data.
+  final bool hasValidFeatureVector;
   final int replayCount;
   final int skipCount;
 
@@ -31,6 +35,7 @@ class Song {
     this.isDownloaded = false,
     this.isFavorite = false,
     List<double>? featureVector,
+    this.hasValidFeatureVector = true,
     this.replayCount = 0,
     this.skipCount = 0,
   }) : featureVector = featureVector ?? List.filled(32, 0.5);
@@ -54,6 +59,7 @@ class Song {
     bool? isDownloaded,
     bool? isFavorite,
     List<double>? featureVector,
+    bool? hasValidFeatureVector,
     int? replayCount,
     int? skipCount,
   }) {
@@ -71,6 +77,7 @@ class Song {
       isDownloaded: isDownloaded ?? this.isDownloaded,
       isFavorite: isFavorite ?? this.isFavorite,
       featureVector: featureVector != null ? List<double>.from(featureVector) : List<double>.from(this.featureVector),
+      hasValidFeatureVector: hasValidFeatureVector ?? this.hasValidFeatureVector,
       replayCount: replayCount ?? this.replayCount,
       skipCount: skipCount ?? this.skipCount,
     );
@@ -97,8 +104,11 @@ class Song {
   Map<String, dynamic> toJson() => toMap();
 
   factory Song.fromMap(Map<String, dynamic> map) {
-    // Feature vector: validate dimensions, finiteness, range [0.0, 1.0]
+    // Feature vector: require EXACTLY 32 finite values within [0.0, 1.0].
+    // Anything else is marked invalid (hasValidFeatureVector=false) so
+    // consumers never mistake a corrupt vector for real recommendation data.
     List<double> vec = List.filled(32, 0.5);
+    bool hasValidVector = false;
     if (map['featureVector'] != null) {
       try {
         List<dynamic> raw;
@@ -108,16 +118,16 @@ class Song {
           final decoded = jsonDecode(map['featureVector']);
           raw = decoded is List ? decoded : <dynamic>[];
         }
-        if (raw.isNotEmpty && raw.every((e) => e is num)) {
+        if (raw.length == 32 && raw.every((e) => e is num)) {
           final parsed = raw.map<double>((e) => (e as num).toDouble()).toList();
-          // All values must be finite and within [0.0, 1.0]
+          // All 32 values must be finite and within [0.0, 1.0]
           if (parsed.every((v) => v.isFinite && v >= 0.0 && v <= 1.0)) {
             vec = parsed;
-            while (vec.length < 32) { vec.add(0.5); }
-            if (vec.length > 32) { vec = vec.sublist(0, 32); }
+            hasValidVector = true;
           }
-          // else: out-of-range or NaN/Infinity — keep default 0.5 vector
+          // else: out-of-range or NaN/Infinity — invalid
         }
+        // else: wrong dimension count or non-numeric — invalid
       } catch (_) {}
     }
 
@@ -150,6 +160,7 @@ class Song {
       isDownloaded: map['isDownloaded'] == 1 || map['isDownloaded'] == true,
       isFavorite: map['isFavorite'] == 1 || map['isFavorite'] == true,
       featureVector: vec,
+      hasValidFeatureVector: hasValidVector,
       replayCount: _parseInt(map['replayCount']),
       skipCount: _parseInt(map['skipCount']),
     );
@@ -158,12 +169,15 @@ class Song {
   factory Song.fromJson(Map<String, dynamic> json) => Song.fromMap(json);
 
   // Type-safe parsing helpers for external data
-  /// Parse a required string field. Rejects non-String values and empty strings.
+  /// Parse a required string field.
+  /// - missing (null): returns '' so callers can synthesize an ID
+  /// - non-String values (int, bool, Map, List): throws FormatException
+  /// - empty or whitespace-only strings: throws FormatException
   static String _parseRequiredStr(dynamic v, String field) {
+    if (v == null) return ''; // missing key — caller decides
     if (v is! String || v.trim().isEmpty) {
-      // Required identity field is missing or wrong type — return empty
-      // to signal invalidity to the caller.
-      return '';
+      throw FormatException(
+          'Invalid Song.$field: expected a non-empty String');
     }
     return v.trim();
   }

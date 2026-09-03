@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:noctra/data/models/song_model.dart';
 import 'package:noctra/data/models/download_location.dart';
@@ -94,13 +95,36 @@ void main() {
       expect(song.duration.inSeconds, 210);
     });
 
-    test('fromMap handles feature vector as JSON string', () {
+    test('fromMap handles valid 32-dim feature vector as JSON string', () {
+      final vec32 = List.generate(32, (i) => 0.1 + i * 0.01);
+      final song = Song.fromMap({
+        'featureVector': jsonEncode(vec32),
+      });
+      expect(song.hasValidFeatureVector, true);
+      expect(song.featureVector[0], closeTo(vec32[0], 0.001));
+      expect(song.featureVector[31], closeTo(vec32[31], 0.001));
+    });
+
+    test('fromMap marks short feature vectors invalid (no silent padding)', () {
       final song = Song.fromMap({
         'featureVector': '[0.1, 0.2, 0.3]',
       });
-      expect(song.featureVector[0], closeTo(0.1, 0.01));
-      expect(song.featureVector[1], closeTo(0.2, 0.01));
-      expect(song.featureVector[2], closeTo(0.3, 0.01));
+      expect(song.hasValidFeatureVector, false);
+      expect(song.featureVector.length, 32);
+      expect(song.featureVector[0], closeTo(0.5, 0.001)); // default, not data
+    });
+
+    test('fromMap marks NaN/Infinity feature vectors invalid', () {
+      final badVec = List.filled(32, double.nan);
+      final song = Song.fromMap({'featureVector': badVec});
+      expect(song.hasValidFeatureVector, false);
+    });
+
+    test('fromMap throws on invalid id types', () {
+      expect(() => Song.fromMap({'id': 123}), throwsFormatException);
+      expect(() => Song.fromMap({'id': true}), throwsFormatException);
+      expect(() => Song.fromMap({'id': {'a': 1}}), throwsFormatException);
+      expect(() => Song.fromMap({'id': '  '}), throwsFormatException);
     });
   });
 

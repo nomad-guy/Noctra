@@ -254,9 +254,7 @@ class _CustomBottomNavBar extends ConsumerWidget {
             color: themeMode.isLiquidGlass
                 ? null
                 : (isDark
-                    ? (themeMode.isAmoled
-                        ? const Color(0xFF000000)
-                        : const Color(0xF2080808))
+                    ? const Color(0xF2080808)
                     : const Color(0xF2FFFFFF)),
             gradient: themeMode.isLiquidGlass
                 ? LinearGradient(

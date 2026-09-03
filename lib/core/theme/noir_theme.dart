@@ -4,13 +4,11 @@ import 'package:flutter/material.dart';
 enum NoirThemeMode {
   noirBlack,
   noirWhite,
-  noirAmoled,
   liquidGlass,
 }
 
 extension NoirThemeModeX on NoirThemeMode {
   bool get isDark => this != NoirThemeMode.noirWhite;
-  bool get isAmoled => this == NoirThemeMode.noirAmoled;
   bool get isLiquidGlass => this == NoirThemeMode.liquidGlass;
   bool get isWhite => this == NoirThemeMode.noirWhite;
 }
@@ -155,10 +153,6 @@ class NoirColors {
   static const Color whiteTextTertiary = Color(0xFFA2A2AA);
   static const Color whiteAccent = Color(0xFF000000);
 
-  // True Pitch Black AMOLED Palette (0% OLED Power)
-  static const Color amoledCanvas = Color(0xFF000000);
-  static const Color amoledSurface = Color(0xFF000000);
-  static const Color amoledSurfaceVariant = Color(0xFF0A0A0A);
   // Liquid Glass — deep sapphire canvas, glass surfaces, aurora cyan actions,
   // violet selection, and mint confirmation. Visibly sapphire blue.
   static const Color glassCanvas = Color(0xFF162E4A);
@@ -176,23 +170,14 @@ class NoirColors {
 class NoirTheme {
   static ThemeData getTheme(NoirThemeMode mode) {
     final isWhite = mode == NoirThemeMode.noirWhite;
-    final isAmoled = mode == NoirThemeMode.noirAmoled;
     final isLiquidGlass = mode == NoirThemeMode.liquidGlass;
 
     final canvas = isWhite
         ? NoirColors.whiteCanvas
-        : (isAmoled
-            ? NoirColors.amoledCanvas
-            : (isLiquidGlass
-                ? NoirColors.glassCanvas
-                : NoirColors.blackCanvas));
+        : (isLiquidGlass ? NoirColors.glassCanvas : NoirColors.blackCanvas);
     final surface = isWhite
         ? NoirColors.whiteSurface
-        : (isAmoled
-            ? NoirColors.amoledSurface
-            : (isLiquidGlass
-                ? NoirColors.glassSurface
-                : NoirColors.blackSurface));
+        : (isLiquidGlass ? NoirColors.glassSurface : NoirColors.blackSurface);
     final textPrimary = isWhite
         ? NoirColors.whiteTextPrimary
         : (isLiquidGlass
@@ -216,18 +201,14 @@ class NoirTheme {
       surface: surface,
       surfaceVariant: isWhite
           ? NoirColors.whiteSurfaceVariant
-          : (isAmoled
-              ? NoirColors.amoledSurfaceVariant
-              : (isLiquidGlass
-                  ? NoirColors.glassSurfaceVariant
-                  : NoirColors.blackSurfaceVariant)),
+          : (isLiquidGlass
+              ? NoirColors.glassSurfaceVariant
+              : NoirColors.blackSurfaceVariant),
       elevatedSurface: isWhite
           ? NoirColors.whiteSurface
-          : (isAmoled
-              ? const Color(0xFF101010)
-              : (isLiquidGlass
-                  ? NoirColors.glassElevatedSurface
-                  : const Color(0xFF1C1C20))),
+          : (isLiquidGlass
+              ? NoirColors.glassElevatedSurface
+              : const Color(0xFF1C1C20)),
       primaryText: textPrimary,
       secondaryText: textSecondary,
       tertiaryText: isWhite

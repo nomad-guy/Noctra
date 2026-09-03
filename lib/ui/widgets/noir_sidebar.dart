@@ -225,10 +225,9 @@ class NoirSidebar extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: GestureDetector(
                 onTap: () {
-                  // Cycle: Noir Black -> AMOLED -> White -> Liquid Glass -> Noir Black
+                  // Cycle: Noir Black -> Noir White -> Liquid Glass -> Noir Black
                   final next = switch (themeMode) {
-                    NoirThemeMode.noirBlack => NoirThemeMode.noirAmoled,
-                    NoirThemeMode.noirAmoled => NoirThemeMode.noirWhite,
+                    NoirThemeMode.noirBlack => NoirThemeMode.noirWhite,
                     NoirThemeMode.noirWhite => NoirThemeMode.liquidGlass,
                     NoirThemeMode.liquidGlass => NoirThemeMode.noirBlack,
                   };
@@ -242,9 +241,7 @@ class NoirSidebar extends ConsumerWidget {
                     children: [
                       Icon(
                         themeMode.isDark
-                            ? (themeMode.isAmoled
-                                ? Icons.dark_mode_rounded
-                                : Icons.nightlight_round)
+                            ? Icons.nightlight_round
                             : Icons.light_mode_rounded,
                         size: 18,
                         color: tokens.accent,
@@ -264,8 +261,7 @@ class NoirSidebar extends ConsumerWidget {
                             Text(
                               switch (themeMode) {
                                 NoirThemeMode.noirBlack => 'Noir Black',
-                                NoirThemeMode.noirAmoled => 'AMOLED',
-                                NoirThemeMode.noirWhite => 'White',
+                                NoirThemeMode.noirWhite => 'Noir White',
                                 NoirThemeMode.liquidGlass => 'Liquid Glass',
                               },
                               style: TextStyle(
