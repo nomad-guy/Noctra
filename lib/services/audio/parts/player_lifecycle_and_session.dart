@@ -216,6 +216,15 @@ mixin PlayerLifecycleMixin on AudioPlayerServiceBase {
       }
       _checkAutoCrossfade(pos);
     });
+
+    _sessionSub = _player.androidAudioSessionIdStream.listen((sid) {
+      if (gen != _listenerGeneration || !identical(attachedPlayer, _player)) {
+        return;
+      }
+      if (sid != null && sid > 0) {
+        attachNativeEffectsSession();
+      }
+    });
   }
 
   @override
@@ -225,10 +234,12 @@ mixin PlayerLifecycleMixin on AudioPlayerServiceBase {
       _stateSub?.cancel() ?? Future.value(),
       _errorSub?.cancel() ?? Future.value(),
       _positionSub?.cancel() ?? Future.value(),
+      _sessionSub?.cancel() ?? Future.value(),
     ]);
     _stateSub = null;
     _errorSub = null;
     _positionSub = null;
+    _sessionSub = null;
   }
 
   // ─── [26] Persistence ──────────────────────────────────────────────────

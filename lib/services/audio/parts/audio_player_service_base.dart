@@ -41,6 +41,7 @@ abstract class AudioPlayerServiceBase {
   StreamSubscription<PlayerState>? _stateSub;
   StreamSubscription<PlayerException>? _errorSub;
   StreamSubscription<Duration>? _positionSub;
+  StreamSubscription<int?>? _sessionSub;
   int _listenerGeneration = 0;
 
   // ─── [01b] Ownership tokens ────────────────────────────────────────────
@@ -185,6 +186,7 @@ abstract class AudioPlayerServiceBase {
   String _extractUrl(String resolved);
   MediaItem _createMediaItem(Song s);
   Future<bool> applyStudioMasterMode(String mode);
+  Future<bool> attachNativeEffectsSession();
   Future<void> _attachListeners();
   Future<void> _detachListeners();
 }

@@ -57,12 +57,20 @@ object AudioChannelsDelegate {
                     }
                 }
                 "applyEqualizer" -> {
+                    val sid = call.argument<Int>("sessionId") ?: 0
+                    if (sid > 0) {
+                        effectsEngine.attachSession(sid)
+                    }
                     val bands = call.argument<List<Double>>("bands") ?: emptyList()
                     val bass = call.argument<Double>("bassBoost") ?: 0.0
                     val virt = call.argument<Double>("virtualizer") ?: 0.0
                     result.success(effectsEngine.applyBands(bands, bass, virt))
                 }
                 "applyStudioMode" -> {
+                    val sid = call.argument<Int>("sessionId") ?: 0
+                    if (sid > 0) {
+                        effectsEngine.attachSession(sid)
+                    }
                     val mode = call.argument<String>("mode") ?: "off"
                     result.success(effectsEngine.applyPresetMode(mode))
                 }

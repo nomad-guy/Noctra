@@ -2,10 +2,8 @@ package com.nomadguy.noctra
 
 import android.media.audiofx.BassBoost
 import android.media.audiofx.Equalizer
-import android.media.audiofx.LoudnessEnhancer
 import android.media.audiofx.PresetReverb
 import android.media.audiofx.Virtualizer
-import android.os.Build
 import android.util.Log
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -32,48 +30,28 @@ class NoctraAudioEffectsEngine {
     }
 
     private val lock = ReentrantLock()
-    private var dynamicsProcessor: NoctraDynamicsProcessor? = null
     private var equalizer: Equalizer? = null
     private var bassBoost: BassBoost? = null
     private var virtualizer: Virtualizer? = null
     private var presetReverb: PresetReverb? = null
-    private var loudnessEnhancer: LoudnessEnhancer? = null
     private var currentSessionId: Int = 0
 
     fun attachSession(sessionId: Int): Boolean = lock.withLock {
         if (sessionId <= 0) return@withLock false
-        if (sessionId == currentSessionId && (dynamicsProcessor != null || equalizer != null)) return@withLock true
+        if (sessionId == currentSessionId && equalizer != null) return@withLock true
         releaseLocked()
         currentSessionId = sessionId
         try {
-            // Android 9+ (API 28+): Prioritize studio DynamicsProcessing (linear phase PreEQ + peak limiter)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                val dp = NoctraDynamicsProcessor(sessionId)
-                if (dp.isAvailable) {
-                    dynamicsProcessor = dp
-                }
-            }
-            // Fallback to legacy android.media.audiofx.Equalizer if DynamicsProcessing unavailable
-            if (dynamicsProcessor == null) {
-                equalizer = Equalizer(0, sessionId).apply { enabled = true }
-            }
-
+            equalizer = Equalizer(0, sessionId).apply { enabled = true }
             bassBoost = BassBoost(0, sessionId).apply { enabled = true }
             virtualizer = Virtualizer(0, sessionId).apply { enabled = true }
             presetReverb = PresetReverb(0, sessionId).apply { enabled = true }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                loudnessEnhancer = LoudnessEnhancer(sessionId).apply {
-                    // Set target gain to 0 mB (neutral) by default to prevent digital clipping/compression
-                    setTargetGain(0)
-                    enabled = false
-                }
-            }
+            Log.i(TAG, "Audio effects attached successfully for session $sessionId")
         } catch (e: Throwable) {
             Log.w(TAG, "Effect attach failed for session $sessionId; releasing", e)
             releaseLocked()
         }
-        return@withLock dynamicsProcessor != null ||
-            equalizer != null ||
+        return@withLock equalizer != null ||
             bassBoost != null ||
             virtualizer != null ||
             presetReverb != null
@@ -85,25 +63,21 @@ class NoctraAudioEffectsEngine {
         virtualizerStrength: Double,
     ): Boolean = lock.withLock {
         try {
-            if (dynamicsProcessor == null && equalizer == null && currentSessionId != 0) {
+            if (equalizer == null && currentSessionId != 0) {
                 attachSession(currentSessionId)
             }
-            // 1. Try modern DynamicsProcessing linear-phase PreEQ
-            val handledByDynamics = dynamicsProcessor?.applyBands(bands) ?: false
-            if (!handledByDynamics) {
-                // 2. Fall back to legacy Equalizer
-                equalizer?.let { eq ->
-                    val numBands = eq.numberOfBands.toInt()
-                    val minLevel = eq.bandLevelRange[0]
-                    val maxLevel = eq.bandLevelRange[1]
-                    val limit = minOf(numBands, bands.size, MAX_SUPPORTED_BANDS)
-                    for (i in 0 until limit) {
-                        val rawDb = bands[i]
-                        val mB = (rawDb * 100).toInt()
-                            .coerceIn(minLevel.toInt(), maxLevel.toInt())
-                            .toShort()
-                        eq.setBandLevel(i.toShort(), mB)
-                    }
+            Log.i(TAG, "applyBands: session=$currentSessionId, eq=${equalizer != null}, bands=$bands")
+            equalizer?.let { eq ->
+                val numBands = eq.numberOfBands.toInt()
+                val minLevel = eq.bandLevelRange[0]
+                val maxLevel = eq.bandLevelRange[1]
+                val limit = minOf(numBands, bands.size, MAX_SUPPORTED_BANDS)
+                for (i in 0 until limit) {
+                    val rawDb = bands[i]
+                    val mB = (rawDb * 100).toInt()
+                        .coerceIn(minLevel.toInt(), maxLevel.toInt())
+                        .toShort()
+                    eq.setBandLevel(i.toShort(), mB)
                 }
             }
             bassBoost?.let { bb ->
@@ -129,9 +103,10 @@ class NoctraAudioEffectsEngine {
 
     fun applyPresetMode(mode: String): Boolean = lock.withLock {
         try {
+            Log.i(TAG, "applyPresetMode: mode=$mode, session=$currentSessionId")
             if (currentSessionId <= 0 ||
-                (dynamicsProcessor == null && equalizer == null &&
-                    bassBoost == null && virtualizer == null && presetReverb == null)
+                (equalizer == null && bassBoost == null &&
+                    virtualizer == null && presetReverb == null)
             ) {
                 return@withLock false
             }
@@ -180,9 +155,6 @@ class NoctraAudioEffectsEngine {
 
     /** Caller must already hold [lock]. */
     private fun releaseLocked() {
-        try { dynamicsProcessor?.release() } catch (e: Throwable) {
-            Log.w(TAG, "dynamicsProcessor.release() failed", e)
-        }
         try { equalizer?.release() } catch (e: Throwable) {
             Log.w(TAG, "equalizer.release() failed", e)
         }
@@ -195,16 +167,9 @@ class NoctraAudioEffectsEngine {
         try { presetReverb?.release() } catch (e: Throwable) {
             Log.w(TAG, "presetReverb.release() failed", e)
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-            try { loudnessEnhancer?.release() } catch (e: Throwable) {
-                Log.w(TAG, "loudnessEnhancer.release() failed", e)
-            }
-        }
-        dynamicsProcessor = null
         equalizer = null
         bassBoost = null
         virtualizer = null
         presetReverb = null
-        loudnessEnhancer = null
     }
 }
