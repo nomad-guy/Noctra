@@ -4,6 +4,7 @@ import '../../../core/utils/localization/localization_keys.dart';
 import '../../../core/utils/localization/localization_scope.dart';
 import '../app_update_service.dart';
 import '../app_update_stager.dart';
+import 'in_app_rollback_card.dart';
 import 'in_app_update_cards.dart';
 
 class InAppUpdateModalContent extends StatefulWidget {
@@ -173,6 +174,11 @@ class _InAppUpdateModalContentState extends State<InAppUpdateModalContent> {
               InAppUpToDateCard(info: info, isDark: isDark),
               const SizedBox(height: 14),
             ],
+            const SizedBox(height: 14),
+            InAppRollbackCard(
+              currentVersion: info.currentVersion,
+              isDark: isDark,
+            ),
           ],
         ),
       ),

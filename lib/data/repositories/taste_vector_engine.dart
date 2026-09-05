@@ -177,9 +177,14 @@ class TasteVectorEngine {
     }
     for (final l in languages) {
       final ll = l.toLowerCase();
-      if (ll.contains('hindi') || ll.contains('urdu')) { nudge(19, 0.90, 0.6); }
-      if (ll.contains('punjabi')) { nudge(20, 0.90, 0.6); }
+      if (ll.contains('hindi') || ll.contains('urdu')) { nudge(19, 0.90, 0.6); nudge(16, 0.85, 0.5); }
+      if (ll.contains('punjabi')) { nudge(20, 0.90, 0.6); nudge(24, 0.85, 0.5); }
+      if (ll.contains('tamil') || ll.contains('telugu') || ll.contains('kannada') || ll.contains('malayalam')) { nudge(17, 0.92, 0.6); nudge(7, 0.90, 0.5); }
+      if (ll.contains('marathi') || ll.contains('bengali') || ll.contains('gujarati') || ll.contains('odia')) { nudge(25, 0.90, 0.6); nudge(17, 0.85, 0.5); }
+      if (ll.contains('spanish') || ll.contains('portuguese')) { nudge(27, 0.95, 0.7); nudge(14, 0.88, 0.5); }
+      if (ll.contains('french') || ll.contains('german') || ll.contains('italian')) { nudge(5, 0.90, 0.6); nudge(8, 0.88, 0.5); }
       if (ll.contains('korean') || ll.contains('japanese')) { nudge(9, 0.90, 0.6); nudge(26, 0.88, 0.6); }
+      if (ll.contains('arabic') || ll.contains('persian')) { nudge(16, 0.95, 0.7); nudge(17, 0.88, 0.5); }
     }
     return vec;
   }

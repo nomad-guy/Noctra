@@ -43,6 +43,14 @@ void updateAppLanguage(WidgetRef ref, String code) {
   NoctraLocalDatabase().saveLanguage(code);
 }
 
+Future<void> refreshHomeFeeds(WidgetRef ref) async {
+  MusicService.clearSearchCache();
+  ref.read(homeFeedRefreshNonceProvider.notifier).state++;
+  ref.invalidate(dynamicTrendingFeedProvider);
+  ref.invalidate(dynamicVibeTracksProvider);
+  ref.invalidate(dynamicSpotifyChartsProvider);
+}
+
 // Theme state with persistent storage
 final themeModeProvider = StateProvider<NoirThemeMode>((ref) {
   final saved = NoctraLocalDatabase().getCachedThemeMode();
@@ -197,21 +205,49 @@ final p2pSyncServiceProvider = ChangeNotifierProvider<P2PSyncService>((ref) {
   return service;
 });
 
+// Home Feed Refresh Nonce Provider
+final homeFeedRefreshNonceProvider = StateProvider<int>((ref) => 0);
+
 // Dynamic Live Trending Feed Future Provider
 final dynamicTrendingFeedProvider = FutureProvider<List<Song>>((ref) async {
-  return MusicService.fetchTrendingFeed();
+  final nonce = ref.watch(homeFeedRefreshNonceProvider);
+  final repo = ref.watch(musicRepositoryProvider);
+  return MusicService.fetchTrendingFeed(
+    languages: repo.onboardedLanguages,
+    genres: repo.onboardedGenres,
+    refreshNonce: nonce,
+  );
 });
 
 // Dynamic Spotify Charts Future Provider
-final selectedSpotifyChartKeyProvider =
-    StateProvider<String>((ref) => 'top_hits');
+final selectedSpotifyChartKeyProvider = StateProvider<String>((ref) {
+  final repo = ref.watch(musicRepositoryProvider);
+  final genres = repo.onboardedGenres.map((g) => g.toLowerCase()).toList();
+  if (genres.any((g) => g.contains('bollywood') || g.contains('sufi'))) {
+    return 'bollywood';
+  }
+  if (genres.any((g) =>
+      g.contains('hip-hop') || g.contains('rap') || g.contains('phonk'))) {
+    return 'rap_caviar';
+  }
+  if (genres.any((g) =>
+      g.contains('lo-fi') || g.contains('acoustic') || g.contains('indie'))) {
+    return 'chill_hits';
+  }
+  if (genres.any((g) => g.contains('edm') || g.contains('synthwave'))) {
+    return 'pop_rising';
+  }
+  return 'top_hits';
+});
 final dynamicSpotifyChartsProvider = FutureProvider<List<Song>>((ref) async {
+  ref.watch(homeFeedRefreshNonceProvider);
   final chart = ref.watch(selectedSpotifyChartKeyProvider);
   return MusicService.fetchSpotifyCharts(chartKey: chart);
 });
 
 // Dynamic Live Vibe Feed Future Provider
 final dynamicVibeTracksProvider = FutureProvider<List<Song>>((ref) async {
+  ref.watch(homeFeedRefreshNonceProvider);
   final vibe = ref.watch(selectedVibeKeyProvider) ?? 'late_night';
   return MusicService.fetchVibeFeed(vibe);
 });

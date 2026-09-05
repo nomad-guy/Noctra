@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/app_providers.dart';
 import 'onboarding_artist_picker.dart';
@@ -80,6 +81,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _handleLanguageTapped(String lang) {
+    HapticFeedback.selectionClick();
     setState(() {
       if (_selectedLanguages.contains(lang)) {
         if (_selectedLanguages.length > 1) _selectedLanguages.remove(lang);
@@ -98,6 +100,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _handleGenreTapped(String genre) {
+    HapticFeedback.selectionClick();
     setState(() {
       if (_selectedGenres.contains(genre)) {
         if (_selectedGenres.length > 1) _selectedGenres.remove(genre);
@@ -232,7 +235,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         if (_currentStep > 0)
-          IconButton(icon: const Icon(Icons.arrow_back_rounded, color: Colors.white70), onPressed: () => setState(() => _currentStep--))
+          IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white70),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              setState(() => _currentStep--);
+            },
+          )
         else
           const SizedBox(width: 48),
         ElevatedButton(
@@ -245,6 +254,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
           onPressed: _canProceed
               ? () {
+                  HapticFeedback.mediumImpact();
                   if (_currentStep < 2) {
                     setState(() => _currentStep++);
                   } else {

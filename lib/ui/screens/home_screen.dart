@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
 import '../../providers/app_providers.dart';
@@ -32,11 +33,10 @@ class HomeScreen extends ConsumerWidget {
         bottom: false,
         child: RefreshIndicator(
           onRefresh: () async {
-            // Invalidate all feed providers to force re-fetch
-            ref.invalidate(dynamicTrendingFeedProvider);
-            ref.invalidate(dynamicVibeTracksProvider);
-            ref.invalidate(dynamicSpotifyChartsProvider);
-            await Future.delayed(const Duration(milliseconds: 800));
+            HapticFeedback.mediumImpact();
+            await refreshHomeFeeds(ref);
+            await Future.delayed(const Duration(milliseconds: 650));
+            HapticFeedback.lightImpact();
           },
           color: isDark ? Colors.white : Colors.black,
           backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,

@@ -229,8 +229,10 @@ class MusicRepository extends ChangeNotifier
 
   /// Preference/onboarding persistence passthroughs so presentation code
   /// never touches [NoctraLocalDatabase] directly. All reads/writes stay in
-  /// the repository facade (the data boundary).
   List<String> get onboardedArtists => NoctraLocalDatabase().onboardedArtists;
+  List<String> get onboardedLanguages =>
+      NoctraLocalDatabase().onboardedLanguages;
+  List<String> get onboardedGenres => NoctraLocalDatabase().onboardedGenres;
 
   Future<void> completeOnboarding({
     required List<String> languages,

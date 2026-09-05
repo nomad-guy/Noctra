@@ -6,6 +6,7 @@ import '../../providers/app_providers.dart';
 import '../widgets/developer_panel_sheet.dart';
 import '../../shared/widgets/glass_card.dart';
 import 'settings/app_language_section.dart';
+import 'settings/music_preferences_section.dart';
 import 'settings/download_storage_section.dart';
 import 'settings/lyrics_and_neural_section.dart';
 import 'settings/playback_and_audio_section.dart';
@@ -76,6 +77,8 @@ class SettingsSheet extends ConsumerWidget {
               ThemeAndIconSection(isDark: isDark),
               const SizedBox(height: 18),
               AppLanguageSection(isDark: isDark),
+              const SizedBox(height: 18),
+              MusicPreferencesSection(isDark: isDark),
               const SizedBox(height: 18),
               DownloadStorageSection(isDark: isDark),
               const SizedBox(height: 18),

@@ -49,8 +49,86 @@ extension MusicServiceCharts on MusicService {
         '${currentSong.title} ${currentSong.artist}');
   }
 
-  static Future<List<Song>> fetchTrendingFeed() async =>
-      fetchTrendingTracks();
+  static const Map<String, String> _languageToCountry = {
+    'hindi': 'in',
+    'punjabi': 'in',
+    'tamil': 'in',
+    'telugu': 'in',
+    'urdu': 'in',
+    'kannada': 'in',
+    'malayalam': 'in',
+    'marathi': 'in',
+    'bengali': 'in',
+    'odia': 'in',
+    'gujarati': 'in',
+    'spanish': 'es',
+    'korean': 'kr',
+    'japanese': 'jp',
+    'french': 'fr',
+    'german': 'de',
+    'italian': 'it',
+    'portuguese': 'br',
+    'english': 'us',
+  };
+
+  static const Set<String> _regionalIndianLanguages = {
+    'punjabi',
+    'tamil',
+    'telugu',
+    'kannada',
+    'malayalam',
+    'marathi',
+    'bengali',
+    'odia',
+    'gujarati',
+    'urdu',
+  };
+
+  static Future<List<Song>> fetchTrendingFeed({
+    List<String>? languages,
+    List<String>? genres,
+    int refreshNonce = 0,
+  }) async {
+    final validLangs = (languages ?? const <String>[])
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty)
+        .toList();
+    final validGenres = (genres ?? const <String>[])
+        .map((g) => g.trim())
+        .where((g) => g.isNotEmpty)
+        .toList();
+
+    String? selectedLang;
+    if (validLangs.isNotEmpty) {
+      selectedLang = validLangs[refreshNonce % validLangs.length];
+    }
+    String? selectedGenre;
+    if (validGenres.isNotEmpty) {
+      selectedGenre = validGenres[refreshNonce % validGenres.length];
+    }
+
+    if (selectedLang != null) {
+      final low = selectedLang.toLowerCase();
+      if (_regionalIndianLanguages.contains(low)) {
+        final query = refreshNonce % 2 == 0
+            ? '$selectedLang Top Hits Trending'
+            : '$selectedLang Latest Chartbusters';
+        final regionalRes = await MusicService.searchTracks(query);
+        if (regionalRes.isNotEmpty) return regionalRes;
+      }
+    }
+
+    final country = selectedLang != null
+        ? (_languageToCountry[selectedLang.toLowerCase()] ?? 'us')
+        : 'us';
+    final itunesTracks = await fetchTrendingTracks(countryCode: country);
+    if (itunesTracks.isNotEmpty) return itunesTracks;
+
+    final fallbackQuery = selectedGenre != null
+        ? '$selectedGenre Trending Hits'
+        : 'Billboard Hot 100 Today';
+    return MusicService.searchTracks(fallbackQuery);
+  }
 
   static Future<List<Song>> fetchSpotifyCharts({String? chartKey}) async {
     final Map<String, String> chartQueries = {
@@ -67,11 +145,12 @@ extension MusicServiceCharts on MusicService {
     return res.isNotEmpty ? res : fetchTrendingTracks();
   }
 
-  static Future<List<Song>> fetchTrendingTracks() async {
+  static Future<List<Song>> fetchTrendingTracks(
+      {String countryCode = 'us'}) async {
     try {
       final res = await http
           .get(Uri.parse(
-              'https://itunes.apple.com/us/rss/topsongs/limit=25/json'))
+              'https://itunes.apple.com/$countryCode/rss/topsongs/limit=25/json'))
           .timeout(const Duration(seconds: 4));
       if (res.statusCode == 200) {
         final entries = jsonDecode(res.body)['feed']?['entry'] as List?;

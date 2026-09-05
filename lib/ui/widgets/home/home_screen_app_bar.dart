@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/noir_theme.dart';
 import '../../../core/utils/localization/localization_keys.dart';
@@ -13,9 +14,8 @@ import '../../screens/settings_sheet.dart';
 /// Collapsing / Expanding floating glass header for the home screen.
 ///
 /// Owns the sidebar menu, SyncCast, feed refresh, theme cycling and
-/// settings buttons. Extracted from HomeScreen so the screen file stays
-/// small and the header can be rebuilt/tested independently.
-class HomeScreenAppBar extends ConsumerWidget {
+/// settings buttons with tactile haptic feedback and smooth refresh spin.
+class HomeScreenAppBar extends ConsumerStatefulWidget {
   final bool isDark;
   final NoirThemeMode themeMode;
 
@@ -26,8 +26,52 @@ class HomeScreenAppBar extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreenAppBar> createState() => _HomeScreenAppBarState();
+}
+
+class _HomeScreenAppBarState extends ConsumerState<HomeScreenAppBar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animController;
+  bool _isRefreshing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleRefresh() async {
+    if (_isRefreshing) return;
+    setState(() => _isRefreshing = true);
+    HapticFeedback.mediumImpact();
+    _animController.repeat();
+    try {
+      await refreshHomeFeeds(ref);
+      await Future.delayed(const Duration(milliseconds: 650));
+    } finally {
+      if (mounted) {
+        _animController.stop();
+        _animController.reset();
+        setState(() => _isRefreshing = false);
+        HapticFeedback.lightImpact();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final syncService = ref.watch(p2pSyncServiceProvider);
+    final isDark = widget.isDark;
+    final themeMode = widget.themeMode;
 
     return SliverAppBar(
       floating: true,
@@ -69,10 +113,13 @@ class HomeScreenAppBar extends ConsumerWidget {
                   icon: Icon(Icons.menu_rounded,
                       color: isDark ? Colors.white : Colors.black, size: 22),
                   tooltip: context.tr(L10nKeys.openSidebar),
-                  onPressed: () => ref
-                      .read(rootScaffoldKeyProvider)
-                      .currentState
-                      ?.openDrawer(),
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    ref
+                        .read(rootScaffoldKeyProvider)
+                        .currentState
+                        ?.openDrawer();
+                  },
                 ),
                 NoctraAppLogo(size: 24, radius: 6, isDark: isDark),
                 const SizedBox(width: 6),
@@ -96,29 +143,30 @@ class HomeScreenAppBar extends ConsumerWidget {
                   context.tr(L10nKeys.partyMode),
                   isDark,
                   active: syncService.isHost || syncService.isClient,
-                  onPressed: () => showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (_) => const SyncCastSheet(),
-                  ),
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => const SyncCastSheet(),
+                    );
+                  },
                 ),
-                _refreshButton(context, isDark, () async {
-                  ref.invalidate(dynamicTrendingFeedProvider);
-                  ref.invalidate(dynamicVibeTracksProvider);
-                  ref.invalidate(dynamicSpotifyChartsProvider);
-                  await Future.delayed(const Duration(milliseconds: 600));
-                }),
+                _refreshButton(context, isDark),
                 _themeMenuButton(context, ref, themeMode, isDark),
                 _topBarIcon(
                   Icons.tune_rounded,
                   context.tr(L10nKeys.settings),
                   isDark,
-                  onPressed: () => showModalBottomSheet(
-                    context: context,
-                    backgroundColor: Colors.transparent,
-                    builder: (_) => const SettingsSheet(),
-                  ),
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    showModalBottomSheet(
+                      context: context,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => const SettingsSheet(),
+                    );
+                  },
                 ),
               ],
             ),
@@ -142,20 +190,26 @@ class HomeScreenAppBar extends ConsumerWidget {
     );
   }
 
-  Widget _refreshButton(BuildContext context, bool isDark, VoidCallback onPressed) {
+  Widget _refreshButton(BuildContext context, bool isDark) {
     return IconButton(
       tooltip: context.tr(L10nKeys.refreshFeed),
       iconSize: 20,
       constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-      icon: Icon(Icons.refresh_rounded,
-          color: isDark ? Colors.white60 : Colors.black54),
-      onPressed: onPressed,
+      icon: RotationTransition(
+        turns: _animController,
+        child: Icon(
+          Icons.refresh_rounded,
+          color: _isRefreshing
+              ? (isDark ? Colors.white : Colors.black)
+              : (isDark ? Colors.white60 : Colors.black54),
+        ),
+      ),
+      onPressed: _handleRefresh,
     );
   }
 
   Widget _themeMenuButton(
       BuildContext context, WidgetRef ref, NoirThemeMode current, bool isDark) {
-    // Cycle: Noir Black → Noir White → Liquid Glass → Noir Black
     final themes = [
       NoirThemeMode.noirBlack,
       NoirThemeMode.noirWhite,
@@ -177,6 +231,7 @@ class HomeScreenAppBar extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
+        HapticFeedback.selectionClick();
         ref.read(themeModeProvider.notifier).state = nextTheme();
       },
       child: Container(

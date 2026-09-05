@@ -41,6 +41,10 @@ class MusicService {
   static const int _maxSearchCacheSize = 60;
   static const int _searchCacheTtlMs = 5 * 60 * 1000;
 
+  static void clearSearchCache() {
+    _searchCache.clear();
+  }
+
   static Future<List<Song>> search(String query, {String source = 'all'}) =>
       searchTracks(query, source: source);
 
@@ -104,8 +108,16 @@ class MusicService {
       MusicServiceCharts.fetchSimilarRadioQueue(currentSong,
           excludeIds: excludeIds);
 
-  static Future<List<Song>> fetchTrendingFeed() =>
-      MusicServiceCharts.fetchTrendingFeed();
+  static Future<List<Song>> fetchTrendingFeed({
+    List<String>? languages,
+    List<String>? genres,
+    int refreshNonce = 0,
+  }) =>
+      MusicServiceCharts.fetchTrendingFeed(
+        languages: languages,
+        genres: genres,
+        refreshNonce: refreshNonce,
+      );
 
   static Future<List<Song>> fetchSpotifyCharts({String? chartKey}) =>
       MusicServiceCharts.fetchSpotifyCharts(chartKey: chartKey);

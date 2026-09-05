@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
 import '../../providers/app_providers.dart';
@@ -44,6 +45,7 @@ class VibeChipSelector extends ConsumerWidget {
                 label: Text(vibe.label),
                 selected: isSelected,
                 onSelected: (_) {
+                  HapticFeedback.selectionClick();
                   ref.read(selectedVibeKeyProvider.notifier).state = vibe.keyName;
                 },
                 backgroundColor: isDark ? const Color(0xFF141414) : const Color(0xFFE5E5E5),

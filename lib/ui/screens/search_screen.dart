@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
 import '../../core/utils/localization/localization_keys.dart';
@@ -185,13 +186,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                 color:
                                     isDark ? Colors.white60 : Colors.black54),
                             onPressed: () {
+                              HapticFeedback.lightImpact();
                               _searchSequence++;
                               _debounceTimer?.cancel();
                               _searchController.clear();
-                              ref.read(searchResultsProvider.notifier).state =
-                                  [];
-                              ref.read(isSearchingProvider.notifier).state =
-                                  false;
+                              ref.read(searchResultsProvider.notifier).state = [];
+                              ref.read(isSearchingProvider.notifier).state = false;
                               setState(() {});
                             },
                           )
@@ -231,6 +231,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 catalogTopics: catalogTopics.asData?.value,
                 isLoadingCatalogTopics: catalogTopics.isLoading,
                 onGenreTap: (query) {
+                  HapticFeedback.selectionClick();
                   _searchController.text = query;
                   _performSearch(query);
                 },
@@ -246,6 +247,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final isSelected = _selectedSource == sourceKey;
     return GestureDetector(
       onTap: () {
+        HapticFeedback.selectionClick();
         setState(() => _selectedSource = sourceKey);
         if (_searchController.text.isNotEmpty) {
           _performSearch(_searchController.text);

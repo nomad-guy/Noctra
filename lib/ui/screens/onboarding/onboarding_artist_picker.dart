@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/theme/noir_theme.dart';
 import '../../../services/metadata/artist_metadata_service.dart';
 
@@ -53,6 +54,7 @@ class _OnboardingArtistPickerState extends State<OnboardingArtistPicker> {
   }
 
   void _handleArtistTapped(String artist) async {
+    HapticFeedback.selectionClick();
     widget.onToggle(artist);
     final willBeSelected = !widget.selectedArtists.contains(artist);
 

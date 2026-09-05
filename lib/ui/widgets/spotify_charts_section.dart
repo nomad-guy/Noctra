@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
 import '../../core/utils/noctra_localization.dart';
@@ -89,6 +90,7 @@ class SpotifyChartsSection extends ConsumerWidget {
                     label: Text(c['label']!),
                     selected: isSelected,
                     onSelected: (_) {
+                      HapticFeedback.selectionClick();
                       ref.read(selectedSpotifyChartKeyProvider.notifier).state =
                           c['key']!;
                     },
@@ -153,11 +155,13 @@ class SpotifyChartsSection extends ConsumerWidget {
                       padding: const EdgeInsets.only(right: 12),
                       child: GestureDetector(
                         onTap: () {
-                          ref
-                              .read(audioPlayerServiceProvider)
-                              .playSong(song, newQueue: tracks);
+                          HapticFeedback.lightImpact();
+                          ref.read(audioPlayerServiceProvider).playSong(song, newQueue: tracks);
                         },
-                        onLongPress: () => SongContextMenu.show(context, song),
+                        onLongPress: () {
+                          HapticFeedback.mediumImpact();
+                          SongContextMenu.show(context, song);
+                        },
                         child: GlassCard(
                           padding: const EdgeInsets.all(8),
                           radius: 16,
@@ -249,9 +253,7 @@ class SpotifyChartsSection extends ConsumerWidget {
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
-                                    color: isDark
-                                        ? NoirColors.blackTextPrimary
-                                        : NoirColors.whiteTextPrimary,
+                                    color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -261,9 +263,7 @@ class SpotifyChartsSection extends ConsumerWidget {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: isDark
-                                        ? NoirColors.blackTextSecondary
-                                        : NoirColors.whiteTextSecondary,
+                                    color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary,
                                   ),
                                 ),
                               ],

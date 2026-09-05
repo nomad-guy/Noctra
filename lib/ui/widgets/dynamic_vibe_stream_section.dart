@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
 import '../../data/models/song_model.dart';
@@ -96,7 +97,10 @@ class _DynamicVibeStreamSectionState extends ConsumerState<DynamicVibeStreamSect
       child: GlassCard(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         radius: 14,
-        onTap: () => ref.read(audioPlayerServiceProvider).playSong(song, newQueue: tracks),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          ref.read(audioPlayerServiceProvider).playSong(song, newQueue: tracks);
+        },
         child: Row(
           children: [
             // Compact artwork -- Spotify-style 48x48

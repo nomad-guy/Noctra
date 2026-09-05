@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
 import '../../core/utils/noctra_localization.dart';
@@ -40,11 +41,16 @@ class _TrendingCarouselSectionState extends ConsumerState<TrendingCarouselSectio
   @override
   Widget build(BuildContext context) {
     final trendingAsync = ref.watch(dynamicTrendingFeedProvider);
+    final repo = ref.watch(musicRepositoryProvider);
+    final userLangs = repo.onboardedLanguages;
+    final badgeLabel = userLangs.isNotEmpty
+        ? userLangs.take(2).join(' & ').toUpperCase()
+        : '320kbps CD';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Spotify-style section header
+        // Spotify-style section header with personalized language badge
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 6),
           child: Row(
@@ -54,10 +60,20 @@ class _TrendingCarouselSectionState extends ConsumerState<TrendingCarouselSectio
                 fontSize: 22, fontWeight: FontWeight.w800,
                 color: widget.isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
               )),
-              Text('320kbps CD', style: TextStyle(
-                fontSize: 11, fontWeight: FontWeight.w600,
-                color: widget.isDark ? Colors.white54 : Colors.black45,
-              )),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: widget.isDark
+                      ? Colors.white.withValues(alpha: 0.08)
+                      : Colors.black.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(badgeLabel, style: TextStyle(
+                  fontSize: 10, fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: widget.isDark ? Colors.white70 : Colors.black87,
+                )),
+              ),
             ],
           ),
         ),
@@ -108,8 +124,14 @@ class _TrendingCarouselSectionState extends ConsumerState<TrendingCarouselSectio
     return Padding(
       padding: const EdgeInsets.only(right: 12),
       child: GestureDetector(
-        onTap: () => ref.read(audioPlayerServiceProvider).playSong(song, newQueue: tracks),
-        onLongPress: () => SongContextMenu.show(context, song),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          ref.read(audioPlayerServiceProvider).playSong(song, newQueue: tracks);
+        },
+        onLongPress: () {
+          HapticFeedback.mediumImpact();
+          SongContextMenu.show(context, song);
+        },
         child: GlassCard(
           padding: const EdgeInsets.all(8),
           radius: 16,
