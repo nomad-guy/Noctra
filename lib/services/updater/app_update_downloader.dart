@@ -22,6 +22,8 @@ class AppUpdateDownloader {
   static const List<String> _trustedReleaseHosts = [
     'github.com',
     'objects.githubusercontent.com',
+    'release-assets.githubusercontent.com',
+    'githubusercontent.com',
     'api.github.com',
   ];
 

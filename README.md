@@ -48,10 +48,10 @@ Noctra-1.0.1-universal.apk (61.3 MB) — Universal multi-ABI compatibility fallb
 
 | Package | Architecture | Direct Download | SHA-256 Digest |
 | :--- | :--- | :--- | :--- |
-| `Noctra-1.0.1-arm64-v8a.apk` | `arm64-v8a` | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.1/Noctra-1.0.1-arm64-v8a.apk) | `01b459b7b0bd5974e06bff1697dac22a6c5bb00269b38533c7a2f062f25b706c` |
-| `Noctra-1.0.1-armeabi-v7a.apk` | `armeabi-v7a` | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.1/Noctra-1.0.1-armeabi-v7a.apk) | `d60a03b5ca8be891755cd0f1ad5d207d4383f7ba14c475e87a9587b14cbae666` |
-| `Noctra-1.0.1-x86_64.apk` | `x86_64` | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.1/Noctra-1.0.1-x86_64.apk) | `66a05018d03d46c307fde9584c3fc21e5ca58bd9667355d18e3c5a6caacc78bc` |
-| `Noctra-1.0.1-universal.apk` | Universal | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.1/Noctra-1.0.1-universal.apk) | `1cf3ca8a2f05121cd1a9cdbe6c41da46c19e9c33ac15f8f649114557b1f78284` |
+| `Noctra-1.0.1-arm64-v8a.apk` | `arm64-v8a` | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.1/Noctra-1.0.1-arm64-v8a.apk) | `87868a26316785e100bce85f0ae83d2ed98d00cc91a42a0c4a1d792a63318580` |
+| `Noctra-1.0.1-armeabi-v7a.apk` | `armeabi-v7a` | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.1/Noctra-1.0.1-armeabi-v7a.apk) | `4602d69a2dedb8d9cb67e907785bb8ee666c48a0183a84e261b8d9fd63f0a237` |
+| `Noctra-1.0.1-x86_64.apk` | `x86_64` | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.1/Noctra-1.0.1-x86_64.apk) | `2cd0dfa993fda623fb3892d199044cda049d74c18132c600a2944b469d47021a` |
+| `Noctra-1.0.1-universal.apk` | Universal | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.1/Noctra-1.0.1-universal.apk) | `2fd2cad0f7fcf2fdd641c8d4b8cead7fbc34a2c2bb68fbe20cf63e33a8688ed6` |
 
 ### Integrity Verification
 Verify all downloaded binaries against the official checksum manifest:
