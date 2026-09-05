@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import '../../core/utils/noctra_logger.dart';
 import '../../data/models/song_model.dart';
+import '../../data/repositories/music_repository.dart';
 import '../assistant/application/assistant_command_router.dart';
 import '../assistant/application/assistant_media_tree.dart';
 import '../assistant/domain/assistant_command.dart';
@@ -192,6 +193,17 @@ class NoctraAudioHandler extends BaseAudioHandler {
     switch (name) {
       case 'clearQueue':
         return router.execute(const ClearQueueCommand());
+      case 'toggleFavorite':
+        final trackId = extras?['trackId']?.toString();
+        final song = (trackId != null && trackId.isNotEmpty)
+            ? (_svc.currentSong?.id == trackId ? _svc.currentSong : null)
+            : _svc.currentSong;
+        if (song != null) {
+          MusicRepository().toggleFavorite(song);
+          _push(forceSong: true);
+          return true;
+        }
+        return false;
       case 'addFavorite':
         return router.execute(AddFavoriteCommand(extras?['trackId']?.toString()));
       case 'removeFavorite':

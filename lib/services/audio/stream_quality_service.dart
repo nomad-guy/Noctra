@@ -110,15 +110,24 @@ class StreamQualityService {
 
     if (audioStreams.isEmpty) return '';
 
-    // Sort by bitrate preference
-    // NOTE: YouTube/InnerTube returns bitrate in bps (e.g. 128000, 250000, 320000)
-    // while StreamQuality stores kbps (e.g. 128, 256, 320). Convert to same units.
+    // Sort by codec transparency and bitrate preference.
+    // Opus 48kHz is prioritized for lossless/hiRes modes as it aligns with Android's
+    // 48kHz native mixer and preserves 20kHz frequency bandwidth.
     audioStreams.sort((a, b) {
+      final aMime = ((a['mimeType'] as String?) ?? '').toLowerCase();
+      final bMime = ((b['mimeType'] as String?) ?? '').toLowerCase();
+      final aIsOpus = aMime.contains('opus') || aMime.contains('webm');
+      final bIsOpus = bMime.contains('opus') || bMime.contains('webm');
+
+      if (_streamQuality == StreamQuality.lossless ||
+          _streamQuality == StreamQuality.hiRes) {
+        if (aIsOpus != bIsOpus) return aIsOpus ? -1 : 1;
+      }
+
       final aBps = ((a['bitrate'] as num?) ?? 0).toDouble();
       final bBps = ((b['bitrate'] as num?) ?? 0).toDouble();
       final targetBps = _streamQuality.bitrate * 1000.0; // kbps → bps
 
-      // Prefer closest to target bitrate
       final aDiff = (aBps - targetBps).abs();
       final bDiff = (bBps - targetBps).abs();
       return aDiff.compareTo(bDiff);

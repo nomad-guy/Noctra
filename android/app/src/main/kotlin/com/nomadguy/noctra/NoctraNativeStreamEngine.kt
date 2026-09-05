@@ -100,15 +100,21 @@ object NoctraNativeStreamEngine {
                 }
                 val formats = root.optJSONObject("streamingData")?.optJSONArray("adaptiveFormats") ?: continue
                 var bestUrl: String? = null
-                var maxBitrate = 0
+                var maxScore = -1
                 for (i in 0 until formats.length()) {
                     val f = formats.getJSONObject(i)
-                    val mime = f.optString("mimeType", "")
+                    val mime = f.optString("mimeType", "").lowercase()
                     val bitrate = f.optInt("bitrate", 0)
                     val url = f.optString("url", "")
-                    if (mime.contains("audio") && url.startsWith("https://") && bitrate > maxBitrate) {
-                        maxBitrate = bitrate
-                        bestUrl = url
+                    if (mime.contains("audio") && url.startsWith("https://")) {
+                        // Opus 48kHz natively matches Android's 48kHz mixer (zero resampling artifacts)
+                        // and provides full 20kHz frequency ceiling vs AAC 128k (which rolls off at 16kHz).
+                        val isOpus = mime.contains("opus") || mime.contains("webm")
+                        val score = bitrate + if (isOpus) 64000 else 0
+                        if (score > maxScore) {
+                            maxScore = score
+                            bestUrl = url
+                        }
                     }
                 }
                 if (!bestUrl.isNullOrEmpty()) return bestUrl

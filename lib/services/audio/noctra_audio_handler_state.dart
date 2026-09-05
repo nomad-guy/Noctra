@@ -1,5 +1,6 @@
 import 'package:audio_service/audio_service.dart';
 import '../../data/models/song_model.dart';
+import '../../data/repositories/music_repository.dart';
 import 'audio_player_service.dart';
 
 /// Helper to serialize and mirror AudioPlayerService state into audio_service's
@@ -13,6 +14,7 @@ class NoctraAudioHandlerStateMirror {
   int _lastQueueIndex = -1;
   String _lastRepeat = 'none';
   bool _lastShuffle = false;
+  bool _lastFavorite = false;
 
   void push({
     required Song? song,
@@ -87,6 +89,7 @@ class NoctraAudioHandlerStateMirror {
     final queueIndex = song == null ? null : svc.currentIndex;
     final repeat = svc.loopMode.name;
     final shuffle = svc.isShuffleEnabled;
+    final isFav = song != null && MusicRepository().isFavorite(song.id);
 
     final posSec = position.inSeconds;
     if (playing == _lastPlaying &&
@@ -95,7 +98,8 @@ class NoctraAudioHandlerStateMirror {
         durationMs == _lastDurationMs &&
         queueIndex == _lastQueueIndex &&
         repeat == _lastRepeat &&
-        shuffle == _lastShuffle) {
+        shuffle == _lastShuffle &&
+        isFav == _lastFavorite) {
       return;
     }
     _lastPlaying = playing;
@@ -105,13 +109,22 @@ class NoctraAudioHandlerStateMirror {
     _lastQueueIndex = queueIndex ?? -1;
     _lastRepeat = repeat;
     _lastShuffle = shuffle;
+    _lastFavorite = isFav;
+
+    final favControl = MediaControl.custom(
+      androidIcon:
+          isFav ? 'drawable/ic_favorite' : 'drawable/ic_favorite_border',
+      label: isFav ? 'Unlike' : 'Like',
+      name: 'toggleFavorite',
+      extras: song != null ? {'trackId': song.id} : null,
+    );
 
     pushPlaybackState(PlaybackState(
       controls: [
+        favControl,
         MediaControl.skipToPrevious,
         playing ? MediaControl.pause : MediaControl.play,
         MediaControl.skipToNext,
-        MediaControl.stop,
       ],
       systemActions: const {
         MediaAction.seek,
@@ -120,7 +133,7 @@ class NoctraAudioHandlerStateMirror {
         MediaAction.setRepeatMode,
         MediaAction.setShuffleMode,
       },
-      androidCompactActionIndices: const [0, 1, 2],
+      androidCompactActionIndices: const [1, 2, 3],
       processingState: processing,
       playing: playing,
       updatePosition: position,

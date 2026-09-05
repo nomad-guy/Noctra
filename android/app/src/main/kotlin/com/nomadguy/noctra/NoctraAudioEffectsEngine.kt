@@ -32,6 +32,7 @@ class NoctraAudioEffectsEngine {
     }
 
     private val lock = ReentrantLock()
+    private var dynamicsProcessor: NoctraDynamicsProcessor? = null
     private var equalizer: Equalizer? = null
     private var bassBoost: BassBoost? = null
     private var virtualizer: Virtualizer? = null
@@ -41,25 +42,38 @@ class NoctraAudioEffectsEngine {
 
     fun attachSession(sessionId: Int): Boolean = lock.withLock {
         if (sessionId <= 0) return@withLock false
-        if (sessionId == currentSessionId && equalizer != null) return@withLock true
+        if (sessionId == currentSessionId && (dynamicsProcessor != null || equalizer != null)) return@withLock true
         releaseLocked()
         currentSessionId = sessionId
         try {
-            equalizer = Equalizer(0, sessionId).apply { enabled = true }
+            // Android 9+ (API 28+): Prioritize studio DynamicsProcessing (linear phase PreEQ + peak limiter)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val dp = NoctraDynamicsProcessor(sessionId)
+                if (dp.isAvailable) {
+                    dynamicsProcessor = dp
+                }
+            }
+            // Fallback to legacy android.media.audiofx.Equalizer if DynamicsProcessing unavailable
+            if (dynamicsProcessor == null) {
+                equalizer = Equalizer(0, sessionId).apply { enabled = true }
+            }
+
             bassBoost = BassBoost(0, sessionId).apply { enabled = true }
             virtualizer = Virtualizer(0, sessionId).apply { enabled = true }
             presetReverb = PresetReverb(0, sessionId).apply { enabled = true }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 loudnessEnhancer = LoudnessEnhancer(sessionId).apply {
-                    setTargetGain(100)
-                    enabled = true
+                    // Set target gain to 0 mB (neutral) by default to prevent digital clipping/compression
+                    setTargetGain(0)
+                    enabled = false
                 }
             }
         } catch (e: Throwable) {
             Log.w(TAG, "Effect attach failed for session $sessionId; releasing", e)
             releaseLocked()
         }
-        return@withLock equalizer != null ||
+        return@withLock dynamicsProcessor != null ||
+            equalizer != null ||
             bassBoost != null ||
             virtualizer != null ||
             presetReverb != null
@@ -71,18 +85,25 @@ class NoctraAudioEffectsEngine {
         virtualizerStrength: Double,
     ): Boolean = lock.withLock {
         try {
-            if (equalizer == null && currentSessionId != 0) attachSession(currentSessionId)
-            equalizer?.let { eq ->
-                val numBands = eq.numberOfBands.toInt()
-                val minLevel = eq.bandLevelRange[0]
-                val maxLevel = eq.bandLevelRange[1]
-                val limit = minOf(numBands, bands.size, MAX_SUPPORTED_BANDS)
-                for (i in 0 until limit) {
-                    val rawDb = bands[i]
-                    val mB = (rawDb * 100).toInt()
-                        .coerceIn(minLevel.toInt(), maxLevel.toInt())
-                        .toShort()
-                    eq.setBandLevel(i.toShort(), mB)
+            if (dynamicsProcessor == null && equalizer == null && currentSessionId != 0) {
+                attachSession(currentSessionId)
+            }
+            // 1. Try modern DynamicsProcessing linear-phase PreEQ
+            val handledByDynamics = dynamicsProcessor?.applyBands(bands) ?: false
+            if (!handledByDynamics) {
+                // 2. Fall back to legacy Equalizer
+                equalizer?.let { eq ->
+                    val numBands = eq.numberOfBands.toInt()
+                    val minLevel = eq.bandLevelRange[0]
+                    val maxLevel = eq.bandLevelRange[1]
+                    val limit = minOf(numBands, bands.size, MAX_SUPPORTED_BANDS)
+                    for (i in 0 until limit) {
+                        val rawDb = bands[i]
+                        val mB = (rawDb * 100).toInt()
+                            .coerceIn(minLevel.toInt(), maxLevel.toInt())
+                            .toShort()
+                        eq.setBandLevel(i.toShort(), mB)
+                    }
                 }
             }
             bassBoost?.let { bb ->
@@ -109,8 +130,8 @@ class NoctraAudioEffectsEngine {
     fun applyPresetMode(mode: String): Boolean = lock.withLock {
         try {
             if (currentSessionId <= 0 ||
-                (equalizer == null && bassBoost == null &&
-                    virtualizer == null && presetReverb == null)
+                (dynamicsProcessor == null && equalizer == null &&
+                    bassBoost == null && virtualizer == null && presetReverb == null)
             ) {
                 return@withLock false
             }
@@ -159,6 +180,9 @@ class NoctraAudioEffectsEngine {
 
     /** Caller must already hold [lock]. */
     private fun releaseLocked() {
+        try { dynamicsProcessor?.release() } catch (e: Throwable) {
+            Log.w(TAG, "dynamicsProcessor.release() failed", e)
+        }
         try { equalizer?.release() } catch (e: Throwable) {
             Log.w(TAG, "equalizer.release() failed", e)
         }
@@ -176,6 +200,7 @@ class NoctraAudioEffectsEngine {
                 Log.w(TAG, "loudnessEnhancer.release() failed", e)
             }
         }
+        dynamicsProcessor = null
         equalizer = null
         bassBoost = null
         virtualizer = null
