@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/noctra_localization.dart';
 import '../../services/audio/stream_quality_service.dart';
 import 'quality/audio_processing_options.dart';
 import 'quality/stream_quality_options.dart';
@@ -64,7 +65,7 @@ class _StreamQualitySheetState extends ConsumerState<StreamQualitySheet> {
                       size: 22, color: tokens.accent),
                   const SizedBox(width: 10),
                   Text(
-                    'CODEC & Resolution',
+                    NoctraLocalization.tr('codec_resolution'),
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w800,

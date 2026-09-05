@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/noctra_localization.dart';
 import '../../data/models/song_model.dart';
 import '../../providers/app_providers.dart';
 import 'add_to_folder_sheet.dart';
@@ -60,9 +61,9 @@ class SongContextMenu extends ConsumerWidget {
                     width: 48, height: 48, cacheWidth: 140, cacheHeight: 140,
                     fit: BoxFit.cover,
                     errorBuilder: (c, e, st) => Container(
-                      width: 48, height: 48,
-                      color: isDark ? Colors.white12 : Colors.black12,
-                      child: Icon(Icons.music_note_rounded, color: isDark ? Colors.white54 : Colors.black54),
+                       width: 48, height: 48,
+                       color: isDark ? Colors.white12 : Colors.black12,
+                       child: Icon(Icons.music_note_rounded, color: isDark ? Colors.white54 : Colors.black54),
                     ),
                   ),
                 ),
@@ -94,30 +95,30 @@ class SongContextMenu extends ConsumerWidget {
             _menuTile(
               context, isDark,
               icon: Icons.skip_next_rounded,
-              title: 'Play Next',
-              subtitle: 'Adds to the top of queue',
+              title: NoctraLocalization.tr('play_next'),
+              subtitle: NoctraLocalization.tr('adds_top_queue'),
               onTap: () {
                 audioPlayer.playNext(song);
                 Navigator.of(context).pop();
-                _showSnack(context, isDark, '"${song.title}" will play next');
+                _showSnack(context, isDark, NoctraLocalization.tr('added_song', args: {'title': song.title}));
               },
             ),
             _menuTile(
               context, isDark,
               icon: Icons.queue_rounded,
-              title: 'Add to Queue',
-              subtitle: 'Adds to the end of queue',
+              title: NoctraLocalization.tr('add_to_queue'),
+              subtitle: NoctraLocalization.tr('adds_end_queue'),
               onTap: () {
                 audioPlayer.addToQueue(song);
                 Navigator.of(context).pop();
-                _showSnack(context, isDark, 'Added "${song.title}" to queue');
+                _showSnack(context, isDark, NoctraLocalization.tr('added_song', args: {'title': song.title}));
               },
             ),
             _menuTile(
               context, isDark,
               icon: Icons.folder_rounded,
-              title: 'Add to Folder',
-              subtitle: 'Save to a custom folder',
+              title: NoctraLocalization.tr('folders'),
+              subtitle: NoctraLocalization.tr('save_custom_folder'),
               onTap: () {
                 Navigator.of(context).pop();
                 showModalBottomSheet(
@@ -131,8 +132,8 @@ class SongContextMenu extends ConsumerWidget {
             _menuTile(
               context, isDark,
               icon: Icons.auto_awesome_rounded,
-              title: 'Start AI Radio',
-              subtitle: 'Similar tracks from neural engine',
+              title: NoctraLocalization.tr('ai_radio'),
+              subtitle: NoctraLocalization.tr('ai_radio_title'),
               onTap: () {
                 Navigator.of(context).pop();
                 showModalBottomSheet(

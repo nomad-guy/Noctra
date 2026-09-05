@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/noir_theme.dart';
+import '../../../core/utils/noctra_localization.dart';
 import '../../../services/audio/audio_stem_separation_service.dart';
 
 class StemStartView extends StatelessWidget {
@@ -21,7 +22,7 @@ class StemStartView extends StatelessWidget {
                 size: 48, color: tokens.accent.withValues(alpha: 0.6)),
             const SizedBox(height: 16),
             Text(
-              'Separate this song into individual stems',
+              NoctraLocalization.tr('separate_song_title'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -31,7 +32,7 @@ class StemStartView extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Split into Vocals, Drums, Bass & Other using on-device ML.\nNo internet required after initial processing.',
+              NoctraLocalization.tr('separate_description'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
@@ -56,7 +57,7 @@ class StemStartView extends StatelessWidget {
                         size: 20, color: tokens.canvas),
                     const SizedBox(width: 8),
                     Text(
-                      'Start Separation',
+                      NoctraLocalization.tr('start_separation'),
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -165,7 +166,7 @@ class StemErrorView extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  'Retry',
+                  NoctraLocalization.tr('retry'),
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,

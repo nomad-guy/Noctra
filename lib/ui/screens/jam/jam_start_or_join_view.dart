@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/localization/localization_keys.dart';
+import '../../../core/utils/localization/localization_scope.dart';
 import '../../../services/p2p/p2p_sync_service.dart';
 import '../../../shared/widgets/glass_card.dart';
 
@@ -33,7 +35,7 @@ class JamStartOrJoinView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Host a Jam Session',
+                  context.tr(L10nKeys.hostJam),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -42,7 +44,7 @@ class JamStartOrJoinView extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Start a room over your local Wi-Fi / Hotspot. Other devices can join without any cloud server.',
+                  context.tr(L10nKeys.hostJamDesc),
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark ? Colors.white60 : Colors.black54,
@@ -73,9 +75,9 @@ class JamStartOrJoinView extends StatelessWidget {
                         ),
                       );
                     },
-                    child: const Text(
-                      'Start Hosting Jam Session',
-                      style: TextStyle(fontWeight: FontWeight.w700),
+                    child: Text(
+                      context.tr(L10nKeys.startHosting),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -99,7 +101,7 @@ class JamStartOrJoinView extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Nearby Rooms Found (${syncService.discoveredRooms.length})',
+                        '${context.tr(L10nKeys.nearbyRoomsFound)} (${syncService.discoveredRooms.length})',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
@@ -152,8 +154,8 @@ class JamStartOrJoinView extends StatelessWidget {
                               hostIpCtrl.text = room.hostIp;
                               onHostIpSelected();
                             },
-                            child: const Text('Select',
-                                style: TextStyle(fontSize: 12)),
+                            child: Text(context.tr(L10nKeys.select),
+                                style: const TextStyle(fontSize: 12)),
                           ),
                         ],
                       ),
@@ -171,7 +173,7 @@ class JamStartOrJoinView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Join an Existing Jam Room',
+                  context.tr(L10nKeys.joinJam),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -180,7 +182,7 @@ class JamStartOrJoinView extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Enter the host device IP and the room secret shown on their screen.',
+                  context.tr(L10nKeys.joinJamDesc),
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark ? Colors.white60 : Colors.black54,
@@ -202,9 +204,9 @@ class JamStartOrJoinView extends StatelessWidget {
                   obscureText: true,
                   enableSuggestions: false,
                   autocorrect: false,
-                  decoration: const InputDecoration(
-                    hintText: 'Room secret',
-                    helperText: 'Required — authenticates you to the host.',
+                  decoration: InputDecoration(
+                    hintText: context.tr(L10nKeys.roomSecret),
+                    helperText: context.tr(L10nKeys.roomSecretHint),
                   ),
                   style: TextStyle(
                     fontFamily: 'monospace',
@@ -227,9 +229,9 @@ class JamStartOrJoinView extends StatelessWidget {
                       final secret = roomSecretCtrl.text.trim();
                       if (ip.isEmpty || secret.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
+                          SnackBar(
                             content: Text(
-                              'Enter both the host IP and the room secret.',
+                              context.tr(L10nKeys.enterIpSecretErr),
                             ),
                           ),
                         );
@@ -240,16 +242,16 @@ class JamStartOrJoinView extends StatelessWidget {
                       if (!context.mounted) return;
                       if (!joined) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
+                          SnackBar(
                             content: Text(
-                              'Could not join. Check the IP and room secret, and confirm the host is online.',
+                              context.tr(L10nKeys.couldNotJoinErr),
                             ),
                           ),
                         );
                       }
                     },
                     child: Text(
-                      'Connect & Sync Audio',
+                      context.tr(L10nKeys.connectSync),
                       style: TextStyle(
                         color: isDark ? Colors.white : Colors.black,
                         fontWeight: FontWeight.w700,

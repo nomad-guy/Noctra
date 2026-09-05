@@ -2,7 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
-import '../../core/utils/noctra_localization.dart';
+import '../../core/utils/localization/localization_keys.dart';
+import '../../core/utils/localization/localization_scope.dart';
 import '../../providers/app_providers.dart';
 import '../widgets/developer_panel_sheet.dart';
 import '../widgets/synccast_sheet.dart';
@@ -95,7 +96,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   IconButton(
                     icon: Icon(Icons.menu_rounded,
                         color: isDark ? Colors.white : Colors.black, size: 24),
-                    tooltip: 'Open Sidebar',
+                    tooltip: context.tr(L10nKeys.openSidebar),
                     onPressed: () => ref
                         .read(rootScaffoldKeyProvider)
                         .currentState
@@ -104,7 +105,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      NoctraLocalization.tr('search_explore'),
+                      context.tr(L10nKeys.searchExplore),
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 20,
@@ -116,7 +117,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     ),
                   ),
                   IconButton(
-                    tooltip: 'SyncCast Party Mode',
+                    tooltip: context.tr(L10nKeys.partyMode),
                     icon: Icon(
                       Icons.podcasts_rounded,
                       color: syncService.isHost || syncService.isClient
@@ -134,7 +135,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     },
                   ),
                   IconButton(
-                    tooltip: 'Developer Suite',
+                    tooltip: context.tr(L10nKeys.developerSuite),
                     icon: Icon(Icons.terminal_rounded,
                         color: isDark ? Colors.white70 : Colors.black87,
                         size: 22),
@@ -171,7 +172,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       color: isDark ? Colors.white : Colors.black,
                       fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: '${NoctraLocalization.tr('search')}...',
+                    hintText: context.tr(L10nKeys.searchHint),
                     hintStyle: TextStyle(
                         fontSize: 13,
                         color: isDark ? Colors.white38 : Colors.black38),
@@ -211,11 +212,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 physics: const BouncingScrollPhysics(),
                 child: Row(
                   children: [
-                    _sourceChip('All Catalog', 'all', isDark),
+                    _sourceChip(context.tr(L10nKeys.allCatalog), 'all', isDark),
                     const SizedBox(width: 8),
-                    _sourceChip('High Fidelity', 'saavn', isDark),
+                    _sourceChip(context.tr(L10nKeys.highFidelity), 'saavn', isDark),
                     const SizedBox(width: 8),
-                    _sourceChip('Extended Catalog', 'ytmusic', isDark),
+                    _sourceChip(context.tr(L10nKeys.extendedCatalog), 'ytmusic', isDark),
                   ],
                 ),
               ),

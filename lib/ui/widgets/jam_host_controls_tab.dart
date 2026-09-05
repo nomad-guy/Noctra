@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/utils/localization/localization_keys.dart';
+import '../../core/utils/localization/localization_scope.dart';
 import '../../services/p2p/p2p_sync_service.dart';
 import '../../shared/widgets/glass_card.dart';
 
@@ -61,7 +63,7 @@ class JamHostControlsTab extends ConsumerWidget {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                               content: Text(
-                                  'Room code copied: ${syncService.roomCode}')),
+                                  context.tr(L10nKeys.roomCodeCopied, {'code': syncService.roomCode}))),
                         );
                       },
                     ),
@@ -118,9 +120,9 @@ class JamHostControlsTab extends ConsumerWidget {
                           Clipboard.setData(
                               ClipboardData(text: syncService.roomSecret));
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                                 content: Text(
-                                    'Room secret copied — share it privately with your listeners.')),
+                                    context.tr(L10nKeys.roomSecretCopied))),
                           );
                         },
                       ),
@@ -147,14 +149,14 @@ class JamHostControlsTab extends ConsumerWidget {
               child: SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(
-                  'Host Controls Playback Only',
+                  context.tr(L10nKeys.hostControlsOnly),
                   style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
                       color: isDark ? Colors.white : Colors.black),
                 ),
                 subtitle: Text(
-                  'When enabled, listeners can only add to queue and cannot pause/skip the song',
+                  context.tr(L10nKeys.hostControlsDesc),
                   style: TextStyle(
                       fontSize: 11,
                       color: isDark ? Colors.white54 : Colors.black54),
@@ -185,7 +187,7 @@ class JamHostControlsTab extends ConsumerWidget {
                 if (context.mounted) Navigator.pop(context);
               },
               child: Text(
-                isHost ? 'End Jam Session' : 'Leave Jam Room',
+                isHost ? context.tr(L10nKeys.endJamSession) : context.tr(L10nKeys.leaveJamRoom),
                 style: TextStyle(
                   color: isDark ? Colors.white : Colors.black,
                   fontWeight: FontWeight.w700,

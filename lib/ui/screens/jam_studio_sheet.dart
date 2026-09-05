@@ -2,6 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/localization/localization_keys.dart';
+import '../../core/utils/localization/localization_scope.dart';
 import '../../providers/app_providers.dart';
 import '../../services/p2p/p2p_sync_service.dart';
 import '../widgets/jam_chat_tab.dart';
@@ -80,7 +82,7 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Noctra Jam Studio',
+                        context.tr(L10nKeys.jamStudio),
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -91,7 +93,7 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet>
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Serverless P2P Synchronized Audio & Live Chat Mesh',
+                        context.tr(L10nKeys.jamSubtitle),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -105,6 +107,7 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet>
                   ),
                 ),
                 IconButton(
+                  tooltip: context.tr(L10nKeys.close),
                   icon: Icon(
                     Icons.close_rounded,
                     color: isDark ? Colors.white : Colors.black,
@@ -145,10 +148,10 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet>
                       isDark ? Colors.white60 : Colors.black54,
                   labelStyle: const TextStyle(
                       fontSize: 12, fontWeight: FontWeight.w700),
-                  tabs: const [
-                    Tab(text: 'Shared Queue'),
-                    Tab(text: 'Live P2P Chat'),
-                    Tab(text: 'Room Controls'),
+                  tabs: [
+                    Tab(text: context.tr(L10nKeys.sharedQueue)),
+                    Tab(text: context.tr(L10nKeys.liveP2pChat)),
+                    Tab(text: context.tr(L10nKeys.roomControls)),
                   ],
                 ),
               ),

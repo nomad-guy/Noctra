@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart'; // Riverpod 3.x: StateProvider
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/noctra_localization.dart';
 import '../../providers/app_providers.dart';
 import '../../shared/widgets/glass_card.dart';
 
@@ -71,7 +72,7 @@ class EqualizerSheet extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'IEM Tuning & Equalizer FX',
+                      NoctraLocalization.tr('iem_tuning'),
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
@@ -80,7 +81,7 @@ class EqualizerSheet extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Audiophile IEM Target Curves & 5-Band DSP',
+                      NoctraLocalization.tr('audiophile_curves'),
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary,
@@ -215,7 +216,7 @@ class EqualizerSheet extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Bass Boost', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
+                            Text(NoctraLocalization.tr('bass_boost'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
                             Text('+${bassBoost.toInt()}dB', style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.black54)),
                           ],
                         ),
@@ -245,7 +246,7 @@ class EqualizerSheet extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('3D Virtualizer', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
+                            Text(NoctraLocalization.tr('virtualizer_3d'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
                             Text('${(virtualizer * 10).toInt()}%', style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.black54)),
                           ],
                         ),

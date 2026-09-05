@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/localization/localization_keys.dart';
+import '../../core/utils/localization/localization_scope.dart';
 import '../../providers/app_providers.dart';
 import '../../services/metadata/artist_metadata_service.dart';
 import '../../services/ytdlp/music_service.dart';
@@ -81,6 +83,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         IconButton(
+                          tooltip: context.tr(L10nKeys.back),
                           icon: Icon(
                             Icons.arrow_back_ios_new_rounded,
                             color: isDark ? Colors.white : Colors.black,
@@ -89,7 +92,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
                           onPressed: () => Navigator.of(context).pop(),
                         ),
                         Text(
-                          'ARTIST PROFILE',
+                          context.tr(L10nKeys.officialArtistProfile).toUpperCase(),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
@@ -122,7 +125,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                     child: Text(
-                      'Top Hit Releases',
+                      context.tr(L10nKeys.topHits),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
@@ -146,7 +149,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 30),
                       child: Center(
                         child: Text(
-                          'No tracks found for this artist.',
+                          context.tr(L10nKeys.noTracksArtist),
                           style: TextStyle(
                             color: isDark ? Colors.white38 : Colors.black38,
                           ),

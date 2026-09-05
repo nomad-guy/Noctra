@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/noctra_localization.dart';
 import '../../core/utils/noctra_logger.dart';
 import '../../data/models/song_model.dart';
 import '../../services/audio/audio_stem_separation_service.dart';
@@ -62,7 +63,7 @@ class _StemSeparationSheetState extends ConsumerState<StemSeparationSheet> {
         _progress = StemSeparationProgress(
           stage: 'error',
           progress: 0,
-          message: 'Could not resolve audio source for this song.',
+          message: NoctraLocalization.tr('failed_resolve_source'),
         );
       });
       sub.cancel();
@@ -160,7 +161,7 @@ class _StemSeparationSheetState extends ConsumerState<StemSeparationSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Audio Stems',
+                          NoctraLocalization.tr('audio_stems'),
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w800,
@@ -168,7 +169,7 @@ class _StemSeparationSheetState extends ConsumerState<StemSeparationSheet> {
                           ),
                         ),
                         Text(
-                          'Separate "${widget.song.title}" into components',
+                          '${NoctraLocalization.tr('audio_stems')} • ${widget.song.title}',
                           style: TextStyle(
                             fontSize: 12,
                             color: tokens.secondaryText,

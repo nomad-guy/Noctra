@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/nomad-guy/Noctra/releases/tag/v1.0.0"><img src="https://img.shields.io/badge/Release-v1.0.0-000000.svg?style=flat-square" alt="Release v1.0.0" /></a>
+  <a href="https://github.com/nomad-guy/Noctra/releases/tag/v1.0.1"><img src="https://img.shields.io/badge/Release-v1.0.1-000000.svg?style=flat-square" alt="Release v1.0.1" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-000000.svg?style=flat-square" alt="License GPL-3.0" /></a>
   <a href="#privacy-architecture"><img src="https://img.shields.io/badge/Telemetry-0%25-000000.svg?style=flat-square" alt="Zero Telemetry" /></a>
   <a href="#automated-verification"><img src="https://img.shields.io/badge/Tests-780%2B%20Passing-000000.svg?style=flat-square" alt="780+ Tests Passing" /></a>
@@ -35,23 +35,23 @@ Noctra is an authentication-less, privacy-first audio streaming and collection c
 
 ## Production Release Downloads
 
-Direct binary artifacts for version 1.0.0. Every artifact is signed with the official Noctra release key and compiled with ProGuard and R8 bytecode optimization.
+Direct binary artifacts for version 1.0.1. Every artifact is signed with the official Noctra release key and compiled with ProGuard and R8 bytecode optimization.
 
 ```text
-Noctra-1.0.0-arm64-v8a.apk (22.1 MB) — Modern 64-bit Android devices (Android 8.0+)
-Noctra-1.0.0-armeabi-v7a.apk (19.9 MB) — Legacy 32-bit ARM devices
-Noctra-1.0.0-x86_64.apk (23.6 MB) — Emulators and x86_64 Chromebooks / tablets
-Noctra-1.0.0-universal.apk (60.7 MB) — Universal multi-ABI compatibility fallback
+Noctra-1.0.1-arm64-v8a.apk (22.3 MB) — Modern 64-bit Android devices (Android 8.0+)
+Noctra-1.0.1-armeabi-v7a.apk (20.2 MB) — Legacy 32-bit ARM devices
+Noctra-1.0.1-x86_64.apk (23.8 MB) — Emulators and x86_64 Chromebooks / tablets
+Noctra-1.0.1-universal.apk (61.3 MB) — Universal multi-ABI compatibility fallback
 ```
 
 ### Artifact Manifest
 
 | Package | Architecture | Direct Download | SHA-256 Digest |
 | :--- | :--- | :--- | :--- |
-| `Noctra-1.0.0-arm64-v8a.apk` | `arm64-v8a` | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.0/Noctra-1.0.0-arm64-v8a.apk) | `e581a732af99e7675f11f44df4051d65109ed81660868ea5a97fed010c0e968d` |
-| `Noctra-1.0.0-armeabi-v7a.apk` | `armeabi-v7a` | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.0/Noctra-1.0.0-armeabi-v7a.apk) | `6ad91523c11e216799a8046a13ed2c672639580f8472134ab9b184d5ab0bf9ee` |
-| `Noctra-1.0.0-x86_64.apk` | `x86_64` | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.0/Noctra-1.0.0-x86_64.apk) | `cd525e81b5b0863239795b484fe8753a78f75a5d341c21b0b151c1ea5f760ab9` |
-| `Noctra-1.0.0-universal.apk` | Universal | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.0/Noctra-1.0.0-universal.apk) | `19c32994122ea64f7c15759dfee57754d7a2ee9b6fbf8481734011e085b950f6` |
+| `Noctra-1.0.1-arm64-v8a.apk` | `arm64-v8a` | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.1/Noctra-1.0.1-arm64-v8a.apk) | `01b459b7b0bd5974e06bff1697dac22a6c5bb00269b38533c7a2f062f25b706c` |
+| `Noctra-1.0.1-armeabi-v7a.apk` | `armeabi-v7a` | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.1/Noctra-1.0.1-armeabi-v7a.apk) | `d60a03b5ca8be891755cd0f1ad5d207d4383f7ba14c475e87a9587b14cbae666` |
+| `Noctra-1.0.1-x86_64.apk` | `x86_64` | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.1/Noctra-1.0.1-x86_64.apk) | `66a05018d03d46c307fde9584c3fc21e5ca58bd9667355d18e3c5a6caacc78bc` |
+| `Noctra-1.0.1-universal.apk` | Universal | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.1/Noctra-1.0.1-universal.apk) | `1cf3ca8a2f05121cd1a9cdbe6c41da46c19e9c33ac15f8f649114557b1f78284` |
 
 ### Integrity Verification
 Verify all downloaded binaries against the official checksum manifest:

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/utils/localization/localization_keys.dart';
+import '../../core/utils/localization/localization_scope.dart';
 import '../../data/models/catalog_topic.dart';
 import '../../data/models/song_model.dart';
 import '../../providers/app_providers.dart';
@@ -40,7 +42,7 @@ class SearchResultsList extends ConsumerWidget {
             ),
             const SizedBox(height: 14),
             Text(
-              'Building your music catalog...',
+              context.tr(L10nKeys.buildingCatalog),
               style: TextStyle(
                 fontSize: 12,
                 color: isDark ? Colors.white60 : Colors.black54,
@@ -74,7 +76,7 @@ class SearchResultsList extends ConsumerWidget {
                   color: isDark ? Colors.white30 : Colors.black26),
               const SizedBox(height: 12),
               Text(
-                'No results for "$activeQuery"',
+                context.tr(L10nKeys.noResultsFor, {'query': activeQuery}),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     fontSize: 14,
@@ -83,7 +85,7 @@ class SearchResultsList extends ConsumerWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Try a shorter name, an artist, or check your connection.',
+                context.tr(L10nKeys.tryShorterName),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     fontSize: 12,

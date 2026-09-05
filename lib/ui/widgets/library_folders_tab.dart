@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/utils/localization/localization_keys.dart';
+import '../../core/utils/localization/localization_scope.dart';
 import '../../data/models/song_model.dart';
 import '../../data/repositories/music_repository.dart';
 import '../../shared/widgets/glass_card.dart';
@@ -115,14 +117,14 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('+ Create New Folder',
+                                Text('+ ${context.tr(L10nKeys.createFolder)}',
                                     style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w700,
                                         color: widget.isDark
                                             ? Colors.white
                                             : Colors.black)),
-                                Text('Organize tracks into custom playlists',
+                                Text(context.tr(L10nKeys.organizePlaylists),
                                     style: TextStyle(
                                         fontSize: 11,
                                         color: widget.isDark
@@ -147,7 +149,7 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Create New Folder',
+                        Text(context.tr(L10nKeys.createFolder),
                             style: TextStyle(
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.w700,
@@ -161,10 +163,9 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
                               child: TextField(
                                 controller: _folderNameCtrl,
                                 autofocus: true,
-                                decoration: const InputDecoration(
-                                  hintText:
-                                      'Folder name (e.g. Late Night, Sufi)',
-                                  contentPadding: EdgeInsets.symmetric(
+                                decoration: InputDecoration(
+                                  hintText: context.tr(L10nKeys.folderNameHint),
+                                  contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 12, vertical: 10),
                                 ),
                                 style: TextStyle(
@@ -177,7 +178,7 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
                             ),
                             const SizedBox(width: 8),
                             IconButton(
-                              tooltip: 'Cancel',
+                              tooltip: context.tr(L10nKeys.cancel),
                               icon: const Icon(Icons.close_rounded, size: 20),
                               onPressed: () => setState(() {
                                 _folderNameCtrl.clear();
@@ -196,8 +197,8 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
                                     borderRadius: BorderRadius.circular(10)),
                               ),
                               onPressed: _submitCreateFolder,
-                              child: const Text('Create',
-                                  style: TextStyle(
+                              child: Text(context.tr(L10nKeys.create),
+                                  style: const TextStyle(
                                       fontSize: 12.5,
                                       fontWeight: FontWeight.w700)),
                             ),
@@ -255,7 +256,7 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(folderName,
+                              Text(folderName == 'Favorites' ? context.tr(L10nKeys.favorites) : folderName,
                                   style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700,
@@ -263,7 +264,7 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
                                           ? Colors.white
                                           : Colors.black)),
                               Text(
-                                  '${folderSongs.length} tracks • Long-press to delete',
+                                  context.tr(L10nKeys.tracksLongPressDelete, {'count': folderSongs.length.toString()}),
                                   style: TextStyle(
                                       fontSize: 11,
                                       color: widget.isDark

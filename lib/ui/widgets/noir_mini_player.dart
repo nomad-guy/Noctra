@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/localization/localization_keys.dart';
+import '../../core/utils/localization/localization_scope.dart';
 import '../../data/models/song_model.dart';
 import '../../providers/app_providers.dart';
 import '../screens/player_sheet.dart';
@@ -125,7 +127,7 @@ class _NoirMiniPlayerViewState extends ConsumerState<NoirMiniPlayerView> {
                   ),
                   IconButton(
                     icon: Icon(Icons.equalizer_rounded, size: 20, color: isDark ? Colors.white60 : Colors.black54),
-                    tooltip: 'Equalizer',
+                    tooltip: context.tr(L10nKeys.equalizer),
                     onPressed: () {
                       HapticFeedback.selectionClick();
                       showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const EqualizerSheet());

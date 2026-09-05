@@ -2,10 +2,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/noctra_localization.dart';
 import '../../data/models/song_model.dart';
 import '../../providers/app_providers.dart';
 import '../../shared/widgets/glass_card.dart';
-
 
 class AddToFolderSheet extends ConsumerStatefulWidget {
   final Song song;
@@ -90,7 +90,7 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
                     children: [
                       Text(widget.song.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black)),
                       const SizedBox(height: 2),
-                      Text('Select folders or create a new collection', style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white54 : Colors.black54)),
+                      Text(NoctraLocalization.tr('save_custom_folder'), style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white54 : Colors.black54)),
                     ],
                   ),
                 ),
@@ -117,7 +117,7 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
                     children: [
                       Icon(Icons.add_circle_outline_rounded, size: 20, color: isDark ? Colors.white70 : Colors.black87),
                       const SizedBox(width: 10),
-                      Text('New Folder...', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
+                      Text(NoctraLocalization.tr('new_folder_ellipsis'), style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
                     ],
                   ),
                 ),
@@ -129,7 +129,7 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
                     child: TextField(
                       controller: _folderNameCtrl,
                       autofocus: true,
-                      decoration: const InputDecoration(hintText: 'Folder name (e.g. Late Night, Chill)'),
+                      decoration: InputDecoration(hintText: NoctraLocalization.tr('folder_name_hint')),
                       style: TextStyle(fontSize: 13, color: isDark ? Colors.white : Colors.black),
                       onSubmitted: (_) => _submitNewFolder(),
                     ),
@@ -148,7 +148,7 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
             // Folder List
             Flexible(
               child: folders.isEmpty
-                  ? Center(child: Text('No custom folders yet. Tap "New Folder..." above.', style: TextStyle(fontSize: 12.5, color: isDark ? Colors.white38 : Colors.black38)))
+                  ? Center(child: Text(NoctraLocalization.tr('no_custom_folders'), style: TextStyle(fontSize: 12.5, color: isDark ? Colors.white38 : Colors.black38)))
                   : Builder(
                       builder: (context) {
                         final folderNames = folders.keys.toList();
@@ -184,7 +184,7 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(folderName, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
-                                          Text('${songsInFolder.length} tracks', style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54)),
+                                          Text(NoctraLocalization.tr('tracks_count', args: {'count': songsInFolder.length}), style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54)),
                                         ],
                                       ),
                                     ),

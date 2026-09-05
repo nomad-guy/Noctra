@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/noir_theme.dart';
+import '../../../core/utils/localization/localization_keys.dart';
+import '../../../core/utils/localization/localization_scope.dart';
 import '../../../providers/app_providers.dart';
 import '../../widgets/audio_output_cast_sheet.dart';
 import '../../widgets/equalizer_sheet.dart';
@@ -34,7 +36,7 @@ class PlayerHeader extends ConsumerWidget {
         const SizedBox(width: 6),
         Expanded(
           child: Text(
-            'NOW PLAYING',
+            context.tr(L10nKeys.nowPlaying),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
@@ -48,7 +50,7 @@ class PlayerHeader extends ConsumerWidget {
         _iconBtn(
           Icons.queue_music_rounded,
           foreground,
-          'Queue',
+          context.tr(L10nKeys.queue),
           () => showModalBottomSheet(
             context: context,
             isScrollControlled: true,
@@ -63,7 +65,7 @@ class PlayerHeader extends ConsumerWidget {
           audioPlayerService.sleepTimerRemainingMinutes != null
               ? Colors.cyanAccent
               : foreground,
-          'Sleep Timer',
+          context.tr(L10nKeys.sleepTimer),
           () => showModalBottomSheet(
             context: context,
             isScrollControlled: true,
@@ -77,7 +79,7 @@ class PlayerHeader extends ConsumerWidget {
           _iconBtn(
             Icons.speaker_group_rounded,
             foreground,
-            'Audio Output',
+            context.tr(L10nKeys.audioOutput),
             () => showModalBottomSheet(
               context: context,
               isScrollControlled: true,
@@ -88,7 +90,7 @@ class PlayerHeader extends ConsumerWidget {
           _iconBtn(
             Icons.podcasts_rounded,
             foreground,
-            'Jam Room',
+            context.tr(L10nKeys.jamRoom),
             () => showModalBottomSheet(
               context: context,
               isScrollControlled: true,
@@ -99,7 +101,7 @@ class PlayerHeader extends ConsumerWidget {
           _iconBtn(
             Icons.equalizer_rounded,
             foreground,
-            'Equalizer',
+            context.tr(L10nKeys.equalizer),
             () => showModalBottomSheet(
               context: context,
               isScrollControlled: true,
@@ -125,7 +127,7 @@ class PlayerHeader extends ConsumerWidget {
   Widget _playerMoreMenu(BuildContext context, WidgetRef ref, bool isDark) {
     final song = ref.watch(currentSongStreamProvider).value;
     return PopupMenuButton<String>(
-      tooltip: 'More player actions',
+      tooltip: context.tr(L10nKeys.morePlayerActions),
       icon: Icon(Icons.more_horiz_rounded,
           color: isDark ? Colors.white : Colors.black),
       onSelected: (value) {
@@ -153,7 +155,7 @@ class PlayerHeader extends ConsumerWidget {
             );
           case 'stems':
             if (song != null) {
-              showModalBottomSheet(
+               showModalBottomSheet(
                 context: context,
                 isScrollControlled: true,
                 backgroundColor: Colors.transparent,
@@ -169,12 +171,12 @@ class PlayerHeader extends ConsumerWidget {
             );
         }
       },
-      itemBuilder: (_) => const [
-        PopupMenuItem(value: 'output', child: Text('Audio output')),
-        PopupMenuItem(value: 'jam', child: Text('Jam room')),
-        PopupMenuItem(value: 'equalizer', child: Text('Equalizer')),
-        PopupMenuItem(value: 'quality', child: Text('CODEC & Resolution')),
-        PopupMenuItem(value: 'stems', child: Text('Audio Stems')),
+      itemBuilder: (_) => [
+        PopupMenuItem(value: 'output', child: Text(context.tr(L10nKeys.audioOutput))),
+        PopupMenuItem(value: 'jam', child: Text(context.tr(L10nKeys.jamRoom))),
+        PopupMenuItem(value: 'equalizer', child: Text(context.tr(L10nKeys.equalizer))),
+        PopupMenuItem(value: 'quality', child: Text(context.tr(L10nKeys.codecResolution))),
+        PopupMenuItem(value: 'stems', child: Text(context.tr(L10nKeys.audioStems))),
       ],
     );
   }

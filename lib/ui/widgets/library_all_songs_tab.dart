@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/utils/localization/localization_keys.dart';
+import '../../core/utils/localization/localization_scope.dart';
 import '../../data/models/song_model.dart';
 import '../../data/repositories/music_repository.dart';
 import '../../shared/widgets/glass_card.dart';
@@ -68,14 +70,14 @@ class LibraryAllSongsTab extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${displaySongs.length} Tracks in Master Library',
+                          context.tr(L10nKeys.tracksCount, {'count': displaySongs.length.toString()}),
                           style: TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w700,
                               color: isDark ? Colors.white : Colors.black),
                         ),
                         Text(
-                          '${downloads.length} Downloaded Offline • High-Fidelity 320k Ready',
+                          context.tr(L10nKeys.downloadedOffline, {'count': downloads.length.toString()}),
                           style: TextStyle(
                               fontSize: 11,
                               color: isDark ? Colors.white54 : Colors.black54),
@@ -101,14 +103,14 @@ class LibraryAllSongsTab extends ConsumerWidget {
                         size: 48,
                         color: isDark ? Colors.white24 : Colors.black26),
                     const SizedBox(height: 14),
-                    Text('No Offline Tracks Yet',
+                    Text(context.tr(L10nKeys.noOfflineTracks),
                         style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: isDark ? Colors.white70 : Colors.black87)),
                     const SizedBox(height: 6),
                     Text(
-                      'Songs you download will appear here for instant offline 320kbps playback.',
+                      context.tr(L10nKeys.offlineTracksHint),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                           fontSize: 12,

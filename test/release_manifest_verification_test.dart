@@ -13,8 +13,8 @@ void main() {
       final manifest = ReleaseManifest.parse(raw);
       expect(manifest, isNotNull, reason: 'Manifest must pass ReleaseManifest.parse');
 
-      expect(manifest!.version, equals('1.0.0'));
-      expect(manifest.versionCode, equals(10000));
+      expect(manifest!.version, equals('1.0.1'));
+      expect(manifest.versionCode, equals(10001));
       expect(manifest.minimumAndroid, equals(21));
       expect(manifest.packages.containsKey('arm64-v8a'), isTrue);
       expect(manifest.packages.containsKey('armeabi-v7a'), isTrue);

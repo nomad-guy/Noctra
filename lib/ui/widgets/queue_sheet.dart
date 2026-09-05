@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/noctra_localization.dart';
 import '../../data/models/song_model.dart';
 import '../../providers/app_providers.dart';
 
@@ -84,7 +85,7 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Queue',
+                    Text(NoctraLocalization.tr('queue'),
                         style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
@@ -97,7 +98,7 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
                               player.clearQueue();
                               setState(() {});
                             },
-                            child: Text('Clear',
+                            child: Text(NoctraLocalization.tr('clear'),
                                 style: TextStyle(
                                     fontSize: 12,
                                     color: isDark
@@ -122,7 +123,7 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
                     children: [
-                      Text('NOW PLAYING',
+                      Text(NoctraLocalization.tr('now_playing'),
                           style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
@@ -141,14 +142,14 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
                     children: [
-                      Text('UP NEXT',
+                      Text(NoctraLocalization.tr('up_next'),
                           style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 1.2,
                               color: isDark ? Colors.white38 : Colors.black38)),
                       const Spacer(),
-                      Text('${queue.length - 1} songs',
+                      Text(NoctraLocalization.tr('songs_count', args: {'count': queue.length - 1}),
                           style: TextStyle(
                               fontSize: 10,
                               color: isDark ? Colors.white38 : Colors.black38)),
@@ -161,7 +162,7 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
               Expanded(
                 child: queue.length <= 1
                     ? Center(
-                        child: Text('Queue is empty.\nTap + to add songs.',
+                        child: Text(NoctraLocalization.tr('queue_empty'),
                             textAlign: TextAlign.center,
                             style: TextStyle(
                                 fontSize: 13,

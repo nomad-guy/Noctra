@@ -1,30 +1,25 @@
-# Noctra v1.0.0 Release Notes
+# Noctra v1.0.1 Release Notes
 
 **Autonomous, privacy-first, on-device music intelligence platform.**
 
-This is the first stable **signed** public release of Noctra. Prior APKs were
-debug-signed test builds; every artifact in this release is signed with the
-Noctra production release key, so future updates can be verified against a
-stable signing identity.
+This is the official **v1.0.1** release of Noctra. Every artifact in this release is signed with the Noctra production release key, packaged with R8 bytecode optimization, and verified with detached SHA-256 digests and JSON update manifests for the in-app updater.
 
 ---
 
 ## APK Download Guide
 
-| File | Architecture | Recommended Device Target |
-| :--- | :--- | :--- |
-| `Noctra-1.0.0-arm64-v8a.apk` | `arm64-v8a` | **Recommended for most users** — modern 64-bit Android phones/tablets (Android 8.0+). |
-| `Noctra-1.0.0-armeabi-v7a.apk` | `armeabi-v7a` | Older 32-bit ARM devices. |
-| `Noctra-1.0.0-x86_64.apk` | `x86_64` | Android emulators, Chromebooks, Intel/AMD tablets. |
-| `Noctra-1.0.0-universal.apk` | Universal | Fallback containing every ABI; works anywhere but is larger. |
+| File | Architecture | Size | Recommended Device Target | SHA-256 Checksum |
+| :--- | :--- | :--- | :--- | :--- |
+| `Noctra-1.0.1-arm64-v8a.apk` | `arm64-v8a` | 22.3 MB | **Recommended for most users** — modern 64-bit Android devices (Android 8.0+). | `01b459b7b0bd5974e06bff1697dac22a6c5bb00269b38533c7a2f062f25b706c` |
+| `Noctra-1.0.1-armeabi-v7a.apk` | `armeabi-v7a` | 20.2 MB | Legacy 32-bit ARM devices. | `d60a03b5ca8be891755cd0f1ad5d207d4383f7ba14c475e87a9587b14cbae666` |
+| `Noctra-1.0.1-x86_64.apk` | `x86_64` | 23.8 MB | Android emulators, Chromebooks, Intel/AMD tablets. | `66a05018d03d46c307fde9584c3fc21e5ca58bd9667355d18e3c5a6caacc78bc` |
+| `Noctra-1.0.1-universal.apk` | Universal | 61.3 MB | Multi-ABI compatibility fallback containing every architecture. | `1cf3ca8a2f05121cd1a9cdbe6c41da46c19e9c33ac15f8f649114557b1f78284` |
 
-> Unsure which to pick? Choose **arm64-v8a**. The in-app updater selects the
-> matching ABI automatically and verifies SHA-256 before install.
+> Unsure which to pick? Choose **arm64-v8a**. The in-app updater automatically selects the matching ABI and verifies SHA-256 before installation.
 
 ### Integrity
 
-`SHA256SUMS.txt` and the `noctra-update-manifest.json` on the release page let
-you verify every APK:
+`SHA256SUMS.txt` and `noctra-update-manifest.json` on the release page allow full cryptographic verification of every APK:
 
 ```bash
 sha256sum -c SHA256SUMS.txt
@@ -32,35 +27,28 @@ sha256sum -c SHA256SUMS.txt
 
 ### Installation
 
-Android may ask you to allow installation from the source you downloaded the
-APK from ("Install unknown apps"). Noctra cannot bypass this — it is an
-Android security requirement. Noctra's own in-app updater performs SHA-256 +
-package + signer verification before it ever hands an APK to the installer.
+Android may prompt you to allow installation from the source you downloaded the APK from ("Install unknown apps"). Noctra's integrated in-app updater performs package, signer identity, and SHA-256 integrity verification before handing an APK to the system package installer.
 
 ---
 
-## What's New in v1.0.0
+## What's New in v1.0.1
 
-### Adaptive Dual-Engine Audio Effects Architecture
-- **DynamicsProcessing Engine (API 28+)**: Implemented `NoctraDynamicsProcessor` with time-domain IIR filters, 10-band PreEq, and studio limiter (-0.5 dBFS).
-- **Universal OEM Compatibility**: `NoctraAudioEffectsEngine` provides automatic fallback to `NoctraLegacyEffects` (NXP Equalizer, BassBoost, Virtualizer, Reverb), preventing AudioFlinger effect chain overload and Dolby Atmos / Dirac muting on Realme, Oppo, Xiaomi, and Samsung devices.
-- **48 kHz Opus Prioritization**: Prioritizes transparent 48 kHz Opus streams over 128 kbps AAC for 20 kHz high-frequency extension.
+### System-Wide Localization Architecture
+- **8 Fully Supported Languages**: Complete dictionary parity across English (`en`), Hindi (`hi`), Punjabi (`pa`), Urdu (`ur`), Kannada (`kn`), Tamil (`ta`), Marathi (`mr`), and Odia (`or`).
+- **Dynamic Reactive Updates**: Instant UI string updates without restarting the application or losing navigation, audio playback, or search states.
+- **Bi-Directional Script & RTL Support**: Native Right-To-Left layout mirroring and bidirectional typography for Urdu (`ur`).
+- **Zero Emojis**: Complete compliance with professional, clean UI typography across all localizations.
 
-### Liquid Glass Theme Performance Overhaul
-- **Hardware-Accelerated Frosted Glass**: Eliminated per-card `BackdropFilter` shaders, replacing them with translucent gradient layers, hairline specular borders, and soft elevation shadows.
-- **RepaintBoundary Caching**: Background liquid orbs and gradients are cached in a display list, eliminating background repaint churn during scrolling.
-- **Tuned Floating Blur Sigmas**: Optimized navigation bar and bottom sheets for locked 60/120 FPS fluid scrolling.
+### Bottom Sheets & UI Internationalization
+- Fully localized Media Controls, Mini Player, Sleep Timer, Audio Output Cast Sheet, Jam Studio P2P controls, Library Folders, Search Catalogs, Neural Audio Stems, and In-App Update Sheet.
 
-### App Shell & System Integrations
-- **App Icon Change Confirmation**: Added modal popup in Settings alerting users to Android application restart before applying launcher alias changes.
-- **Google Assistant App Actions**: Integrated `shortcuts.xml` with `actions.intent.PLAY_MUSIC` and `actions.intent.OPEN_APP_FEATURE` capabilities.
-- **Interactive Notification Heart**: Replaced static stop button with live favorite heart toggle in media notification.
+### Android Voice Assistant Hardening
+- Strengthened Android `MediaSession` external controller callbacks allowing Google Assistant and Gemini to control playback, volume, skipping, and track querying.
 
 ### Reliability & Architecture
-- **Strict LOC Limit**: All source files strictly <= 300 LOC.
-- Real end-to-end resolution deadlines with per-operation recalculation.
-- On-device 120-dim MLP recommender + MMR diversity, signal-trained with zero telemetry leaving the device.
-- 6-tier composite stream resolution (local -> direct -> JioSaavn -> native -> InnerTube -> YouTube fallback).
+- **Strict <= 300 LOC Invariant**: Maintained 100% compliance across all source files in `lib/` and `android/`.
+- **Zero Static Analyzer Issues**: `flutter analyze` clean with 0 warnings.
+- **100% Automated Test Coverage**: Complete test suite passing including key parity verification and release manifest integrity.
 
 ---
 

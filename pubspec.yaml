@@ -2,7 +2,7 @@ name: noctra
 description: "Authentication-less on-device agentic music player with dual Noir themes."
 publish_to: 'none'
 
-version: 1.0.0+13000
+version: 1.0.1+10001
 
 environment:
   sdk: ">=3.4.0 <4.0.0"

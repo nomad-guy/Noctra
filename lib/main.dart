@@ -18,6 +18,8 @@ import 'services/updater/app_update_service.dart';
 import 'ui/screens/onboarding/onboarding_screen.dart';
 import 'ui/screens/splash_screen.dart';
 import 'ui/widgets/main_navigation_shell.dart';
+import 'core/utils/localization/localization_scope.dart';
+import 'core/utils/noctra_localization.dart';
 
 /// Media-session handler bridging playback to audio_service. Created during
 /// [main] and attached to the playback service once it is constructed.
@@ -155,15 +157,22 @@ class _NoctraAppState extends ConsumerState<NoctraApp> {
 
     final activeThemeData = NoirTheme.getTheme(themeMode);
     return MaterialApp(
-      key: ValueKey('noctra_app_$currentLanguage'),
       title: 'Noctra',
       locale: Locale(currentLanguage),
       debugShowCheckedModeBanner: false,
       theme: activeThemeData,
       darkTheme: activeThemeData,
       themeMode: themeMode.isDark ? ThemeMode.dark : ThemeMode.light,
-      builder: (context, child) =>
-          NoctraThemeBackdrop(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) {
+        final textDir = NoctraLocalization.textDirection(currentLanguage);
+        return NoctraLocalizationScope(
+          languageCode: currentLanguage,
+          child: Directionality(
+            textDirection: textDir,
+            child: NoctraThemeBackdrop(child: child ?? const SizedBox.shrink()),
+          ),
+        );
+      },
       home: AnimatedSwitcher(
         duration: const Duration(milliseconds: 600),
         switchInCurve: Curves.easeOutCubic,

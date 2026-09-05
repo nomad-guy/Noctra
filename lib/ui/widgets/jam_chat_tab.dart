@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/utils/localization/localization_keys.dart';
+import '../../core/utils/localization/localization_scope.dart';
 import '../../services/p2p/p2p_sync_service.dart';
 
 class JamChatTab extends ConsumerStatefulWidget {
@@ -43,7 +45,7 @@ class _JamChatTabState extends ConsumerState<JamChatTab> {
                         Icon(Icons.chat_bubble_outline_rounded, size: 36, color: widget.isDark ? Colors.white24 : Colors.black26),
                         const SizedBox(height: 12),
                         Text(
-                          'No messages yet in this session.\nType below to chat with all connected listeners in real-time.',
+                          context.tr(L10nKeys.noMessagesSession),
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 12.5, color: widget.isDark ? Colors.white38 : Colors.black38),
                         ),
@@ -120,7 +122,7 @@ class _JamChatTabState extends ConsumerState<JamChatTab> {
                   child: TextField(
                     controller: _msgCtrl,
                     decoration: InputDecoration(
-                      hintText: 'Type P2P message...',
+                      hintText: context.tr(L10nKeys.typeMessage),
                       hintStyle: TextStyle(fontSize: 12.5, color: widget.isDark ? Colors.white38 : Colors.black38),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),

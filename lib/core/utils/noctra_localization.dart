@@ -1,12 +1,19 @@
-import 'localization/localization_strings_north.dart';
-import 'localization/localization_strings_south_east.dart';
+import 'package:flutter/widgets.dart';
+import 'localization/languages/english.dart';
+import 'localization/languages/hindi.dart';
+import 'localization/languages/kannada.dart';
+import 'localization/languages/marathi.dart';
+import 'localization/languages/odia.dart';
+import 'localization/languages/punjabi.dart';
+import 'localization/languages/tamil.dart';
+import 'localization/languages/urdu.dart';
 
-/// Full i18n system for Noctra.
-/// Supported: English, Hindi, Punjabi, Urdu, Kannada, Tamil, Marathi, Odia
+/// Complete System-Wide i18n Localization Engine for Noctra.
+/// Supports 8 Indian and Global languages with native scripts and RTL Urdu.
 class NoctraLocalization {
   static String currentLanguage = 'en';
 
-  /// All supported languages with display names.
+  /// Supported languages with their native display script.
   static const Map<String, String> supportedLanguages = {
     'en': 'English',
     'hi': 'हिन्दी',
@@ -18,24 +25,50 @@ class NoctraLocalization {
     'or': 'ଓଡ଼ିଆ',
   };
 
-  /// Language codes for the settings UI.
+  /// Language codes available for selection.
   static List<String> get availableLanguages =>
       supportedLanguages.keys.toList();
 
-  /// Get display name for a language code.
+  /// Native display name for a language code.
   static String languageName(String code) =>
-      _localizedValues[code]?['lang_name'] ??
-      _localizedValues['en']?[code] ??
-      code;
+      supportedLanguages[code] ?? code;
 
-  static final Map<String, Map<String, String>> _localizedValues = {
-    ...LocalizationStringsNorth.values,
-    ...LocalizationStringsSouthEast.values,
+  /// Whether the specified or current language uses right-to-left layout.
+  static bool isRtl([String? lang]) => (lang ?? currentLanguage) == 'ur';
+
+  /// Returns the appropriate TextDirection for the language.
+  static TextDirection textDirection([String? lang]) =>
+      isRtl(lang) ? TextDirection.rtl : TextDirection.ltr;
+
+  static final Map<String, Map<String, String>> _dictionaries = {
+    'en': englishLocale,
+    'hi': hindiLocale,
+    'pa': punjabiLocale,
+    'ur': urduLocale,
+    'kn': kannadaLocale,
+    'ta': tamilLocale,
+    'mr': marathiLocale,
+    'or': odiaLocale,
   };
 
-  static String tr(String key) {
-    return _localizedValues[currentLanguage]?[key] ??
-        _localizedValues['en']?[key] ??
+  /// Resolves a localized string by [key], falling back to English, with
+  /// dynamic parameter interpolation for tokens like `{count}`, `{query}`, etc.
+  static String tr(
+    String key, {
+    String? language,
+    Map<String, dynamic>? args,
+  }) {
+    final lang = language ?? currentLanguage;
+    final raw = _dictionaries[lang]?[key] ??
+        _dictionaries['en']?[key] ??
         key;
+
+    if (args == null || args.isEmpty) return raw;
+
+    var formatted = raw;
+    for (final entry in args.entries) {
+      formatted = formatted.replaceAll('{${entry.key}}', '${entry.value}');
+    }
+    return formatted;
   }
 }

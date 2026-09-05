@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/localization/localization_keys.dart';
+import '../../../core/utils/localization/localization_scope.dart';
 import '../../../data/models/catalog_topic.dart';
 import '../../../shared/widgets/glass_card.dart';
 
@@ -48,8 +50,8 @@ class SearchCatalogGrid extends StatelessWidget {
             children: [
               Text(
                 isLoadingCatalogTopics
-                    ? 'Updating live catalog...'
-                    : 'Explore Live Catalogs & Genres',
+                    ? context.tr(L10nKeys.updatingLiveCatalog)
+                    : context.tr(L10nKeys.exploreLiveCatalogs),
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -64,7 +66,7 @@ class SearchCatalogGrid extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  '${globalGenres.length} Catalogs',
+                  context.tr(L10nKeys.catalogsCount, {'count': globalGenres.length.toString()}),
                   style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w600,
@@ -76,9 +78,9 @@ class SearchCatalogGrid extends StatelessWidget {
           ),
         ),
         if (globalGenres.isEmpty && !isLoadingCatalogTopics)
-          const Padding(
-            padding: EdgeInsets.only(top: 48),
-            child: Center(child: Text('Catalog is temporarily unavailable.')),
+          Padding(
+            padding: const EdgeInsets.only(top: 48),
+            child: Center(child: Text(context.tr(L10nKeys.catalogUnavailable))),
           )
         else
           GridView.builder(

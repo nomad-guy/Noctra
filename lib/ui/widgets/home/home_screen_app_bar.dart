@@ -2,6 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/noir_theme.dart';
+import '../../../core/utils/localization/localization_keys.dart';
+import '../../../core/utils/localization/localization_scope.dart';
 import '../../../providers/app_providers.dart';
 import '../synccast_sheet.dart';
 import '../noctra_app_logo.dart';
@@ -66,7 +68,7 @@ class HomeScreenAppBar extends ConsumerWidget {
                 IconButton(
                   icon: Icon(Icons.menu_rounded,
                       color: isDark ? Colors.white : Colors.black, size: 22),
-                  tooltip: 'Open Sidebar',
+                  tooltip: context.tr(L10nKeys.openSidebar),
                   onPressed: () => ref
                       .read(rootScaffoldKeyProvider)
                       .currentState
@@ -91,7 +93,7 @@ class HomeScreenAppBar extends ConsumerWidget {
               children: [
                 _topBarIcon(
                   Icons.podcasts_rounded,
-                  'SyncCast',
+                  context.tr(L10nKeys.partyMode),
                   isDark,
                   active: syncService.isHost || syncService.isClient,
                   onPressed: () => showModalBottomSheet(
@@ -101,7 +103,7 @@ class HomeScreenAppBar extends ConsumerWidget {
                     builder: (_) => const SyncCastSheet(),
                   ),
                 ),
-                _refreshButton(isDark, () async {
+                _refreshButton(context, isDark, () async {
                   ref.invalidate(dynamicTrendingFeedProvider);
                   ref.invalidate(dynamicVibeTracksProvider);
                   ref.invalidate(dynamicSpotifyChartsProvider);
@@ -110,7 +112,7 @@ class HomeScreenAppBar extends ConsumerWidget {
                 _themeMenuButton(context, ref, themeMode, isDark),
                 _topBarIcon(
                   Icons.tune_rounded,
-                  'Settings',
+                  context.tr(L10nKeys.settings),
                   isDark,
                   onPressed: () => showModalBottomSheet(
                     context: context,
@@ -140,9 +142,9 @@ class HomeScreenAppBar extends ConsumerWidget {
     );
   }
 
-  Widget _refreshButton(bool isDark, VoidCallback onPressed) {
+  Widget _refreshButton(BuildContext context, bool isDark, VoidCallback onPressed) {
     return IconButton(
-      tooltip: 'Refresh Feed',
+      tooltip: context.tr(L10nKeys.refreshFeed),
       iconSize: 20,
       constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
       icon: Icon(Icons.refresh_rounded,

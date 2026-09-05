@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
-import '../../core/utils/noctra_localization.dart';
+import '../../core/utils/localization/localization_keys.dart';
+import '../../core/utils/localization/localization_scope.dart';
 import '../../providers/app_providers.dart';
 import '../widgets/synccast_sheet.dart';
 import '../widgets/library_folders_tab.dart';
@@ -55,13 +56,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                 children: [
                   IconButton(
                     icon: Icon(Icons.menu_rounded, color: isDark ? Colors.white : Colors.black, size: 24),
-                    tooltip: 'Open Sidebar',
+                    tooltip: context.tr(L10nKeys.openSidebar),
                     onPressed: () => ref.read(rootScaffoldKeyProvider).currentState?.openDrawer(),
                   ),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      NoctraLocalization.tr('library_title'),
+                      context.tr(L10nKeys.libraryTitle),
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 20,
@@ -71,7 +72,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Import / Migrate Library',
+                    tooltip: context.tr(L10nKeys.importMigrateLibrary),
                     icon: Icon(Icons.file_download_outlined, color: isDark ? Colors.white60 : Colors.black54, size: 22),
                     onPressed: () {
                       showModalBottomSheet(
@@ -84,7 +85,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                     },
                   ),
                   IconButton(
-                    tooltip: 'SyncCast Party Mode',
+                    tooltip: context.tr(L10nKeys.partyMode),
                     icon: Icon(
                       Icons.podcasts_rounded,
                       color: syncService.isHost || syncService.isClient
@@ -126,9 +127,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                   unselectedLabelColor: isDark ? Colors.white60 : Colors.black54,
                   labelStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
                   tabs: [
-                    Tab(text: NoctraLocalization.tr('ai_mixes')),
-                    Tab(text: NoctraLocalization.tr('folders')),
-                    Tab(text: NoctraLocalization.tr('downloads')),
+                    Tab(text: context.tr(L10nKeys.aiMixes)),
+                    Tab(text: context.tr(L10nKeys.folders)),
+                    Tab(text: context.tr(L10nKeys.downloads)),
                   ],
                 ),
               ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../screens/player_sheet.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/localization/localization_keys.dart';
+import '../../core/utils/localization/localization_scope.dart';
 
 class PlayerVisualizerSelector extends ConsumerWidget {
   final bool isDark;
@@ -23,7 +25,7 @@ class PlayerVisualizerSelector extends ConsumerWidget {
         children: [
           _pillButton(
             context: context,
-            label: 'Artwork',
+            label: context.tr(L10nKeys.artwork),
             icon: Icons.album_rounded,
             isActive: currentMode == PlayerDisplayMode.artwork,
             onTap: () => ref.read(playerDisplayModeProvider.notifier).state = PlayerDisplayMode.artwork,
@@ -31,7 +33,7 @@ class PlayerVisualizerSelector extends ConsumerWidget {
           const SizedBox(width: 6),
           _pillButton(
             context: context,
-            label: 'Spectrum',
+            label: context.tr(L10nKeys.spectrum),
             icon: Icons.bar_chart_rounded,
             isActive: currentMode == PlayerDisplayMode.spectrumBars,
             onTap: () => ref.read(playerDisplayModeProvider.notifier).state = PlayerDisplayMode.spectrumBars,
@@ -39,7 +41,7 @@ class PlayerVisualizerSelector extends ConsumerWidget {
           const SizedBox(width: 6),
           _pillButton(
             context: context,
-            label: 'Circle',
+            label: context.tr(L10nKeys.circle),
             icon: Icons.circle_outlined,
             isActive: currentMode == PlayerDisplayMode.radialCircle,
             onTap: () => ref.read(playerDisplayModeProvider.notifier).state = PlayerDisplayMode.radialCircle,
@@ -47,7 +49,7 @@ class PlayerVisualizerSelector extends ConsumerWidget {
           const SizedBox(width: 6),
           _pillButton(
             context: context,
-            label: 'Synthwave',
+            label: context.tr(L10nKeys.synthwave),
             icon: Icons.grid_goldenratio_rounded,
             isActive: currentMode == PlayerDisplayMode.synthwaveGrid,
             onTap: () => ref.read(playerDisplayModeProvider.notifier).state = PlayerDisplayMode.synthwaveGrid,
@@ -55,7 +57,7 @@ class PlayerVisualizerSelector extends ConsumerWidget {
           const SizedBox(width: 6),
           _pillButton(
             context: context,
-            label: 'Lyrics',
+            label: context.tr(L10nKeys.lyrics),
             icon: Icons.lyrics_rounded,
             isActive: currentMode == PlayerDisplayMode.lyrics,
             onTap: () => ref.read(playerDisplayModeProvider.notifier).state = PlayerDisplayMode.lyrics,

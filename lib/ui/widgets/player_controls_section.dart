@@ -5,6 +5,8 @@ import 'package:just_audio/just_audio.dart';
 import '../../providers/app_providers.dart';
 import '../../services/audio/audio_player_service.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/localization/localization_keys.dart';
+import '../../core/utils/localization/localization_scope.dart';
 import '../screens/player/player_studio_chips.dart';
 
 class PlayerControlsSection extends ConsumerWidget {
@@ -46,10 +48,10 @@ class PlayerControlsSection extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             Semantics(
-              label: isShuffle ? 'Shuffle enabled' : 'Shuffle disabled',
+              label: isShuffle ? context.tr(L10nKeys.shuffleOn) : context.tr(L10nKeys.shuffleOff),
               button: true,
               child: IconButton(
-                tooltip: isShuffle ? 'Shuffle: ON' : 'Shuffle: OFF',
+                tooltip: isShuffle ? context.tr(L10nKeys.shuffleOn) : context.tr(L10nKeys.shuffleOff),
                 icon: Icon(
                   Icons.shuffle_rounded,
                   size: 22,
@@ -62,10 +64,10 @@ class PlayerControlsSection extends ConsumerWidget {
               ),
             ),
             Semantics(
-              label: 'Previous track',
+              label: context.tr(L10nKeys.previousTrack),
               button: true,
               child: IconButton(
-                tooltip: 'Previous Track',
+                tooltip: context.tr(L10nKeys.previousTrack),
                 icon: Icon(Icons.skip_previous_rounded, size: 34, color: tokens.primaryText),
                 onPressed: () {
                   HapticFeedback.lightImpact();
@@ -74,7 +76,7 @@ class PlayerControlsSection extends ConsumerWidget {
               ),
             ),
             Semantics(
-              label: isPlaying ? 'Pause' : 'Play',
+              label: isPlaying ? context.tr(L10nKeys.paused) : context.tr(L10nKeys.playing),
               button: true,
               child: GestureDetector(
                 onTap: () {
@@ -104,10 +106,10 @@ class PlayerControlsSection extends ConsumerWidget {
               ),
             ),
             Semantics(
-              label: 'Next track',
+              label: context.tr(L10nKeys.nextTrack),
               button: true,
               child: IconButton(
-                tooltip: 'Next Track',
+                tooltip: context.tr(L10nKeys.nextTrack),
                 icon: Icon(Icons.skip_next_rounded, size: 34, color: tokens.primaryText),
                 onPressed: () {
                   HapticFeedback.lightImpact();
@@ -116,10 +118,10 @@ class PlayerControlsSection extends ConsumerWidget {
               ),
             ),
             Semantics(
-              label: loopMode == LoopMode.all ? 'Loop all' : (loopMode == LoopMode.one ? 'Loop single' : 'Loop off'),
+              label: loopMode == LoopMode.all ? context.tr(L10nKeys.loopAll) : (loopMode == LoopMode.one ? context.tr(L10nKeys.loopOne) : context.tr(L10nKeys.loopOff)),
               button: true,
               child: IconButton(
-                tooltip: loopMode == LoopMode.all ? 'Loop: ALL' : (loopMode == LoopMode.one ? 'Loop: ONE' : 'Loop: OFF'),
+                tooltip: loopMode == LoopMode.all ? context.tr(L10nKeys.loopAll) : (loopMode == LoopMode.one ? context.tr(L10nKeys.loopOne) : context.tr(L10nKeys.loopOff)),
                 icon: Icon(
                   loopMode == LoopMode.one ? Icons.repeat_one_rounded : Icons.repeat_rounded,
                   size: 22,

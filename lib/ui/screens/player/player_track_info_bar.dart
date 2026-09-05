@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/noir_theme.dart';
+import '../../../core/utils/localization/localization_keys.dart';
+import '../../../core/utils/localization/localization_scope.dart';
 import '../../../data/models/song_model.dart';
 import '../../../data/repositories/music_repository.dart';
 import '../../../providers/app_providers.dart';
@@ -121,17 +123,17 @@ class PlayerTrackInfoBar extends ConsumerWidget {
       final shouldRemove = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Remove download?'),
+          title: Text(context.tr(L10nKeys.removeDownloadQ)),
           content:
-              Text('"${song.title}" will be removed from offline playback.'),
+              Text(context.tr(L10nKeys.removeDownload)),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Cancel'),
+              child: Text(context.tr(L10nKeys.cancel)),
             ),
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('Remove'),
+              child: Text(context.tr(L10nKeys.remove)),
             ),
           ],
         ),
@@ -142,7 +144,7 @@ class PlayerTrackInfoBar extends ConsumerWidget {
       return;
     }
     sm.showSnackBar(SnackBar(
-      content: Text('Downloading "${song.title}" in 320kbps High-Fidelity...'),
+      content: Text(context.tr(L10nKeys.downloadingSong, {'title': song.title})),
       duration: const Duration(seconds: 2),
     ));
     final res = await MusicService.downloadTrack(song);
@@ -152,8 +154,8 @@ class PlayerTrackInfoBar extends ConsumerWidget {
     if (context.mounted) {
       sm.showSnackBar(SnackBar(
         content: Text(res != null
-            ? 'Downloaded "${song.title}" for offline playback'
-            : 'Download failed. Check connection.'),
+            ? context.tr(L10nKeys.downloadedSong, {'title': song.title})
+            : context.tr(L10nKeys.error)),
         duration: const Duration(seconds: 3),
       ));
     }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/localization/localization_keys.dart';
+import '../../core/utils/localization/localization_scope.dart';
 import '../../providers/app_providers.dart';
 import '../../services/audio/audio_router_service.dart';
 import '../../shared/widgets/glass_card.dart';
@@ -69,7 +71,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'AUDIO OUTPUT ROUTER',
+                      context.tr(L10nKeys.outputRouter),
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -79,7 +81,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Device Casting & Multi-Output',
+                      context.tr(L10nKeys.deviceCasting),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -95,7 +97,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '${effectiveDevices.length} Connected',
+                    context.tr(L10nKeys.connectedDevices, {'count': effectiveDevices.length.toString()}),
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -107,20 +109,20 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
             ),
             const SizedBox(height: 16),
 
-            // Multi-Cast Dual Audio Toggle Card
+            // Multi-Cast Audio Section (Bluetooth Dual Audio / Multi-Device)
             GlassCard(
               radius: 16,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.all(14),
               child: Row(
                 children: [
-                  Icon(Icons.hub_outlined, size: 22, color: isDark ? Colors.white : Colors.black),
+                  Icon(Icons.hub_rounded, size: 20, color: isDark ? Colors.white : Colors.black),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Multi-Cast Dual Audio',
+                          context.tr(L10nKeys.multiCastDual),
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -129,7 +131,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Simultaneous output to Bluetooth + Speaker / AUX',
+                          context.tr(L10nKeys.dualAudioDesc),
                           style: TextStyle(
                             fontSize: 10.5,
                             color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary,
@@ -162,7 +164,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                 ),
                 icon: Icon(Icons.tune_rounded, size: 16, color: isDark ? Colors.white70 : Colors.black87),
                 label: Text(
-                  'Open System Output Panel / Dual Audio',
+                  context.tr(L10nKeys.openSystemPanel),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -176,7 +178,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
 
             // Connected Devices List
             Text(
-              'SELECT ACTIVE OUTPUT',
+              context.tr(L10nKeys.selectActiveOutput),
               style: TextStyle(
                 fontSize: 10.5,
                 fontWeight: FontWeight.w700,
@@ -250,7 +252,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
-                                'ACTIVE',
+                                context.tr(L10nKeys.active),
                                 style: TextStyle(
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w800,

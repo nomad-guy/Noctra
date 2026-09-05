@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/noir_theme.dart';
+import '../../../core/utils/localization/localization_keys.dart';
+import '../../../core/utils/localization/localization_scope.dart';
 import '../../../core/utils/time_of_day_greeting.dart';
 import '../live_audio_wave.dart';
 
@@ -24,7 +26,7 @@ class HomeGreetingSection extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              timeOfDayGreeting(),
+              timeOfDayGreeting(context),
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.w800,
@@ -45,7 +47,7 @@ class HomeGreetingSection extends StatelessWidget {
                     Border.all(color: isDark ? Colors.white12 : Colors.black12),
               ),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
+                 mainAxisSize: MainAxisSize.min,
                 children: [
                   LiveAudioWave(
                       isPlaying: isPlaying,
@@ -54,7 +56,7 @@ class HomeGreetingSection extends StatelessWidget {
                       barCount: 3),
                   const SizedBox(width: 5),
                   Text(
-                    isPlaying ? 'PLAYING' : 'READY',
+                    isPlaying ? context.tr(L10nKeys.playing).toUpperCase() : context.tr(L10nKeys.ready),
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.w700,

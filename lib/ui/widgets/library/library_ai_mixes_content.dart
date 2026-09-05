@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/utils/localization/localization_keys.dart';
+import '../../../core/utils/localization/localization_scope.dart';
 import '../../../data/models/ai_folder_model.dart';
 import '../../../data/models/ai_playlist_model.dart';
 
@@ -27,13 +29,13 @@ class LibraryAiMixesContent extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 160),
         children: [
-          Text('Your sound: $archetype',
+          Text('${context.tr(L10nKeys.yourSound)}: $archetype',
               style: TextStyle(
                   fontSize: 13,
                   color: isDark ? Colors.white54 : Colors.black54)),
           const SizedBox(height: 18),
           if (mixes.isNotEmpty) ...[
-            _heading('Your Mixes'),
+            _heading(context.tr(L10nKeys.aiMixes)),
             SizedBox(
               height: 160,
               child: ListView.separated(
@@ -49,7 +51,7 @@ class LibraryAiMixesContent extends StatelessWidget {
             const SizedBox(height: 24),
           ],
           if (folders.isNotEmpty) ...[
-            _heading('AI Folders'),
+            _heading(context.tr(L10nKeys.folders)),
             ...folders.map((folder) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: _FolderRow(
@@ -60,7 +62,7 @@ class LibraryAiMixesContent extends StatelessWidget {
             const SizedBox(height: 14),
           ],
           if (topArtists.isNotEmpty) ...[
-            _heading('In Your Rotation'),
+            _heading(context.tr(L10nKeys.exploreArtists)),
             Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -69,11 +71,11 @@ class LibraryAiMixesContent extends StatelessWidget {
                     .toList()),
           ],
           if (mixes.isEmpty && folders.isEmpty)
-            const Padding(
-              padding: EdgeInsets.only(top: 60),
+            Padding(
+              padding: const EdgeInsets.only(top: 60),
               child: Center(
                   child: Text(
-                      'Keep listening\nYour AI mixes and folders will appear as you build your listening history.',
+                      context.tr(L10nKeys.keepListeningAi),
                       textAlign: TextAlign.center)),
             ),
         ],

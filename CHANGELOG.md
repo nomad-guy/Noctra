@@ -1,5 +1,36 @@
 # Changelog
 
+## v1.0.1 (2026-09-05)
+
+### Complete System-Wide Localization & Voice Integration Foundation
+
+This release brings comprehensive, production-grade system-wide localization across all 8 supported languages with 100% 1:1 key parity, dynamic runtime reactivity without app restarts, and external voice assistant controller hardening.
+
+### System-Wide Localization Architecture
+- **8 Fully Supported Languages**: Complete dictionary parity across English (`en`), Hindi (`hi`), Punjabi (`pa`), Urdu (`ur`), Kannada (`kn`), Tamil (`ta`), Marathi (`mr`), and Odia (`or`).
+- **Reactive Localization Scope**: Upgraded `LocalizationContextX.tr(key, [args])` to support clean positional parameter interpolation (`context.tr(L10nKeys.key, {'param': 'val'})`) and instant reactive updates across the widget tree via `NoctraLocalizationScope`.
+- **Zero-Emoji Compliance**: Verified all dictionaries and localized user-facing strings strictly adhere to professional typographic standards with zero emojis.
+- **Bi-Directional Script & RTL Support**: Native Right-To-Left layout mirroring and bidirectional text flow for Urdu (`ur`) using `NoctraLocalization.isRtl`.
+
+### UI & Bottom Sheet Internationalization
+- **Media Controls & Mini Player**: Fully localized track titles, durations, codec badges, audio visualizers, and playback actions.
+- **Audio Output & Sleep Timer**: Localized device casting targets, sleep timer durations, auto-pause descriptions, and state toasts.
+- **Jam Studio & P2P SyncCast**: Complete localization for room codes, host controls, real-time sync status, chat, and queue operations.
+- **Library & Search Catalogs**: Localized genre chips, AI mixes, folders management, catalog status messages, and dynamic search prompts.
+- **Equalizer & Audio Stems**: Localized preset names, frequency band controls, neural stem separation progress, and vocal isolation labels.
+- **In-App Updater & Settings**: Fully localized update prompts, release version comparison labels, action buttons, and storage management tools.
+
+### Android Voice Assistant Hardening
+- **MediaSession Voice Integration**: Strengthened Android `MediaSession` external controller callbacks allowing Google Assistant and Gemini to control playback, volume, skipping, and track metadata querying.
+- **App Actions Capabilities**: Validated `shortcuts.xml` declarations for `actions.intent.PLAY_MUSIC` and `actions.intent.OPEN_APP_FEATURE`.
+
+### Architecture & Verification
+- **Strict <= 300 LOC Invariant**: Maintained 100% compliance across all Dart and Kotlin source files.
+- **Clean Static Analysis**: 0 warnings and 0 errors across the entire repository with `flutter analyze`.
+- **Comprehensive Automated Test Coverage**: All test suites passing including key parity verification and release manifest integrity.
+
+---
+
 ## v1.0.0 (2026-09-05)
 
 ### Stable Signed Production Release

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/noir_theme.dart';
+import '../../../core/utils/localization/localization_keys.dart';
+import '../../../core/utils/localization/localization_scope.dart';
 import '../../../data/models/song_model.dart';
 import '../../widgets/ai_radio_sheet.dart';
 import '../artist_screen.dart';
@@ -35,7 +37,7 @@ class PlayerBottomActions extends StatelessWidget {
                     size: 14, color: tokens.secondaryAccent),
                 const SizedBox(width: 6),
                 Text(
-                  'AI Radio',
+                  context.tr(L10nKeys.aiRadio),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,

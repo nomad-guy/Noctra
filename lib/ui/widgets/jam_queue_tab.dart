@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/localization/localization_keys.dart';
+import '../../core/utils/localization/localization_scope.dart';
 import '../../services/p2p/p2p_sync_service.dart';
 import '../../shared/widgets/glass_card.dart';
 
@@ -28,7 +30,7 @@ class JamQueueTab extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'SHARED QUEUE (${queue.length})',
+                '${context.tr(L10nKeys.sharedQueue).toUpperCase()} (${queue.length})',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -37,7 +39,7 @@ class JamQueueTab extends ConsumerWidget {
                 ),
               ),
               Text(
-                'Live Synced Across Peers',
+                context.tr(L10nKeys.liveSyncedPeers),
                 style: TextStyle(
                     fontSize: 11,
                     color: isDark ? Colors.white38 : Colors.black38),
@@ -61,8 +63,8 @@ class JamQueueTab extends ConsumerWidget {
                         const SizedBox(height: 12),
                         Text(
                           syncService.hostControlsOnly && !syncService.isHost
-                              ? 'The host has restricted the queue.\nOnly the host can change tracks right now.'
-                              : 'No tracks in the collaborative queue.\nAny listener in this room can add songs here.',
+                              ? context.tr(L10nKeys.hostRestrictedQueue)
+                              : context.tr(L10nKeys.collaborativeQueueEmpty),
                           textAlign: TextAlign.center,
                           style: TextStyle(
                               fontSize: 12.5,

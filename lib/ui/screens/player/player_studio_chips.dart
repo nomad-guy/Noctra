@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import '../../../core/theme/noir_theme.dart';
+import '../../../core/utils/localization/localization_keys.dart';
+import '../../../core/utils/localization/localization_scope.dart';
 import '../../../providers/app_providers.dart';
 
 enum StudioMasterMode { lossless320, spatial3d, concertReverb }
@@ -23,7 +25,7 @@ class PlayerStudioChips extends ConsumerWidget {
         _masterChip(
           context,
           ref,
-          'Master 320k',
+          context.tr(L10nKeys.master320k),
           StudioMasterMode.lossless320,
           Icons.album_rounded,
           masterMode,
@@ -32,7 +34,7 @@ class PlayerStudioChips extends ConsumerWidget {
         _masterChip(
           context,
           ref,
-          'Spatial 3D',
+          context.tr(L10nKeys.virtualizer3d),
           StudioMasterMode.spatial3d,
           Icons.surround_sound_rounded,
           masterMode,
@@ -41,7 +43,7 @@ class PlayerStudioChips extends ConsumerWidget {
         _masterChip(
           context,
           ref,
-          'Concert Reverb',
+          context.tr(L10nKeys.concertReverb),
           StudioMasterMode.concertReverb,
           Icons.stadium_rounded,
           masterMode,
@@ -69,10 +71,9 @@ class PlayerStudioChips extends ConsumerWidget {
         if (applied) {
           ref.read(studioMasterModeProvider.notifier).state = mode;
         } else if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text(
-                'This audio effect is unavailable for the current output.'),
-            duration: Duration(seconds: 2),
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(context.tr(L10nKeys.effectUnavailableOutput)),
+            duration: const Duration(seconds: 2),
           ));
         }
       },

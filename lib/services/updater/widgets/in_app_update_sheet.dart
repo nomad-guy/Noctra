@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../../core/utils/localization/localization_keys.dart';
+import '../../../core/utils/localization/localization_scope.dart';
 import '../app_update_service.dart';
 import '../app_update_stager.dart';
 import 'in_app_update_cards.dart';
@@ -135,7 +137,7 @@ class _InAppUpdateModalContentState extends State<InAppUpdateModalContent> {
             const SizedBox(height: 16),
             if (info.hasUpdate) ...[
               Text(
-                'RELEASE HIGHLIGHTS',
+                context.tr(L10nKeys.releaseHighlights),
                 style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w700,

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/localization/localization_keys.dart';
+import '../../core/utils/localization/localization_scope.dart';
 import '../../providers/app_providers.dart';
 import '../../shared/widgets/glass_card.dart';
-
 
 class SleepTimerSheet extends ConsumerWidget {
   const SleepTimerSheet({super.key});
@@ -57,7 +58,7 @@ class SleepTimerSheet extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Night Sleep Timer',
+                          context.tr(L10nKeys.nightSleepTimer),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -65,7 +66,9 @@ class SleepTimerSheet extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          remaining != null ? '$remaining minutes remaining' : 'Auto fade-out & pause',
+                          remaining != null
+                              ? context.tr(L10nKeys.minutesRemaining, {'minutes': remaining.toString()})
+                              : context.tr(L10nKeys.autoFadeOutPause),
                           style: TextStyle(
                             fontSize: 11.5,
                             fontFamily: remaining != null ? 'monospace' : null,
@@ -112,7 +115,7 @@ class SleepTimerSheet extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            m == 0 ? 'Off' : '${m}m',
+                            m == 0 ? context.tr(L10nKeys.off) : '${m}m',
                             style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/noctra_localization.dart';
 import '../../providers/app_providers.dart';
 import '../../shared/widgets/glass_card.dart';
 
@@ -52,7 +53,7 @@ class RecentlyPlayedSheet extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Recently Played History',
+                      NoctraLocalization.tr('recently_played_history'),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
@@ -61,7 +62,7 @@ class RecentlyPlayedSheet extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${recentlyPlayed.length} Tracks • Autonomous taste learning active',
+                      NoctraLocalization.tr('tracks_count', args: {'count': recentlyPlayed.length}),
                       style: TextStyle(
                         fontSize: 11,
                         color: isDark ? Colors.white54 : Colors.black54,
@@ -73,7 +74,7 @@ class RecentlyPlayedSheet extends ConsumerWidget {
                   TextButton.icon(
                     icon: Icon(Icons.delete_outline_rounded, size: 16, color: isDark ? Colors.white70 : Colors.black87),
                     label: Text(
-                      'Clear All',
+                      NoctraLocalization.tr('clear_all'),
                       style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : Colors.black87),
                     ),
                     onPressed: () {
@@ -95,7 +96,7 @@ class RecentlyPlayedSheet extends ConsumerWidget {
                     child: ElevatedButton.icon(
                       icon: Icon(Icons.play_arrow_rounded, size: 18, color: isDark ? Colors.black : Colors.white),
                       label: Text(
-                        'Play All',
+                        NoctraLocalization.tr('play_all'),
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: isDark ? Colors.black : Colors.white),
                       ),
                       style: ElevatedButton.styleFrom(
@@ -114,7 +115,7 @@ class RecentlyPlayedSheet extends ConsumerWidget {
                     child: OutlinedButton.icon(
                       icon: Icon(Icons.shuffle_rounded, size: 16, color: isDark ? Colors.white : Colors.black),
                       label: Text(
-                        'Shuffle',
+                        NoctraLocalization.tr('shuffle'),
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black),
                       ),
                       style: OutlinedButton.styleFrom(
@@ -145,7 +146,7 @@ class RecentlyPlayedSheet extends ConsumerWidget {
                         Icon(Icons.history_rounded, size: 48, color: isDark ? Colors.white24 : Colors.black26),
                         const SizedBox(height: 12),
                         Text(
-                          'No recently played tracks',
+                          NoctraLocalization.tr('no_recent_tracks'),
                           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? Colors.white54 : Colors.black54),
                         ),
                       ],
@@ -203,7 +204,7 @@ class RecentlyPlayedSheet extends ConsumerWidget {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      '${song.artist} • $score% Match',
+                                      '${song.artist} • ${NoctraLocalization.tr('match_percent', args: {'score': score})}',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
@@ -220,7 +221,7 @@ class RecentlyPlayedSheet extends ConsumerWidget {
                               ],
                               IconButton(
                                 icon: Icon(Icons.close_rounded, size: 16, color: isDark ? Colors.white38 : Colors.black38),
-                                tooltip: 'Remove from history',
+                                tooltip: NoctraLocalization.tr('removeFromHistory'),
                                 onPressed: () {
                                   repo.removeRecentlyPlayed(song.id);
                                 },

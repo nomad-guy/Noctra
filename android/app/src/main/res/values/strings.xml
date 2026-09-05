@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Noctra</string>
+    <string name="notification_channel_name">Noctra Playback</string>
+    <string name="notification_channel_description">Active music playback and media session controls</string>
+</resources>

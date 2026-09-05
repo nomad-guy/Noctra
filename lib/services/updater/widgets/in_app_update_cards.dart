@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/utils/localization/localization_keys.dart';
+import '../../../core/utils/localization/localization_scope.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../app_update_service.dart';
 
@@ -9,12 +11,7 @@ class InAppUpdateHeaderRow extends StatelessWidget {
   final bool isDark;
   final VoidCallback onClose;
 
-  const InAppUpdateHeaderRow({
-    super.key,
-    required this.info,
-    required this.isDark,
-    required this.onClose,
-  });
+  const InAppUpdateHeaderRow({super.key, required this.info, required this.isDark, required this.onClose});
 
   @override
   Widget build(BuildContext context) {
@@ -37,14 +34,19 @@ class InAppUpdateHeaderRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  info.hasUpdate ? 'New Version Available' : 'App is Up to Date',
+                  info.hasUpdate
+                      ? context.tr(L10nKeys.newVersionAvailable)
+                      : context.tr(L10nKeys.appUpToDate),
                   style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                       color: isDark ? Colors.white : Colors.black),
                 ),
                 Text(
-                  'Installed: ${info.currentVersion} • Latest: ${info.latestVersion}',
+                  context.tr(L10nKeys.installedVersionLabel, {
+                    'current': info.currentVersion,
+                    'latest': info.latestVersion,
+                  }),
                   style: TextStyle(
                       fontSize: 11.5,
                       color: isDark ? Colors.white54 : Colors.black54),
@@ -95,11 +97,7 @@ class InAppReadyToInstallCard extends StatelessWidget {
   final bool isDark;
   final VoidCallback onInstall;
 
-  const InAppReadyToInstallCard({
-    super.key,
-    required this.isDark,
-    required this.onInstall,
-  });
+  const InAppReadyToInstallCard({super.key, required this.isDark, required this.onInstall});
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +114,7 @@ class InAppReadyToInstallCard extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Update downloaded and verified. Install when you are ready.',
+                  context.tr(L10nKeys.updateReadyInstall),
                   style: TextStyle(
                       fontSize: 12.5,
                       color: isDark ? Colors.white70 : Colors.black87),
@@ -133,7 +131,7 @@ class InAppReadyToInstallCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
           icon: const Icon(Icons.restart_alt_rounded, size: 18),
-          label: const Text('Restart & Update'),
+          label: Text(context.tr(L10nKeys.restartUpdate)),
           onPressed: onInstall,
         ),
         const SizedBox(height: 8),
@@ -149,13 +147,7 @@ class InAppDownloadingCard extends StatelessWidget {
   final double downloadedMb;
   final double? totalMb;
 
-  const InAppDownloadingCard({
-    super.key,
-    required this.isDark,
-    required this.progress,
-    required this.downloadedMb,
-    this.totalMb,
-  });
+  const InAppDownloadingCard({super.key, required this.isDark, required this.progress, required this.downloadedMb, this.totalMb});
 
   @override
   Widget build(BuildContext context) {
@@ -178,8 +170,8 @@ class InAppDownloadingCard extends StatelessWidget {
           children: [
             Text(
               progress >= 1.0
-                  ? 'Launching system installer...'
-                  : 'Downloading update (${(progress * 100).toInt()}%)',
+                  ? context.tr(L10nKeys.launchingInstaller)
+                  : context.tr(L10nKeys.downloadingUpdatePercent, {'percent': (progress * 100).toInt().toString()}),
               style: TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
@@ -202,21 +194,14 @@ class InAppDownloadingCard extends StatelessWidget {
   }
 }
 
-/// Primary update CTA: error message, in-app download button and the
-/// external-browser fallback.
+/// Primary update CTA: error message, in-app download button and browser fallback.
 class InAppUpdateActionCard extends StatelessWidget {
   final bool isDark;
   final String? errorMessage;
   final VoidCallback onUpdate;
   final VoidCallback onExternal;
 
-  const InAppUpdateActionCard({
-    super.key,
-    required this.isDark,
-    required this.errorMessage,
-    required this.onUpdate,
-    required this.onExternal,
-  });
+  const InAppUpdateActionCard({super.key, required this.isDark, required this.errorMessage, required this.onUpdate, required this.onExternal});
 
   @override
   Widget build(BuildContext context) {
@@ -234,20 +219,19 @@ class InAppUpdateActionCard extends StatelessWidget {
             backgroundColor: isDark ? Colors.white : Colors.black,
             foregroundColor: isDark ? Colors.black : Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
           icon: const Icon(Icons.flash_on_rounded, size: 18),
-          label: const Text('Update Now (Direct In-App)',
-              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+          label: Text(context.tr(L10nKeys.updateNowDirect),
+              style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
           onPressed: onUpdate,
         ),
         const SizedBox(height: 8),
         Center(
           child: TextButton.icon(
             icon: const Icon(Icons.open_in_browser_rounded, size: 14),
-            label: const Text('Or download APK from browser',
-                style: TextStyle(fontSize: 11.5)),
+            label: Text(context.tr(L10nKeys.downloadApkBrowser),
+                style: const TextStyle(fontSize: 11.5)),
             onPressed: onExternal,
           ),
         ),
@@ -275,7 +259,7 @@ class InAppUpToDateCard extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'You are running the latest official build of Noctra (${info.currentVersion}).',
+              context.tr(L10nKeys.runningLatest, {'version': info.currentVersion}),
               style: TextStyle(
                   fontSize: 13,
                   color: isDark ? Colors.white70 : Colors.black87),
