@@ -1,0 +1,6 @@
+# Live-network smoke tests are excluded from the default suite so CI stays
+# hermetic. Run them explicitly with:
+#   flutter test --run-skipped --tags live
+tags:
+  live:
+    skip: "Live-network smoke test; run with --run-skipped --tags live"

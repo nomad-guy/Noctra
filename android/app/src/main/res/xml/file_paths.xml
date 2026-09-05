@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The FileProvider exists solely to hand the verified, downloaded
+         update APK (written to the internal cache via
+         getTemporaryDirectory) to the Android package installer. Nothing
+         else in the app creates FileProvider URIs, so only the internal
+         cache is exposed (not external storage, app files, or the
+         external cache). -->
+    <cache-path name="cache" path="." />
+</paths>

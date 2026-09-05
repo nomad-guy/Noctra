@@ -1,0 +1,41 @@
+name: noctra
+description: "Authentication-less on-device agentic music player with dual Noir themes."
+publish_to: 'none'
+
+version: 1.0.0+10000
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.4.2
+  http: ^1.2.1
+  just_audio: ^0.10.6
+  audio_service: ^0.18.19
+  path_provider: ^2.1.3
+  permission_handler: 12.0.3
+  shared_preferences: ^2.5.5
+  audio_session: ^0.2.4
+  url_launcher: ^6.3.1
+  sqflite: ^2.3.3+1
+  path: ^1.9.0
+  file_picker: ^12.1.2
+  crypto: ^3.0.6
+  package_info_plus: ^10.2.1
+  cryptography: 2.7.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  shared_preferences_platform_interface: ^2.4.2
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/logo_noctra_noir_black.png
+    - assets/images/logo_noctra_noir_white.png
+    - assets/images/logo_noctra_liquid_glass.png
+    - assets/images/liquid_glass_shard.png
