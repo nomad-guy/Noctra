@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
 import '../../core/utils/localization/localization_keys.dart';
 import '../../core/utils/localization/localization_scope.dart';
+import '../../core/utils/permission_helper.dart';
 import '../../providers/app_providers.dart';
 import '../../services/audio/audio_router_service.dart';
 import '../../shared/widgets/glass_card.dart';
 
+const _kFallbackEndpoint = [
+  AudioDeviceEndpoint(id: 1, name: 'Built-in Phone Speaker', type: 'Phone Speaker', typeCode: 2, isSink: true, isActive: true),
+];
 
 class AudioOutputCastSheet extends ConsumerStatefulWidget {
   final bool isDark;
-
   const AudioOutputCastSheet({super.key, required this.isDark});
 
   @override
@@ -22,20 +26,24 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
   final Set<int> _selectedMultiIds = {};
 
   @override
+  void initState() {
+    super.initState();
+    _initBluetooth();
+  }
+
+  Future<void> _initBluetooth() async {
+    final granted = await PermissionHelper.requestBluetoothPermissions();
+    if (granted && mounted) {
+      ref.invalidate(connectedAudioDevicesProvider);
+      ref.invalidate(initialAudioDevicesProvider);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final devicesStream = ref.watch(connectedAudioDevicesProvider);
     final initialDevices = ref.watch(initialAudioDevicesProvider);
-    final devices = devicesStream.asData?.value ?? initialDevices.asData?.value;
-    final effectiveDevices = devices ?? [
-      const AudioDeviceEndpoint(
-        id: 1,
-        name: 'Built-in Phone Speaker',
-        type: 'Phone Speaker',
-        typeCode: 2,
-        isSink: true,
-        isActive: true,
-      ),
-    ];
+    final effectiveDevices = devicesStream.asData?.value ?? initialDevices.asData?.value ?? _kFallbackEndpoint;
     final router = ref.watch(audioRouterServiceProvider);
     final isDark = widget.isDark;
 
@@ -50,7 +58,6 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Handle Bar
             Center(
               child: Container(
                 width: 36,
@@ -62,8 +69,6 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
               ),
             ),
             const SizedBox(height: 18),
-
-            // Header Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -108,8 +113,6 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
               ],
             ),
             const SizedBox(height: 16),
-
-            // Multi-Cast Audio Section (Bluetooth Dual Audio / Multi-Device)
             GlassCard(
               radius: 16,
               padding: const EdgeInsets.all(14),
@@ -123,19 +126,12 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                       children: [
                         Text(
                           context.tr(L10nKeys.multiCastDual),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : Colors.black,
-                          ),
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           context.tr(L10nKeys.dualAudioDesc),
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary,
-                          ),
+                          style: TextStyle(fontSize: 10.5, color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary),
                         ),
                       ],
                     ),
@@ -144,7 +140,15 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                     value: _isMultiCastEnabled,
                     activeTrackColor: isDark ? Colors.white : Colors.black,
                     onChanged: (val) {
-                      setState(() => _isMultiCastEnabled = val);
+                      HapticFeedback.mediumImpact();
+                      setState(() {
+                        _isMultiCastEnabled = val;
+                        if (val) {
+                          _selectedMultiIds.addAll(effectiveDevices.map((d) => d.id));
+                        } else {
+                          _selectedMultiIds.clear();
+                        }
+                      });
                       router.setMultiOutputMode(val, _selectedMultiIds.toList());
                     },
                   ),
@@ -152,8 +156,6 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
               ),
             ),
             const SizedBox(height: 12),
-
-            // Native Android System Media Switcher / Dual Audio Panel
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
@@ -165,29 +167,20 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                 icon: Icon(Icons.tune_rounded, size: 16, color: isDark ? Colors.white70 : Colors.black87),
                 label: Text(
                   context.tr(L10nKeys.openSystemPanel),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : Colors.black,
-                  ),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black),
                 ),
-                onPressed: () => router.openSystemMediaSwitcher(),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  router.openSystemMediaSwitcher();
+                },
               ),
             ),
             const SizedBox(height: 16),
-
-            // Connected Devices List
             Text(
               context.tr(L10nKeys.selectActiveOutput),
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-                color: isDark ? Colors.white54 : Colors.black45,
-              ),
+              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: isDark ? Colors.white54 : Colors.black45),
             ),
             const SizedBox(height: 8),
-
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -202,7 +195,8 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                     isHighlighted: isSelected,
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     child: InkWell(
-                      onTap: () {
+                      onTap: () async {
+                        HapticFeedback.mediumImpact();
                         if (_isMultiCastEnabled) {
                           setState(() {
                             if (_selectedMultiIds.contains(dev.id)) {
@@ -211,9 +205,13 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                               _selectedMultiIds.add(dev.id);
                             }
                           });
-                          router.setMultiOutputMode(true, _selectedMultiIds.toList());
+                          await router.setMultiOutputMode(true, _selectedMultiIds.toList());
                         } else {
-                          router.setOutputDevice(dev.id);
+                          await router.setOutputDevice(dev.id);
+                        }
+                        if (context.mounted) {
+                          ref.invalidate(connectedAudioDevicesProvider);
+                          ref.invalidate(initialAudioDevicesProvider);
                         }
                       },
                       child: Row(
@@ -226,20 +224,12 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                               children: [
                                 Text(
                                   dev.name,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                    color: isDark ? Colors.white : Colors.black,
-                                  ),
+                                  style: TextStyle(fontSize: 13, fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500, color: isDark ? Colors.white : Colors.black),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   dev.type,
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    fontFamily: 'monospace',
-                                    color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary,
-                                  ),
+                                  style: TextStyle(fontSize: 10.5, fontFamily: 'monospace', color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary),
                                 ),
                               ],
                             ),
@@ -247,17 +237,10 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                           if (isSelected)
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: isDark ? Colors.white : Colors.black,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
+                              decoration: BoxDecoration(color: isDark ? Colors.white : Colors.black, borderRadius: BorderRadius.circular(10)),
                               child: Text(
                                 context.tr(L10nKeys.active),
-                                style: TextStyle(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: isDark ? Colors.black : Colors.white,
-                                ),
+                                style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, color: isDark ? Colors.black : Colors.white),
                               ),
                             )
                           else
@@ -281,16 +264,10 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
   }
 
   IconData _getDeviceIcon(String type) {
-    final lower = type.toLowerCase();
-    if (lower.contains('bluetooth') || lower.contains('wireless') || lower.contains('ble')) {
-      return Icons.bluetooth_audio_rounded;
-    }
-    if (lower.contains('aux') || lower.contains('headphone') || lower.contains('headset')) {
-      return Icons.headphones_rounded;
-    }
-    if (lower.contains('usb') || lower.contains('dac')) {
-      return Icons.usb_rounded;
-    }
+    final l = type.toLowerCase();
+    if (l.contains('blue') || l.contains('wireless') || l.contains('ble')) return Icons.bluetooth_audio_rounded;
+    if (l.contains('aux') || l.contains('headphone') || l.contains('headset')) return Icons.headphones_rounded;
+    if (l.contains('usb') || l.contains('dac')) return Icons.usb_rounded;
     return Icons.volume_up_rounded;
   }
 }

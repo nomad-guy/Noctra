@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/app_providers.dart';
 import '../../../shared/widgets/glass_card.dart';
 import 'music_preferences_sheet.dart';
+import '../../widgets/audio_dna_sheet.dart';
 
 /// Settings section displaying active music preferences with an editor action.
 class MusicPreferencesSection extends ConsumerWidget {
@@ -73,6 +74,55 @@ class MusicPreferencesSection extends ConsumerWidget {
                     MusicPreferencesSheet.show(context, ref, isDark),
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        GlassCard(
+          radius: 16,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: InkWell(
+            onTap: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => const AudioDnaSheet(),
+              );
+            },
+            child: Row(
+              children: [
+                Icon(Icons.fingerprint_rounded,
+                    size: 22,
+                    color: isDark ? Colors.white70 : Colors.black87),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Audio DNA & Taste Radar',
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Live 32-axis geometric acoustic visualizer',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: isDark ? Colors.white54 : Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded,
+                    size: 20,
+                    color: isDark ? Colors.white38 : Colors.black38),
+              ],
+            ),
           ),
         ),
       ],

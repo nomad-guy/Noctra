@@ -31,4 +31,17 @@ class PermissionHelper {
       return false;
     }
   }
+
+  static Future<bool> requestBluetoothPermissions() async {
+    if (kIsWeb) return true;
+    try {
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        final status = await Permission.bluetoothConnect.request();
+        return status.isGranted;
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 }

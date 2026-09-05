@@ -6,6 +6,7 @@ import '../../../core/utils/localization/localization_scope.dart';
 import '../../../providers/app_providers.dart';
 import '../../widgets/audio_output_cast_sheet.dart';
 import '../../widgets/equalizer_sheet.dart';
+import '../../widgets/playback_speed_sheet.dart';
 import '../../widgets/queue_sheet.dart';
 import '../../widgets/sleep_timer_sheet.dart';
 import '../../widgets/stem_separation_sheet.dart';
@@ -153,6 +154,13 @@ class PlayerHeader extends ConsumerWidget {
               backgroundColor: Colors.transparent,
               builder: (_) => const EqualizerSheet(),
             );
+          case 'speed':
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => const PlaybackSpeedSheet(),
+            );
           case 'stems':
             if (song != null) {
                showModalBottomSheet(
@@ -174,6 +182,7 @@ class PlayerHeader extends ConsumerWidget {
       itemBuilder: (_) => [
         PopupMenuItem(value: 'output', child: Text(context.tr(L10nKeys.audioOutput))),
         PopupMenuItem(value: 'jam', child: Text(context.tr(L10nKeys.jamRoom))),
+        PopupMenuItem(value: 'speed', child: const Text('Speed & FX (Slowed / Nightcore)')),
         PopupMenuItem(value: 'equalizer', child: Text(context.tr(L10nKeys.equalizer))),
         PopupMenuItem(value: 'quality', child: Text(context.tr(L10nKeys.codecResolution))),
         PopupMenuItem(value: 'stems', child: Text(context.tr(L10nKeys.audioStems))),

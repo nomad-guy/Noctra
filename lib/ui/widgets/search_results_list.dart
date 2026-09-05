@@ -8,6 +8,7 @@ import '../../providers/app_providers.dart';
 import 'search/search_artist_card.dart';
 import 'search/search_catalog_grid.dart';
 import 'search/search_track_tile.dart';
+import 'swipeable_song_tile.dart';
 
 class SearchResultsList extends ConsumerWidget {
   final bool isDark;
@@ -114,10 +115,13 @@ class SearchResultsList extends ConsumerWidget {
         }
 
         final song = searchResults[i - 1];
-        return SearchTrackTile(
+        return SwipeableSongTile(
           song: song,
-          isCurrent: currentSong?.id == song.id,
-          isDark: isDark,
+          child: SearchTrackTile(
+            song: song,
+            isCurrent: currentSong?.id == song.id,
+            isDark: isDark,
+          ),
         );
       },
     );

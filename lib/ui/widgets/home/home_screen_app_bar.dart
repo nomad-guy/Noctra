@@ -70,6 +70,7 @@ class _HomeScreenAppBarState extends ConsumerState<HomeScreenAppBar>
   @override
   Widget build(BuildContext context) {
     final syncService = ref.watch(p2pSyncServiceProvider);
+    final isOffline = ref.watch(isOfflineModeProvider);
     final isDark = widget.isDark;
     final themeMode = widget.themeMode;
 
@@ -138,6 +139,7 @@ class _HomeScreenAppBarState extends ConsumerState<HomeScreenAppBar>
             ),
             Row(
               children: [
+                _offlineModeButton(context, isOffline, isDark),
                 _topBarIcon(
                   Icons.podcasts_rounded,
                   context.tr(L10nKeys.partyMode),
@@ -173,6 +175,26 @@ class _HomeScreenAppBarState extends ConsumerState<HomeScreenAppBar>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _offlineModeButton(BuildContext context, bool isOffline, bool isDark) {
+    return IconButton(
+      tooltip: isOffline ? 'Offline Mode (Active)' : 'Downloads Only (Offline)',
+      iconSize: 20,
+      constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+      icon: Icon(
+        isOffline ? Icons.cloud_off_rounded : Icons.cloud_queue_rounded,
+        color: isOffline
+            ? (isDark ? const Color(0xFF00E5FF) : const Color(0xFF007A87))
+            : (isDark ? Colors.white60 : Colors.black54),
+      ),
+      onPressed: () {
+        toggleOfflineMode(ref);
+        ref.invalidate(dynamicTrendingFeedProvider);
+        ref.invalidate(dynamicVibeTracksProvider);
+        ref.invalidate(dynamicSpotifyChartsProvider);
+      },
     );
   }
 

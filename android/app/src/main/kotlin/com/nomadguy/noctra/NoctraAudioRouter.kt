@@ -126,6 +126,7 @@ class NoctraAudioRouter(private val context: Context) {
                 ?: return RouteResult.DeviceNotFound
 
             applyDeviceRouting(target)
+            notifyDeviceChange()
             RouteResult.Ok
         } catch (e: Throwable) {
             Log.w(TAG, "setPreferredOutputDevice($deviceId) failed", e)
@@ -143,38 +144,66 @@ class NoctraAudioRouter(private val context: Context) {
     private fun applyDeviceRouting(target: AudioDeviceInfo) {
         when (target.type) {
             AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> {
-                @Suppress("DEPRECATION")
-                audioManager.isSpeakerphoneOn = true
-                @Suppress("DEPRECATION")
-                audioManager.mode = AudioManager.MODE_NORMAL
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    try {
+                        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+                        audioManager.setCommunicationDevice(target)
+                    } catch (e: Throwable) {
+                        Log.w(TAG, "setCommunicationDevice(speaker) failed", e)
+                    }
+                } else {
+                    audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+                    @Suppress("DEPRECATION")
+                    audioManager.isSpeakerphoneOn = true
+                }
             }
             AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
             AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
             AudioDeviceInfo.TYPE_BLE_HEADSET,
             AudioDeviceInfo.TYPE_BLE_SPEAKER -> {
-                @Suppress("DEPRECATION")
-                audioManager.isSpeakerphoneOn = false
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    try {
+                        audioManager.clearCommunicationDevice()
+                        audioManager.setCommunicationDevice(target)
+                    } catch (_: Throwable) {}
+                    audioManager.mode = AudioManager.MODE_NORMAL
+                } else {
                     @Suppress("DEPRECATION")
-                    audioManager.startBluetoothSco()
-                    @Suppress("DEPRECATION")
-                    audioManager.isBluetoothScoOn = true
+                    audioManager.isSpeakerphoneOn = false
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                        @Suppress("DEPRECATION")
+                        audioManager.startBluetoothSco()
+                        @Suppress("DEPRECATION")
+                        audioManager.isBluetoothScoOn = true
+                    }
+                    audioManager.mode = AudioManager.MODE_NORMAL
                 }
-                // API 31+ intentionally has no app-level media
-                // routing call. The user must select the device via
-                // the system media output panel, which we open in
-                // [openSystemMediaOutputSwitcher] when called.
             }
             AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
             AudioDeviceInfo.TYPE_WIRED_HEADSET,
             AudioDeviceInfo.TYPE_USB_DEVICE,
             AudioDeviceInfo.TYPE_USB_HEADSET -> {
-                @Suppress("DEPRECATION")
-                audioManager.isSpeakerphoneOn = false
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    try {
+                        audioManager.clearCommunicationDevice()
+                        audioManager.setCommunicationDevice(target)
+                    } catch (_: Throwable) {}
+                    audioManager.mode = AudioManager.MODE_NORMAL
+                } else {
+                    @Suppress("DEPRECATION")
+                    audioManager.isSpeakerphoneOn = false
+                    audioManager.mode = AudioManager.MODE_NORMAL
+                }
             }
             else -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    try {
+                        audioManager.clearCommunicationDevice()
+                    } catch (_: Throwable) {}
+                }
                 @Suppress("DEPRECATION")
                 audioManager.isSpeakerphoneOn = false
+                audioManager.mode = AudioManager.MODE_NORMAL
             }
         }
     }
@@ -230,20 +259,23 @@ class NoctraAudioRouter(private val context: Context) {
             return SpeakerPlusBluetoothResult.SingleDeviceRouted
         }
         return try {
-            @Suppress("DEPRECATION")
-            audioManager.isSpeakerphoneOn = true
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val speaker = devices.find { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                if (speaker != null) {
+                    audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+                    audioManager.setCommunicationDevice(speaker)
+                }
+                notifyDeviceChange()
+                SpeakerPlusBluetoothResult.SpeakerOnly
+            } else {
+                audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+                @Suppress("DEPRECATION")
+                audioManager.isSpeakerphoneOn = true
                 @Suppress("DEPRECATION")
                 audioManager.startBluetoothSco()
                 @Suppress("DEPRECATION")
                 audioManager.isBluetoothScoOn = true
-            }
-            // API 31+ cannot run two media sinks simultaneously
-            // from user code; signal that fact so the UI can show
-            // a "needs system panel" hint.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                SpeakerPlusBluetoothResult.SpeakerOnly
-            } else {
+                notifyDeviceChange()
                 SpeakerPlusBluetoothResult.Ok
             }
         } catch (e: Throwable) {

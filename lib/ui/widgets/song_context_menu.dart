@@ -7,6 +7,7 @@ import '../../data/models/song_model.dart';
 import '../../providers/app_providers.dart';
 import 'add_to_folder_sheet.dart';
 import 'ai_radio_sheet.dart';
+import 'share_story_card_sheet.dart';
 
 /// Reusable song context menu bottom sheet.
 /// Shows song info + actions: Play Next, Add to Queue, Add to Folder, AI Radio.
@@ -141,6 +142,21 @@ class SongContextMenu extends ConsumerWidget {
                   isScrollControlled: true,
                   backgroundColor: Colors.transparent,
                   builder: (_) => AIRadioSheet(seedSong: song),
+                );
+              },
+            ),
+            _menuTile(
+              context, isDark,
+              icon: Icons.share_rounded,
+              title: 'Share Story Card',
+              subtitle: 'Export visual story card to Instagram or chats',
+              onTap: () {
+                Navigator.of(context).pop();
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => ShareStoryCardSheet(song: song),
                 );
               },
             ),

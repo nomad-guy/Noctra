@@ -7,6 +7,7 @@ import '../../data/repositories/music_repository.dart';
 import '../../shared/widgets/glass_card.dart';
 
 import 'library/library_song_row.dart';
+import 'swipeable_song_tile.dart';
 
 class LibraryAllSongsTab extends ConsumerWidget {
   final bool isDark;
@@ -128,10 +129,13 @@ class LibraryAllSongsTab extends ConsumerWidget {
               delegate: SliverChildBuilderDelegate(
                 (context, i) {
                   final s = displaySongs[i];
-                  return LibrarySongRow(
+                  return SwipeableSongTile(
                     song: s,
-                    isDark: isDark,
-                    repo: repo,
+                    child: LibrarySongRow(
+                      song: s,
+                      isDark: isDark,
+                      repo: repo,
+                    ),
                   );
                 },
                 childCount: displaySongs.length,

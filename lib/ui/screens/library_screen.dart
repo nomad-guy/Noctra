@@ -42,6 +42,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
     final allSongs = repo.localLibrary;
     final customFolders = repo.customFolders;
     final syncService = ref.watch(p2pSyncServiceProvider);
+    final isOffline = ref.watch(isOfflineModeProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -70,6 +71,17 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                         color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
                       ),
                     ),
+                  ),
+                  IconButton(
+                    tooltip: isOffline ? 'Offline Mode (Active)' : 'Downloads Only (Offline)',
+                    icon: Icon(
+                      isOffline ? Icons.cloud_off_rounded : Icons.cloud_queue_rounded,
+                      color: isOffline
+                          ? (isDark ? const Color(0xFF00E5FF) : const Color(0xFF007A87))
+                          : (isDark ? Colors.white60 : Colors.black54),
+                      size: 22,
+                    ),
+                    onPressed: () => toggleOfflineMode(ref),
                   ),
                   IconButton(
                     tooltip: context.tr(L10nKeys.importMigrateLibrary),

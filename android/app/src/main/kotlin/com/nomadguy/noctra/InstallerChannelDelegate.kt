@@ -80,6 +80,35 @@ object InstallerChannelDelegate {
                     Log.e(TAG, "APK install failed", e)
                     result.error("INSTALL_ERROR", e.message, null)
                 }
+            } else if (call.method == "shareFile") {
+                val filePath = call.argument<String>("filePath") ?: ""
+                val title = call.argument<String>("title") ?: "Share"
+                val mimeType = call.argument<String>("mimeType") ?: "image/png"
+                try {
+                    val file = File(filePath)
+                    if (file.exists()) {
+                        val uri = FileProvider.getUriForFile(
+                            activity.applicationContext,
+                            "${activity.applicationContext.packageName}.fileprovider",
+                            file
+                        )
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = mimeType
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        }
+                        val chooser = Intent.createChooser(shareIntent, title).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        activity.startActivity(chooser)
+                        result.success(true)
+                    } else {
+                        result.success(false)
+                    }
+                } catch (e: Throwable) {
+                    Log.e(TAG, "File share failed", e)
+                    result.error("SHARE_ERROR", e.message, null)
+                }
             } else {
                 result.notImplemented()
             }

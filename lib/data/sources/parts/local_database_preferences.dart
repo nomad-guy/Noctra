@@ -59,4 +59,24 @@ extension LocalDatabasePreferences on NoctraLocalDatabase {
       }
     });
   }
+
+  bool getCachedOfflineMode() {
+    try {
+      return _prefs?.getBool('noctra_offline_mode_only') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> saveOfflineMode(bool enabled) {
+    return _enqueuePrefsWrite(() async {
+      try {
+        final prefs = _prefs ?? await SharedPreferences.getInstance();
+        _prefs = prefs;
+        await prefs.setBool('noctra_offline_mode_only', enabled);
+      } catch (e) {
+        NoctraLogger.w('Failed to persist offline mode', e);
+      }
+    });
+  }
 }

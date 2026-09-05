@@ -17,9 +17,10 @@ import '../services/ytdlp/music_service.dart';
 import '../services/ai/candidate_retrieval_service.dart';
 import '../services/discovery/catalog_discovery_service.dart';
 import '../data/models/stream_metadata_model.dart';
-import '../features/search/domain/search_repository_contract.dart';
-import '../features/search/application/search_coordinator.dart';
-import '../features/search/infrastructure/search_repository_impl.dart';
+import 'offline_mode_provider.dart';
+
+export 'offline_mode_provider.dart';
+export 'search_providers.dart';
 
 // Navigation & App State
 final currentNavigationIndexProvider = StateProvider<int>((ref) => 0);
@@ -210,8 +211,12 @@ final homeFeedRefreshNonceProvider = StateProvider<int>((ref) => 0);
 
 // Dynamic Live Trending Feed Future Provider
 final dynamicTrendingFeedProvider = FutureProvider<List<Song>>((ref) async {
-  final nonce = ref.watch(homeFeedRefreshNonceProvider);
+  final isOffline = ref.watch(isOfflineModeProvider);
   final repo = ref.watch(musicRepositoryProvider);
+  if (isOffline) {
+    return repo.downloads.isNotEmpty ? repo.downloads : repo.localLibrary;
+  }
+  final nonce = ref.watch(homeFeedRefreshNonceProvider);
   return MusicService.fetchTrendingFeed(
     languages: repo.onboardedLanguages,
     genres: repo.onboardedGenres,
@@ -240,6 +245,11 @@ final selectedSpotifyChartKeyProvider = StateProvider<String>((ref) {
   return 'top_hits';
 });
 final dynamicSpotifyChartsProvider = FutureProvider<List<Song>>((ref) async {
+  final isOffline = ref.watch(isOfflineModeProvider);
+  final repo = ref.watch(musicRepositoryProvider);
+  if (isOffline) {
+    return repo.downloads.isNotEmpty ? repo.downloads : repo.localLibrary;
+  }
   ref.watch(homeFeedRefreshNonceProvider);
   final chart = ref.watch(selectedSpotifyChartKeyProvider);
   return MusicService.fetchSpotifyCharts(chartKey: chart);
@@ -247,6 +257,11 @@ final dynamicSpotifyChartsProvider = FutureProvider<List<Song>>((ref) async {
 
 // Dynamic Live Vibe Feed Future Provider
 final dynamicVibeTracksProvider = FutureProvider<List<Song>>((ref) async {
+  final isOffline = ref.watch(isOfflineModeProvider);
+  final repo = ref.watch(musicRepositoryProvider);
+  if (isOffline) {
+    return repo.downloads.isNotEmpty ? repo.downloads : repo.localLibrary;
+  }
   ref.watch(homeFeedRefreshNonceProvider);
   final vibe = ref.watch(selectedVibeKeyProvider) ?? 'late_night';
   return MusicService.fetchVibeFeed(vibe);
@@ -270,12 +285,4 @@ final aiAgentMixProvider =
       vibeKey: vibe, naturalPrompt: prompt);
 });
 
-// Search Subsystem Modular Contract Providers
-final searchRepositoryContractProvider = Provider<SearchRepositoryContract>((ref) {
-  return SearchRepositoryImpl();
-});
-
-final searchCoordinatorProvider = Provider<SearchCoordinator>((ref) {
-  return SearchCoordinator(ref.watch(searchRepositoryContractProvider));
-});
 
