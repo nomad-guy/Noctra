@@ -254,6 +254,9 @@ class NoctraAudioHandler extends BaseAudioHandler {
       pushPlaybackState: (state) {
         if (!playbackState.isClosed) playbackState.add(state);
       },
+      pushQueue: (items) {
+        if (!queue.isClosed) queue.add(items);
+      },
       forceSong: forceSong,
     );
   }
@@ -277,5 +280,6 @@ class NoctraAudioHandler extends BaseAudioHandler {
     _ticker = null;
     if (!playbackState.isClosed) playbackState.close();
     if (!mediaItem.isClosed) mediaItem.close();
+    if (!queue.isClosed) queue.close();
   }
 }

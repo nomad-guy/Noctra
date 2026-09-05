@@ -108,6 +108,7 @@ class TopArtistsCarousel extends ConsumerWidget {
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
+            itemExtent: 90.0,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: displayList.length,
             itemBuilder: (context, i) {

@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/noctra_localization.dart';
 import '../../providers/app_providers.dart';
 import '../../shared/widgets/glass_card.dart';
 
@@ -25,7 +26,7 @@ class AIGeneratedPlaylistsSection extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'AI Personalized Mixes',
+                NoctraLocalization.tr('ai_mixes'),
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
@@ -52,6 +53,7 @@ class AIGeneratedPlaylistsSection extends ConsumerWidget {
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               physics: const BouncingScrollPhysics(),
+              itemExtent: 148.0,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: playlists.length,
               itemBuilder: (context, index) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/noctra_localization.dart';
 import '../../core/utils/latest_request_gate.dart';
 import '../../providers/app_providers.dart';
 import '../../services/ai/candidate_retrieval_service.dart';
@@ -69,6 +70,7 @@ class _AIStudioScreenState extends ConsumerState<AIStudioScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(appLanguageProvider);
     final isDark = ref.watch(themeModeProvider).isDark;
     final repo = ref.watch(musicRepositoryProvider);
     return Scaffold(
@@ -114,7 +116,7 @@ class _AIStudioScreenState extends ConsumerState<AIStudioScreen> {
                 ref.read(rootScaffoldKeyProvider).currentState?.openDrawer(),
           ),
           Expanded(
-              child: Text('AI Studio',
+              child: Text(NoctraLocalization.tr('ai_studio_title'),
                   style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,

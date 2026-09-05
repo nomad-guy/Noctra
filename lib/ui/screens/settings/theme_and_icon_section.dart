@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/noir_theme.dart';
+import '../../../core/utils/noctra_localization.dart';
 import '../../../services/platform/dynamic_icon_service.dart';
 import '../../../providers/app_providers.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -12,13 +13,14 @@ class ThemeAndIconSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(appLanguageProvider);
     final themeMode = ref.watch(themeModeProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'INTERFACE THEME',
+          NoctraLocalization.tr('theme').toUpperCase(),
           style: TextStyle(
             fontSize: 10.5,
             fontWeight: FontWeight.w700,

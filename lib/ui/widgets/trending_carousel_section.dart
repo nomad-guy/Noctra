@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/noctra_localization.dart';
 import '../../data/models/song_model.dart';
 import '../../providers/app_providers.dart';
 import '../../shared/widgets/glass_card.dart';
@@ -49,7 +50,7 @@ class _TrendingCarouselSectionState extends ConsumerState<TrendingCarouselSectio
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Top Trending Hits', style: TextStyle(
+              Text(NoctraLocalization.tr('top_charts'), style: TextStyle(
                 fontSize: 22, fontWeight: FontWeight.w800,
                 color: widget.isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary,
               )),
@@ -80,6 +81,7 @@ class _TrendingCarouselSectionState extends ConsumerState<TrendingCarouselSectio
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
+                  itemExtent: 160.0,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: tracks.length,
                   itemBuilder: (context, i) => _buildCard(tracks, i),

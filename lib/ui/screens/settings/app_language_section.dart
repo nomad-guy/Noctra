@@ -11,11 +11,12 @@ class AppLanguageSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(appLanguageProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'APPLICATION LANGUAGE',
+          NoctraLocalization.tr('language').toUpperCase(),
           style: TextStyle(
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
@@ -58,8 +59,7 @@ class AppLanguageSection extends ConsumerWidget {
                 ],
                 onChanged: (val) {
                   if (val != null) {
-                    NoctraLocalization.currentLanguage = val;
-                    ref.read(appLanguageProvider.notifier).state = val;
+                    updateAppLanguage(ref, val);
                   }
                 },
               ),

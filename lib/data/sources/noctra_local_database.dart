@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/utils/noctra_logger.dart';
+import '../../core/utils/noctra_localization.dart';
 import '../models/catalog_topic.dart';
 import '../models/download_location.dart';
 import '../models/song_model.dart';
@@ -13,6 +14,7 @@ part 'parts/local_database_playback.dart';
 part 'parts/local_database_decoders.dart';
 part 'parts/local_database_manifests.dart';
 part 'parts/local_database_catalog_topics.dart';
+part 'parts/local_database_preferences.dart';
 
 class NoctraLocalDatabase {
   static final NoctraLocalDatabase _instance =
@@ -47,8 +49,6 @@ class NoctraLocalDatabase {
   List<String> get onboardedArtists => List.unmodifiable(_onboardedArtists);
   List<String> get onboardedGenres => List.unmodifiable(_onboardedGenres);
   List<String> get onboardedLanguages => List.unmodifiable(_onboardedLanguages);
-  String getCachedThemeMode() => _cachedThemeMode;
-
   static String normalizeThemeMode(String? raw) {
     if (raw == null) return 'noirBlack';
     final lower = raw.trim().toLowerCase();
@@ -56,29 +56,6 @@ class NoctraLocalDatabase {
     if (lower == 'liquidglass' || lower == 'liquid_glass') return 'liquidGlass';
     return 'noirBlack';
   }
-
-  String getCachedDownloadLocation() {
-    try {
-      return _prefs?.getString('noctra_download_location') ??
-          DownloadLocation.appDocs;
-    } catch (_) {
-      return DownloadLocation.appDocs;
-    }
-  }
-
-  Future<void> saveDownloadLocation(String key) {
-    return _enqueuePrefsWrite(() async {
-      try {
-        final prefs = _prefs ?? await SharedPreferences.getInstance();
-        _prefs = prefs;
-        await prefs.setString('noctra_download_location', key);
-      } catch (e) {
-        NoctraLogger.w('Failed to persist download location', e);
-      }
-    });
-  }
-
-  Future<void> saveCachedThemeMode(String modeName) => saveThemeMode(modeName);
 
   @visibleForTesting
   void debugResetForTest() {
@@ -139,6 +116,10 @@ class NoctraLocalDatabase {
       if (savedTheme != _cachedThemeMode) {
         unawaited(prefs.setString('noctra_theme_mode', _cachedThemeMode));
       }
+      final savedLang = prefs.getString('noctra_app_language');
+      if (savedLang != null && savedLang.isNotEmpty) {
+        NoctraLocalization.currentLanguage = savedLang;
+      }
 
       final kgStr = prefs.getString('noctra_kg_manifests');
       if (kgStr != null) {
@@ -161,20 +142,6 @@ class NoctraLocalDatabase {
       _cachedTasteVector = null;
       _isLoaded = false;
     }
-  }
-
-  Future<void> saveThemeMode(String mode) {
-    final clean = normalizeThemeMode(mode);
-    _cachedThemeMode = clean;
-    return _enqueuePrefsWrite(() async {
-      try {
-        final prefs = _prefs ?? await SharedPreferences.getInstance();
-        _prefs = prefs;
-        await prefs.setString('noctra_theme_mode', clean);
-      } catch (e) {
-        NoctraLogger.e('Failed to persist theme mode', e);
-      }
-    });
   }
 
   Future<void> saveFavorites(List<Song> songs) {

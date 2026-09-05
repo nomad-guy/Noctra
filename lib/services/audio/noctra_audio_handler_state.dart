@@ -15,16 +15,43 @@ class NoctraAudioHandlerStateMirror {
   String _lastRepeat = 'none';
   bool _lastShuffle = false;
   bool _lastFavorite = false;
+  String? _lastQueueKey;
 
   void push({
     required Song? song,
     required AudioPlayerService svc,
     required void Function(MediaItem?) pushMediaItem,
     required void Function(PlaybackState) pushPlaybackState,
+    void Function(List<MediaItem>)? pushQueue,
     bool forceSong = false,
   }) {
     _pushSong(song, svc, pushMediaItem, force: forceSong);
     _pushState(song, svc, pushPlaybackState);
+    if (pushQueue != null) {
+      _pushQueue(svc, pushQueue);
+    }
+  }
+
+  void _pushQueue(
+    AudioPlayerService svc,
+    void Function(List<MediaItem>) pushQueue,
+  ) {
+    final q = svc.queue;
+    final key = q.map((s) => s.id).join(',');
+    if (key == _lastQueueKey) return;
+    _lastQueueKey = key;
+    final mediaItems = q.map((s) => MediaItem(
+      id: s.id,
+      title: s.title,
+      artist: s.artist,
+      album: s.album,
+      duration: s.duration,
+      artUri: (s.artworkUrl != null && s.artworkUrl!.startsWith('http'))
+          ? Uri.tryParse(s.artworkUrl!)
+          : null,
+      playable: true,
+    )).toList(growable: false);
+    pushQueue(mediaItems);
   }
 
   void _pushSong(

@@ -31,8 +31,17 @@ final rootScaffoldKeyProvider =
     Provider<GlobalKey<ScaffoldState>>((ref) => GlobalKey<ScaffoldState>());
 
 // App Language state
-final appLanguageProvider =
-    StateProvider<String>((ref) => NoctraLocalization.currentLanguage);
+final appLanguageProvider = StateProvider<String>((ref) {
+  final cached = NoctraLocalDatabase().getCachedLanguage();
+  NoctraLocalization.currentLanguage = cached;
+  return cached;
+});
+
+void updateAppLanguage(WidgetRef ref, String code) {
+  NoctraLocalization.currentLanguage = code;
+  ref.read(appLanguageProvider.notifier).state = code;
+  NoctraLocalDatabase().saveLanguage(code);
+}
 
 // Theme state with persistent storage
 final themeModeProvider = StateProvider<NoirThemeMode>((ref) {

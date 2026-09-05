@@ -56,6 +56,7 @@ void main() async {
           androidStopForegroundOnPause: true,
         ),
       );
+      AssistantIntentChannel(router: noctraAudioHandler!.router).initialize();
     } catch (e, st) {
       NoctraLogger.e('AudioService.init failed', e, st);
     }
@@ -120,7 +121,6 @@ class _NoctraAppState extends ConsumerState<NoctraApp> {
         noctraAudioHandler!.router.setThemeCallback((mode) {
           ref.read(themeModeProvider.notifier).state = mode;
         });
-        AssistantIntentChannel(router: noctraAudioHandler!.router).initialize();
       }
     });
   }
@@ -142,6 +142,7 @@ class _NoctraAppState extends ConsumerState<NoctraApp> {
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
+    final currentLanguage = ref.watch(appLanguageProvider);
     final isInitialized = ref.watch(appInitializedProvider);
     final hasCompletedOnboarding = ref.watch(onboardingCompletedProvider);
 
@@ -154,7 +155,9 @@ class _NoctraAppState extends ConsumerState<NoctraApp> {
 
     final activeThemeData = NoirTheme.getTheme(themeMode);
     return MaterialApp(
+      key: ValueKey('noctra_app_$currentLanguage'),
       title: 'Noctra',
+      locale: Locale(currentLanguage),
       debugShowCheckedModeBanner: false,
       theme: activeThemeData,
       darkTheme: activeThemeData,

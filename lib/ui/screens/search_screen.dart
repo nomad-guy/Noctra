@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/noctra_localization.dart';
 import '../../providers/app_providers.dart';
 import '../widgets/developer_panel_sheet.dart';
 import '../widgets/synccast_sheet.dart';
@@ -71,6 +72,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(appLanguageProvider);
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
     final isSearching = ref.watch(isSearchingProvider);
@@ -102,7 +104,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      'Search & Explore',
+                      NoctraLocalization.tr('search_explore'),
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 20,
@@ -169,7 +171,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       color: isDark ? Colors.white : Colors.black,
                       fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'Search songs, artists, or paste URL...',
+                    hintText: '${NoctraLocalization.tr('search')}...',
                     hintStyle: TextStyle(
                         fontSize: 13,
                         color: isDark ? Colors.white38 : Colors.black38),

@@ -86,7 +86,7 @@ class NoirSidebar extends ConsumerWidget {
                   children: [
                     SidebarItem(
                       icon: Icons.home_filled,
-                      label: 'Home',
+                      label: NoctraLocalization.tr('home'),
                       isSelected: currentIndex == 0,
                       isDark: isDark,
                       onTap: () {
@@ -139,7 +139,7 @@ class NoirSidebar extends ConsumerWidget {
                     const SizedBox(height: 8),
                     SidebarItem(
                       icon: Icons.history_rounded,
-                      label: 'Recently Played',
+                      label: NoctraLocalization.tr('recently_played'),
                       isSelected: false,
                       isDark: isDark,
                       onTap: () {
@@ -169,7 +169,7 @@ class NoirSidebar extends ConsumerWidget {
                     ),
                     SidebarItem(
                       icon: Icons.equalizer_rounded,
-                      label: 'Equalizer FX',
+                      label: NoctraLocalization.tr('equalizer'),
                       isSelected: false,
                       isDark: isDark,
                       onTap: () {
@@ -183,7 +183,7 @@ class NoirSidebar extends ConsumerWidget {
                     ),
                     SidebarItem(
                       icon: Icons.terminal_rounded,
-                      label: 'Developer Suite',
+                      label: NoctraLocalization.tr('developer_suite'),
                       isSelected: false,
                       isDark: isDark,
                       onTap: () {
@@ -213,7 +213,7 @@ class NoirSidebar extends ConsumerWidget {
                     ),
                     SidebarItem(
                       icon: Icons.system_update_rounded,
-                      label: 'Check for Updates',
+                      label: NoctraLocalization.tr('check_updates'),
                       isSelected: false,
                       isDark: isDark,
                       onTap: () {

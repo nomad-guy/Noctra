@@ -75,6 +75,7 @@ void main() {
     handler.dispose();
     expect(handler.playbackState.isClosed, isTrue);
     expect(handler.mediaItem.isClosed, isTrue);
+    expect(handler.queue.isClosed, isTrue);
 
     // After dispose the mirror must refuse to push (no StateError on the
     // closed subjects) even if attach is called again.

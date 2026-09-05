@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
+import '../../core/utils/noctra_localization.dart';
 import '../../providers/app_providers.dart';
 import '../widgets/synccast_sheet.dart';
 import '../widgets/library_folders_tab.dart';
@@ -32,6 +33,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(appLanguageProvider);
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
     final repo = ref.watch(musicRepositoryProvider);
@@ -59,7 +61,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      'Your Library',
+                      NoctraLocalization.tr('library_title'),
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 20,
@@ -123,10 +125,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                   labelColor: isDark ? Colors.black : Colors.white,
                   unselectedLabelColor: isDark ? Colors.white60 : Colors.black54,
                   labelStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
-                  tabs: const [
-                    Tab(text: 'AI Mixes & Taste'),
-                    Tab(text: 'Folders & Playlists'),
-                    Tab(text: 'All Downloads'),
+                  tabs: [
+                    Tab(text: NoctraLocalization.tr('ai_mixes')),
+                    Tab(text: NoctraLocalization.tr('folders')),
+                    Tab(text: NoctraLocalization.tr('downloads')),
                   ],
                 ),
               ),

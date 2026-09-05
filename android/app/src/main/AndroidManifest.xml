@@ -57,6 +57,12 @@
                 <action android:name="android.intent.action.MEDIA_SEARCH" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="noctra" />
+            </intent-filter>
         </activity>
 
         <!-- ====== LAUNCHER ALIASES ======

@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/utils/noctra_localization.dart';
 import '../../data/models/song_model.dart';
 import '../../providers/app_providers.dart';
 import '../../shared/widgets/glass_card.dart';
@@ -47,7 +48,7 @@ class RecentlyPlayedSection extends ConsumerWidget {
                 child: Row(
                   children: [
                     Text(
-                      'RECENTLY PLAYED',
+                      NoctraLocalization.tr('recently_played').toUpperCase(),
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,

@@ -7,6 +7,7 @@ import 'package:noctra/data/models/song_model.dart';
 import 'package:noctra/providers/app_providers.dart';
 import 'package:noctra/services/audio/audio_player_service.dart';
 import 'package:noctra/services/p2p/p2p_sync_service.dart';
+import 'package:noctra/ui/widgets/fade_indexed_stack.dart';
 import 'package:noctra/ui/widgets/main_navigation_shell.dart';
 import 'package:noctra/ui/widgets/queue_sheet.dart';
 
@@ -148,8 +149,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 20));
 
-      IndexedStack stack() =>
-          tester.widget<IndexedStack>(find.byType(IndexedStack).first);
+      FadeIndexedStack stack() =>
+          tester.widget<FadeIndexedStack>(find.byType(FadeIndexedStack).first);
       // Tab-aligned children (fixed length 4; unvisited slots are trivial
       // placeholders). The lazy guarantee is: only the visited tab is a real
       // screen. Pre-fix: all four screens existed from frame one.

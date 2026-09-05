@@ -8,8 +8,9 @@ import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
 
 /**
- * Handles incoming Assistant/voice search intents (`android.media.action.MEDIA_PLAY_FROM_SEARCH`)
- * and routes them to Flutter's AssistantCommandRouter.
+ * Handles incoming Assistant, voice search, and deep link intents
+ * (`android.media.action.MEDIA_PLAY_FROM_SEARCH`, `android.intent.action.VIEW`, etc.)
+ * and reliably forwards them to Flutter's AssistantCommandRouter.
  */
 class AssistantIntentDelegate {
     companion object {
@@ -39,30 +40,42 @@ class AssistantIntentDelegate {
         if (intent == null) return false
         val action = intent.action ?: return false
 
-        if (action == "android.media.action.MEDIA_PLAY_FROM_SEARCH" ||
-            action == "android.media.action.MEDIA_SEARCH" ||
-            action == Intent.ACTION_SEARCH
-        ) {
-            val query = intent.getStringExtra(SearchManager.QUERY) ?: ""
-            val extrasMap = bundleToMap(intent.extras)
+        val isMediaSearch = action == "android.media.action.MEDIA_PLAY_FROM_SEARCH" ||
+                action == "android.media.action.MEDIA_SEARCH" ||
+                action == Intent.ACTION_SEARCH
 
-            val payload = mapOf(
-                "query" to query,
-                "action" to action,
-                "extras" to extrasMap
-            )
+        val isView = action == Intent.ACTION_VIEW
 
-            Log.d(TAG, "Captured media search intent: query='$query', extras=$extrasMap")
+        if (!isMediaSearch && !isView) return false
 
-            val channel = methodChannel
-            if (channel != null) {
-                channel.invokeMethod("onMediaPlayFromSearch", payload)
-            } else {
-                pendingIntentData = payload
-            }
-            return true
+        val extrasMap = bundleToMap(intent.extras)
+        val query = intent.getStringExtra(SearchManager.QUERY)
+            ?: intent.getStringExtra("query")
+            ?: intent.getStringExtra("android.intent.extra.title")
+            ?: intent.getStringExtra("music.recording.name")
+            ?: ""
+
+        val dataString = intent.dataString
+
+        val payload = mapOf(
+            "query" to query,
+            "action" to action,
+            "data" to dataString,
+            "extras" to extrasMap
+        )
+
+        Log.d(TAG, "Captured assistant/media intent: action=$action, query='$query', data='$dataString'")
+
+        // Always cache as pending intent to survive cold start
+        pendingIntentData = payload
+
+        // If channel is ready, notify Dart listener immediately
+        val channel = methodChannel
+        if (channel != null) {
+            val method = if (isView) "onViewIntent" else "onMediaPlayFromSearch"
+            channel.invokeMethod(method, payload)
         }
-        return false
+        return true
     }
 
     private fun bundleToMap(bundle: Bundle?): Map<String, Any?> {
