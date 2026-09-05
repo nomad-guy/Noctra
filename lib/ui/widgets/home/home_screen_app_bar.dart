@@ -39,15 +39,17 @@ class HomeScreenAppBar extends ConsumerWidget {
       toolbarHeight: 54,
       automaticallyImplyLeading: false,
       titleSpacing: 0,
-      flexibleSpace: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Container(
-            color: themeMode.isLiquidGlass
-                ? context.noctraTokens.surface.withValues(alpha: .54)
-                : (isDark
-                    ? Colors.black.withValues(alpha: 0.6)
-                    : Colors.white.withValues(alpha: 0.7)),
+      flexibleSpace: RepaintBoundary(
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              color: themeMode.isLiquidGlass
+                  ? context.noctraTokens.surface.withValues(alpha: .54)
+                  : (isDark
+                      ? Colors.black.withValues(alpha: 0.6)
+                      : Colors.white.withValues(alpha: 0.7)),
+            ),
           ),
         ),
       ),

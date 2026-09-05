@@ -1,4 +1,3 @@
-import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import '../../core/theme/noir_theme.dart';
 
@@ -58,12 +57,7 @@ class GlassCard extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(radius),
-        child: tokens.glassBlurSigma > 0
-            ? BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: tokens.glassBlurSigma, sigmaY: tokens.glassBlurSigma),
-                child: _contentStack(tokens, isDark),
-              )
-            : _contentStack(tokens, isDark),
+        child: _contentStack(tokens, isDark),
       ),
     );
 

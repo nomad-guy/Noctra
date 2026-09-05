@@ -93,4 +93,34 @@ void main() {
     expect(find.text('Liquid Glass'), findsAtLeastNWidgets(1));
     expect(find.text('Language / भाषा'), findsOneWidget);
   });
+
+  testWidgets('App icon change shows confirmation popup dialog', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: SettingsSheet(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Tap on 'Noir Black' icon chip
+    final iconChips = find.text('Noir Black');
+    expect(iconChips, findsAtLeastNWidgets(1));
+    // The second 'Noir Black' is the icon chip in ThemeAndIconSection
+    await tester.tap(iconChips.last);
+    await tester.pumpAndSettle();
+
+    // Verify confirmation dialog appears
+    expect(find.text('Change App Icon'), findsOneWidget);
+    expect(find.text('No'), findsOneWidget);
+    expect(find.text('Yes, Apply'), findsOneWidget);
+
+    // Tap 'No' to dismiss
+    await tester.tap(find.text('No'));
+    await tester.pumpAndSettle();
+    expect(find.text('Change App Icon'), findsNothing);
+  });
 }

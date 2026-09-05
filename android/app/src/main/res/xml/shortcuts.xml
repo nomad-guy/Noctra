@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <capability android:name="actions.intent.PLAY_MUSIC">
+        <intent
+            android:action="android.media.action.MEDIA_PLAY_FROM_SEARCH"
+            android:targetPackage="com.nomadguy.noctra"
+            android:targetClass="com.nomadguy.noctra.MainActivity">
+            <parameter
+                android:name="music.recording.name"
+                android:key="query"/>
+        </intent>
+    </capability>
+    <capability android:name="actions.intent.OPEN_APP_FEATURE">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.nomadguy.noctra"
+            android:targetClass="com.nomadguy.noctra.MainActivity">
+            <parameter
+                android:name="feature"
+                android:key="feature"/>
+        </intent>
+    </capability>
+</shortcuts>

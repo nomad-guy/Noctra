@@ -123,14 +123,15 @@ class CustomBottomNavBar extends ConsumerWidget {
     final isDark = themeMode.isDark;
     final tokens = context.noctraTokens;
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-            sigmaX: themeMode.isLiquidGlass ? 22 : 0,
-            sigmaY: themeMode.isLiquidGlass ? 22 : 0),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
+    return RepaintBoundary(
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+              sigmaX: themeMode.isLiquidGlass ? 12 : 0,
+              sigmaY: themeMode.isLiquidGlass ? 12 : 0),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
           height: 58,
           decoration: BoxDecoration(
             color: themeMode.isLiquidGlass
@@ -182,7 +183,7 @@ class CustomBottomNavBar extends ConsumerWidget {
           ),
         ),
       ),
-    );
+    ),);
   }
 
   Widget _navItem(

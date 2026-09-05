@@ -182,6 +182,7 @@ mixin PlayerEffectsMixin on AudioPlayerServiceBase {
   double? _lastBassBoost;
   double? _lastVirtualizer;
 
+  @override
   Future<bool> attachNativeEffectsSession() async {
     if (!NoctraCapabilities.supportsNativeAudioEffects) {
       return false;
@@ -260,6 +261,20 @@ mixin PlayerEffectsMixin on AudioPlayerServiceBase {
       });
     } catch (e) {
       NoctraLogger.w('applyEqualizer failed', e);
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> getAudioEngineStatus() async {
+    if (!NoctraCapabilities.supportsNativeAudioEffects) {
+      return {'engine': 'none', 'isDynamics': false};
+    }
+    try {
+      final res = await _effectsChannel
+          .invokeMapMethod<String, dynamic>('getEngineStatus');
+      return res ?? {'engine': 'none', 'isDynamics': false};
+    } catch (_) {
+      return {'engine': 'none', 'isDynamics': false};
     }
   }
 }

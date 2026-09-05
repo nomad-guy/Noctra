@@ -37,9 +37,10 @@ class EqualizerSheet extends ConsumerWidget {
     final virtualizer = ref.watch(virtualizerProvider);
     final audioPlayer = ref.watch(audioPlayerServiceProvider);
 
-    return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-      child: Container(
+    return RepaintBoundary(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xF2000000) : const Color(0xF2FFFFFF),
@@ -270,6 +271,6 @@ class EqualizerSheet extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ),);
   }
 }

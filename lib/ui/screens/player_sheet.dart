@@ -45,9 +45,10 @@ class PlayerSheet extends ConsumerWidget {
         final velocity = d.primaryVelocity ?? 0;
         if (velocity > 400 && dragStartY < 80) Navigator.of(context).pop();
       },
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-        child: Container(
+      child: RepaintBoundary(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+          child: Container(
           constraints: BoxConstraints(maxHeight: screenH * 0.96),
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
           decoration: BoxDecoration(
@@ -119,6 +120,6 @@ class PlayerSheet extends ConsumerWidget {
           ),
         ),
       ),
-    );
+    ),);
   }
 }

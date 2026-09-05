@@ -11,39 +11,46 @@ class NoctraThemeBackdrop extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.noctraTokens;
     if (tokens.glassBlurSigma == 0) return child;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF0E2444),
-            tokens.canvas,
-            const Color(0xFF161838)
-          ],
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        RepaintBoundary(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF0E2444),
+                  tokens.canvas,
+                  const Color(0xFF161838),
+                ],
+              ),
+            ),
+            child: const Stack(
+              fit: StackFit.expand,
+              children: [
+                Positioned(
+                  top: -220,
+                  left: -160,
+                  child: _LiquidOrb(size: 480, color: Color(0x9068C8FF)),
+                ),
+                Positioned(
+                  bottom: -250,
+                  right: -180,
+                  child: _LiquidOrb(size: 520, color: Color(0x808070FF)),
+                ),
+                Positioned(
+                  top: 300,
+                  right: -150,
+                  child: _LiquidOrb(size: 330, color: Color(0x6068E8C0)),
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          const Positioned(
-            top: -220,
-            left: -160,
-            child: _LiquidOrb(size: 480, color: Color(0x9068C8FF)),
-          ),
-          const Positioned(
-            bottom: -250,
-            right: -180,
-            child: _LiquidOrb(size: 520, color: Color(0x808070FF)),
-          ),
-          const Positioned(
-            top: 300,
-            right: -150,
-            child: _LiquidOrb(size: 330, color: Color(0x6068E8C0)),
-          ),
-          child,
-        ],
-      ),
+        child,
+      ],
     );
   }
 }

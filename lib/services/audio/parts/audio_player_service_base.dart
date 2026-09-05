@@ -187,6 +187,7 @@ abstract class AudioPlayerServiceBase {
   MediaItem _createMediaItem(Song s);
   Future<bool> applyStudioMasterMode(String mode);
   Future<bool> attachNativeEffectsSession();
+  Future<Map<String, dynamic>> getAudioEngineStatus();
   Future<void> _attachListeners();
   Future<void> _detachListeners();
 }

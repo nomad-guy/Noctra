@@ -140,11 +140,7 @@ class ThemeAndIconSection extends ConsumerWidget {
     final tokens = context.noctraTokens;
 
     return GestureDetector(
-      onTap: () async {
-        await DynamicIconService.setIcon(icon);
-        ref.read(appIconProvider.notifier).state =
-            DynamicIconService.currentIcon;
-      },
+      onTap: () => _confirmAndSetIcon(context, ref, icon, title),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 9),
         decoration: BoxDecoration(
@@ -164,5 +160,73 @@ class ThemeAndIconSection extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmAndSetIcon(BuildContext context, WidgetRef ref,
+      NoctraAppIcon icon, String title) async {
+    final currentIcon = ref.read(appIconProvider);
+    if (currentIcon == icon) return;
+
+    final tokens = context.noctraTokens;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final shouldApply = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: tokens.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: tokens.subtleBorder),
+        ),
+        title: Text(
+          'Change App Icon',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: tokens.primaryText,
+          ),
+        ),
+        content: Text(
+          'Changing the app icon to "$title" will close the app due to Android system requirements. You will need to reopen Noctra to continue.\n\nDo you want to apply this change?',
+          style: TextStyle(
+            fontSize: 13,
+            height: 1.4,
+            color: tokens.secondaryText,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'No',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white60 : Colors.black54,
+              ),
+            ),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: tokens.accent,
+              foregroundColor: tokens.canvas,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Yes, Apply',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldApply == true) {
+      await DynamicIconService.setIcon(icon);
+      ref.read(appIconProvider.notifier).state =
+          DynamicIconService.currentIcon;
+    }
   }
 }

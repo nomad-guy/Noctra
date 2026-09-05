@@ -119,17 +119,24 @@ class StreamQualityService {
       final aIsOpus = aMime.contains('opus') || aMime.contains('webm');
       final bIsOpus = bMime.contains('opus') || bMime.contains('webm');
 
-      if (_streamQuality == StreamQuality.lossless ||
-          _streamQuality == StreamQuality.hiRes) {
-        if (aIsOpus != bIsOpus) return aIsOpus ? -1 : 1;
-      }
-
       final aBps = ((a['bitrate'] as num?) ?? 0).toDouble();
       final bBps = ((b['bitrate'] as num?) ?? 0).toDouble();
       final targetBps = _streamQuality.bitrate * 1000.0; // kbps → bps
 
       final aDiff = (aBps - targetBps).abs();
       final bDiff = (bBps - targetBps).abs();
+
+      // If bitrate distance difference is significant (> 16kbps), pick the closest bitrate
+      if ((aDiff - bDiff).abs() > 16000) {
+        return aDiff.compareTo(bDiff);
+      }
+
+      // If bitrates are comparably close, prioritize transparent 48kHz Opus
+      if (_streamQuality == StreamQuality.lossless ||
+          _streamQuality == StreamQuality.hiRes) {
+        if (aIsOpus != bIsOpus) return aIsOpus ? -1 : 1;
+      }
+
       return aDiff.compareTo(bDiff);
     });
 

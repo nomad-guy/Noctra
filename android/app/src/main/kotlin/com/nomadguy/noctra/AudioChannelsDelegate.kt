@@ -74,6 +74,14 @@ object AudioChannelsDelegate {
                     val mode = call.argument<String>("mode") ?: "off"
                     result.success(effectsEngine.applyPresetMode(mode))
                 }
+                "getEngineStatus" -> {
+                    result.success(
+                        mapOf(
+                            "engine" to effectsEngine.getActiveEngineName(),
+                            "isDynamics" to (effectsEngine.getActiveEngineName() == NoctraAudioEffectsEngine.ENGINE_DYNAMICS)
+                        )
+                    )
+                }
                 else -> result.notImplemented()
             }
         }
