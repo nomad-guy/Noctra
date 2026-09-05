@@ -1,5 +1,50 @@
 # Changelog
 
+## v1.0.2 (2026-09-05)
+
+### Features & Output Routing Hardening
+
+This release introduces comprehensive offline playback control, dynamic audio DNA profiling, smart playback FX, swipe gesture queuing, shareable lyric story cards, universal playlist importing, updater rollback capabilities, and Bluetooth output router enhancements.
+
+### In-App Rollback Architecture
+- **Seamless Rollback Support**: Users can now easily roll back to previous stable versions directly from the In-App Update Sheet.
+- **Rollback Manifest Tracking**: Cached fallback APK snapshots and SHA-256 digest validation prevent broken downgrade loops.
+
+### Offline Mode ("Downloads Only" Mode)
+- **One-Tap Offline Toggle**: Added dedicated offline switch on the Home Screen AppBar and Library screen.
+- **Dynamic Content Fallback**: When active, Home Trending, Spotify Charts, and Live Vibe feeds automatically resolve to downloaded and local songs with zero network requests.
+
+### Taste Radar & Audio DNA Profile Visualizer
+- **Interactive Acoustic Radar**: Custom multi-polygon visualizer mapping 8 acoustic traits: Energy, Valence, Danceability, Acousticness, Instrumentalness, Tempo, Liveness, and Speechiness.
+- **Acoustic Archetype Engine**: Classifies user listening habits into dynamic archetypes (e.g. Cyber Synth Architect, Melodic Architect, Nocturnal Dreamer).
+- **Audio DNA Sheet**: Accessible from Music Preferences in Settings.
+
+### Smart Playback Speed & Pitch FX
+- **Granular Speed Slider**: Full 0.5x to 2.0x playback rate adjustment with pristine audio time-stretching.
+- **Instant Preset Chips**: One-tap speed presets: Slowed (0.85x), Chill (0.90x), Normal (1.0x), Nightcore (1.25x), and Fast (1.50x).
+- **Player Quick Menu**: Speed & Pitch FX action sheet accessible directly from the player header.
+
+### Swipeable List Gesture Actions
+- **Swipe to Play Next**: Swipe track right (Cyan) to insert immediately behind the active song.
+- **Swipe to Add to Queue**: Swipe track left (Amber) to append to the end of the current play queue.
+- **Tactile Haptic Triggers**: Native haptic feedback on swipe thresholds across Library Songs and Search Results.
+
+### Shareable Song & Lyric Story Cards
+- **9:16 Story Card Generator**: Export high-resolution, beautifully styled music story cards for Instagram, Telegram, and WhatsApp stories.
+- **5 Dynamic Visual Themes**: Noir Black, Liquid Glass, Amber Glow, Neon Cyber, and Velvet Rose.
+- **Native Android Share Intent**: Zero external dependencies; shares directly using Android's native `FileProvider` and chooser sheet.
+
+### Universal Playlist URL Importer
+- **Multi-Platform Support**: Directly import Spotify public playlists, YouTube playlists, or plaintext tracklists ("Song - Artist").
+- **Automatic Matching**: Resolves metadata and saves songs into custom library folders seamlessly.
+
+### Bluetooth & Output Router Hardening
+- **Android 12+ Permission Resolution**: Prompts for `BLUETOOTH_CONNECT` runtime permissions so connected Bluetooth headphones/speakers are reliably enumerated.
+- **Accurate Active Sink Detection**: Dynamic priority heuristics for Communication Device -> Bluetooth A2DP -> Wired AUX -> Phone Speaker.
+- **Samsung Dual Audio Integration**: Direct launch of Samsung One UI QuickBoard Media Output panel for concurrent dual Bluetooth streaming.
+
+---
+
 ## v1.0.1 (2026-09-05)
 
 ### Complete System-Wide Localization & Voice Integration Foundation

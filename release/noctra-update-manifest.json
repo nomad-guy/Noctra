@@ -1,23 +1,23 @@
 {
-  "version": "1.0.1",
-  "versionCode": 13001,
+  "version": "1.0.2",
+  "versionCode": 13002,
   "minimumAndroid": 21,
   "packages": {
     "arm64-v8a": {
-      "file": "Noctra-1.0.1-arm64-v8a.apk",
-      "sha256": "87868a26316785e100bce85f0ae83d2ed98d00cc91a42a0c4a1d792a63318580"
+      "file": "Noctra-1.0.2-arm64-v8a.apk",
+      "sha256": "e1216b2afaf7bfa464dbd0d8d84af77a8000a0b4580cd2632553f45af8f170c3"
     },
     "armeabi-v7a": {
-      "file": "Noctra-1.0.1-armeabi-v7a.apk",
-      "sha256": "4602d69a2dedb8d9cb67e907785bb8ee666c48a0183a84e261b8d9fd63f0a237"
+      "file": "Noctra-1.0.2-armeabi-v7a.apk",
+      "sha256": "4534bf1683fcbfd95fdd8395e739d9915f4a14bd4724478e837ead283be7d34c"
     },
     "x86_64": {
-      "file": "Noctra-1.0.1-x86_64.apk",
-      "sha256": "2cd0dfa993fda623fb3892d199044cda049d74c18132c600a2944b469d47021a"
+      "file": "Noctra-1.0.2-x86_64.apk",
+      "sha256": "7b9a96ff5b994ec565ad7cc9f9fa857be5e223807ccbcef8160e1f9f1137d6ad"
     },
     "universal": {
-      "file": "Noctra-1.0.1-universal.apk",
-      "sha256": "2fd2cad0f7fcf2fdd641c8d4b8cead7fbc34a2c2bb68fbe20cf63e33a8688ed6"
+      "file": "Noctra-1.0.2-universal.apk",
+      "sha256": "9d26fa01faecd34c233e5401e022e2e5a308d5ff4e6809d26ba4099d659b0cb7"
     }
   }
 }
