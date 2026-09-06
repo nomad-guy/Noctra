@@ -31,10 +31,11 @@ void main() {
         final ups = '../'.allMatches(targetRaw).length;
         var base = path.substring(0, path.lastIndexOf('/'));
         for (var i = 0; i < ups; i++) {
-          base = base.substring(0, base.lastIndexOf('/'));
+          final slash = base.lastIndexOf('/');
+          base = slash != -1 ? base.substring(0, slash) : '';
         }
         final rel = targetRaw.substring(ups * 3);
-        final resolved = normalize('$base/$rel');
+        final resolved = normalize(base.isNotEmpty ? '$base/$rel' : rel);
         if (resolved != path) deps.add(resolved);
       }
       edges[path] = deps;
@@ -137,9 +138,12 @@ void main() {
         final ups = '../'.allMatches(targetRaw).length;
         var base = p.substring(0, p.lastIndexOf('/'));
         for (var i = 0; i < ups; i++) {
-          base = base.substring(0, base.lastIndexOf('/'));
+          final slash = base.lastIndexOf('/');
+          base = slash != -1 ? base.substring(0, slash) : '';
         }
-        final resolved = normalize('$base/${targetRaw.substring(ups * 3)}');
+        final resolved = normalize(base.isNotEmpty
+            ? '$base/${targetRaw.substring(ups * 3)}'
+            : targetRaw.substring(ups * 3));
 
         String? layerOf(String path) {
           if (path.startsWith('lib/core/')) return 'core';
@@ -148,6 +152,7 @@ void main() {
           if (path.startsWith('lib/providers/')) return 'providers';
           if (path.startsWith('lib/ui/')) return 'ui';
           if (path.startsWith('lib/shared/')) return 'shared';
+          if (path.startsWith('lib/features/')) return 'features';
           return null;
         }
 

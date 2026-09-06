@@ -32,6 +32,18 @@ enum AudioCodec {
   const AudioCodec(this.displayName, this.description);
 }
 
+/// Explicit mobile streaming data-saver policy.
+enum StreamingPolicy {
+  audiophileExtreme('Audiophile Extreme', 'Always bit-perfect FLAC / 320k'),
+  smartNetwork('Smart Wi-Fi / Mobile', 'Bit-perfect FLAC on Wi-Fi, efficient Opus on mobile data'),
+  dataSaver('Data Saver', 'Opus 96-128kbps low-bandwidth profile');
+
+  final String displayName;
+  final String description;
+
+  const StreamingPolicy(this.displayName, this.description);
+}
+
 /// CODEC and resolution settings for audio streaming and download.
 class StreamQualityService {
   static final StreamQualityService _instance =
@@ -48,6 +60,9 @@ class StreamQualityService {
   AudioCodec _preferredCodec = AudioCodec.mp3;
   AudioCodec get preferredCodec => _preferredCodec;
 
+  StreamingPolicy _streamingPolicy = StreamingPolicy.smartNetwork;
+  StreamingPolicy get streamingPolicy => _streamingPolicy;
+
   bool _normalizeVolume = true;
   bool get normalizeVolume => _normalizeVolume;
 
@@ -58,6 +73,19 @@ class StreamQualityService {
       StreamController<StreamQualitySettings>.broadcast();
   Stream<StreamQualitySettings> get settingsStream =>
       _settingsController.stream;
+
+  /// Sets the active streaming policy.
+  void setStreamingPolicy(StreamingPolicy policy) {
+    _streamingPolicy = policy;
+    if (policy == StreamingPolicy.dataSaver) {
+      _streamQuality = StreamQuality.low;
+      _preferredCodec = AudioCodec.opus;
+    } else if (policy == StreamingPolicy.audiophileExtreme) {
+      _streamQuality = StreamQuality.hiRes;
+      _preferredCodec = AudioCodec.flac;
+    }
+    _emitSettings();
+  }
 
   /// Set the streaming quality preference.
   Future<void> setStreamQuality(StreamQuality quality) async {
@@ -169,6 +197,7 @@ class StreamQualityService {
     _settingsController.add(StreamQualitySettings(
       streamQuality: _streamQuality,
       preferredCodec: _preferredCodec,
+      streamingPolicy: _streamingPolicy,
       normalizeVolume: _normalizeVolume,
       gaplessPlayback: _gaplessPlayback,
     ));
@@ -179,12 +208,14 @@ class StreamQualityService {
 class StreamQualitySettings {
   final StreamQuality streamQuality;
   final AudioCodec preferredCodec;
+  final StreamingPolicy streamingPolicy;
   final bool normalizeVolume;
   final bool gaplessPlayback;
 
   const StreamQualitySettings({
     required this.streamQuality,
     required this.preferredCodec,
+    required this.streamingPolicy,
     required this.normalizeVolume,
     required this.gaplessPlayback,
   });

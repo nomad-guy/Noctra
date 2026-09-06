@@ -26,14 +26,15 @@ class UrlPlaylistImporter {
 
   static Future<ImportedPlaylist?> _importSpotifyPlaylist(String url) async {
     try {
-      final match = RegExp(r'playlist/([a-zA-Z0-9]+)').firstMatch(url);
-      final playlistId = match?.group(1);
-      if (playlistId == null) return null;
+      final match = RegExp(r'(playlist|album)/([a-zA-Z0-9]+)').firstMatch(url);
+      final entityType = match?.group(1) ?? 'playlist';
+      final entityId = match?.group(2);
+      if (entityId == null) return null;
 
-      String playlistName = 'Spotify Playlist';
+      String playlistName = entityType == 'album' ? 'Spotify Album' : 'Spotify Playlist';
       try {
         final oRes = await http.get(Uri.parse(
-          'https://open.spotify.com/oembed?url=https://open.spotify.com/playlist/$playlistId',
+          'https://open.spotify.com/oembed?url=https://open.spotify.com/$entityType/$entityId',
         )).timeout(const Duration(seconds: 6));
         if (oRes.statusCode == 200) {
           final oData = jsonDecode(oRes.body);
@@ -42,7 +43,7 @@ class UrlPlaylistImporter {
       } catch (_) {}
 
       final embedRes = await http.get(
-        Uri.parse('https://open.spotify.com/embed/playlist/$playlistId'),
+        Uri.parse('https://open.spotify.com/embed/$entityType/$entityId'),
         headers: {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'},
       ).timeout(const Duration(seconds: 8));
 

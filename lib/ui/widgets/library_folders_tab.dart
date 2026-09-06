@@ -8,6 +8,7 @@ import '../../shared/widgets/glass_card.dart';
 
 import 'library/folder_delete_sheet.dart';
 import 'library/folder_detail_view.dart';
+import 'library/local_scan_card.dart';
 
 class LibraryFoldersTab extends ConsumerStatefulWidget {
   final bool isDark;
@@ -102,41 +103,47 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab>
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: !_isCreatingFolder
-                ? GestureDetector(
-                    onTap: () => setState(() => _isCreatingFolder = true),
-                    child: GlassCard(
-                      radius: 16,
-                      isHighlighted: true,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: widget.isDark ? Colors.white : Colors.black,
-                            ),
-                            child: Icon(Icons.create_new_folder_outlined,
-                                size: 20, color: widget.isDark ? Colors.black : Colors.white),
+                ? Column(
+                    children: [
+                      GestureDetector(
+                        onTap: () => setState(() => _isCreatingFolder = true),
+                        child: GlassCard(
+                          radius: 16,
+                          isHighlighted: true,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: widget.isDark ? Colors.white : Colors.black,
+                                ),
+                                child: Icon(Icons.create_new_folder_outlined,
+                                    size: 20, color: widget.isDark ? Colors.black : Colors.white),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('+ ${context.tr(L10nKeys.createFolder)}',
+                                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: widget.isDark ? Colors.white : Colors.black)),
+                                    Text(context.tr(L10nKeys.organizePlaylists),
+                                        style: TextStyle(fontSize: 11, color: widget.isDark ? Colors.white54 : Colors.black54)),
+                                  ],
+                                ),
+                              ),
+                              Icon(Icons.arrow_forward_ios_rounded,
+                                  size: 14, color: widget.isDark ? Colors.white38 : Colors.black38),
+                            ],
                           ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('+ ${context.tr(L10nKeys.createFolder)}',
-                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: widget.isDark ? Colors.white : Colors.black)),
-                                Text(context.tr(L10nKeys.organizePlaylists),
-                                    style: TextStyle(fontSize: 11, color: widget.isDark ? Colors.white54 : Colors.black54)),
-                              ],
-                            ),
-                          ),
-                          Icon(Icons.arrow_forward_ios_rounded,
-                              size: 14, color: widget.isDark ? Colors.white38 : Colors.black38),
-                        ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      LocalScanCard(isDark: widget.isDark, repo: widget.repo),
+                    ],
                   )
                 : GlassCard(
                     radius: 16,

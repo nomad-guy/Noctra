@@ -5,3 +5,6 @@
 library;
 
 export 'noctra_capabilities.dart';
+export 'contracts/playback_engine.dart';
+export 'contracts/platform_storage.dart';
+export 'contracts/media_control_service.dart';

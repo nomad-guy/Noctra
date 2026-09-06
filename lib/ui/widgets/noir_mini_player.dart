@@ -91,7 +91,7 @@ class _NoirMiniPlayerViewState extends ConsumerState<NoirMiniPlayerView> {
           }
         },
         child: GlassCard(
-          radius: 20,
+          radius: 24,
           padding: EdgeInsets.zero,
           isHighlighted: true,
           child: Column(
@@ -101,7 +101,7 @@ class _NoirMiniPlayerViewState extends ConsumerState<NoirMiniPlayerView> {
                 padding: const EdgeInsets.fromLTRB(10, 8, 10, 2),
                 child: Row(children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     child: Container(
                       width: 46, height: 46,
                       color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE0E0E0),

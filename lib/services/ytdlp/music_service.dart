@@ -15,6 +15,7 @@ import '../metadata/artist_metadata_service.dart';
 import '../metadata/artist_metadata_normalizer.dart';
 import '../metadata/spotify_oembed_service.dart';
 import '../resolvers/stream_resolver.dart';
+import '../../features/discovery/infrastructure/jiosaavn_pure_engine.dart';
 import 'search_result_ranker.dart';
 
 part 'parts/music_service_search.dart';

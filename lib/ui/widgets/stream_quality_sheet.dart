@@ -18,6 +18,7 @@ class _StreamQualitySheetState extends ConsumerState<StreamQualitySheet> {
   final _service = StreamQualityService();
   late StreamQuality _selectedQuality;
   late AudioCodec _selectedCodec;
+  late StreamingPolicy _selectedPolicy;
   late bool _normalizeVolume;
   late bool _gaplessPlayback;
 
@@ -26,6 +27,7 @@ class _StreamQualitySheetState extends ConsumerState<StreamQualitySheet> {
     super.initState();
     _selectedQuality = _service.streamQuality;
     _selectedCodec = _service.preferredCodec;
+    _selectedPolicy = _service.streamingPolicy;
     _normalizeVolume = _service.normalizeVolume;
     _gaplessPlayback = _service.gaplessPlayback;
   }
@@ -89,6 +91,21 @@ class _StreamQualitySheetState extends ConsumerState<StreamQualitySheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _buildSectionHeader('STREAMING DATA POLICY (DATA SAVER)', tokens),
+                    const SizedBox(height: 8),
+                    StreamingPolicyOptionsCard(
+                      selectedPolicy: _selectedPolicy,
+                      tokens: tokens,
+                      onSelect: (p) {
+                        setState(() {
+                          _selectedPolicy = p;
+                          _selectedQuality = _service.streamQuality;
+                          _selectedCodec = _service.preferredCodec;
+                        });
+                        _service.setStreamingPolicy(p);
+                      },
+                    ),
+                    const SizedBox(height: 16),
                     _buildSectionHeader('STREAM QUALITY', tokens),
                     const SizedBox(height: 8),
                     StreamQualityOptionsCard(

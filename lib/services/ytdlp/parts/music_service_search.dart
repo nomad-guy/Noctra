@@ -46,18 +46,12 @@ extension MusicServiceSearch on MusicService {
 
     final futures = <Future>[];
 
-    if (!kIsWeb && querySaavn) {
+    if (querySaavn) {
       futures.add(() async {
         try {
-          final List<dynamic>? nativeSongs =
-              await const MethodChannel('com.nomadguy.noctra/native_resolver')
-                  .invokeListMethod('searchJioSaavn', {
-            'query': clean,
-            'limit': 20
-          }).timeout(const Duration(seconds: 4));
-          if (nativeSongs != null) {
-            for (final m in nativeSongs) {
-              final map = m as Map;
+          final pureSongs = await JioSaavnPureEngine.searchSongs(clean, limit: 20);
+          if (pureSongs.isNotEmpty) {
+            for (final map in pureSongs) {
               collect(saavn, Song(
                   id: (map['id'] ??
                           'jio_${(map['title']?.toString() ?? '').hashCode}_${(map['artist']?.toString() ?? '').hashCode}')
@@ -66,8 +60,7 @@ extension MusicServiceSearch on MusicService {
                   artist: (map['artist'] ?? 'Unknown Artist').toString(),
                   album: (map['album'] ?? '320k Master').toString(),
                   artworkUrl: map['thumbnail'] as String?,
-                  streamUrl: (map['stream_url'] as String?)?.isNotEmpty ==
-                          true
+                  streamUrl: (map['stream_url'] as String?)?.isNotEmpty == true
                       ? map['stream_url'] as String?
                       : null,
                   duration: Duration(
@@ -77,6 +70,37 @@ extension MusicServiceSearch on MusicService {
                       map['title']?.toString() ?? '',
                       artist: map['artist']?.toString() ?? '',
                       genre: map['source']?.toString() ?? '')));
+            }
+          } else if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+            final List<dynamic>? nativeSongs =
+                await const MethodChannel('com.nomadguy.noctra/native_resolver')
+                    .invokeListMethod('searchJioSaavn', {
+              'query': clean,
+              'limit': 20
+            }).timeout(const Duration(seconds: 4));
+            if (nativeSongs != null) {
+              for (final m in nativeSongs) {
+                final map = m as Map;
+                collect(saavn, Song(
+                    id: (map['id'] ??
+                            'jio_${(map['title']?.toString() ?? '').hashCode}_${(map['artist']?.toString() ?? '').hashCode}')
+                        .toString(),
+                    title: (map['title'] ?? 'Unknown Track').toString(),
+                    artist: (map['artist'] ?? 'Unknown Artist').toString(),
+                    album: (map['album'] ?? '320k Master').toString(),
+                    artworkUrl: map['thumbnail'] as String?,
+                    streamUrl: (map['stream_url'] as String?)?.isNotEmpty ==
+                            true
+                        ? map['stream_url'] as String?
+                        : null,
+                    duration: Duration(
+                        seconds: (map['duration'] as num?)?.toInt() ?? 210),
+                    genre: (map['source'] ?? '320k High-Fidelity').toString(),
+                    featureVector: MusicService._deriveFeatureVector(
+                        map['title']?.toString() ?? '',
+                        artist: map['artist']?.toString() ?? '',
+                        genre: map['source']?.toString() ?? '')));
+              }
             }
           }
         } catch (_) {}

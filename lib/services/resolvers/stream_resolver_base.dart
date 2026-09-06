@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import '../../features/discovery/domain/stream_resolver_contract.dart';
+import '../../features/discovery/infrastructure/jiosaavn_pure_engine.dart';
 import '../../data/models/song_model.dart';
 import 'trusted_audio_hosts.dart';
 
@@ -84,7 +85,6 @@ class JioSaavnDirectResolver implements StreamResolver {
   @override
   String get sourceId => 'jiosaavn_320kbps';
   @override
-  @override
   Future<bool> canResolve(Song song, {Duration? timeBudget}) async {
     final u = song.streamUrl;
     if (u != null &&
@@ -106,9 +106,6 @@ class JioSaavnDirectResolver implements StreamResolver {
       final pid = song.id.substring(6);
       final uri = Uri.parse(
           'https://www.jiosaavn.com/api.php?__call=song.getDetails&pids=$pid&_format=json&_marker=0&ctx=android');
-      // Per-attempt client so the request can actually be aborted when the
-      // shared resolution budget expires (top-level http.get would keep the
-      // socket open until its own 4 s cap with no way to cancel).
       final client = http.Client();
       try {
         final cap = boundedTimeout(timeBudget, const Duration(seconds: 4));
@@ -128,13 +125,16 @@ class JioSaavnDirectResolver implements StreamResolver {
           final encUrl = songData?['encrypted_media_url'] as String? ??
               songData?['more_info']?['encrypted_media_url'] as String?;
           if (encUrl != null && encUrl.isNotEmpty) {
-            final decUrl = await _channel
-                .invokeMethod<String>('decryptUrl', {'encryptedUrl': encUrl});
-            if (decUrl != null && decUrl.isNotEmpty) return decUrl;
+            final pureUrl = JioSaavnPureEngine.decryptMediaUrl(encUrl);
+            if (pureUrl != null && pureUrl.isNotEmpty) return pureUrl;
+            if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+              final decUrl = await _channel
+                  .invokeMethod<String>('decryptUrl', {'encryptedUrl': encUrl});
+              if (decUrl != null && decUrl.isNotEmpty) return decUrl;
+            }
           }
         }
       } on TimeoutException {
-        // Budget expired: client.close() below aborts the in-flight GET.
         return null;
       } catch (_) {
         return null;
@@ -151,9 +151,8 @@ class NativeKotlinResolver implements StreamResolver {
   @override
   String get sourceId => 'native_kotlin_320k';
   @override
-  @override
   Future<bool> canResolve(Song song, {Duration? timeBudget}) async =>
-      !kIsWeb && !song.id.startsWith('jam_');
+      !song.id.startsWith('jam_');
 
   @override
   Future<String?> resolveStreamUrl(Song song, {Duration? timeBudget}) async {
@@ -163,21 +162,29 @@ class NativeKotlinResolver implements StreamResolver {
           .replaceAll(RegExp(r'\[.*?\]'), '')
           .trim();
       final cleanArtist = song.artist.split(RegExp(r'[,&/]')).first.trim();
-      // The native call itself cannot be cancelled from Dart once invoked;
-      // bound the wait by the shared budget (the Kotlin engine also has its
-      // own connect/read timeouts) and simply discard a late result.
+      final t = cleanTitle.isNotEmpty ? cleanTitle : song.title;
+      final a = cleanArtist.isNotEmpty ? cleanArtist : song.artist;
+
       final cap = boundedTimeout(timeBudget, const Duration(seconds: 6));
-      final String? streamUrl =
-          await _channel.invokeMethod<String>('resolve320k', {
-        'title': cleanTitle.isNotEmpty ? cleanTitle : song.title,
-        'artist': cleanArtist.isNotEmpty ? cleanArtist : song.artist,
-      }).timeout(cap);
-      if (streamUrl != null &&
-          streamUrl.isNotEmpty &&
-          !streamUrl.contains('preview')) {
-        return streamUrl;
+      final pureStream = await JioSaavnPureEngine.resolveTrackStream(t, a, timeBudget: cap);
+      if (pureStream != null && pureStream.isNotEmpty && !pureStream.contains('preview')) {
+        return pureStream;
+      }
+
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        final String? streamUrl =
+            await _channel.invokeMethod<String>('resolve320k', {
+          'title': t,
+          'artist': a,
+        }).timeout(cap);
+        if (streamUrl != null &&
+            streamUrl.isNotEmpty &&
+            !streamUrl.contains('preview')) {
+          return streamUrl;
+        }
       }
     } catch (_) {}
     return null;
   }
 }
+

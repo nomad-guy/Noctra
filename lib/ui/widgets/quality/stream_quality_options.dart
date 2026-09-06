@@ -153,3 +153,71 @@ class AudioCodecOptionsCard extends StatelessWidget {
     );
   }
 }
+
+class StreamingPolicyOptionsCard extends StatelessWidget {
+  final StreamingPolicy selectedPolicy;
+  final NoctraThemeTokens tokens;
+  final ValueChanged<StreamingPolicy> onSelect;
+
+  const StreamingPolicyOptionsCard({
+    super.key,
+    required this.selectedPolicy,
+    required this.tokens,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassCard(
+      radius: 14,
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: StreamingPolicy.values.map((p) {
+          final isSelected = selectedPolicy == p;
+          return InkWell(
+            onTap: () => onSelect(p),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Row(
+                children: [
+                  Icon(
+                    isSelected
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_off,
+                    size: 18,
+                    color: isSelected ? tokens.accent : tokens.secondaryText,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          p.displayName,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight:
+                                isSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: tokens.primaryText,
+                          ),
+                        ),
+                        Text(
+                          p.description,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isSelected ? tokens.accent : tokens.secondaryText,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+

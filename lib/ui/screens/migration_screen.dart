@@ -10,6 +10,7 @@ import '../../services/migration/track_matcher.dart';
 import 'migration/migration_choose_view.dart';
 import 'migration/migration_preview_view.dart';
 import 'migration/migration_status_views.dart';
+import 'migration/url_import_sheet.dart';
 
 class MigrationScreen extends ConsumerStatefulWidget {
   const MigrationScreen({super.key});
@@ -128,6 +129,44 @@ class _MigrationScreenState extends ConsumerState<MigrationScreen> {
   }
 
   void _selectSource(String sourceName) async {
+    final isDark = ref.read(themeModeProvider).isDark;
+    if (sourceName == 'Spotify') {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Spotify Importer'),
+            content: const Text(
+              'Import your Spotify playlists without logging in. You can paste any public Spotify playlist or album URL, or select an exported JSON/CSV file.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  UrlImportSheet.show(context, isDark);
+                },
+                child: const Text('Paste Link'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  final imp = getAllImporters()
+                      .firstWhere((i) => i.sourceName == 'Spotify');
+                  _pickFile(imp);
+                },
+                child: const Text('Select File'),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
     final importer = getAllImporters().firstWhere(
       (i) =>
           i.sourceName == sourceName ||
