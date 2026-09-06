@@ -58,4 +58,25 @@ class NoctraCapabilities {
 
   /// Package-installer driven self update (GitHub APK distribution).
   static bool get supportsSelfUpdate => isAndroid;
+
+  /// Native lockscreen / notification / Control Center media controls.
+  static bool get supportsNativeMediaControls => isAndroid || isIOS || isDesktop;
+
+  /// Hardware/native equalizer DSP support.
+  static bool get supportsNativeEqualizer => isAndroid;
+
+  /// Native desktop window management (min/max/close controls).
+  static bool get supportsDesktopWindowControls => isDesktop;
+
+  /// Direct filesystem directory picker.
+  static bool get supportsFolderPicker => !kIsWeb;
+
+  /// Direct filesystem file picker.
+  static bool get supportsFilePicker => !kIsWeb;
+
+  /// Desktop notification center integration.
+  static bool get supportsDesktopNotifications => isDesktop;
+
+  /// Jam/P2P LAN SyncCast streaming.
+  static bool get supportsP2P => isAndroid || isDesktop;
 }
