@@ -67,8 +67,8 @@ Built with Flutter, Dart, Riverpod, and native platform digital signal processin
       <b>Search & Catalog Explorer</b>
     </td>
     <td align="center" width="33%">
-      <img src="docs/screenshots/queue.png" alt="Play Queue" width="260" /><br />
-      <b>Play Queue & Swipe Actions</b>
+      <img src="docs/screenshots/library.png" alt="Library & Custom Folders" width="260" /><br />
+      <b>Library & Custom Folders</b>
     </td>
     <td align="center" width="33%">
       <img src="docs/screenshots/settings.png" alt="Audiophile Settings" width="260" /><br />
