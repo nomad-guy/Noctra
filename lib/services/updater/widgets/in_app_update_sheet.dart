@@ -92,6 +92,28 @@ class _InAppUpdateModalContentState extends State<InAppUpdateModalContent> {
   Future<void> _installStagedUpdate() async {
     final filePath = _stagedFilePath ?? AppUpdateStager.takeStagedPath();
     if (filePath == null) return;
+
+    if (!Platform.isAndroid) {
+      try {
+        if (Platform.isWindows && filePath.endsWith('.exe')) {
+          await Process.start(filePath, []);
+          if (mounted) Navigator.of(context).maybePop();
+          return;
+        } else if (Platform.isLinux && filePath.endsWith('.deb')) {
+          await Process.start('xdg-open', [filePath]);
+          if (mounted) Navigator.of(context).maybePop();
+          return;
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _errorMessage = 'Could not launch desktop installer: $e';
+          });
+        }
+        return;
+      }
+    }
+
     final ok = await AppUpdateService.notifyChannel
         .invokeMethod('installApk', {'filePath': filePath});
 

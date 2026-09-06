@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../core/utils/noctra_logger.dart';
 import 'app_update_service.dart';
 import 'app_update_verifier.dart';
@@ -43,35 +45,72 @@ class AppUpdateLegacyScan {
     String? matchedName;
 
     Map<String, dynamic>? selected;
-    if (abi != 'universal') {
-      for (final a in assets) {
-        if (a is Map) {
-          final name = ((a['name'] as String?) ?? '').toLowerCase();
-          if (name.endsWith('.apk') && _nameMatchesAbi(name, abi)) {
-            selected = Map<String, dynamic>.from(a);
-            break;
+
+    if (!kIsWeb) {
+      if (Platform.isWindows) {
+        for (final a in assets) {
+          if (a is Map) {
+            final name = ((a['name'] as String?) ?? '').toLowerCase();
+            if (name.endsWith('.exe')) {
+              selected = Map<String, dynamic>.from(a);
+              break;
+            }
+          }
+        }
+      } else if (Platform.isLinux) {
+        for (final a in assets) {
+          if (a is Map) {
+            final name = ((a['name'] as String?) ?? '').toLowerCase();
+            if (name.endsWith('.deb')) {
+              selected = Map<String, dynamic>.from(a);
+              break;
+            }
+          }
+        }
+      } else if (Platform.isIOS) {
+        for (final a in assets) {
+          if (a is Map) {
+            final name = ((a['name'] as String?) ?? '').toLowerCase();
+            if (name.endsWith('.ipa')) {
+              selected = Map<String, dynamic>.from(a);
+              break;
+            }
           }
         }
       }
     }
+
     if (selected == null) {
-      for (final a in assets) {
-        if (a is Map) {
-          final name = ((a['name'] as String?) ?? '').toLowerCase();
-          if (name.contains('universal') && name.endsWith('.apk')) {
-            selected = Map<String, dynamic>.from(a);
-            break;
+      if (abi != 'universal') {
+        for (final a in assets) {
+          if (a is Map) {
+            final name = ((a['name'] as String?) ?? '').toLowerCase();
+            if (name.endsWith('.apk') && _nameMatchesAbi(name, abi)) {
+              selected = Map<String, dynamic>.from(a);
+              break;
+            }
           }
         }
       }
-    }
-    if (selected == null) {
-      for (final a in assets) {
-        if (a is Map) {
-          final name = ((a['name'] as String?) ?? '').toLowerCase();
-          if (name.endsWith('.apk')) {
-            selected = Map<String, dynamic>.from(a);
-            break;
+      if (selected == null) {
+        for (final a in assets) {
+          if (a is Map) {
+            final name = ((a['name'] as String?) ?? '').toLowerCase();
+            if (name.contains('universal') && name.endsWith('.apk')) {
+              selected = Map<String, dynamic>.from(a);
+              break;
+            }
+          }
+        }
+      }
+      if (selected == null) {
+        for (final a in assets) {
+          if (a is Map) {
+            final name = ((a['name'] as String?) ?? '').toLowerCase();
+            if (name.endsWith('.apk')) {
+              selected = Map<String, dynamic>.from(a);
+              break;
+            }
           }
         }
       }

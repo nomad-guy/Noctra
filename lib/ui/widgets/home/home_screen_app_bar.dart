@@ -110,18 +110,19 @@ class _HomeScreenAppBarState extends ConsumerState<HomeScreenAppBar>
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                IconButton(
-                  icon: Icon(Icons.menu_rounded,
-                      color: isDark ? Colors.white : Colors.black, size: 22),
-                  tooltip: context.tr(L10nKeys.openSidebar),
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    ref
-                        .read(rootScaffoldKeyProvider)
-                        .currentState
-                        ?.openDrawer();
-                  },
-                ),
+                if (MediaQuery.sizeOf(context).width < 720)
+                  IconButton(
+                    icon: Icon(Icons.menu_rounded,
+                        color: isDark ? Colors.white : Colors.black, size: 22),
+                    tooltip: context.tr(L10nKeys.openSidebar),
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      ref
+                          .read(rootScaffoldKeyProvider)
+                          .currentState
+                          ?.openDrawer();
+                    },
+                  ),
                 NoctraAppLogo(size: 24, radius: 6, isDark: isDark),
                 const SizedBox(width: 6),
                 Text(

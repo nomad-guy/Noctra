@@ -1,5 +1,7 @@
+import 'dart:io' show Platform, Process;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../core/utils/noctra_logger.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../app_update_rollback_service.dart';
 import '../app_update_service.dart';
@@ -106,13 +108,37 @@ class _InAppRollbackCardState extends State<InAppRollbackCard> {
       _statusMessage = 'Triggering installer for ${release.tag}...';
     });
 
+    if (!Platform.isAndroid) {
+      try {
+        if (Platform.isWindows && filePath.endsWith('.exe')) {
+          await Process.start(filePath, []);
+          setState(() {
+            _statusMessage = 'Installer launched. Follow setup instructions.';
+          });
+          return;
+        } else if (Platform.isLinux && filePath.endsWith('.deb')) {
+          await Process.start('xdg-open', [filePath]);
+          setState(() {
+            _statusMessage = 'Package opened. Follow system installer.';
+          });
+          return;
+        }
+      } catch (e) {
+        NoctraLogger.w('Failed to launch desktop installer: $e');
+      }
+      setState(() {
+        _statusMessage = 'Package saved to: $filePath';
+      });
+      return;
+    }
+
     final ok = await AppUpdateService.notifyChannel
         .invokeMethod('installApk', {'filePath': filePath});
 
     if (ok != true && mounted) {
       setState(() {
         _statusMessage =
-            'Installer launch blocked. The APK is saved in Downloads.';
+            'Installer launch blocked. The package is saved in Downloads.';
       });
     }
   }

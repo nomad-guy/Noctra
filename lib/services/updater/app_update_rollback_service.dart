@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../core/utils/noctra_logger.dart';
@@ -63,11 +65,11 @@ class AppUpdateRollbackService {
         final notes = (item['body'] as String?) ?? '';
         final assets = (item['assets'] as List?) ?? const [];
 
-        final apkAsset = _selectApkAsset(assets, deviceAbi);
-        if (apkAsset == null) continue;
+        final releaseAsset = _selectReleaseAsset(assets, deviceAbi);
+        if (releaseAsset == null) continue;
 
-        final assetName = (apkAsset['name'] as String?) ?? '';
-        final downloadUrl = (apkAsset['browser_download_url'] as String?) ?? '';
+        final assetName = (releaseAsset['name'] as String?) ?? '';
+        final downloadUrl = (releaseAsset['browser_download_url'] as String?) ?? '';
         if (downloadUrl.isEmpty) continue;
 
         final sha256 = await _resolveSha256(assets, notes, assetName);
@@ -93,8 +95,38 @@ class AppUpdateRollbackService {
     return results;
   }
 
-  static Map<String, dynamic>? _selectApkAsset(
+  static Map<String, dynamic>? _selectReleaseAsset(
       List<dynamic> assets, String abi) {
+    if (!kIsWeb) {
+      if (Platform.isWindows) {
+        for (final a in assets) {
+          if (a is Map) {
+            final name = (a['name'] as String?)?.toLowerCase() ?? '';
+            if (name.endsWith('.exe')) return Map<String, dynamic>.from(a);
+          }
+        }
+        return null;
+      }
+      if (Platform.isLinux) {
+        for (final a in assets) {
+          if (a is Map) {
+            final name = (a['name'] as String?)?.toLowerCase() ?? '';
+            if (name.endsWith('.deb')) return Map<String, dynamic>.from(a);
+          }
+        }
+        return null;
+      }
+      if (Platform.isIOS) {
+        for (final a in assets) {
+          if (a is Map) {
+            final name = (a['name'] as String?)?.toLowerCase() ?? '';
+            if (name.endsWith('.ipa')) return Map<String, dynamic>.from(a);
+          }
+        }
+        return null;
+      }
+    }
+
     String pattern = 'arm64-v8a';
     if (abi == 'armeabi-v7a') pattern = 'armeabi-v7a';
     if (abi == 'x86_64') pattern = 'x86_64';

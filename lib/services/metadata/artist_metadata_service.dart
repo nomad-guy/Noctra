@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../core/utils/bounded_concurrency.dart';
 import '../../core/utils/noctra_logger.dart';
+import 'artist_wikipedia_service.dart';
 
 class ArtistMetadata {
   final String name;
@@ -73,10 +74,16 @@ class ArtistMetadataService {
       String? bio;
       String? shortDesc = 'Artist Profile';
 
+      final primaryArtist = cleanName
+          .split(RegExp(r'[,&/;\\]|(?:\s+(?:feat\.|ft\.|featuring|with|x)\s+)', caseSensitive: false))
+          .first
+          .trim();
+      final effectiveName = primaryArtist.isNotEmpty ? primaryArtist : cleanName;
+
       // 1. Tier 1: Deezer Official Music Graph (Zero false disambiguations, 500x500 HD photos)
       try {
         final uri = Uri.parse(
-            'https://api.deezer.com/search/artist?q=${Uri.encodeComponent(cleanName)}&limit=1');
+            'https://api.deezer.com/search/artist?q=${Uri.encodeComponent(effectiveName)}&limit=1');
         final res = await http.get(uri, headers: {
           'User-Agent': 'Mozilla/5.0'
         }).timeout(const Duration(milliseconds: 2500));
@@ -102,7 +109,7 @@ class ArtistMetadataService {
       if (resolvedImageUrl == null || resolvedImageUrl.isEmpty) {
         try {
           final saavnUri = Uri.parse(
-              'https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query=${Uri.encodeComponent(cleanName)}');
+              'https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query=${Uri.encodeComponent(effectiveName)}');
           final res = await http.get(saavnUri, headers: {
             'User-Agent': 'Mozilla/5.0'
           }).timeout(const Duration(milliseconds: 2500));
@@ -128,7 +135,7 @@ class ArtistMetadataService {
       if (resolvedImageUrl == null || resolvedImageUrl.isEmpty) {
         try {
           final itunesUri = Uri.parse(
-              'https://itunes.apple.com/search?term=${Uri.encodeComponent(cleanName)}&entity=song&limit=1');
+              'https://itunes.apple.com/search?term=${Uri.encodeComponent(effectiveName)}&entity=song&limit=1');
           final res = await http.get(itunesUri, headers: {
             'User-Agent': 'Mozilla/5.0'
           }).timeout(const Duration(milliseconds: 2500));
@@ -145,58 +152,18 @@ class ArtistMetadataService {
         } catch (_) {}
       }
 
-      // 4. Tier 4: Wikipedia Biography & Musician summary
-      try {
-        final wikiUri = Uri.parse(
-            'https://en.wikipedia.org/api/rest_v1/page/summary/${Uri.encodeComponent(cleanName)}');
-        final res = await http.get(wikiUri, headers: {
-          'User-Agent': 'NoctraMusicApp/1.0 (contact@noctra.app)'
-        }).timeout(const Duration(milliseconds: 2500));
-        if (res.statusCode == 200) {
-          final data = jsonDecode(res.body) as Map<String, dynamic>;
-          final String? desc = data['description']?.toString().toLowerCase();
-          final bool isMusicEntity = desc != null &&
-              (desc.contains('singer') ||
-                  desc.contains('musician') ||
-                  desc.contains('band') ||
-                  desc.contains('rapper') ||
-                  desc.contains('composer') ||
-                  desc.contains('artist') ||
-                  desc.contains('producer') ||
-                  desc.contains('record'));
-
-          if (isMusicEntity || desc == null) {
-            bio = data['extract'];
-            shortDesc = data['description'] ?? 'Official Music Profile';
-            if (resolvedImageUrl == null || resolvedImageUrl.isEmpty) {
-              final thumb = data['thumbnail']?['source'] ??
-                  data['originalimage']?['source'];
-              if (thumb != null && thumb.toString().isNotEmpty) {
-                resolvedImageUrl = thumb.toString();
-              }
-            }
-          }
+      // 4. Tier 4: Wikipedia Biography & Musician summary with disambiguation defense
+      final wikiResult =
+          await ArtistWikipediaService.fetchBioAndImage(effectiveName);
+      if (wikiResult != null) {
+        if (wikiResult.bio != null) bio = wikiResult.bio;
+        if (wikiResult.shortDescription != null) {
+          shortDesc = wikiResult.shortDescription;
         }
-      } catch (_) {}
-
-      // Fallback bio query if direct summary missed
-      if (bio == null) {
-        try {
-          final queryUrl = Uri.parse(
-              'https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${Uri.encodeComponent("$cleanName musician")}&gsrlimit=1&prop=extracts&exintro=1&explaintext=1&format=json&origin=*');
-          final res = await http.get(queryUrl, headers: {
-            'User-Agent': 'NoctraMusicApp/1.0 (contact@noctra.app)'
-          }).timeout(const Duration(milliseconds: 2500));
-          if (res.statusCode == 200) {
-            final data = jsonDecode(res.body) as Map<String, dynamic>;
-            final pages = data['query']?['pages'] as Map<String, dynamic>?;
-            if (pages != null && pages.isNotEmpty) {
-              final page = pages.values.first as Map<String, dynamic>;
-              bio = page['extract'];
-              shortDesc = 'Artist Profile';
-            }
-          }
-        } catch (_) {}
+        if ((resolvedImageUrl == null || resolvedImageUrl.isEmpty) &&
+            wikiResult.imageUrl != null) {
+          resolvedImageUrl = wikiResult.imageUrl;
+        }
       }
 
       final metadata = ArtistMetadata(

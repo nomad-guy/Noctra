@@ -1,0 +1,68 @@
+.container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Ambient glow orbs behind the Three.js canvas matching Flutter's NoctraThemeBackdrop */
+.orbTopLeft {
+  position: absolute;
+  top: -200px;
+  left: -160px;
+  width: 550px;
+  height: 550px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(104, 200, 255, 0.28) 0%, transparent 70%);
+  pointer-events: none;
+  filter: blur(40px);
+  opacity: 0.8;
+  transition: opacity 0.5s ease;
+}
+
+.orbBottomRight {
+  position: absolute;
+  bottom: -220px;
+  right: -180px;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(128, 112, 255, 0.25) 0%, transparent 70%);
+  pointer-events: none;
+  filter: blur(50px);
+  opacity: 0.75;
+  transition: opacity 0.5s ease;
+}
+
+.orbCenterRight {
+  position: absolute;
+  top: 35%;
+  right: -140px;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(104, 232, 192, 0.22) 0%, transparent 70%);
+  pointer-events: none;
+  filter: blur(45px);
+  opacity: 0.6;
+  transition: opacity 0.5s ease;
+}
+
+:global([data-theme='noir-black']) .orbTopLeft,
+:global([data-theme='noir-black']) .orbBottomRight,
+:global([data-theme='noir-black']) .orbCenterRight,
+:global([data-theme='noir-white']) .orbTopLeft,
+:global([data-theme='noir-white']) .orbBottomRight,
+:global([data-theme='noir-white']) .orbCenterRight {
+  opacity: 0;
+}

@@ -1,0 +1,163 @@
+.section {
+  position: relative;
+  z-index: 1;
+  padding: 80px 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.tableContainer {
+  position: relative;
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  margin-bottom: 48px;
+}
+
+.tableContainer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: var(--card-sheen);
+  pointer-events: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1.4fr 1.6fr 1.6fr;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.headerRow {
+  background: var(--surface-variant);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+}
+
+.danger {
+  color: #FF453A;
+  font-weight: 500;
+}
+
+.safe {
+  color: #30D158;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Telegram Community Banner Card */
+.communityCard {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid rgba(42, 171, 238, 0.35);
+  border-radius: var(--radius-xl);
+  padding: 36px 32px;
+  box-shadow: 0 10px 30px -10px rgba(42, 171, 238, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  flex-wrap: wrap;
+  backdrop-filter: var(--glass-blur);
+}
+
+.communityCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, #2AABEE, transparent);
+  pointer-events: none;
+}
+
+.communityContent {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  max-width: 620px;
+}
+
+.tgIconBox {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(42, 171, 238, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2AABEE;
+  flex-shrink: 0;
+}
+
+.communityPill {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #2AABEE;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.communityTitle {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 4px 0 6px 0;
+}
+
+.communityDesc {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.tgJoinBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #2AABEE;
+  color: #FFFFFF;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 16px rgba(42, 171, 238, 0.35);
+  transition: all var(--transition-fast);
+  text-decoration: none;
+}
+
+.tgJoinBtn:hover {
+  background: #38bdf8;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(42, 171, 238, 0.45);
+}
+
+@media (max-width: 768px) {
+  .row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}

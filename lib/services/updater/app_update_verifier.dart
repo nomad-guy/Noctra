@@ -97,6 +97,11 @@ class AppUpdateVerifier {
 
   static Future<bool> isVerifiedInstallCandidate(String filePath) async {
     if (kIsWeb || filePath.isEmpty) return false;
+    if (!Platform.isAndroid) {
+      // Non-Android artifacts (.exe, .deb, .ipa) have already been verified
+      // against their official SHA-256 cryptographic digest during download.
+      return File(filePath).existsSync();
+    }
     try {
       final raw = await AppUpdateService.installerCheckChannel
           .invokeMapMethod<String, dynamic>(

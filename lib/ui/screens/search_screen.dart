@@ -94,16 +94,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
               child: Row(
                 children: [
-                  IconButton(
-                    icon: Icon(Icons.menu_rounded,
-                        color: isDark ? Colors.white : Colors.black, size: 24),
-                    tooltip: context.tr(L10nKeys.openSidebar),
-                    onPressed: () => ref
-                        .read(rootScaffoldKeyProvider)
-                        .currentState
-                        ?.openDrawer(),
-                  ),
-                  const SizedBox(width: 4),
+                  if (MediaQuery.sizeOf(context).width < 720)
+                    IconButton(
+                      icon: Icon(Icons.menu_rounded,
+                          color: isDark ? Colors.white : Colors.black, size: 24),
+                      tooltip: context.tr(L10nKeys.openSidebar),
+                      onPressed: () => ref
+                          .read(rootScaffoldKeyProvider)
+                          .currentState
+                          ?.openDrawer(),
+                    ),
+                  if (MediaQuery.sizeOf(context).width < 720) const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       context.tr(L10nKeys.searchExplore),

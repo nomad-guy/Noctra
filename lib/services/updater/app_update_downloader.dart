@@ -104,8 +104,17 @@ class AppUpdateDownloader {
       return null;
     }
     final tag = key.substring(0, 16);
+    String ext = '.apk';
+    final lowerUrl = info.downloadUrl.toLowerCase();
+    if (lowerUrl.endsWith('.exe')) {
+      ext = '.exe';
+    } else if (lowerUrl.endsWith('.deb')) {
+      ext = '.deb';
+    } else if (lowerUrl.endsWith('.ipa')) {
+      ext = '.ipa';
+    }
     final tmp = File('${dir.path}/noctra-update-$tag.part');
-    final finalFile = File('${dir.path}/noctra-update-$tag.apk');
+    final finalFile = File('${dir.path}/noctra-update-$tag$ext');
 
     final transfer = AppUpdateTransfer(
       overallTimeout: downloadTimeout,

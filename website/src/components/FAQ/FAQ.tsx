@@ -1,0 +1,74 @@
+import styles from './FAQ.module.css';
+
+export function FAQ() {
+  return (
+    <section id="faq" className={styles.section}>
+      <div className="section-header">
+        <span className="section-tag">FREQUENTLY ASKED QUESTIONS</span>
+        <h2 className="section-title">Answers to Common Inquiries</h2>
+      </div>
+
+      <div className={styles.accordion}>
+        <details className={styles.item} open>
+          <summary className={styles.question}>
+            <span>What is new in Noctra v1.0.5?</span>
+            <span className={styles.arrow}>+</span>
+          </summary>
+          <div className={styles.answer}>
+            <p>
+              v1.0.5 introduces single-file native standalone packages for <strong>Windows (.exe)</strong>, <strong>Linux (.deb)</strong>, and <strong>iOS (.ipa)</strong> alongside Android. It also brings 1-tap Shuffle & Algorithmic Remix for playlists, plus a pure-Dart cross-device playlist transfer protocol supporting JSON manifests (.noctra.json) and universal CSV.
+            </p>
+          </div>
+        </details>
+
+        <details className={styles.item}>
+          <summary className={styles.question}>
+            <span>Do I need an account or subscription to use Noctra?</span>
+            <span className={styles.arrow}>+</span>
+          </summary>
+          <div className={styles.answer}>
+            <p>
+              No. Noctra is completely authentication-less. You do not need an email, phone number, or password. All playlists, favorites, and listening records are saved on your local device in an encrypted SQLite database.
+            </p>
+          </div>
+        </details>
+
+        <details className={styles.item}>
+          <summary className={styles.question}>
+            <span>Is the audio stream bit-perfect lossless?</span>
+            <span className={styles.arrow}>+</span>
+          </summary>
+          <div className={styles.answer}>
+            <p>
+              Yes. Noctra resolves pure FLAC bitstreams up to 24-bit / 192 kHz from uncompressed streaming repositories. Real-time audio telemetry in the player displays live codec, sample rate, and bit depth.
+            </p>
+          </div>
+        </details>
+
+        <details className={styles.item}>
+          <summary className={styles.question}>
+            <span>How do I install Noctra on iOS?</span>
+            <span className={styles.arrow}>+</span>
+          </summary>
+          <div className={styles.answer}>
+            <p>
+              Download <code>Noctra-1.0.5.ipa</code> from the downloads section. Open AltStore, SideStore, Sideloadly, or TrollStore, select the IPA, and install it to your iPhone or iPad with zero jailbreaking required.
+            </p>
+          </div>
+        </details>
+
+        <details className={styles.item}>
+          <summary className={styles.question}>
+            <span>How do bilingual synchronized lyrics work?</span>
+            <span className={styles.arrow}>+</span>
+          </summary>
+          <div className={styles.answer}>
+            <p>
+              In songs where synchronized dual-language transcripts are present (e.g. Hindi in Romanized English alongside an English translation), Noctra consolidates identical timestamps (&le; 150ms) so the translated line displays as a subtle italic subtitle beneath the active vocal line.
+            </p>
+          </div>
+        </details>
+      </div>
+    </section>
+  );
+}

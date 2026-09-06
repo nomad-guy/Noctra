@@ -109,12 +109,13 @@ class _AIStudioScreenState extends ConsumerState<AIStudioScreen> {
   Widget _header(bool isDark) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         child: Row(children: [
-          IconButton(
-            icon: Icon(Icons.menu_rounded,
-                color: isDark ? Colors.white : Colors.black),
-            onPressed: () =>
-                ref.read(rootScaffoldKeyProvider).currentState?.openDrawer(),
-          ),
+          if (MediaQuery.sizeOf(context).width < 720)
+            IconButton(
+              icon: Icon(Icons.menu_rounded,
+                  color: isDark ? Colors.white : Colors.black),
+              onPressed: () =>
+                  ref.read(rootScaffoldKeyProvider).currentState?.openDrawer(),
+            ),
           Expanded(
               child: Text(NoctraLocalization.tr('ai_studio_title'),
                   style: TextStyle(

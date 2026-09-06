@@ -1,0 +1,304 @@
+.section {
+  position: relative;
+  z-index: 1;
+  padding: 80px 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.studioCard {
+  position: relative;
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 36px 32px;
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.studioCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: var(--card-sheen);
+  pointer-events: none;
+}
+
+/* Header with Player Controls & Script Switcher */
+.controlBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.scriptSelectorGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.scriptLabel {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+
+.scriptButtons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-variant);
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-subtle);
+}
+
+.scriptBtn {
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.scriptBtn:hover {
+  color: var(--text-primary);
+}
+
+.scriptBtnActive {
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-color);
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+/* Player simulation bar */
+.playerSimBar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--surface-variant);
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-subtle);
+}
+
+.playPauseBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--btn-primary-color);
+  transition: transform var(--transition-fast);
+}
+
+.playPauseBtn:hover {
+  transform: scale(1.08);
+}
+
+.trackInfoMini {
+  display: flex;
+  flex-direction: column;
+}
+
+.trackTitleMini {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.trackTimeMini {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+}
+
+/* Karaoke Box */
+.karaokeBox {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 0;
+  position: relative;
+}
+
+/* Shader mask effect at top and bottom matching Flutter's ShaderMask */
+.karaokeBox::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  background: linear-gradient(180deg, var(--surface) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.karaokeBox::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  background: linear-gradient(0deg, var(--surface) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.lyricLine {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 20px;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  position: relative;
+  background: transparent;
+}
+
+.lyricLine:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sungVocal {
+  font-family: var(--font-sans);
+  font-size: 1.28rem;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  transition: all var(--transition-normal);
+}
+
+.translationSubtitle {
+  font-size: 0.94rem;
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  transition: all var(--transition-normal);
+}
+
+/* Past Line: Apple Music style dim */
+.pastLine {
+  opacity: 0.35;
+  filter: blur(0.4px);
+}
+
+.pastLine:hover {
+  opacity: 0.7;
+  filter: none;
+}
+
+/* Active Line: Apple Music / Spotify Active Karaoke Glow */
+.activeLine {
+  opacity: 1;
+  background: rgba(126, 200, 255, 0.08);
+  border: 1px solid rgba(126, 200, 255, 0.25);
+  box-shadow: 0 4px 20px rgba(126, 200, 255, 0.15);
+  transform: scale(1.015);
+}
+
+[data-theme='noir-black'] .activeLine {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.12);
+}
+
+[data-theme='noir-white'] .activeLine {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.18);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.activeLine .sungVocal {
+  color: var(--accent);
+  text-shadow: 0 0 16px var(--accent-glow);
+}
+
+[data-theme='noir-black'] .activeLine .sungVocal {
+  color: #FFFFFF;
+  text-shadow: 0 0 16px rgba(255, 255, 255, 0.4);
+}
+
+[data-theme='noir-white'] .activeLine .sungVocal {
+  color: #060608;
+  text-shadow: none;
+}
+
+.activeLine .translationSubtitle {
+  color: var(--text-primary);
+  opacity: 0.85;
+}
+
+/* Future Line */
+.futureLine {
+  opacity: 0.65;
+}
+
+/* RTL support for Urdu script */
+.rtl {
+  direction: rtl;
+  text-align: right;
+  font-family: 'Noto Nastaliq Urdu', 'Urdu Typesetting', 'Segoe UI', Tahoma, sans-serif;
+}
+
+.rtl .sungVocal {
+  font-size: 1.45rem;
+  line-height: 1.8;
+}
+
+.rtl .translationSubtitle {
+  direction: ltr;
+  text-align: right;
+}
+
+/* Footer Floating Sync Button matching Flutter's LyricsSyncFloatingButton */
+.syncFooter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 10px;
+}
+
+.syncChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-variant);
+  border: 1px solid var(--border);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  transition: all var(--transition-fast);
+}
+
+.syncChip:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-focus);
+  transform: translateY(-2px);
+}

@@ -80,35 +80,73 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
           ref.read(bottomNavIndexProvider.notifier).state = 0;
         }
       },
-      child: Scaffold(
-        key: scaffoldKey,
-        backgroundColor: themeMode.isLiquidGlass
-            ? Colors.transparent
-            : context.noctraTokens.canvas,
-        drawer: const NoirSidebar(),
-        body: Stack(
-          children: [
-            IndexedStack(
-              index: currentIndex,
-              children: children,
-            ),
-            const Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: SafeArea(
-                top: false,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    NoirMiniPlayer(),
-                    CustomBottomNavBar(),
-                  ],
-                ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth >= 720;
+          if (isWide) {
+            return Scaffold(
+              key: scaffoldKey,
+              backgroundColor: themeMode.isLiquidGlass
+                  ? Colors.transparent
+                  : context.noctraTokens.canvas,
+              body: Row(
+                children: [
+                  const NoirSidebar(),
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        IndexedStack(
+                          index: currentIndex,
+                          children: children,
+                        ),
+                        const Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: SafeArea(
+                            top: false,
+                            child: NoirMiniPlayer(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
+            );
+          }
+
+          return Scaffold(
+            key: scaffoldKey,
+            backgroundColor: themeMode.isLiquidGlass
+                ? Colors.transparent
+                : context.noctraTokens.canvas,
+            drawer: const NoirSidebar(),
+            body: Stack(
+              children: [
+                IndexedStack(
+                  index: currentIndex,
+                  children: children,
+                ),
+                const Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: SafeArea(
+                    top: false,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        NoirMiniPlayer(),
+                        CustomBottomNavBar(),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

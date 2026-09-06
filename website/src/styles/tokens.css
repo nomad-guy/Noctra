@@ -1,0 +1,112 @@
+/* Design tokens identical to Flutter app's NoirColors & NoctraThemeTokens */
+
+:root {
+  /* Common spacing, font, radii */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-pill: 9999px;
+
+  --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-normal: 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-smooth: 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 1. Liquid Glass Theme (Default) */
+[data-theme='liquid-glass'] {
+  --canvas: #162E4A;
+  --canvas-gradient: linear-gradient(135deg, #0E2444 0%, #162E4A 50%, #161838 100%);
+  --surface: rgba(37, 62, 96, 0.82);
+  --surface-hover: rgba(48, 80, 122, 0.88);
+  --surface-variant: rgba(53, 96, 128, 0.75);
+  --surface-elevated: rgba(74, 122, 170, 0.87);
+  --border: rgba(208, 228, 255, 0.35);
+  --border-subtle: rgba(192, 216, 240, 0.20);
+  --border-focus: rgba(126, 200, 255, 0.8);
+  
+  --text-primary: #F0F6FF;
+  --text-secondary: #B0C8E8;
+  --text-tertiary: #6E8EB8;
+
+  --accent: #7EC8FF;
+  --accent-secondary: #B8A8FF;
+  --accent-tertiary: #68E8C0;
+  --accent-glow: rgba(126, 200, 255, 0.35);
+
+  --card-sheen: linear-gradient(90deg, transparent, rgba(240, 246, 255, 0.25), transparent);
+  --glass-blur: blur(20px);
+  --shadow-card: 0 10px 30px -8px rgba(10, 22, 40, 0.6), 0 0 0 1px var(--border-subtle);
+  --shadow-active: 0 14px 40px -6px rgba(126, 200, 255, 0.25);
+  
+  --btn-primary-bg: #7EC8FF;
+  --btn-primary-color: #061426;
+  --btn-primary-hover: #9ad7ff;
+}
+
+/* 2. Noir Black Theme */
+[data-theme='noir-black'] {
+  --canvas: #070709;
+  --canvas-gradient: linear-gradient(180deg, #070709 0%, #0B0B0E 100%);
+  --surface: #0E0E12;
+  --surface-hover: #14141A;
+  --surface-variant: #16161C;
+  --surface-elevated: #1C1C20;
+  --border: rgba(255, 255, 255, 0.16);
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-focus: rgba(255, 255, 255, 0.6);
+
+  --text-primary: #FFFFFF;
+  --text-secondary: #929298;
+  --text-tertiary: #58585E;
+
+  --accent: #FFFFFF;
+  --accent-secondary: #8E8E93;
+  --accent-tertiary: #FFFFFF;
+  --accent-glow: rgba(255, 255, 255, 0.22);
+
+  --card-sheen: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  --glass-blur: blur(14px);
+  --shadow-card: 0 10px 30px -8px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--border-subtle);
+  --shadow-active: 0 14px 40px -6px rgba(255, 255, 255, 0.12);
+
+  --btn-primary-bg: #FFFFFF;
+  --btn-primary-color: #070709;
+  --btn-primary-hover: #E4E4E6;
+}
+
+/* 3. Noir White Theme */
+[data-theme='noir-white'] {
+  --canvas: #F4F4F6;
+  --canvas-gradient: linear-gradient(180deg, #F8F8FA 0%, #F4F4F6 100%);
+  --surface: #FFFFFF;
+  --surface-hover: #F8F8FA;
+  --surface-variant: #EBEBF0;
+  --surface-elevated: #FFFFFF;
+  --border: rgba(0, 0, 0, 0.14);
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-focus: rgba(0, 0, 0, 0.6);
+
+  --text-primary: #060608;
+  --text-secondary: #5C5C64;
+  --text-tertiary: #A2A2AA;
+
+  --accent: #000000;
+  --accent-secondary: #636366;
+  --accent-tertiary: #000000;
+  --accent-glow: rgba(0, 0, 0, 0.12);
+
+  --card-sheen: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.08), transparent);
+  --glass-blur: blur(12px);
+  --shadow-card: 0 10px 30px -8px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--border-subtle);
+  --shadow-active: 0 14px 40px -6px rgba(0, 0, 0, 0.12);
+
+  --btn-primary-bg: #060608;
+  --btn-primary-color: #FFFFFF;
+  --btn-primary-hover: #222226;
+}
