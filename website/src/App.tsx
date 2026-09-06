@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   ShieldCheck, 
   Download, 
@@ -6,6 +6,8 @@ import {
   Copy, 
   Volume2
 } from 'lucide-react';
+
+type ThemeType = 'liquid-glass' | 'noir-black' | 'noir-white';
 
 interface ShowcaseItem {
   id: string;
@@ -108,11 +110,70 @@ const LYRIC_DEMO: Record<string, { line1: string; line2: string; line3: string; 
   }
 };
 
+const THEME_CONFIGS: Record<ThemeType, { id: ThemeType; name: string; icon: string; fontBadge: string; nextThemeName: string }> = {
+  'liquid-glass': {
+    id: 'liquid-glass',
+    name: 'Liquid Glass',
+    icon: '💧',
+    fontBadge: 'Outfit Sans',
+    nextThemeName: 'Noir Black',
+  },
+  'noir-black': {
+    id: 'noir-black',
+    name: 'Noir Black',
+    icon: '🌑',
+    fontBadge: 'Space & Mono',
+    nextThemeName: 'Noir White',
+  },
+  'noir-white': {
+    id: 'noir-white',
+    name: 'Noir White',
+    icon: '☀️',
+    fontBadge: 'Newsreader Serif',
+    nextThemeName: 'Liquid Glass',
+  },
+};
+
 export default function App() {
+  const [theme, setTheme] = useState<ThemeType>(() => {
+    const saved = localStorage.getItem('noctra-theme') as ThemeType;
+    if (saved === 'liquid-glass' || saved === 'noir-black' || saved === 'noir-white') {
+      return saved;
+    }
+    return 'liquid-glass';
+  });
+
   const [activeShowcase, setActiveShowcase] = useState<ShowcaseItem>(SHOWCASE_ITEMS[0]);
   const [activeScript, setActiveScript] = useState<string>('latin');
   const [copiedArm, setCopiedArm] = useState(false);
   const [copiedUni, setCopiedUni] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('noctra-theme', theme);
+  }, [theme]);
+
+  const cycleTheme = () => {
+    setTheme((prev) => {
+      if (prev === 'liquid-glass') return 'noir-black';
+      if (prev === 'noir-black') return 'noir-white';
+      return 'liquid-glass';
+    });
+  };
+
+  const currentTheme = THEME_CONFIGS[theme] || THEME_CONFIGS['liquid-glass'];
+
+  const getBrandLogo = () => {
+    switch (theme) {
+      case 'noir-black':
+        return './images/logo_noctra_noir_white.png';
+      case 'noir-white':
+        return './images/logo_noctra_noir_black.png';
+      case 'liquid-glass':
+      default:
+        return './images/logo_noctra_liquid_glass.png';
+    }
+  };
 
   const copyToClipboard = (text: string, type: 'arm' | 'uni') => {
     navigator.clipboard.writeText(text);
@@ -136,7 +197,7 @@ export default function App() {
       <header className="site-header">
         <div className="nav-container">
           <a href="#" className="brand-badge">
-            <img src="./images/logo_noctra_liquid_glass.png" alt="Noctra" className="brand-logo" />
+            <img src={getBrandLogo()} alt="Noctra" className="brand-logo" />
             <span className="brand-name">NOCTRA</span>
             <span className="version-tag">v1.0.4</span>
           </a>
@@ -151,11 +212,29 @@ export default function App() {
           </nav>
 
           <div className="nav-actions">
+            {/* Single Tap Theme & Typography Switcher */}
+            <button 
+              className="theme-tap-btn"
+              onClick={cycleTheme}
+              title={`Active: ${currentTheme.name} (${currentTheme.fontBadge}). Tap to switch to ${currentTheme.nextThemeName}.`}
+              type="button"
+            >
+              <span className="theme-tap-icon">{currentTheme.icon}</span>
+              <div className="theme-tap-info">
+                <span className="theme-tap-name">
+                  {currentTheme.name}
+                  <span className="theme-tap-arrow">↻</span>
+                </span>
+                <span className="theme-tap-font-badge">{currentTheme.fontBadge}</span>
+              </div>
+            </button>
+
             <a 
               href="https://github.com/nomad-guy/Noctra" 
               target="_blank" 
               rel="noopener noreferrer" 
               className="btn btn-glass"
+              title="GitHub Repository"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
@@ -174,7 +253,7 @@ export default function App() {
       <section className="hero-section">
         <div className="hero-pill">
           <span className="pulse-dot" />
-          <span>v1.0.4 Release &bull; Bilingual Lyric Subtitles &bull; Audiophile IEM Target Curves</span>
+          <span>v1.0.4 Release • Bilingual Lyric Subtitles • Audiophile IEM Target Curves</span>
         </div>
 
         <h1 className="hero-title">
@@ -192,7 +271,7 @@ export default function App() {
               <Download size={20} />
               <span>Download for Android</span>
             </div>
-            <span className="btn-subtext">arm64-v8a &bull; Free & Open Source</span>
+            <span className="btn-subtext">arm64-v8a • Free & Open Source</span>
           </a>
           <a href="#showcase" className="btn btn-glass btn-large">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -217,7 +296,7 @@ export default function App() {
           <div className="metric-divider" />
           <div className="metric-card">
             <span className="metric-value">3 Scripts</span>
-            <span className="metric-label">Hindi &bull; Punjabi &bull; Urdu</span>
+            <span className="metric-label">Hindi • Punjabi • Urdu</span>
           </div>
           <div className="metric-divider" />
           <div className="metric-card">
@@ -285,7 +364,7 @@ export default function App() {
             <span className="section-tag">NEW IN V1.0.4</span>
             <h2 className="section-title">Synchronized Bilingual Lyrics with Translation Subtitles</h2>
             <p className="section-subtitle">
-              No more repetitive lines or awkward double-rendering. When songs feature dual-language LRC transcripts, Noctra automatically consolidates identical timestamps (&le; 150ms) into a primary vocal line paired with a subtle, dimmed italic translation subtitle.
+              No more repetitive lines or awkward double-rendering. When songs feature dual-language LRC transcripts, Noctra automatically consolidates identical timestamps (≤ 150ms) into a primary vocal line paired with a subtle, dimmed italic translation subtitle.
             </p>
 
             <div className="feature-bullets">
@@ -293,7 +372,7 @@ export default function App() {
                 <div className="bullet-icon">⚡</div>
                 <div>
                   <h4>Smart Timestamp Consolidation</h4>
-                  <p>Lines sharing identical or near-identical timestamps (&le; 150ms) are intelligently consolidated into primary text and subtitle.</p>
+                  <p>Lines sharing identical or near-identical timestamps (≤ 150ms) are intelligently consolidated into primary text and subtitle.</p>
                 </div>
               </div>
               <div className="bullet-item">
@@ -320,7 +399,7 @@ export default function App() {
                 <span className="pulse-dot active" />
                 <div>
                   <div className="track-title">Mere Hi Liye</div>
-                  <div className="track-artist">Aditya Rikhari &bull; Synchronized LRC</div>
+                  <div className="track-artist">Aditya Rikhari • Synchronized LRC</div>
                 </div>
               </div>
               <div className="script-chips">
@@ -421,7 +500,7 @@ export default function App() {
           <div className="grid-card">
             <div className="card-icon">📡</div>
             <h3>Multi-Tier Fallback</h3>
-            <p>Self-healing 6-tier stream resolution pipeline: local vault &rarr; validated lossless stream &rarr; high-fidelity Deezer &rarr; Qobuz Studio &rarr; InnerTube resilient fallback.</p>
+            <p>Self-healing 6-tier stream resolution pipeline: local vault → validated lossless stream → high-fidelity Deezer → Qobuz Studio → InnerTube resilient fallback.</p>
             <div className="card-tags">
               <span>Self-Healing</span>
               <span>Zero Buffering</span>
@@ -479,12 +558,12 @@ export default function App() {
             <div className="table-row">
               <div>Account & Identity</div>
               <div className="danger">Mandatory (Email / Phone / OAuth)</div>
-              <div className="safe">0 Accounts &bull; Launch & Play</div>
+              <div className="safe">0 Accounts • Launch & Play</div>
             </div>
             <div className="table-row">
               <div>Remote Telemetry</div>
               <div className="danger">Continuous Analytics & Trackers</div>
-              <div className="safe">0% Telemetry &bull; Strict Local Sandbox</div>
+              <div className="safe">0% Telemetry • Strict Local Sandbox</div>
             </div>
             <div className="table-row">
               <div>Listening Taste Graph</div>
@@ -515,7 +594,7 @@ export default function App() {
             <div className="download-card-header">
               <div className="arch-badge">ARM64-V8A</div>
               <h3>Noctra ARM64</h3>
-              <span className="card-filesize">22.9 MB &bull; v1.0.4 Release</span>
+              <span className="card-filesize">22.9 MB • v1.0.4 Release</span>
             </div>
             <p>Optimized for modern 64-bit Android smartphones & tablets. Smallest footprint and highest native execution speed.</p>
             
@@ -524,7 +603,7 @@ export default function App() {
                 <span className="hash-label">SHA-256 Checksum:</span>
                 <button 
                   onClick={() => copyToClipboard('545024a2e4dc4389fe5cc1e1d1b470165523fd3ad942178d0093687639d656aa', 'arm')} 
-                  style={{ background: 'none', border: 'none', color: '#00F0FF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem' }}
+                  style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem' }}
                 >
                   {copiedArm ? <Check size={12} /> : <Copy size={12} />}
                   <span>{copiedArm ? 'Copied' : 'Copy'}</span>
@@ -547,7 +626,7 @@ export default function App() {
             <div className="download-card-header">
               <div className="arch-badge">UNIVERSAL</div>
               <h3>Noctra Universal</h3>
-              <span className="card-filesize">63.2 MB &bull; v1.0.4 Release</span>
+              <span className="card-filesize">63.2 MB • v1.0.4 Release</span>
             </div>
             <p>Bundles all native architectures (ARM64, ARMv7, x86_64). Guarantees 100% compatibility across all Android devices.</p>
             
@@ -556,7 +635,7 @@ export default function App() {
                 <span className="hash-label">SHA-256 Checksum:</span>
                 <button 
                   onClick={() => copyToClipboard('ee7558a611a95432f6d52102d9283ca6bd0e572b46d4e3e3b07bb58dd5b8647f', 'uni')} 
-                  style={{ background: 'none', border: 'none', color: '#00F0FF', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem' }}
+                  style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem' }}
                 >
                   {copiedUni ? <Check size={12} /> : <Copy size={12} />}
                   <span>{copiedUni ? 'Copied' : 'Copy'}</span>
@@ -580,7 +659,7 @@ export default function App() {
           <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.4/Noctra-1.0.4-armeabi-v7a.apk" className="link-tag">armeabi-v7a (20.9 MB)</a>
           <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.4/Noctra-1.0.4-x86_64.apk" className="link-tag">x86_64 (24.4 MB)</a>
           <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.4/SHA256SUMS.txt" className="link-tag">Official SHA256SUMS.txt</a>
-          <a href="https://github.com/nomad-guy/Noctra/releases/tag/v1.0.4" className="link-tag">&rarr; All GitHub Releases</a>
+          <a href="https://github.com/nomad-guy/Noctra/releases/tag/v1.0.4" className="link-tag">→ All GitHub Releases</a>
         </div>
       </section>
 
@@ -595,7 +674,7 @@ export default function App() {
           <details className="faq-item" open>
             <summary className="faq-question">
               <span>Do I need an account or subscription to use Noctra?</span>
-              <span className="faq-arrow">&plus;</span>
+              <span className="faq-arrow">+</span>
             </summary>
             <div className="faq-answer">
               <p>No. Noctra is completely authentication-less. You do not need an email, phone number, or password. All playlists, favorites, and listening records are saved on your local device in an encrypted SQLite database.</p>
@@ -605,7 +684,7 @@ export default function App() {
           <details className="faq-item">
             <summary className="faq-question">
               <span>Is the audio really lossless?</span>
-              <span className="faq-arrow">&plus;</span>
+              <span className="faq-arrow">+</span>
             </summary>
             <div className="faq-answer">
               <p>Yes. Noctra resolves pure FLAC bitstreams up to 24-bit / 192 kHz from uncompressed streaming repositories. Real-time audio telemetry in the player displays live codec, sample rate, and bit depth.</p>
@@ -615,17 +694,17 @@ export default function App() {
           <details className="faq-item">
             <summary className="faq-question">
               <span>How do bilingual synchronized lyrics work?</span>
-              <span className="faq-arrow">&plus;</span>
+              <span className="faq-arrow">+</span>
             </summary>
             <div className="faq-answer">
-              <p>In songs where contributors uploaded synchronized dual-language transcripts (e.g. Hindi in Romanized English alongside a pure English translation), Noctra consolidates identical timestamps (&le; 150ms) so the translated line displays as a subtle italic subtitle beneath the active vocal line.</p>
+              <p>In songs where contributors uploaded synchronized dual-language transcripts (e.g. Hindi in Romanized English alongside a pure English translation), Noctra consolidates identical timestamps (≤ 150ms) so the translated line displays as a subtle italic subtitle beneath the active vocal line.</p>
             </div>
           </details>
 
           <details className="faq-item">
             <summary className="faq-question">
               <span>Where are downloaded songs stored on Android?</span>
-              <span className="faq-arrow">&plus;</span>
+              <span className="faq-arrow">+</span>
             </summary>
             <div className="faq-answer">
               <p>Tracks are stored in standard music storage (by default <code>/storage/emulated/0/Music/Noctra/</code>). You can customize your storage directory directly from <em>Settings & Storage</em>.</p>
@@ -635,7 +714,7 @@ export default function App() {
           <details className="faq-item">
             <summary className="faq-question">
               <span>Can I build Noctra from source code?</span>
-              <span className="faq-arrow">&plus;</span>
+              <span className="faq-arrow">+</span>
             </summary>
             <div className="faq-answer">
               <p>Yes! Noctra is fully open-source under the GPL-3.0 license. Simply clone the repository from GitHub, run <code>flutter pub get</code>, and build with <code>flutter build apk --release</code>.</p>
@@ -648,7 +727,7 @@ export default function App() {
       <footer className="site-footer">
         <div className="footer-container">
           <div className="footer-brand">
-            <img src="./images/logo_noctra_liquid_glass.png" alt="Noctra" className="footer-logo" />
+            <img src={getBrandLogo()} alt="Noctra" className="footer-logo" />
             <div>
               <span className="footer-name">NOCTRA</span>
               <p className="footer-motto">Autonomous, Privacy-Sovereign Music Intelligence.</p>
@@ -663,7 +742,7 @@ export default function App() {
           </div>
 
           <div className="footer-copyright">
-            <p>&copy; 2026 Noctra. Built with precision for pure acoustic freedom. Distributed strictly for personal, educational, and research purposes.</p>
+            <p>© 2026 Noctra. Built with precision for pure acoustic freedom. Distributed strictly for personal, educational, and research purposes.</p>
           </div>
         </div>
       </footer>
