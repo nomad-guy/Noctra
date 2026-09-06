@@ -7,8 +7,13 @@ import 'parts/lyrics_provider_fallback.dart';
 class LyricLine {
   final Duration timestamp;
   final String text;
+  final String? translation;
 
-  const LyricLine({required this.timestamp, required this.text});
+  const LyricLine({
+    required this.timestamp,
+    required this.text,
+    this.translation,
+  });
 }
 
 class LyricsData {

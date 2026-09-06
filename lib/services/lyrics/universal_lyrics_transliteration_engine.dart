@@ -36,12 +36,19 @@ class UniversalLyricsTransliterationEngine {
         final cacheKey = '$cacheKeyPrefix${line.text}';
         if (_cache.containsKey(cacheKey)) {
           return LyricLine(
-              timestamp: line.timestamp, text: _cache[cacheKey]!);
+            timestamp: line.timestamp,
+            text: _cache[cacheKey]!,
+            translation: line.translation,
+          );
         }
         final converted = transliterateText(line.text, targetScript);
         if (_cache.length >= _maxCacheSize) _cache.remove(_cache.keys.first);
         _cache[cacheKey] = converted;
-        return LyricLine(timestamp: line.timestamp, text: converted);
+        return LyricLine(
+          timestamp: line.timestamp,
+          text: converted,
+          translation: line.translation,
+        );
       }).toList();
 
       return LyricsData(

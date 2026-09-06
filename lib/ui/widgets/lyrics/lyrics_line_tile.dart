@@ -54,7 +54,34 @@ class LyricsLineTile extends StatelessWidget {
           child: AnimatedOpacity(
             duration: const Duration(milliseconds: 160),
             opacity: isActive ? 1.0 : (isPast ? 0.72 : 0.9),
-            child: Text(line.text),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(line.text),
+                if (line.translation != null &&
+                    line.translation!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    line.translation!.trim(),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      fontStyle: FontStyle.italic,
+                      letterSpacing: 0,
+                      height: 1.3,
+                      color: isActive
+                          ? (isDark
+                              ? Colors.white.withValues(alpha: 0.72)
+                              : Colors.black.withValues(alpha: 0.68))
+                          : (isDark
+                              ? Colors.white.withValues(alpha: isPast ? 0.26 : 0.46)
+                              : Colors.black.withValues(alpha: isPast ? 0.20 : 0.38)),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),

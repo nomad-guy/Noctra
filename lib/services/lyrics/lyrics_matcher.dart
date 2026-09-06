@@ -109,6 +109,36 @@ class LyricsMatcher {
       }
     }
     lines.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-    return lines;
+
+    final consolidated = <LyricLine>[];
+    for (final line in lines) {
+      if (consolidated.isNotEmpty &&
+          (line.timestamp - consolidated.last.timestamp).abs().inMilliseconds <= 150) {
+        final prev = consolidated.removeLast();
+        if (line.text.toLowerCase().trim() != prev.text.toLowerCase().trim()) {
+          final lineIsNonLatin = hasNonLatinScript(line.text);
+          final prevIsNonLatin = hasNonLatinScript(prev.text);
+
+          if (lineIsNonLatin && !prevIsNonLatin) {
+            consolidated.add(LyricLine(
+              timestamp: prev.timestamp,
+              text: line.text,
+              translation: prev.translation ?? prev.text,
+            ));
+          } else {
+            consolidated.add(LyricLine(
+              timestamp: prev.timestamp,
+              text: prev.text,
+              translation: line.text,
+            ));
+          }
+        } else {
+          consolidated.add(prev);
+        }
+      } else {
+        consolidated.add(line);
+      }
+    }
+    return consolidated;
   }
 }
