@@ -21,15 +21,19 @@
 </p>
 
 <p align="center">
+  <a href="https://nomad-guy.github.io/Noctra/"><b>🌐 Official Website</b></a> &bull;
+  <a href="https://t.me/Noctra_app"><b>✈️ Telegram Community (@Noctra_app)</b></a> &bull;
+  <a href="https://github.com/nomad-guy/Noctra/releases/latest"><b>📦 Downloads & Releases</b></a>
+</p>
+
+<p align="center">
   <a href="#overview">Overview</a> &bull;
   <a href="#screenshots">Screenshots</a> &bull;
+  <a href="#whats-new-in-v105">What's New</a> &bull;
   <a href="#features">Features</a> &bull;
   <a href="#installation--downloads">Downloads</a> &bull;
   <a href="#architecture">Architecture</a> &bull;
   <a href="#building-from-source">Build from Source</a> &bull;
-  <a href="CODE_OF_CONDUCT.md">Code of Conduct</a> &bull;
-  <a href="CONTRIBUTING.md">Contributing</a> &bull;
-  <a href="SECURITY.md">Security</a> &bull;
   <a href="CHANGELOG.md">Changelog</a> &bull;
   <a href="#legal-disclaimer--terms-of-use">Legal Disclaimer</a>
 </p>
@@ -38,9 +42,9 @@
 
 ## Overview
 
-**Noctra** is an authentication-less, privacy-first audiophile music streaming client engineered for **Android, Windows, Linux, and iOS**.
+**Noctra** is an authentication-less, privacy-sovereign audiophile music streaming platform engineered for **Android, Windows, Linux, and iOS**.
 
-Built with Flutter, Dart, Riverpod, and native platform digital signal processing delegates, Noctra streams pure lossless FLAC audio up to **24-bit/192 kHz**, synchronizes bilingual lyrics with elegant translation subtitles, executes on-device neural taste vector recommendations, and packages into single-file native installers (`.exe`, `.deb`, `.apk`, `.ipa`) without accounts, tracking, or cloud relays.
+Built with Flutter, Dart, Riverpod, and native platform digital signal processing delegates, Noctra streams pure lossless FLAC audio up to **24-bit/192 kHz**, synchronizes bilingual lyrics with Apple Music / Spotify style translation subtitles, executes on-device neural taste recommendations, and packages into native standalone installers (`.exe`, `.deb`, `.apk`, `.ipa`) without user accounts, cloud tracking, or telemetry.
 
 ---
 
@@ -86,6 +90,7 @@ Built with Flutter, Dart, Riverpod, and native platform digital signal processin
 - [What's New in v1.0.5](#whats-new-in-v105)
 - [Features](#features)
   - [Streaming & Audiophile Playback](#streaming--audiophile-playback)
+  - [Responsive Cross-Platform Shell](#responsive-cross-platform-shell)
   - [Discovery & Neural Taste Engine](#discovery--neural-taste-engine)
   - [Synced Bilingual Lyrics & Transliteration](#synced-bilingual-lyrics--transliteration)
   - [Playlist Management & Universal Transfer](#playlist-management--universal-transfer)
@@ -101,16 +106,22 @@ Built with Flutter, Dart, Riverpod, and native platform digital signal processin
 ## What's New in v1.0.5
 
 - **Cross-Platform Native Packaging**:
-  - **Windows**: Single-file standalone `Noctra-1.0.5-Setup-x64.exe` installer compiled with Inno Setup.
+  - **Windows**: Single-file standalone `Noctra-1.0.5-Setup-x64.exe` installer compiled with Inno Setup and branded with native high-definition `app_icon.ico`.
   - **Linux**: Native Debian/Ubuntu package (`noctra_1.0.5_amd64.deb`) with system icons and desktop entry.
   - **Android**: Universal APK, Split-ABI APKs (`arm64-v8a`, `armeabi-v7a`, `x86_64`), and Google Play App Bundle (`.aab`).
   - **iOS**: Sideloadable `Noctra-1.0.5.ipa` bundle ready for AltStore, SideStore, Sideloadly, and TrollStore.
+- **Adaptive Desktop & Mobile Layout**:
+  - Automatically adapts between wide desktop screens ($\ge 720\text{px}$) with a permanently docked `NoirSidebar` and fluid mini-player, and mobile devices ($< 720\text{px}$) with an ergonomic bottom navigation bar.
+- **Accurate Artist Biographies**:
+  - Built `ArtistWikipediaService` with music entity validation keywords (`singer`, `musician`, `band`, `rapper`, `album`, `playback singer`) and multi-candidate disambiguation defense.
+- **Native Cross-Platform Rollback & Updater**:
+  - Dynamic OS asset detection selects `.exe` installers on Windows and executes native desktop setup processes instead of calling Android package managers.
+- **Modular Official Website**:
+  - Interactive Three.js 3D crystal shards canvas, Anime.js micro-animations, and live AksharaEngine bilingual lyrics demonstration.
 - **Shuffle & Algorithmic Remix for Folders**:
   - Integrated `AiCollectionActionBar` into all imported playlists and custom folders with 1-tap random shuffle and deterministic remix reordering persisted directly to the local SQLite database.
 - **Universal Playlist & Library Transfer Protocol**:
-  - Pure-Dart `NoctraTransferService` supporting lossless JSON manifest (`.noctra.json`) and spreadsheet-compatible universal CSV (`.csv`) export and import with 1-tap clipboard copying and downloads file saving.
-- **Build Hardening**:
-  - Silenced MSVC `STL1011` coroutine deprecation static assertions on Windows runners and added graceful debug keystore fallback for CI environments.
+  - Pure-Dart `NoctraTransferService` supporting lossless JSON manifest (`.noctra.json`) and spreadsheet-compatible universal CSV (`.csv`) export and import with 1-tap clipboard copying and device saving.
 
 ---
 
@@ -119,10 +130,16 @@ Built with Flutter, Dart, Riverpod, and native platform digital signal processin
 ### Streaming & Audiophile Playback
 - **Pure Lossless FLAC up to 24-bit/192kHz**: Automatic priority resolution for uncompressed studio master streams.
 - **Real-Time Audio Telemetry**: Instant live readout of active bit depth ($16\text{-bit} / 24\text{-bit}$) and sample rate ($44.1\,\text{kHz} - 192\,\text{kHz}$) directly in the player header.
-- **5-Band DSP Equalizer Suite**: Built-in audiophile presets including target curves for Harman IEM, Moondrop VDSF, and Tangzu Wan'er.
+- **5-Band DSP Equalizer Suite**: Built-in audiophile presets including target curves for Harman IEM 2019, Moondrop VDSF, and Tangzu Wan'er.
 - **Spatial Audio & 3D Virtualizer**: Acoustic resonance simulation with Concert, Studio, and Dolby Atmos virtualized soundstage.
 - **Seamless Gapless Crossfade**: Configurable crossfade ramp engine with linear and logarithmic decay curves.
 - **Smart Speed & Pitch FX**: Granular 0.5x to 2.0x playback rate adjustment with time-stretching, plus 1-tap presets (Slowed 0.85x, Chill 0.90x, Nightcore 1.25x).
+
+### Responsive Cross-Platform Shell
+- **Adaptive Desktop Interface**: On Windows, Linux, and wide tablets ($\ge 720\text{px}$), renders a permanently docked `NoirSidebar` with instant access to Search, Library, AI Studio, Party Mode, and EQ, while floating the mini-player smoothly across the content area.
+- **Mobile First UX**: On mobile devices ($< 720\text{px}$), provides a tactile 4-tab bottom navigation bar with haptic feedback and an off-canvas drawer.
+- **Native Keyboard Navigation**: Full hotkey support on desktop (Space to play/pause, Left/Right arrows to seek, Up/Down for volume, M to mute).
+- **Verified Musician Discovery**: Real-time graph integration with Deezer, JioSaavn, iTunes, and music-validated Wikipedia extracts through `ArtistWikipediaService`.
 
 ### Discovery & Neural Taste Engine
 - **On-Device Neural Taste Recommender**: 4-layer multi-layer perceptron (120 input dimensions) modeling acoustic valence, energy, danceability, and listening velocity on-device without cloud telemetry.
