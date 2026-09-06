@@ -265,72 +265,51 @@ export default function App() {
       <div className="glow-mesh glow-3" />
 
       {/* Navigation Header */}
+      {/* Sleek Minimal Floating Header */}
       <header className="site-header">
         <div className="nav-container">
           <a href="#" className="brand-badge">
             <img src={getBrandLogo()} alt="Noctra" className="brand-logo" />
             <span className="brand-name">NOCTRA</span>
-            <span className="version-tag">v1.0.5</span>
           </a>
 
           <nav className="nav-links">
-            <a href="#player-demo">Live Audio</a>
-            <a href="#showcase">Showcase</a>
-            <a href="#transfer-studio">Transfer Protocol</a>
-            <a href="#lyrics">Lyrics</a>
-            <a href="#audiophile">Audiophile DSP</a>
+            <a href="#showcase">Features</a>
+            <a href="#player-demo">Telemetry</a>
+            <a href="#transfer-studio">Transfer</a>
             <a href="#downloads">Downloads</a>
-            <a href="#faq">FAQ</a>
           </nav>
 
           <div className="nav-actions">
-            {/* 1-Tap Theme Switcher */}
+            {/* Minimal Theme Switcher Icon */}
             <button 
-              className="theme-tap-btn"
+              className="minimal-theme-btn"
               onClick={cycleTheme}
-              title={`Active: ${currentTheme.name} (${currentTheme.fontBadge}). Tap to switch to ${currentTheme.nextThemeName}.`}
+              title={`Active: ${currentTheme.name} (${currentTheme.fontBadge}). Tap to switch.`}
               type="button"
+              aria-label="Switch Theme"
             >
-              <span className="theme-tap-icon">{currentTheme.icon}</span>
-              <div className="theme-tap-info">
-                <span className="theme-tap-name">
-                  {currentTheme.name}
-                  <span className="theme-tap-arrow">↻</span>
-                </span>
-                <span className="theme-tap-font-badge">{currentTheme.fontBadge}</span>
-              </div>
+              <span className="minimal-theme-icon">{currentTheme.icon}</span>
             </button>
 
-            {/* Telegram Channel Button */}
+            {/* Telegram Official Logo Only */}
             <a 
               href="https://t.me/Noctra_app" 
               target="_blank" 
               rel="noopener noreferrer" 
-              className="btn btn-telegram"
-              title="Join Noctra Telegram Channel"
+              className="tg-logo-btn"
+              title="Join Noctra Telegram Channel (@Noctra_app)"
+              aria-label="Noctra Telegram Channel"
             >
-              <Send size={15} />
-              <span>Telegram</span>
-            </a>
-
-            {/* GitHub Button */}
-            <a 
-              href="https://github.com/nomad-guy/Noctra" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="btn btn-glass"
-              title="GitHub Repository"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM16.64 8.8C16.49 10.38 15.84 14.22 15.51 15.99C15.37 16.74 15.09 16.99 14.83 17.02C14.25 17.07 13.81 16.64 13.25 16.27C12.37 15.69 11.87 15.33 11.02 14.77C10.03 14.12 10.67 13.76 11.24 13.18C11.39 13.03 13.95 10.7 14 10.49C14.01 10.45 14.01 10.33 13.94 10.27C13.87 10.21 13.77 10.23 13.7 10.25C13.6 10.27 12.01 11.32 8.94 13.38C8.5 13.68 8.1 13.83 7.74 13.82C7.34 13.81 6.57 13.59 6 13.4C5.3 13.17 4.75 13.05 4.8 12.67C4.83 12.47 5.11 12.27 5.64 12.06C8.88 10.65 11.04 9.72 12.12 9.27C15.2 7.98 15.84 7.76 16.26 7.76C16.35 7.76 16.56 7.78 16.69 7.89C16.8 7.98 16.83 8.11 16.84 8.2C16.83 8.27 16.85 8.48 16.64 8.8Z" fill="currentColor"/>
               </svg>
-              <span>GitHub</span>
             </a>
 
-            {/* Direct Download Link */}
-            <a href="#downloads" className="btn btn-primary">
-              <Download size={16} />
-              <span>Get v1.0.5</span>
+            {/* Minimal Download Button */}
+            <a href="#downloads" className="btn btn-primary btn-sm">
+              <Download size={14} />
+              <span>Get Noctra</span>
             </a>
           </div>
         </div>
