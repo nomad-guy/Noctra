@@ -15,6 +15,9 @@ class LibraryFoldersTab extends ConsumerStatefulWidget {
   final Map<String, List<Song>> customFolders;
   final List<Song> allSongs;
 
+  @visibleForTesting
+  static bool debugDisableDebounce = false;
+
   const LibraryFoldersTab({
     super.key,
     required this.isDark,
@@ -29,7 +32,7 @@ class LibraryFoldersTab extends ConsumerStatefulWidget {
 
 class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab>
     with AutomaticKeepAliveClientMixin {
-  String? _openedFolder;
+  DateTime? _lastOpenTime;
   bool _isCreatingFolder = false;
   final TextEditingController _folderNameCtrl = TextEditingController();
 
@@ -40,6 +43,26 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab>
   void dispose() {
     _folderNameCtrl.dispose();
     super.dispose();
+  }
+
+  void _openFolder(String folderName, List<Song> folderSongs) {
+    final now = DateTime.now();
+    if (!LibraryFoldersTab.debugDisableDebounce &&
+        _lastOpenTime != null &&
+        now.difference(_lastOpenTime!) < const Duration(milliseconds: 500)) {
+      return;
+    }
+    _lastOpenTime = now;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FolderDetailView(
+          isDark: widget.isDark,
+          repo: widget.repo,
+          folderName: folderName,
+          songs: folderSongs,
+        ),
+      ),
+    );
   }
 
   void _submitCreateFolder() {
@@ -64,29 +87,6 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-
-    if (_openedFolder != null) {
-      final folderSongs = _openedFolder == 'Favorites'
-          ? widget.repo.favorites
-          : (widget.repo.customFolders[_openedFolder] ??
-              widget.customFolders[_openedFolder] ??
-              []);
-      return PopScope(
-        canPop: false,
-        onPopInvokedWithResult: (didPop, _) {
-          if (!didPop) {
-            setState(() => _openedFolder = null);
-          }
-        },
-        child: FolderDetailView(
-          isDark: widget.isDark,
-          repo: widget.repo,
-          folderName: _openedFolder!,
-          songs: folderSongs,
-          onBack: () => setState(() => _openedFolder = null),
-        ),
-      );
-    }
 
     final customFolderNames = (widget.repo.customFolders.isNotEmpty
             ? widget.repo.customFolders
@@ -205,7 +205,7 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab>
                   child: GlassCard(
                     radius: 14,
                     padding: const EdgeInsets.all(12),
-                    onTap: () => setState(() => _openedFolder = folderName),
+                    onTap: () => _openFolder(folderName, folderSongs),
                     onLongPress: folderName != 'Favorites'
                         ? () => _confirmDeleteFolder(folderName)
                         : null,

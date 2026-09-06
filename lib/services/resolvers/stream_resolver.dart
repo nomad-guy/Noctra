@@ -1,14 +1,21 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import '../../data/models/audio_quality.dart';
 import '../../data/models/song_model.dart';
 import 'innertube_resolver.dart';
+import 'qobuz_stream_resolver.dart';
 import 'stream_resolver_base.dart';
+import 'tidal_stream_resolver.dart';
 import 'trusted_audio_hosts.dart';
 import 'youtube_web_search_resolver.dart';
 
+export '../../data/models/audio_quality.dart';
 export 'innertube_resolver.dart';
+export 'odesli_songlink_resolver.dart';
+export 'qobuz_stream_resolver.dart';
 export 'stream_resolver_base.dart';
+export 'tidal_stream_resolver.dart';
 export 'trusted_audio_hosts.dart';
 export 'youtube_web_search_resolver.dart';
 
@@ -22,7 +29,11 @@ class _CacheEntry {
 class CompositeStreamResolver {
   static final Map<String, _CacheEntry> _cache = {};
   static final Map<String, Future<String?>> _inFlight = {};
+  static final Map<String, AudioStreamInfo> _streamInfoMap = {};
   static const int _ttlMs = 30 * 60 * 1000;
+
+  static AudioStreamInfo? getAudioStreamInfo(String songId) =>
+      _streamInfoMap[songId];
 
   /// Overall wall-clock budget for one uncached resolution pass. Without it,
   /// a song rejected by every tier could wait the full sum of per-tier
@@ -38,6 +49,8 @@ class CompositeStreamResolver {
   static final List<StreamResolver> _resolvers = [
     LocalFileResolver(),
     DirectOpenStreamResolver(),
+    TidalStreamResolver(),
+    QobuzStreamResolver(),
     JioSaavnDirectResolver(),
     NativeKotlinResolver(),
     InnerTubeMusicResolver(),
@@ -53,6 +66,8 @@ class CompositeStreamResolver {
       _resolvers.addAll([
         LocalFileResolver(),
         DirectOpenStreamResolver(),
+        TidalStreamResolver(),
+        QobuzStreamResolver(),
         JioSaavnDirectResolver(),
         NativeKotlinResolver(),
         InnerTubeMusicResolver(),
@@ -65,6 +80,9 @@ class CompositeStreamResolver {
   static void clearCacheForTesting() {
     _cache.clear();
     _inFlight.clear();
+    _streamInfoMap.clear();
+    TidalStreamResolver.clearCacheForTesting();
+    QobuzStreamResolver.clearCacheForTesting();
   }
 
   static String _cacheKey(Song song) {
@@ -177,6 +195,11 @@ class CompositeStreamResolver {
             _cache.remove(_cache.keys.first);
           }
           _cache[key] = _CacheEntry(url, now, now + _ttlMs);
+          final info = TidalStreamResolver.getStreamInfo(song.id) ??
+              QobuzStreamResolver.getStreamInfo(song.id) ??
+              AudioStreamInfo.fromUrl(url, sourceId: resolver.sourceId);
+          _streamInfoMap[song.id] = info;
+          _streamInfoMap[key] = info;
           return url;
         }
       } catch (e) {

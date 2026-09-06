@@ -1,16 +1,7 @@
 import 'dart:math';
 
-/// High-precision song matching guard that prevents wrong-song / wrong-stream
-/// substitution across search results and stream resolvers.
-///
-/// Ensures:
-/// 1. Version tag consistency: Remixed, Live, Acoustic, Instrumental, Slowed,
-///    and Sped-Up songs ONLY match candidates with identical modifiers. Clean
-///    studio tracks NEVER match remixes, live concerts, or covers.
-/// 2. Primary artist validation: The primary artist must be present in the
-///    candidate title, artist, or channel.
-/// 3. Duration boundaries: Rejects clips/previews (< 45s) and durations differing
-///    by more than 45s or 25% from the expected track duration.
+/// High-precision song matching guard preventing wrong-song/wrong-stream substitution.
+/// Ensures version tag consistency, primary artist presence, and duration boundaries.
 class TrackMatchingGuard {
   static const Set<String> _modifierTags = {
     'remix',
@@ -163,6 +154,28 @@ class TrackMatchingGuard {
       candidateDuration: candidateDuration,
     );
     return conf >= 0.75;
+  }
+
+  static bool isMismatch({
+    required String requestedTitle,
+    required String requestedArtist,
+    required String candidateTitle,
+    required String candidateArtist,
+    int? requestedDurationMs,
+    int? candidateDurationMs,
+  }) {
+    return !isSafeMatch(
+      targetTitle: requestedTitle,
+      targetArtist: requestedArtist,
+      targetDuration: requestedDurationMs != null && requestedDurationMs > 0
+          ? Duration(milliseconds: requestedDurationMs)
+          : null,
+      candidateTitle: candidateTitle,
+      candidateArtist: candidateArtist,
+      candidateDuration: candidateDurationMs != null && candidateDurationMs > 0
+          ? Duration(milliseconds: candidateDurationMs)
+          : null,
+    );
   }
 
   static Set<String> _extractModifiers(String text) {

@@ -50,9 +50,17 @@ class StreamQualityOptionsCard extends StatelessWidget {
                             color: tokens.primaryText,
                           ),
                         ),
-                        if (q != StreamQuality.hiRes)
+                        if (q == StreamQuality.hiRes)
                           Text(
-                            '${q.bitrate} kbps • ${q.codec.toUpperCase()}',
+                            'Lossless 24-Bit / 96kHz • Studio Master (IEMs & DACs)',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isSelected ? tokens.accent : tokens.secondaryText,
+                            ),
+                          )
+                        else if (q == StreamQuality.lossless)
+                          Text(
+                            'Lossless 16-Bit / 44.1kHz • CD Quality (FLAC)',
                             style: TextStyle(
                               fontSize: 11,
                               color: tokens.secondaryText,
@@ -60,7 +68,7 @@ class StreamQualityOptionsCard extends StatelessWidget {
                           )
                         else
                           Text(
-                            'Lossless • ${q.codec.toUpperCase()}',
+                            '${q.bitrate} kbps • ${q.codec.toUpperCase()}',
                             style: TextStyle(
                               fontSize: 11,
                               color: tokens.secondaryText,

@@ -15,10 +15,23 @@ class TrustedAudioHosts {
     'cdn.jsdelivr.net',
     'jamendo.com',
     'jamendocdn.com',
+    'tidal.com',
+    'tidalhifi.com',
+    'sp-linear.tidal.com',
+    'qobuz.com',
+    'audio-qobuz.com',
+    'hw-cdn.net',
+    'fastly.net',
   };
 
   static bool isTrusted(String? url) {
     if (url == null || url.isEmpty) return false;
+    if (url.startsWith('/') ||
+        url.startsWith('file:') ||
+        url.startsWith('http://localhost') ||
+        url.startsWith('http://127.0.0.1')) {
+      return true;
+    }
     try {
       final u = Uri.parse(url);
       if (u.scheme != 'https') return false;

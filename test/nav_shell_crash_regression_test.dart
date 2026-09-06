@@ -7,7 +7,6 @@ import 'package:noctra/data/models/song_model.dart';
 import 'package:noctra/data/repositories/music_repository.dart';
 import 'package:noctra/providers/app_providers.dart';
 import 'package:noctra/services/p2p/p2p_sync_service.dart';
-import 'package:noctra/ui/widgets/fade_indexed_stack.dart';
 import 'package:noctra/ui/widgets/main_navigation_shell.dart';
 
 /// Phase 22 P0 regression tests — IndexedStack tab-index crash.
@@ -92,7 +91,7 @@ void main() {
     expect(tester.takeException(), isNull);
 
     // Library must be the active tab, inside a tab-aligned list of 4.
-    final stack = tester.widget<FadeIndexedStack>(find.byType(FadeIndexedStack).first);
+    final stack = tester.widget<IndexedStack>(find.byType(IndexedStack).first);
     expect(stack.index, 2);
     expect(stack.children, hasLength(4));
 
@@ -107,7 +106,7 @@ void main() {
     await selectTab(tester, 3);
     expect(tester.takeException(), isNull);
 
-    final stack = tester.widget<FadeIndexedStack>(find.byType(FadeIndexedStack).first);
+    final stack = tester.widget<IndexedStack>(find.byType(IndexedStack).first);
     expect(stack.index, 3);
     expect(stack.children, hasLength(4));
 
@@ -127,7 +126,7 @@ void main() {
     expect(tester.takeException(), isNull);
 
     int realScreens() => tester
-        .widget<FadeIndexedStack>(find.byType(FadeIndexedStack).first)
+        .widget<IndexedStack>(find.byType(IndexedStack).first)
         .children
         .where((w) => w is! SizedBox)
         .length;
@@ -150,9 +149,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 20));
     expect(tester.takeException(), isNull);
 
-    final stack = tester.widget<FadeIndexedStack>(find.byType(FadeIndexedStack).first);
+    final stack = tester.widget<IndexedStack>(find.byType(IndexedStack).first);
     expect(stack.index, 2);
-    expect(find.byType(FadeIndexedStack), findsOneWidget);
+    expect(find.byType(IndexedStack), findsOneWidget);
 
     await teardownShell(tester);
   });

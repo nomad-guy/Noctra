@@ -7,7 +7,9 @@ import '../../../data/models/song_model.dart';
 import '../../../data/repositories/music_repository.dart';
 import '../../../providers/app_providers.dart';
 import '../../../services/ytdlp/music_service.dart';
+import '../../../services/resolvers/stream_resolver.dart';
 import '../../widgets/song_context_menu.dart';
+import '../../widgets/stream_quality_sheet.dart';
 import '../artist_screen.dart';
 
 class PlayerTrackInfoBar extends ConsumerWidget {
@@ -24,6 +26,7 @@ class PlayerTrackInfoBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tokens = context.noctraTokens;
     final repo = ref.watch(musicRepositoryProvider);
+    final streamInfo = CompositeStreamResolver.getAudioStreamInfo(song.id);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -62,25 +65,33 @@ class PlayerTrackInfoBar extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
-              InkWell(
-                onTap: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).push(MaterialPageRoute(
-                    builder: (c) => ArtistScreen(
-                      artistName: song.artist,
-                      artistImageUrl: song.artworkUrl,
+              Row(
+                children: [
+                  Flexible(
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).push(MaterialPageRoute(
+                          builder: (c) => ArtistScreen(
+                            artistName: song.artist,
+                            artistImageUrl: song.artworkUrl,
+                          ),
+                        ));
+                      },
+                      child: Text(
+                        song.artist,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          color: tokens.secondaryText,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ));
-                },
-                child: Text(
-                  song.artist,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    color: tokens.secondaryText,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  const SizedBox(width: 8),
+                  _buildQualityBadge(context, streamInfo, tokens),
+                ],
               ),
             ],
           ),
@@ -113,6 +124,58 @@ class PlayerTrackInfoBar extends ConsumerWidget {
           onPressed: () => _handleDownload(context, repo, song, isDownloaded),
         ),
       ],
+    );
+  }
+
+  Widget _buildQualityBadge(
+    BuildContext context,
+    AudioStreamInfo? info,
+    NoctraThemeTokens tokens,
+  ) {
+    final isLocal = song.localFilePath != null && song.localFilePath!.isNotEmpty;
+    final label = info?.shortLabel ?? (isLocal ? 'LOCAL' : '320K');
+    final isHiRes = info?.tier == AudioQualityTier.hiResLossless;
+    final isLossless = info?.tier == AudioQualityTier.lossless;
+    final isAtmos = info?.tier == AudioQualityTier.dolbyAtmos;
+
+    final Color badgeColor = isHiRes
+        ? const Color(0xFFFFD700)
+        : isLossless
+            ? const Color(0xFF00E5FF)
+            : isAtmos
+                ? const Color(0xFFB388FF)
+                : tokens.secondaryText.withValues(alpha: 0.8);
+
+    return InkWell(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          backgroundColor: Colors.transparent,
+          isScrollControlled: true,
+          builder: (_) => const StreamQualitySheet(),
+        );
+      },
+      borderRadius: BorderRadius.circular(5),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(5),
+          border: Border.all(
+            color: badgeColor.withValues(alpha: 0.5),
+            width: 0.8,
+          ),
+          color: badgeColor.withValues(alpha: 0.12),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.5,
+            color: badgeColor,
+          ),
+        ),
+      ),
     );
   }
 
