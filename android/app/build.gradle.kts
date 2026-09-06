@@ -71,7 +71,7 @@ android {
             val releaseSigning = signingConfigs.getByName("release")
             val hasReleaseKeys = !releaseSigning.storePassword.isNullOrBlank() &&
                 !releaseSigning.keyPassword.isNullOrBlank()
-            val enforceReleaseSigning = System.getenv("CI") == "true" ||
+            val enforceReleaseSigning =
                 (project.findProperty("NOCTRA_ENFORCE_SIGNING") as? String) == "true"
 
             if (hasReleaseKeys) {

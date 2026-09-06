@@ -136,6 +136,9 @@ jobs:
       - name: Compile Inno Setup Installer (.exe)
         shell: pwsh
         run: |
+          if (-not (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup --yes --no-progress
+          }
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
 
       - name: Archive Windows Installer (.exe)
