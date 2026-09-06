@@ -1,24 +1,65 @@
-name: Cross-Platform Native Packaging & Multi-Architecture Builds
+name: Cross-Platform Native Packaging & Release
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+    tags:
+      - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Desired Version (e.g. 1.0.5)'
+        required: false
+        default: '1.0.5'
+
+permissions:
+  contents: write
 
 jobs:
   version:
-    name: Calculate Version (+0.0.1 per run)
+    name: Extract Version & Changelog
     runs-on: ubuntu-latest
     outputs:
-      app_version: ${{ steps.calc.outputs.version }}
+      app_version: ${{ steps.resolve.outputs.version }}
     steps:
-      - id: calc
+      - uses: actions/checkout@v4
+
+      - id: resolve
         run: |
-          PATCH_VER=$(( 4 + ${{ github.run_number }} ))
-          echo "version=1.0.${PATCH_VER}" >> "$GITHUB_OUTPUT"
-          echo "Computed version: 1.0.${PATCH_VER} (Run #${{ github.run_number }})"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ github.event.inputs.version }}" ]]; then
+            RAW_VER="${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref_type }}" == "tag" ]]; then
+            RAW_VER="${{ github.ref_name }}"
+          else
+            RAW_VER=$(grep '^version:' pubspec.yaml | head -n1 | cut -d ' ' -f2 | cut -d '+' -f1)
+          fi
+          CLEAN_VER="${RAW_VER#v}"
+          echo "version=${CLEAN_VER}" >> "$GITHUB_OUTPUT"
+          echo "Determined release version: ${CLEAN_VER}"
+
+          python3 -c "
+          import re
+          ver = '${CLEAN_VER}'
+          try:
+              with open('CHANGELOG.md', 'r', encoding='utf-8') as f:
+                  content = f.read()
+              pattern = rf'(## v{re.escape(ver)}.*?(?=\n## v|\Z))'
+              match = re.search(pattern, content, re.DOTALL)
+              if match:
+                  notes = match.group(1).strip()
+              else:
+                  notes = f'## v{ver}\n\nAutomated multi-platform release for Noctra v{ver}.'
+          except Exception as e:
+              notes = f'## v{ver}\n\nAutomated multi-platform release for Noctra v{ver}.'
+
+          with open('extracted_notes.md', 'w', encoding='utf-8') as out:
+              out.write(notes)
+          "
+
+      - name: Archive Extracted Release Notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: extracted_notes.md
 
   build-android:
     name: Build Android (Universal, Split-ABI & AAB)
@@ -256,3 +297,83 @@ jobs:
         with:
           name: Noctra-${{ env.APP_VERSION }}-iOS-ipa
           path: "Noctra-${{ env.APP_VERSION }}.ipa"
+
+  publish-release:
+    name: Publish Official GitHub Release
+    needs: [version, build-android, build-windows, build-linux, build-ios]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Extracted Release Notes
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: release_meta/
+
+      - name: Download Android Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Noctra-${{ needs.version.outputs.app_version }}-Android
+          path: release_dist/
+
+      - name: Download Windows Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Noctra-${{ needs.version.outputs.app_version }}-Windows
+          path: release_dist/
+
+      - name: Download Linux Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Noctra-${{ needs.version.outputs.app_version }}-Linux-deb
+          path: release_dist/
+
+      - name: Download iOS Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Noctra-${{ needs.version.outputs.app_version }}-iOS-ipa
+          path: release_dist/
+
+      - name: Generate Checksums & Formatted Release Notes
+        run: |
+          cd release_dist
+          sha256sum * > SHA256SUMS.txt
+          cd ..
+
+          cat release_meta/extracted_notes.md > release_body.md
+          cat << 'EOF' >> release_body.md
+
+          ---
+
+          ### Native Platform Downloads
+
+          | Platform | Package | Architecture | Description |
+          |---|---|---|---|
+          | **Windows** | `Noctra-${{ needs.version.outputs.app_version }}-Setup-x64.exe` | x86_64 / x64 | Standalone 1-Click Installer (Inno Setup) |
+          | **Linux** | `noctra_${{ needs.version.outputs.app_version }}_amd64.deb` | x86_64 / amd64 | Debian / Ubuntu native package (`sudo dpkg -i`) |
+          | **Android** | `Noctra-${{ needs.version.outputs.app_version }}-Universal.apk` | All Devices | Universal APK for all modern Android devices |
+          | **Android** | `Noctra-${{ needs.version.outputs.app_version }}-arm64-v8a.apk` | 64-bit Mobile | Optimized smallest APK for 64-bit phones |
+          | **Android** | `Noctra-${{ needs.version.outputs.app_version }}-armeabi-v7a.apk` | 32-bit Mobile | Legacy 32-bit Android phones |
+          | **Android** | `Noctra-${{ needs.version.outputs.app_version }}-x86_64.apk` | x86_64 / PC | Android emulators, ChromeOS, Windows Subsystem |
+          | **Android** | `Noctra-${{ needs.version.outputs.app_version }}.aab` | Google Play | App Bundle for Play Store distribution |
+          | **iOS** | `Noctra-${{ needs.version.outputs.app_version }}.ipa` | ARM64 / iPhone & iPad | Sideloadable via AltStore / SideStore / TrollStore |
+
+          > **Integrity Verification**: Verify downloaded binaries against `SHA256SUMS.txt` attached below.
+          EOF
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Noctra v${{ needs.version.outputs.app_version }}"
+          tag_name: "v${{ needs.version.outputs.app_version }}"
+          body_path: release_body.md
+          files: |
+            release_dist/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

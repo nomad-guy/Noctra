@@ -1,6 +1,27 @@
 # Changelog
 
-## v1.0.4 (2026-09-06)
+## v1.0.5 (2026-09-06)
+
+### Cross-Platform Native Packaging, Shuffle & Remix for Folders, and Universal Playlist Transfer
+
+- **Cross-Platform Native Packaging & Multi-Architecture Builds**:
+  - **Windows**: Packaged as a standalone single-file `Noctra-1.0.5-Setup-x64.exe` installer compiled with Inno Setup (bundles all Flutter engine DLLs, audio codecs, and visualizer assets).
+  - **Linux**: Packaged as a native Debian/Ubuntu package (`noctra_1.0.5_amd64.deb`) with desktop entry specification, system icons, and mime associations.
+  - **Android**: Multi-architecture packaging featuring Universal APK, Split-ABI APKs (`arm64-v8a`, `armeabi-v7a`, `x86_64`), and Google Play App Bundle (`.aab`).
+  - **iOS**: Sideloadable `Noctra-1.0.5.ipa` bundle ready for AltStore, SideStore, Sideloadly, and TrollStore installation.
+  - **Build Toolchain Hardening**: Suppressed MSVC `STL1011` coroutine deprecation static assertions on Windows runners and implemented graceful debug keystore signing fallback for CI environments lacking private signing keys.
+
+- **Shuffle & Remix for Imported Playlists & Custom Folders**:
+  - Integrated `AiCollectionActionBar` into `FolderDetailView`, bringing one-tap Shuffle and intelligent algorithmic Remix to all Spotify, YouTube, and local custom folders.
+  - Added `reorderFolderSongs` in `MusicRepository` to persist remixed and rearranged tracklists directly to the local SQLite database.
+
+- **Universal Playlist & Library Transfer Protocol**:
+  - Engineered pure-Dart `NoctraTransferService` supporting zero-dependency export and import of playlists and collections.
+  - Manifest JSON (`.noctra.json`) format: lossless transfer preserving track metadata, duration, cover art URL, artists, and ordering.
+  - Universal CSV (`.csv`) format: spreadsheet-compatible export/import matching industry playlist exchange standards.
+  - One-tap clipboard copy and device storage file export via `ExportPlaylistSheet`.
+  - Native auto-detect parser in `UrlImportSheet` and `PlaylistFileImporters` for instant import of transferred Noctra playlists.
+
 
 ### Bilingual Lyrics Translation Subtitles, Lossless FLAC Stream Hardening & Audiophile Tuning
 
