@@ -5,55 +5,114 @@
 <h1 align="center">NOCTRA</h1>
 
 <p align="center">
-  <b>Autonomous, Privacy-Sovereign, On-Device Music Intelligence Platform</b>
+  <b>Autonomous, Privacy-Sovereign, Audiophile-Grade Music Streaming & Intelligence Platform</b>
 </p>
 
 <p align="center">
-  <a href="https://github.com/nomad-guy/Noctra/releases/tag/v1.0.1"><img src="https://img.shields.io/badge/Release-v1.0.1-000000.svg?style=flat-square" alt="Release v1.0.1" /></a>
+  <a href="https://github.com/nomad-guy/Noctra/releases/tag/v1.0.4"><img src="https://img.shields.io/badge/Release-v1.0.4-000000.svg?style=flat-square" alt="Release v1.0.4" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-000000.svg?style=flat-square" alt="License GPL-3.0" /></a>
   <a href="#privacy-architecture"><img src="https://img.shields.io/badge/Telemetry-0%25-000000.svg?style=flat-square" alt="Zero Telemetry" /></a>
+  <a href="#features"><img src="https://img.shields.io/badge/Audio-Hi--Res%20FLAC%2024--bit%2F192kHz-000000.svg?style=flat-square" alt="Hi-Res FLAC" /></a>
   <a href="#automated-verification"><img src="https://img.shields.io/badge/Tests-780%2B%20Passing-000000.svg?style=flat-square" alt="780+ Tests Passing" /></a>
   <a href="#codebase-architecture"><img src="https://img.shields.io/badge/Architecture-%E2%89%A4300%20LOC-000000.svg?style=flat-square" alt="Modular Architecture" /></a>
   <a href="https://flutter.dev"><img src="https://img.shields.io/badge/Framework-Flutter%203.47-000000.svg?style=flat-square" alt="Flutter" /></a>
 </p>
 
 <p align="center">
-  <a href="#production-release-downloads">Downloads</a> &bull;
-  <a href="ARCHITECTURE.md">Architecture</a> &bull;
-  <a href="CHANGELOG.md">Changelog</a> &bull;
-  <a href="RELEASE_NOTES.md">Release Notes</a> &bull;
-  <a href="#legal-notice-and-statutory-compliance-policy">Legal Notice</a>
+  <a href="#overview">Overview</a> &bull;
+  <a href="#screenshots">Screenshots</a> &bull;
+  <a href="#features">Features</a> &bull;
+  <a href="#download">Download</a> &bull;
+  <a href="#architecture">Architecture</a> &bull;
+  <a href="#build-from-source">Build</a> &bull;
+  <a href="#faq">FAQ</a> &bull;
+  <a href="CHANGELOG.md">Changelog</a>
 </p>
 
 ---
 
 ## Overview
 
-Noctra is an authentication-less, privacy-first audio streaming and collection client engineered for Android. Built with Flutter, Dart, Riverpod, and native Android Kotlin digital signal processing delegates, Noctra executes recommendation ranking, vector embeddings, query routing, and library persistence entirely on the local device without intermediary servers or remote telemetry collection.
+Noctra is an authentication-less, privacy-first audiophile music streaming client engineered for Android. Built with Flutter, Dart, Riverpod, and native Android Kotlin digital signal processing delegates, Noctra streams pure lossless FLAC audio up to **24-bit/192 kHz**, synchronizes bilingual lyrics with elegant translation subtitles, and executes taste vector embeddings and recommendations entirely on-device without telemetry, accounts, or cloud relays.
 
 ---
 
-## Production Release Downloads
+## Screenshots
 
-Direct binary artifacts for version 1.0.1. Every artifact is signed with the official Noctra release key and compiled with ProGuard and R8 bytecode optimization.
+<table align="center">
+  <tr>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/home.png" alt="Home Screen" width="260" /><br />
+      <b>Discovery & Charts</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/player.png" alt="Now Playing Player" width="260" /><br />
+      <b>Hi-Res Player & Telemetry</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/lyrics.png" alt="Bilingual Lyrics" width="260" /><br />
+      <b>Bilingual Lyrics & Subtitles</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/search.png" alt="Search & Explore" width="260" /><br />
+      <b>Search & Catalog Explorer</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/equalizer.png" alt="IEM Target Curves & DSP" width="260" /><br />
+      <b>Audiophile IEM DSP Curves</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/screenshots/settings.png" alt="Settings & Themes" width="260" /><br />
+      <b>Triple Noir & App Icons</b>
+    </td>
+  </tr>
+</table>
+
+---
+
+## Features
+
+- **Hi-Res & Lossless FLAC Audio**: Bit-perfect uncompressed streaming up to 24-bit / 192 kHz straight to your DAC with live codec, sample rate, and bit depth telemetry.
+- **Multi-Tier Stream Resolution**: Automated fallback pipeline prioritizing pristine FLAC streams (Deezer Hi-Fi, Qobuz Studio) with seamless Opus 160kbps resilience.
+- **Bilingual Synchronized Lyrics & Subtitles**: Intelligent timestamp consolidation merges simultaneous multi-language lyric lines from LRCLIB into primary sung text with dimmed italic English translation subtitles (Apple Music & Spotify style).
+- **AksharaEngine Script Transliteration**: 100% offline, zero-latency phonetic script transliteration supporting Devanagari (Hindi), Gurmukhi (Punjabi), Urdu, and Latin/IAST.
+- **Audiophile IEM Target Curves**: Integrated target frequency response curves (Harman IEM, Moondrop VDSF, Tangzu Wan'er) combined with a 5-band hardware DSP equalizer and bass boost.
+- **Spatial Audio & 3D Virtualizer**: Soundstage widening with Concert acoustic resonance presets and Dolby Atmos spatial audio detection badges.
+- **Autonomous AI Sound Studio**: On-device vector embeddings, 8-axis acoustic DNA radar (Energy, Valence, Danceability, Acousticness), and mood-driven playlist generation.
+- **Triple Noir Design System**:
+  - **Noir Black**: Obsidian glassmorphism with `#0A0A0A` depth and specular fluid borders.
+  - **Noir White**: Editorial monochrome high-contrast surfaces for outdoor visibility.
+  - **Liquid Glass**: Sapphire optical refraction (`#162E4A`) with hardware-accelerated shaders.
+  - Dynamic Android launcher icon synchronization matching the active in-app theme.
+- **SyncCast Party Mode**: Low-latency multi-device audio streaming across local Wi-Fi without external servers.
+- **Zero-Knowledge Privacy**: No accounts, emails, phone numbers, or OAuth logins. Playback history, search queries, and tastes remain permanently on local encrypted SQLite storage.
+
+---
+
+## Download
+
+Direct binary releases for version **v1.0.4**. Every artifact is compiled with ProGuard and R8 bytecode optimization.
 
 ```text
-Noctra-1.0.1-arm64-v8a.apk (22.3 MB) — Modern 64-bit Android devices (Android 8.0+)
-Noctra-1.0.1-armeabi-v7a.apk (20.2 MB) — Legacy 32-bit ARM devices
-Noctra-1.0.1-x86_64.apk (23.8 MB) — Emulators and x86_64 Chromebooks / tablets
-Noctra-1.0.1-universal.apk (61.3 MB) — Universal multi-ABI compatibility fallback
+Noctra-1.0.4-arm64-v8a.apk   (22.9 MB) — Recommended for modern 64-bit Android devices (Android 8.0+)
+Noctra-1.0.4-universal.apk   (63.2 MB) — Universal multi-ABI compatibility
+Noctra-1.0.4-armeabi-v7a.apk (20.9 MB) — Legacy 32-bit ARM devices
+Noctra-1.0.4-x86_64.apk      (24.4 MB) — Emulators and x86_64 Chromebooks / tablets
 ```
 
 ### Artifact Manifest
 
 | Package | Architecture | Direct Download | SHA-256 Digest |
 | :--- | :--- | :--- | :--- |
-| `Noctra-1.0.1-arm64-v8a.apk` | `arm64-v8a` | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.1/Noctra-1.0.1-arm64-v8a.apk) | `87868a26316785e100bce85f0ae83d2ed98d00cc91a42a0c4a1d792a63318580` |
-| `Noctra-1.0.1-armeabi-v7a.apk` | `armeabi-v7a` | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.1/Noctra-1.0.1-armeabi-v7a.apk) | `4602d69a2dedb8d9cb67e907785bb8ee666c48a0183a84e261b8d9fd63f0a237` |
-| `Noctra-1.0.1-x86_64.apk` | `x86_64` | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.1/Noctra-1.0.1-x86_64.apk) | `2cd0dfa993fda623fb3892d199044cda049d74c18132c600a2944b469d47021a` |
-| `Noctra-1.0.1-universal.apk` | Universal | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.1/Noctra-1.0.1-universal.apk) | `2fd2cad0f7fcf2fdd641c8d4b8cead7fbc34a2c2bb68fbe20cf63e33a8688ed6` |
+| `Noctra-1.0.4-arm64-v8a.apk` | `arm64-v8a` | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.4/Noctra-1.0.4-arm64-v8a.apk) | `545024a2e4dc4389fe5cc1e1d1b470165523fd3ad942178d0093687639d656aa` |
+| `Noctra-1.0.4-universal.apk` | Universal | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.4/Noctra-1.0.4-universal.apk) | `ee7558a611a95432f6d52102d9283ca6bd0e572b46d4e3e3b07bb58dd5b8647f` |
+| `Noctra-1.0.4-armeabi-v7a.apk` | `armeabi-v7a` | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.4/Noctra-1.0.4-armeabi-v7a.apk) | `437a000c29bdddc56d178ef2d1edfabc0c9f75b1f220c8f33e2ca37b69dee98d` |
+| `Noctra-1.0.4-x86_64.apk` | `x86_64` | [Download](https://github.com/nomad-guy/Noctra/releases/download/v1.0.4/Noctra-1.0.4-x86_64.apk) | `90762d2f40f4fbd76d03aaa1352894b6f75fb04e6c8d300ba6e6f16530078203` |
 
 ### Integrity Verification
+
 Verify all downloaded binaries against the official checksum manifest:
 ```bash
 sha256sum -c SHA256SUMS.txt
@@ -61,183 +120,106 @@ sha256sum -c SHA256SUMS.txt
 
 ---
 
-## Privacy Architecture
+## Architecture
 
-Noctra operates under a strict zero-knowledge, zero-telemetry architectural boundary:
-
-- **Zero Remote Telemetry**: Playback history, search queries, skip rates, and taste profiles never leave the physical device.
-- **Authentication-Less**: No accounts, emails, telephone numbers, or OAuth logins. The application initializes directly into a functional state upon launch.
-- **Encrypted Local Storage**: Playlists, listening graphs, and downloaded media metadata reside in an encrypted SQLite database on local storage.
-- **Self-Contained Network Queries**: Outbound HTTP requests originate directly from the client to public endpoints without routing through proxy servers or proprietary cloud relays.
-
----
-
-## The Triple Noir Design System
-
-The visual interface is built on Swiss typography, strict contrast ratios, and minimalist geometric surfaces:
-
-| Theme | Description | Specifications |
-| :--- | :--- | :--- |
-| **Noir Black** | Obsidian glassmorphism | `#0A0A0A` background, 16px fluid radii, subtle specular borders, and frosted glass layering. |
-| **Noir White** | Editorial monochrome | High-contrast paper white, structured typography, and daylight-readable surfaces. |
-| **Liquid Glass** | Sapphire optical blur | Deep sapphire refraction (`#162E4A`), dynamic backdrop blur, and hardware-accelerated shaders. |
-
-The Android launcher icon dynamically synchronizes in the background via Activity aliases to match the active in-app theme selection.
-
----
-
-## Core System Architecture
-
-### 1. Composite Stream Resolution
-Playback relies on a prioritized, self-healing 6-tier stream resolution pipeline:
+Noctra adheres to a strict modular architectural rule where **no single source file in `lib/` exceeds 300 lines of code (LOC)**.
 
 ```text
-Stream Request
-      |
-      +---> Tier 1: Local Disk Vault (320kbps MP3 / High-bitrate AAC)
-      |
-      +---> Tier 2: Validated Direct HTTPS Stream
-      |
-      +---> Tier 3: JioSaavn 320kbps CD Lossless Master
-      |
-      +---> Tier 4: Native Android Kotlin Extractor
-      |
-      +---> Tier 5: YouTube Music InnerTube REST API (Adaptive Opus/AAC)
-      |
-      +---> Tier 6: YouTube Search Fallback Resolver
+noctra/
+├── lib/
+│   ├── core/
+│   │   ├── constants/            # Design tokens, storage keys & audio constants
+│   │   ├── theme/                # Triple Noir design tokens (Black, White, Liquid Glass)
+│   │   └── utils/                # Localization (L10n), sanitizers, formatting
+│   ├── data/
+│   │   ├── models/               # Immutable models (Song, Album, Artist, StreamInfo)
+│   │   └── repositories/         # SQLite persistence & taste vector database
+│   ├── providers/                # Riverpod state management & audio service controllers
+│   ├── services/
+│   │   ├── audio/                # JustAudio player engine, DSP, & telemetry
+│   │   ├── lyrics/               # LRCLIB, consolidation engine, & Akshara transliteration
+│   │   ├── stream/               # Multi-tier stream resolution (FLAC / Opus)
+│   │   └── sync/                 # SyncCast local Wi-Fi broadcasting
+│   └── ui/
+│       ├── screens/              # Core screens (Home, Search, Player, Library, AI Studio)
+│       └── widgets/              # Reusable UI components, visualizers & lyrics views
+└── android/                      # Kotlin DSP delegates, AudioFX visualizers & icon aliases
 ```
-
-### 2. Network Security & SSRF Protection
-- **Host Whitelisting**: Connections are restricted to verified audio CDN hostnames.
-- **Anti-SSRF Enforcement**: Rejects loopback (`127.0.0.1`, `localhost`), link-local, broadcast, and RFC 1918 private subnets.
-- **Redirect Validation**: Follows HTTP 3xx redirects only after independently validating destination hosts against security boundaries.
-
-### 3. On-Device Neural Recommender
-- **120-Dimensional Representation**: Encodes acoustic metrics, temporal listening context, and genre affinities.
-- **4-Layer MLP Classifier**: Deep feedforward network (120 to 64 to 32 to 16 to 1) scoring candidates with sub-millisecond on-device latency.
-- **Maximal Marginal Relevance (MMR)**: Configurable diversity reranking parameter ($\lambda = 0.75$) preventing artist saturation.
-- **Behavioral Reward Shaping**: Gradient updates driven by natural user interactions (+1.0 completion, +1.5 immediate replay, +3.0 favorite, -1.0 quick skip) with an exponential 14-day half-life decay.
-
-### 4. Codebase Architecture
-- **Strict LOC Limits**: Every source file in `lib/`, `test/`, and `android/` is bounded to $\le$ 300 lines of code, verified mechanically during CI.
-- **Decoupled Engine Delegates**: Audio operations are modularized into `PlayerCrossfadeEngine`, `PlayerSessionLoader`, `PlayerCrossfadeRamp`, `PlayerAutoplayManager`, and `PlayerPlaybackController`.
-- **Rebuild Scope Isolation**: `LibrarySongRow` manages localized consumer rebuilds to eliminate full-list rendering during active playback ticks.
-
-### 5. Google Assistant & MediaSession Integration
-- **MediaBrowserService Content Hierarchy**: Exposes structured navigation roots for Favorites, Downloads, Recently Played, Playlists, Albums, Artists, and AI Recommendations.
-- **Voice Search Routing**: Handles `android.media.action.MEDIA_PLAY_FROM_SEARCH` with query normalization, artist and album extras filtering, and candidate validation.
-- **Wrong-Song Protection**: Resolves queries through identity validation gates, duration checks, and candidate matching guards.
-- **Native Session Actions**: Full MediaSession integration for play, pause, seek, fast-forward, rewind, queue management, and dynamic theme switching.
-
-### 6. Hardware-Accelerated Audio DSP
-- **Native Kotlin Equalizer**: 5-band parametric equalizer with studio master presets.
-- **Dynamic Processing**: Bass boost exciter, virtualizer, and loudness enhancer.
-- **Real-Time Visualizers**: 32-band spectrum analysis with harmonic peak markers, radial glow, and 3D synthwave rendering.
-
-### 7. Multi-Script Lyrics & Translation Engine
-- **Synchronized LRC**: Sub-frame synchronized scrolling via LRCLIB, JioSaavn, and InnerTube.
-- **Indic Script Transliteration**: Real-time Sanscript engine covering Devanagari, Gurmukhi, Bengali, Gujarati, Telugu, Tamil, Kannada, Malayalam, and Odia.
-- **International Transliteration**: Native transliteration for Japanese (Romaji), Korean (Hangul to Roman), Chinese (Pinyin), Cyrillic, Arabic, Greek, Thai, and Hebrew.
-- **Semantic Translation**: 3-layer translation lexicon with intelligent schwa-deletion heuristics.
-
-### 8. Decentralized P2P SyncCast
-- Peer-to-peer playback synchronization across local Wi-Fi or mobile hotspots using a lightweight WebSocket protocol.
-- Automated peer discovery, sub-millisecond clock drift compensation, and cryptographic room verification without external server dependencies.
 
 ---
 
-## Building from Source
+## Build from Source
 
 ### Prerequisites
-- Flutter SDK: `3.24.0` or higher (Channel stable)
-- Android SDK: API Level 26 through API Level 36
-- Java Development Kit: JDK 17
+- **Flutter SDK**: `^3.47.0` (Dart `^3.4.0`)
+- **Android SDK**: API Level 36 (`compileSdk = 36`, `minSdk = 26`)
+- **Java**: OpenJDK 17
 
-### Build Commands
+### 1. Clone the Repository
 ```bash
-# Clone the repository
 git clone https://github.com/nomad-guy/Noctra.git
 cd Noctra
-
-# Install dependencies
-flutter pub get
-
-# Run static analysis
-flutter analyze
-
-# Execute test suite
-flutter test
-
-# Build release APKs (split by ABI)
-flutter build apk --release --split-per-abi
 ```
 
-Binaries will be generated in `build/app/outputs/flutter-apk/`.
+### 2. Fetch Dependencies
+```bash
+flutter pub get
+```
+
+### 3. Run Automated Quality Suite
+```bash
+flutter analyze
+flutter test
+flutter test test/architecture_boundaries_test.dart
+```
+
+### 4. Build Release Artifacts
+```bash
+# Build optimized split APKs per ABI (recommended)
+flutter build apk --split-per-abi --release
+
+# Build universal APK
+flutter build apk --release
+```
+
+Compiled binaries will be generated in `build/app/outputs/flutter-apk/`.
 
 ---
 
-## Automated Verification
+## FAQ
 
-Noctra enforces comprehensive quality and safety checks:
-- **780+ Passing Tests**: Full unit, integration, and regression coverage (`flutter test`).
-- **Zero Static Analysis Issues**: Clean analyzer run with zero warnings and zero errors (`flutter analyze`).
-- **Architectural Boundary Enforcement**: LOC ceilings and import cycle bans verified by `test/architecture_boundaries_test.dart`.
-- **Release Manifest Validation**: Automated on-disk verification of generated APK binaries and SHA-256 digests (`test/release_manifest_verification_test.dart`).
+#### Do I need an account to use Noctra?
+No. Noctra does not possess user accounts, passwords, or emails. All playlists, favorites, and listening graphs are preserved locally in an encrypted database on your device.
 
----
+#### Is playback really lossless?
+Yes. Noctra prioritizes pure, uncompressed FLAC streams up to 24-bit/192 kHz. When connected to a DAC or supported audio device, the player displays live bit depth and sample rate telemetry.
 
-## Legal Notice and Statutory Compliance Policy
+#### How do bilingual lyrics work?
+When an LRC file contains simultaneous dual-language lines (such as Romanized Hindi alongside an English translation), Noctra consolidates them into a single line: the vocal line takes primary focus, while the English translation displays beneath it as a subtle italicized subtitle.
 
-**Please review this compliance policy carefully before downloading, compiling, contributing to, or operating Noctra.**
+#### Where are downloaded songs stored?
+Downloaded tracks are saved to your chosen storage directory (`/storage/emulated/0/Music/Noctra/` by default) with embedded high-resolution artwork and metadata tags.
 
-### 1. Pure Client-Side User Agent Architecture & Zero Cloud Infrastructure
-Noctra is strictly an on-device client application, parser, and user interface. It is architecturally analogous to a local web browser, terminal user agent, or media player.
-- **Zero Content Hosting**: Noctra does not host, store, cache on remote servers, re-encode, or distribute any audio recordings, copyrighted music files, lyrical compositions, artwork, or video streams.
-- **Zero Centralized Relays**: The maintainers do not operate, manage, finance, or provide streaming servers, proxy backends, cloud caches, or content distribution networks.
-- **Local Resolution**: All network transactions occur directly between the user's local device and publicly accessible third-party endpoints, initiated solely upon explicit user command.
-
-### 2. Anti-Circumvention Compliance (17 U.S.C. § 1201)
-Noctra complies with all statutory anti-circumvention provisions:
-- **Zero DRM Decryption**: Noctra does not bypass, defeat, remove, crack, or circumvent Digital Rights Management (DRM) mechanisms, cryptographic access controls, or subscription paywalls (such as Widevine, FairPlay, or PlayReady).
-- **Public Endpoints Only**: All stream resolution relies strictly on unencrypted, publicly accessible HTTP endpoints provided by third-party services to standard web clients.
-
-### 3. Non-Commercial Educational & Interoperability Research Scope
-Noctra is published as free and open-source software under the **GNU General Public License v3.0 (GPL-3.0)**, conducted in accordance with:
-- **Section 107 of the United States Copyright Act (17 U.S.C. § 107)** regarding Fair Use for research and scholarship.
-- **Directive 2009/24/EC of the European Parliament and of the Council (Article 6)** regarding decompilation for interoperability research.
-- **Academic Research Focus**: Mobile-edge deep neural ranking architectures, serverless peer-to-peer clock synchronization, hardware-assisted DSP audio processing, and zero-telemetry database design.
-
-Noctra is strictly non-monetized. The maintainers do not sell subscriptions, display advertisements, license proprietary features, or derive commercial profit from this project.
-
-### 4. Third-Party Trademarks & Nominative Fair Use
-All third-party corporate names, brand marks, and registered trademarks—including Spotify, Apple Music, YouTube, YouTube Music, JioSaavn, Deezer, MusicBrainz, LRCLIB, Google, and Android—are the property of their respective owners.
-Their reference within this codebase and documentation is strictly for identification, technical compatibility, and nominative fair use. Noctra is an independent project and is not endorsed by, sponsored by, or affiliated with any trademark owner.
-
-### 5. Sovereign User Responsibility & Indemnification
-- **User Agency**: Users exercise sole and independent control over their operation of the software. Users are solely responsible for ensuring that their use complies with all applicable municipal, state, national, and international laws, copyright regulations, and third-party terms of service in their jurisdiction.
-- **Indemnification**: By compiling, downloading, or running this software, users agree to indemnify, defend, and hold harmless the authors, maintainers, and contributors from any claims, liabilities, losses, damages, or legal expenses resulting from the user's operation, network queries, or misuse of the application.
-
-### 6. DMCA & Service Provider Notices
-Because Noctra possesses no central server infrastructure and hosts no media files:
-- Notices regarding media availability must be directed to the third-party web host serving the content.
-- Inquiries regarding the open-source code in this repository may be submitted via GitHub Issues for prompt review.
-
-### 7. Disclaimer of Warranty (GPLv3 § 15)
-THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM RESTS WITH THE USER.
-
-### 8. Limitation of Liability (GPLv3 § 16)
-IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES ARISING FROM THE USE OR INABILITY TO USE THE PROGRAM (INCLUDING LOSS OF DATA, CORRUPTION, OR LOSSES SUSTAINED BY THIRD PARTIES), EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+#### Does Noctra support background and lock-screen playback?
+Yes. Noctra integrates directly with Android's `MediaSessionCompat` and foreground audio service, providing full playback controls, seekbars, and artwork on your lock screen and notification shade.
 
 ---
 
-## License
+## Contributing
 
-Copyright &copy; 2026 Nomad Guy
+Contributions are welcome! Please ensure:
+1. All modified or newly added Dart files in `lib/` strictly stay **$\le 300$ lines of code**.
+2. Run `flutter analyze` and confirm 0 issues.
+3. Ensure all unit and integration tests pass before submitting a pull request.
 
-This project is Free and Open Source Software licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
+---
 
-See the complete [LICENSE](LICENSE) file for legal details.
+## Legal Notice & Statutory Compliance
+
+Noctra is distributed as open-source software strictly for personal, educational, and research purposes. Noctra does not host, store, index, or distribute copyright-protected audio files on central servers. All stream resolution and media fetching operate as client-side user agents interacting directly with publicly accessible endpoints. Users remain solely responsible for ensuring compliance with applicable regional intellectual property laws and service terms.
+
+---
 
 <p align="center">
-  <sub>Engineered by <b>Nomad Guy</b> &bull; <a href="https://github.com/nomad-guy">@nomad-guy</a></sub>
+  <b>Noctra</b> &bull; Crafted with precision for pure acoustic freedom.
 </p>

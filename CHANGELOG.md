@@ -1,6 +1,22 @@
 # Changelog
 
-## v1.0.3 (2026-09-06)
+## v1.0.4 (2026-09-06)
+
+### Bilingual Lyrics Translation Subtitles, Lossless FLAC Stream Hardening & Audiophile Tuning
+
+- **Consolidated Bilingual Lyrics with Apple Music / Spotify Style Subtitles**:
+  - Implemented timestamp consolidation in `LyricsMatcher.parseLrc`: tracks with bilingual lines sharing identical or near-identical timestamps ($\le 150\text{ms}$) now consolidate into a single `LyricLine` with `text` (sung vocal) and `translation` (subtitle).
+  - Intelligent script detection automatically assigns native scripts (Devanagari, Gurmukhi, Urdu, Arabic, Japanese, Korean) to primary text and Latin translations to subtitles.
+  - `UniversalLyricsTransliterationEngine` preserves English translations untouched during script conversion.
+  - Enhanced `LyricsLineTile` with subtle, dimmed italic translation subtitles that synchronize smoothly with line-by-line scrolling.
+- **Lossless Stream Pipeline & Audio Engine Telemetry**:
+  - Real-time bit depth ($16\text{-bit} / 24\text{-bit}$) and sample rate ($44.1\,\text{kHz} - 192\,\text{kHz}$) telemetry indicators.
+  - Spatial audio and 3D virtualizer mode with Dolby Atmos detection badges and Concert acoustic resonance presets.
+  - Audiophile IEM target curves (Harman IEM, Moondrop VDSF, Tangzu Wan'er) integrated into the 5-band DSP equalizer suite.
+- **Physical Device Showcase & Documentation Overhaul**:
+  - Clean, modern README redesign inspired by FLACidal-Mobile with real device captures from RMX3395.
+  - Dedicated architecture breakdowns and checksum verification manifest.
+
 
 ### Dynamic Artwork Resolution, AksharaEngine & Universal Playback
 
