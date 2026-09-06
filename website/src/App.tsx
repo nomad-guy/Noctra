@@ -166,9 +166,9 @@ export default function App() {
   const getBrandLogo = () => {
     switch (theme) {
       case 'noir-black':
-        return './images/logo_noctra_noir_white.png';
-      case 'noir-white':
         return './images/logo_noctra_noir_black.png';
+      case 'noir-white':
+        return './images/logo_noctra_noir_white.png';
       case 'liquid-glass':
       default:
         return './images/logo_noctra_liquid_glass.png';
