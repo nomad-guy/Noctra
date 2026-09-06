@@ -238,7 +238,7 @@ jobs:
           Section: sound
           Priority: optional
           Architecture: amd64
-          Maintainer: Noctra Team <support@noctra.app>
+          Maintainer: Noctra Project <https://github.com/nomad-guy/Noctra>
           Description: Noctra - Autonomous On-Device Music Player
            High-resolution lossless player with neural taste modeling and local-first library.
           EOF

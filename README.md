@@ -271,7 +271,7 @@ We hold the highest respect for musicians, audio engineers, and content creators
 Noctra does not host, store, cache on remote servers, or distribute any audio, video, or copyright-protected media. All streams accessed through this client originate directly from publicly accessible third-party endpoints. All intellectual property remains the exclusive domain of their respective copyright holders.
 
 #### 5. User Responsibility & Contact
-This software is provided "AS IS", without warranty of any kind. The developers of Noctra do not condone or encourage copyright infringement. Users bear sole responsibility for ensuring their usage complies with regional intellectual property laws and service terms. For inquiries regarding the open-source codebase, contact: [support@noctra.app](mailto:support@noctra.app).
+This software is provided "AS IS", without warranty of any kind. The developers of Noctra do not condone or encourage copyright infringement. Users bear sole responsibility for ensuring their usage complies with regional intellectual property laws and service terms. For inquiries regarding the open-source codebase, open a discussion or issue on [GitHub](https://github.com/nomad-guy/Noctra/issues).
 
 ---
 

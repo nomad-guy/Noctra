@@ -8,7 +8,7 @@ To maintain our high bar of engineering quality, audiophile performance, and cod
 
 ## Code of Conduct
 
-All contributors and maintainers are expected to abide by our [Code of Conduct](CODE_OF_CONDUCT.md). Please report any unacceptable behavior to [support@noctra.app](mailto:support@noctra.app).
+All contributors and maintainers are expected to abide by our [Code of Conduct](CODE_OF_CONDUCT.md). Please report any unacceptable behavior directly to the project maintainers via GitHub.
 
 ---
 

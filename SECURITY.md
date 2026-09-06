@@ -16,8 +16,7 @@ We provide active security patches and updates for the following versions of Noc
 The Noctra project team takes software security, data privacy, and cryptographic integrity seriously. If you discover a vulnerability or potential security flaw, please report it responsibly so we can remediate it before public disclosure.
 
 ### How to Report
-* **GitHub Private Vulnerability Advisory (Recommended)**: Submit an advisory directly via the **Security** tab of our repository: [Security Advisories](https://github.com/nomad-guy/Noctra/security/advisories/new).
-* **Direct Email**: Send details of the issue to [support@noctra.app](mailto:support@noctra.app).
+Submit an advisory directly via the **Security** tab of our repository: [GitHub Security Advisories](https://github.com/nomad-guy/Noctra/security/advisories/new).
 
 ### What to Include in Your Report
 To help us triage and resolve the issue quickly, please provide:
