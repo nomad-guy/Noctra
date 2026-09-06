@@ -1,20 +1,21 @@
 :root,
-[data-theme="liquid-glass"] {
+[data-theme="liquid-glass"],
+.theme-liquid-glass {
   --bg-dark: #040612;
-  --bg-header: rgba(5, 8, 22, 0.78);
-  --bg-card: rgba(13, 22, 45, 0.65);
-  --bg-card-hover: rgba(20, 34, 68, 0.85);
+  --bg-header: rgba(5, 8, 22, 0.82);
+  --bg-card: rgba(13, 22, 45, 0.7);
+  --bg-card-hover: rgba(20, 34, 68, 0.9);
   --bg-input: rgba(0, 0, 0, 0.4);
-  --border-glass: rgba(56, 189, 248, 0.16);
-  --border-glass-hover: rgba(0, 240, 255, 0.4);
-  --text-primary: #FFFFFF;
-  --text-secondary: #94A3B8;
-  --text-muted: #64748B;
+  --border-glass: rgba(56, 189, 248, 0.18);
+  --border-glass-hover: rgba(0, 240, 255, 0.45);
+  --text-primary: #E0F2FE; /* Luminous ice sapphire */
+  --text-secondary: #7DD3FC; /* Soft cyan slate */
+  --text-muted: #38BDF8;
   --accent-cyan: #00F0FF;
   --accent-blue: #38BDF8;
   --accent-indigo: #6366F1;
   --accent-violet: #8B5CF6;
-  --accent-glow: rgba(0, 240, 255, 0.28);
+  --accent-glow: rgba(0, 240, 255, 0.35);
   --mesh-glow-opacity: 0.38;
   --shadow-card: 0 16px 40px rgba(0, 0, 0, 0.5);
   --phone-border: #1C2438;
@@ -23,8 +24,8 @@
   --button-primary-bg: linear-gradient(135deg, #00F0FF 0%, #38BDF8 50%, #6366F1 100%);
   --button-primary-text: #050508;
   --lyrics-bg: rgba(10, 15, 30, 0.92);
-  --tab-active-bg: rgba(0, 240, 255, 0.1);
-  --tag-bg: rgba(255, 255, 255, 0.05);
+  --tab-active-bg: rgba(0, 240, 255, 0.12);
+  --tag-bg: rgba(0, 240, 255, 0.08);
   --theme-active-bg: rgba(0, 240, 255, 0.15);
   --theme-active-color: #00F0FF;
   --radius-sm: 8px;
@@ -36,53 +37,55 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
-/* Noir Black (Deep OLED Obsidian) */
-[data-theme="noir-black"] {
+/* Noir Black (Deep OLED Obsidian & Monochromatic Titanium Stark White) */
+[data-theme="noir-black"],
+.theme-noir-black {
   --bg-dark: #000000;
-  --bg-header: rgba(10, 10, 10, 0.85);
-  --bg-card: rgba(18, 18, 20, 0.75);
-  --bg-card-hover: rgba(26, 26, 30, 0.92);
-  --bg-input: rgba(10, 10, 12, 0.8);
-  --border-glass: rgba(255, 255, 255, 0.09);
-  --border-glass-hover: rgba(0, 240, 255, 0.35);
-  --text-primary: #FFFFFF;
-  --text-secondary: #A1A1AA;
+  --bg-header: rgba(10, 10, 10, 0.9);
+  --bg-card: rgba(18, 18, 20, 0.8);
+  --bg-card-hover: rgba(28, 28, 32, 0.95);
+  --bg-input: rgba(10, 10, 12, 0.85);
+  --border-glass: rgba(255, 255, 255, 0.1);
+  --border-glass-hover: rgba(255, 255, 255, 0.35);
+  --text-primary: #FFFFFF; /* Pure stark high-contrast white */
+  --text-secondary: #A1A1AA; /* Stark neutral titanium */
   --text-muted: #71717A;
-  --accent-cyan: #00F0FF;
+  --accent-cyan: #22D3EE;
   --accent-blue: #38BDF8;
-  --accent-indigo: #6366F1;
-  --accent-violet: #8B5CF6;
-  --accent-glow: rgba(0, 240, 255, 0.2);
-  --mesh-glow-opacity: 0.12;
-  --shadow-card: 0 16px 40px rgba(0, 0, 0, 0.8);
+  --accent-indigo: #818CF8;
+  --accent-violet: #A78BFA;
+  --accent-glow: rgba(34, 211, 238, 0.2);
+  --mesh-glow-opacity: 0.1;
+  --shadow-card: 0 16px 40px rgba(0, 0, 0, 0.85);
   --phone-border: #1C1C24;
   --footer-bg: rgba(8, 8, 10, 0.98);
-  --gradient-brand: linear-gradient(135deg, #FFFFFF 0%, #00F0FF 50%, #38BDF8 100%);
-  --button-primary-bg: linear-gradient(135deg, #00F0FF 0%, #38BDF8 100%);
+  --gradient-brand: linear-gradient(135deg, #FFFFFF 0%, #E2E8F0 50%, #94A3B8 100%);
+  --button-primary-bg: linear-gradient(135deg, #FFFFFF 0%, #E2E8F0 100%);
   --button-primary-text: #000000;
-  --lyrics-bg: rgba(12, 12, 14, 0.95);
-  --tab-active-bg: rgba(0, 240, 255, 0.08);
-  --tag-bg: rgba(255, 255, 255, 0.04);
-  --theme-active-bg: rgba(255, 255, 255, 0.12);
+  --lyrics-bg: rgba(12, 12, 14, 0.96);
+  --tab-active-bg: rgba(255, 255, 255, 0.08);
+  --tag-bg: rgba(255, 255, 255, 0.05);
+  --theme-active-bg: rgba(255, 255, 255, 0.15);
   --theme-active-color: #FFFFFF;
   --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body: 'JetBrains Mono', monospace;
   --font-mono: 'JetBrains Mono', monospace;
 }
 
-/* Noir White (Editorial Daylight Minimalist) */
-[data-theme="noir-white"] {
+/* Noir White (Editorial Daylight Minimalist & Deep Ink Black) */
+[data-theme="noir-white"],
+.theme-noir-white {
   --bg-dark: #F5F6F9;
-  --bg-header: rgba(245, 246, 249, 0.88);
-  --bg-card: rgba(255, 255, 255, 0.94);
+  --bg-header: rgba(245, 246, 249, 0.92);
+  --bg-card: rgba(255, 255, 255, 0.96);
   --bg-card-hover: #FFFFFF;
   --bg-input: rgba(0, 0, 0, 0.04);
   --border-glass: rgba(0, 0, 0, 0.08);
   --border-glass-hover: rgba(2, 132, 199, 0.35);
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
+  --text-primary: #090A0F; /* Deep pitch black ink */
+  --text-secondary: #334155; /* Dark readable slate ink */
   --text-muted: #64748B;
-  --accent-cyan: #0284C7;
+  --accent-cyan: #0284C7; /* Deep royal azure */
   --accent-blue: #2563EB;
   --accent-indigo: #4F46E5;
   --accent-violet: #7C3AED;
@@ -91,7 +94,7 @@
   --shadow-card: 0 16px 36px rgba(0, 0, 0, 0.06);
   --phone-border: #CBD5E1;
   --footer-bg: #EAECEF;
-  --gradient-brand: linear-gradient(135deg, #0F172A 0%, #0284C7 50%, #4F46E5 100%);
+  --gradient-brand: linear-gradient(135deg, #090A0F 0%, #1E293B 40%, #0284C7 100%);
   --button-primary-bg: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
   --button-primary-text: #FFFFFF;
   --lyrics-bg: #FFFFFF;
@@ -116,12 +119,15 @@ html {
   transition: background-color 0.3s ease;
 }
 
-[data-theme="noir-white"] {
+[data-theme="noir-white"],
+.theme-noir-white {
   color-scheme: light;
 }
 
 [data-theme="noir-black"],
-[data-theme="liquid-glass"] {
+[data-theme="liquid-glass"],
+.theme-noir-black,
+.theme-liquid-glass {
   color-scheme: dark;
 }
 
@@ -134,6 +140,43 @@ body {
   position: relative;
   -webkit-font-smoothing: antialiased;
   transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Explicit Global Typography Color Bindings */
+h1, h2, h3, h4, h5, h6,
+.hero-title,
+.section-title,
+.brand-name,
+.tab-title,
+.phone-caption-card h3,
+.bullet-item h4,
+.track-title,
+.grid-card h3,
+.download-card h3,
+.faq-question,
+.theme-tap-name {
+  color: var(--text-primary);
+  transition: color 0.3s ease, font-family 0.3s ease;
+}
+
+p,
+.hero-subtitle,
+.section-subtitle,
+.tab-desc,
+.bullet-item p,
+.phone-caption-card p,
+.grid-card p,
+.download-card p,
+.privacy-body,
+.faq-answer,
+.footer-motto,
+.footer-copyright {
+  color: var(--text-secondary);
+  transition: color 0.3s ease, font-family 0.3s ease;
+}
+
+a {
+  color: inherit;
 }
 
 /* Ambient glow mesh */

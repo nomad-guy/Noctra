@@ -150,6 +150,7 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    document.body.setAttribute('data-theme', theme);
     localStorage.setItem('noctra-theme', theme);
   }, [theme]);
 
@@ -187,7 +188,7 @@ export default function App() {
   };
 
   return (
-    <div className="noctra-app">
+    <div className={`noctra-app theme-${theme}`} data-theme={theme}>
       {/* Glow layers */}
       <div className="glow-mesh glow-1" />
       <div className="glow-mesh glow-2" />
