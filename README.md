@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/images/logo_noctra_noir_black.png" alt="Noctra Logo" width="128" height="128" />
+  <img src="docs/images/banner_noctra_horizontal.jpg" alt="Noctra Banner" width="100%" />
 </p>
 
 <h1 align="center">Noctra</h1>
