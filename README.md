@@ -245,14 +245,17 @@ flutter build ios --release --no-codesign
 
 ## Special Thanks
 
-Noctra stands on the shoulders of remarkable open-source projects and communities:
+Noctra stands on the shoulders of several remarkable open-source projects and communities. Sincere thanks to:
 
-* [**Flutter**](https://flutter.dev) & [**Riverpod**](https://riverpod.dev) — High-performance reactive UI framework and state orchestration.
-* [**just_audio**](https://github.com/ryanheise/just_audio) by Ryan Heise — Robust audio pipeline and streaming engine.
-* [**Echo Music**](https://github.com/EchoMusicApp/Echo-Music) — Inspiration in modern mobile music interface design.
-* [**LRCLIB**](https://lrclib.net) — Community-driven synchronized lyrics database.
-* [**indic_transliteration**](https://github.com/sanskrit-coders/indic_transliteration_dart) — Foundational phonetic matrix algorithms.
-* [**Metrolist**](https://github.com/MetrolistGroup/Metrolist) & [**SimpMusic**](https://github.com/maxrave-dev/SimpMusic) — Open-source media client architectural insights.
+| Project | Description |
+|---|---|
+| [**Flutter**](https://flutter.dev) & [**Riverpod**](https://riverpod.dev) | High-performance cross-platform reactive UI framework & state orchestration |
+| [**just_audio**](https://github.com/ryanheise/just_audio) | Robust audio pipeline, gapless playback & streaming engine by Ryan Heise |
+| [**Echo Music**](https://github.com/EchoMusicApp/Echo-Music) | Foundational inspiration for clean, ad-free mobile music interfaces |
+| [**LRCLIB**](https://lrclib.net) | Community-driven synchronized & word-by-word lyrics database |
+| [**indic_transliteration**](https://github.com/sanskrit-coders/indic_transliteration_dart) | Foundational Indic phonetic transliteration matrices & algorithms |
+| [**Metrolist**](https://github.com/MetrolistGroup/Metrolist) & [**SimpMusic**](https://github.com/maxrave-dev/SimpMusic) | Open-source media client architecture and stream resolution references |
+| [**Inno Setup**](https://jrsoftware.org/isinfo.php) | Professional Windows single-file installer packaging engine |
 
 ---
 
