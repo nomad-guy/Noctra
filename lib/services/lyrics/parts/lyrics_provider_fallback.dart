@@ -16,7 +16,7 @@ class LyricsProviderFallback {
       final query = Uri.encodeComponent('$rawTitle $primaryArtist');
       final uri = Uri.parse('https://lrclib.net/api/search?q=$query');
       final res = await http.get(uri, headers: {
-        'User-Agent': 'Noctra/1.0.4 (https://noctra.app)'
+        'User-Agent': 'Noctra/1.0.5 (https://noctra.app)'
       }).timeout(const Duration(seconds: 4));
       if (res.statusCode == 200) {
         final list = jsonDecode(res.body) as List?;

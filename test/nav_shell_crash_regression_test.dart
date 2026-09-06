@@ -77,7 +77,7 @@ void main() {
   /// default-feed 8s timeout) so the test ends without pending timers.
   Future<void> teardownShell(WidgetTester tester) async {
     await tester.pumpWidget(const SizedBox());
-    await tester.pump(const Duration(seconds: 9));
+    await tester.pump(const Duration(seconds: 11));
   }
 
   testWidgets(

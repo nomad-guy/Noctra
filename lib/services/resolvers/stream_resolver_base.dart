@@ -2,12 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import '../../features/discovery/domain/stream_resolver_contract.dart';
-import '../../features/discovery/infrastructure/jiosaavn_pure_engine.dart';
 import '../../data/models/song_model.dart';
 import 'trusted_audio_hosts.dart';
+import 'native_resolver_client.dart';
 
 /// Caps an internal network timeout by [budget] (the remaining time of the
 /// caller's overall resolution budget) when the budget is tighter. Lets a
@@ -81,7 +80,6 @@ class DirectOpenStreamResolver implements StreamResolver {
 }
 
 class JioSaavnDirectResolver implements StreamResolver {
-  static const _channel = MethodChannel('com.nomadguy.noctra/native_resolver');
   @override
   String get sourceId => 'jiosaavn_320kbps';
   @override
@@ -125,13 +123,8 @@ class JioSaavnDirectResolver implements StreamResolver {
           final encUrl = songData?['encrypted_media_url'] as String? ??
               songData?['more_info']?['encrypted_media_url'] as String?;
           if (encUrl != null && encUrl.isNotEmpty) {
-            final pureUrl = JioSaavnPureEngine.decryptMediaUrl(encUrl);
-            if (pureUrl != null && pureUrl.isNotEmpty) return pureUrl;
-            if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-              final decUrl = await _channel
-                  .invokeMethod<String>('decryptUrl', {'encryptedUrl': encUrl});
-              if (decUrl != null && decUrl.isNotEmpty) return decUrl;
-            }
+            final decUrl = await NativeResolverClient.decryptUrl(encUrl);
+            if (decUrl != null && decUrl.isNotEmpty) return decUrl;
           }
         }
       } on TimeoutException {
@@ -147,7 +140,6 @@ class JioSaavnDirectResolver implements StreamResolver {
 }
 
 class NativeKotlinResolver implements StreamResolver {
-  static const _channel = MethodChannel('com.nomadguy.noctra/native_resolver');
   @override
   String get sourceId => 'native_kotlin_320k';
   @override
@@ -166,22 +158,12 @@ class NativeKotlinResolver implements StreamResolver {
       final a = cleanArtist.isNotEmpty ? cleanArtist : song.artist;
 
       final cap = boundedTimeout(timeBudget, const Duration(seconds: 6));
-      final pureStream = await JioSaavnPureEngine.resolveTrackStream(t, a, timeBudget: cap);
-      if (pureStream != null && pureStream.isNotEmpty && !pureStream.contains('preview')) {
-        return pureStream;
-      }
-
-      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-        final String? streamUrl =
-            await _channel.invokeMethod<String>('resolve320k', {
-          'title': t,
-          'artist': a,
-        }).timeout(cap);
-        if (streamUrl != null &&
-            streamUrl.isNotEmpty &&
-            !streamUrl.contains('preview')) {
-          return streamUrl;
-        }
+      final streamUrl =
+          await NativeResolverClient.resolve320k(t, a, timeBudget: cap);
+      if (streamUrl != null &&
+          streamUrl.isNotEmpty &&
+          !streamUrl.contains('preview')) {
+        return streamUrl;
       }
     } catch (_) {}
     return null;

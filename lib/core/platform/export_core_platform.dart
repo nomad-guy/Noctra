@@ -15,3 +15,4 @@ export 'media/no_op_media_controls.dart';
 export 'media/desktop_media_controls.dart';
 export 'media/ios_media_controls.dart';
 export 'notifications/platform_notification_service.dart';
+export 'noctra_platform.dart';

@@ -1,6 +1,7 @@
 import 'dart:io';
 import '../../../data/models/migration_models.dart';
 import '../library_importers.dart';
+import '../noctra_transfer_service.dart';
 
 /// Generic CSV importer.
 class GenericCSVImporter extends LibraryImporter {
@@ -157,3 +158,64 @@ class M3UImporter extends LibraryImporter {
     return MigrationResult(tracks: tracks, playlists: playlists, source: 'm3u');
   }
 }
+
+/// Noctra Manifest JSON importer for .noctra.json and export transfer packages.
+class NoctraManifestFileImporter extends LibraryImporter {
+  @override
+  String get sourceName => 'Noctra Manifest';
+
+  @override
+  List<String> get supportedExtensions => ['.json'];
+
+  @override
+  bool canImport(String filePath, {String? fileContent}) {
+    final lower = filePath.toLowerCase();
+    if (lower.endsWith('.noctra.json')) return true;
+    if (lower.endsWith('.json') &&
+        fileContent != null &&
+        fileContent.contains('noctra_manifest')) {
+      return true;
+    }
+    return false;
+  }
+
+  @override
+  String getInstructions() =>
+      'Select an exported Noctra Manifest JSON file (.noctra.json).';
+
+  @override
+  Future<MigrationResult> import(File file) async {
+    final content = await file.readAsString();
+    final parsed = NoctraTransferService.parseManifest(content);
+    if (parsed == null) {
+      return MigrationResult(tracks: [], source: 'noctra_manifest');
+    }
+
+    final normalized = parsed.tracks
+        .map((s) => NormalizedTrack(
+              title: s.title,
+              artist: s.artist,
+              album: s.album,
+              duration: s.duration,
+              artworkUrl: s.artworkUrl,
+              source: 'noctra_manifest',
+              sourceId: s.id,
+            ))
+        .toList();
+
+    final playlists = [
+      ImportedPlaylist(
+        name: parsed.title,
+        source: 'noctra_manifest',
+        tracks: normalized,
+      )
+    ];
+
+    return MigrationResult(
+      tracks: normalized,
+      playlists: playlists,
+      source: 'noctra_manifest',
+    );
+  }
+}
+

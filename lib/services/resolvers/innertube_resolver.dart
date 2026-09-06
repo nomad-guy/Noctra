@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import '../../data/models/song_model.dart';
@@ -8,6 +7,7 @@ import '../metadata/song_artwork_resolver.dart';
 import 'innertube/innertube_player_api.dart';
 import 'stream_resolver_base.dart';
 import 'track_matching_guard.dart';
+import 'native_resolver_client.dart';
 
 /// Music search client pinned to a current WEB_REMIX build.
 const String _searchClientName = 'WEB_REMIX';
@@ -166,9 +166,7 @@ class InnerTubeMusicResolver implements StreamResolver {
       try {
         final cap = boundedTimeout(timeBudget, const Duration(seconds: 3));
         final nativeUrl =
-            await const MethodChannel('com.nomadguy.noctra/native_resolver')
-                .invokeMethod<String>(
-                    'extractInnerTube', {'videoId': videoId}).timeout(cap);
+            await NativeResolverClient.extractInnerTube(videoId).timeout(cap);
         if (nativeUrl != null && nativeUrl.isNotEmpty) return nativeUrl;
       } catch (_) {}
     }

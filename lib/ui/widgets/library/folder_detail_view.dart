@@ -7,7 +7,10 @@ import '../../../data/models/song_model.dart';
 import '../../../data/repositories/music_repository.dart';
 import '../../../providers/app_providers.dart';
 import '../../../services/metadata/song_artwork_resolver.dart';
+import '../../../services/ai/ai_mix_track_source.dart';
 import '../noir_mini_player_dock.dart';
+import 'ai_collection_action_bar.dart';
+import 'export_playlist_sheet.dart';
 
 /// Full-screen track list shown when a folder (or Favorites) is opened from
 /// [LibraryFoldersTab]. Pushed over the tabbed shell, owns its own back
@@ -61,6 +64,47 @@ class _FolderDetailViewState extends ConsumerState<FolderDetailView> {
     }
   }
 
+  int _remixEpoch = 0;
+
+  void _playAll(List<Song> songs) {
+    if (songs.isEmpty) return;
+    ref
+        .read(audioPlayerServiceProvider)
+        .playSong(songs.first, newQueue: List<Song>.of(songs));
+  }
+
+  void _shuffle(List<Song> songs) {
+    if (songs.isEmpty) return;
+    final shuffled = List<Song>.of(songs)..shuffle();
+    ref
+        .read(audioPlayerServiceProvider)
+        .playSong(shuffled.first, newQueue: shuffled);
+  }
+
+  void _remix(List<Song> songs) {
+    if (songs.length < 2) return;
+    _remixEpoch++;
+    final remixed = AiMixTrackSource.applyRemixOrder(
+      songs,
+      epoch: _remixEpoch,
+      vibeKey: widget.folderName,
+    );
+    if (widget.folderName != 'Favorites') {
+      widget.repo.reorderFolderSongs(widget.folderName, remixed);
+    }
+    _playAll(remixed);
+  }
+
+  void _export(List<Song> songs) {
+    if (songs.isEmpty) return;
+    ExportPlaylistSheet.show(
+      context,
+      title: widget.folderName,
+      tracks: songs,
+      isDark: widget.isDark,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final repo = ref.watch(musicRepositoryProvider);
@@ -106,6 +150,17 @@ class _FolderDetailViewState extends ConsumerState<FolderDetailView> {
                     ],
                   ),
                 ),
+                AiCollectionActionBar(
+                  isDark: isDark,
+                  canRemix: currentSongs.length >= 2,
+                  busy: false,
+                  hasTracks: currentSongs.isNotEmpty,
+                  onPlayAll: () => _playAll(currentSongs),
+                  onShuffle: () => _shuffle(currentSongs),
+                  onRemix: () => _remix(currentSongs),
+                  onExport: () => _export(currentSongs),
+                ),
+                const SizedBox(height: 8),
                 Expanded(
                   child: currentSongs.isEmpty
                       ? Center(

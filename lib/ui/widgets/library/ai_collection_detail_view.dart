@@ -8,6 +8,7 @@ import '../../../services/ai/ai_mix_track_source.dart';
 import '../noir_mini_player_dock.dart';
 import 'ai_collection_action_bar.dart';
 import 'ai_collection_song_row.dart';
+import 'export_playlist_sheet.dart';
 
 /// Loader seam for tests: returns the tracks to show for a vibe. The default
 /// resolves through [AiMixTrackSource] (local-first curation + bounded feed).
@@ -134,6 +135,24 @@ class _AiCollectionDetailViewState
         .playSong(_tracks.first, newQueue: List<Song>.of(_tracks));
   }
 
+  void _shuffle() {
+    if (_tracks.isEmpty || _busy) return;
+    final shuffled = List<Song>.of(_tracks)..shuffle();
+    ref
+        .read(audioPlayerServiceProvider)
+        .playSong(shuffled.first, newQueue: shuffled);
+  }
+
+  void _export() {
+    if (_tracks.isEmpty) return;
+    ExportPlaylistSheet.show(
+      context,
+      title: widget.title,
+      tracks: _tracks,
+      isDark: widget.isDark,
+    );
+  }
+
   void _playFrom(int index) {
     final queue = List<Song>.of(_tracks);
     final start = queue.removeAt(index);
@@ -161,7 +180,9 @@ class _AiCollectionDetailViewState
                   busy: _busy,
                   hasTracks: _tracks.isNotEmpty,
                   onPlayAll: _playAll,
+                  onShuffle: _shuffle,
                   onRemix: _remix,
+                  onExport: _export,
                 ),
                 const SizedBox(height: 8),
                 Expanded(child: _buildBody(isDark, textSecondary)),

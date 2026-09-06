@@ -9,7 +9,9 @@ class AiCollectionActionBar extends StatelessWidget {
   final bool busy;
   final bool hasTracks;
   final VoidCallback onPlayAll;
+  final VoidCallback? onShuffle;
   final VoidCallback onRemix;
+  final VoidCallback? onExport;
 
   const AiCollectionActionBar({
     super.key,
@@ -18,14 +20,19 @@ class AiCollectionActionBar extends StatelessWidget {
     required this.busy,
     required this.hasTracks,
     required this.onPlayAll,
+    this.onShuffle,
     required this.onRemix,
+    this.onExport,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           _ActionButton(
             isDark: isDark,
@@ -34,8 +41,18 @@ class AiCollectionActionBar extends StatelessWidget {
             enabled: hasTracks && !busy,
             onTap: onPlayAll,
           ),
-          const SizedBox(width: 10),
-          if (canRemix)
+          if (onShuffle != null) ...[
+            const SizedBox(width: 8),
+            _ActionButton(
+              isDark: isDark,
+              icon: Icons.shuffle_rounded,
+              label: 'Shuffle',
+              enabled: hasTracks && !busy,
+              onTap: onShuffle!,
+            ),
+          ],
+          if (canRemix) ...[
+            const SizedBox(width: 8),
             _ActionButton(
               isDark: isDark,
               icon: Icons.auto_awesome_rounded,
@@ -43,6 +60,17 @@ class AiCollectionActionBar extends StatelessWidget {
               enabled: !busy && hasTracks,
               onTap: onRemix,
             ),
+          ],
+          if (onExport != null) ...[
+            const SizedBox(width: 8),
+            _ActionButton(
+              isDark: isDark,
+              icon: Icons.ios_share_rounded,
+              label: 'Export',
+              enabled: hasTracks && !busy,
+              onTap: onExport!,
+            ),
+          ],
           if (busy) ...[
             const SizedBox(width: 12),
             const SizedBox(

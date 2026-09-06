@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/song_model.dart';
+import '../../../data/models/migration_models.dart';
 import '../../../providers/app_providers.dart';
 import '../../../services/metadata/song_artwork_resolver.dart';
 import '../../../services/migration/importers/url_playlist_importer.dart';
+import '../../../services/migration/noctra_transfer_service.dart';
 import '../../../shared/widgets/glass_card.dart';
 
 class UrlImportSheet extends ConsumerStatefulWidget {
@@ -49,11 +51,31 @@ class _UrlImportSheetState extends ConsumerState<UrlImportSheet> {
 
     try {
       final repo = ref.read(musicRepositoryProvider);
+      final manifest = NoctraTransferService.parseManifest(input);
       final isUrl = UrlPlaylistImporter.isPlaylistUrl(input);
 
-      final playlist = isUrl
-          ? await UrlPlaylistImporter.importFromUrl(input)
-          : UrlPlaylistImporter.importFromTracklistText(input);
+      ImportedPlaylist? playlist;
+      if (manifest != null && manifest.tracks.isNotEmpty) {
+        playlist = ImportedPlaylist(
+          name: manifest.title,
+          source: 'noctra_transfer',
+          tracks: manifest.tracks
+              .map((s) => NormalizedTrack(
+                    title: s.title,
+                    artist: s.artist,
+                    album: s.album,
+                    duration: s.duration,
+                    artworkUrl: s.artworkUrl,
+                    source: 'noctra_transfer',
+                    sourceId: s.id,
+                  ))
+              .toList(),
+        );
+      } else if (isUrl) {
+        playlist = await UrlPlaylistImporter.importFromUrl(input);
+      } else {
+        playlist = UrlPlaylistImporter.importFromTracklistText(input);
+      }
 
       if (playlist == null || playlist.tracks.isEmpty) {
         if (mounted) {

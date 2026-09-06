@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import '../../core/utils/noctra_logger.dart';
 import '../../data/models/download_location.dart';
@@ -16,6 +15,7 @@ import '../metadata/artist_metadata_normalizer.dart';
 import '../metadata/spotify_oembed_service.dart';
 import '../resolvers/stream_resolver.dart';
 import '../../features/discovery/infrastructure/jiosaavn_pure_engine.dart';
+import '../resolvers/native_resolver_client.dart';
 import 'search_result_ranker.dart';
 
 part 'parts/music_service_search.dart';

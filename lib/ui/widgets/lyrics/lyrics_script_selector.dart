@@ -21,40 +21,48 @@ class LyricsScriptSelector extends StatelessWidget {
 
     return Positioned(
       top: 10,
-      right: 14,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: options.map((opt) {
-          final sel = selectedScript == opt.code;
-          return Padding(
-            padding: const EdgeInsets.only(left: 6),
-            child: GestureDetector(
-              onTap: () => onSelectScript(opt.code),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: sel
-                      ? (isDark ? Colors.white : Colors.black)
-                      : (isDark
-                          ? const Color(0x33FFFFFF)
-                          : const Color(0x1F000000)),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  opt.label,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+      left: 0,
+      right: 0,
+      child: SizedBox(
+        height: 36,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          itemCount: options.length,
+          itemBuilder: (context, index) {
+            final opt = options[index];
+            final sel = selectedScript == opt.code;
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: GestureDetector(
+                onTap: () => onSelectScript(opt.code),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                  decoration: BoxDecoration(
                     color: sel
-                        ? (isDark ? Colors.black : Colors.white)
-                        : (isDark ? Colors.white70 : Colors.black87),
+                        ? (isDark ? Colors.white : Colors.black)
+                        : (isDark
+                            ? const Color(0x33FFFFFF)
+                            : const Color(0x1F000000)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    opt.label,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: sel
+                          ? (isDark ? Colors.black : Colors.white)
+                          : (isDark ? Colors.white70 : Colors.black87),
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        }).toList(),
+            );
+          },
+        ),
       ),
     );
   }

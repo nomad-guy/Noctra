@@ -47,6 +47,7 @@ class MigrationResult {
 
 /// Get all available importers.
 List<LibraryImporter> getAllImporters() => [
+      NoctraManifestFileImporter(),
       SpotifyExportImporter(),
       AppleMusicExportImporter(),
       YouTubeMusicExportImporter(),

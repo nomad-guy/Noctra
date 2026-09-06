@@ -71,15 +71,10 @@ extension MusicServiceSearch on MusicService {
                       artist: map['artist']?.toString() ?? '',
                       genre: map['source']?.toString() ?? '')));
             }
-          } else if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-            final List<dynamic>? nativeSongs =
-                await const MethodChannel('com.nomadguy.noctra/native_resolver')
-                    .invokeListMethod('searchJioSaavn', {
-              'query': clean,
-              'limit': 20
-            }).timeout(const Duration(seconds: 4));
-            if (nativeSongs != null) {
-              for (final m in nativeSongs) {
+          } else {
+            final List<dynamic> nativeSongs =
+                await NativeResolverClient.searchJioSaavn(clean, limit: 20);
+            for (final m in nativeSongs) {
                 final map = m as Map;
                 collect(saavn, Song(
                     id: (map['id'] ??
@@ -102,7 +97,6 @@ extension MusicServiceSearch on MusicService {
                         genre: map['source']?.toString() ?? '')));
               }
             }
-          }
         } catch (_) {}
       }());
     }
@@ -202,7 +196,7 @@ extension MusicServiceSearch on MusicService {
           final lUri = Uri.parse(
               'https://lrclib.net/api/search?q=${Uri.encodeComponent(clean)}');
           final lRes = await http.get(lUri, headers: {
-            'User-Agent': 'Noctra/1.0.4'
+            'User-Agent': 'Noctra/1.0.5'
           }).timeout(const Duration(seconds: 4));
           if (lRes.statusCode == 200) {
             final lData = jsonDecode(lRes.body) as List?;

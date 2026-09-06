@@ -1,0 +1,255 @@
+name: Cross-Platform Native Packaging & Multi-Architecture Builds
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  version:
+    name: Calculate Version (+0.0.1 per run)
+    runs-on: ubuntu-latest
+    outputs:
+      app_version: ${{ steps.calc.outputs.version }}
+    steps:
+      - id: calc
+        run: |
+          PATCH_VER=$(( 4 + ${{ github.run_number }} ))
+          echo "version=1.0.${PATCH_VER}" >> "$GITHUB_OUTPUT"
+          echo "Computed version: 1.0.${PATCH_VER} (Run #${{ github.run_number }})"
+
+  build-android:
+    name: Build Android (Universal, Split-ABI & AAB)
+    needs: version
+    runs-on: ubuntu-latest
+    env:
+      APP_VERSION: ${{ needs.version.outputs.app_version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Universal APK
+        run: |
+          flutter build apk --release \
+            --build-name="${{ env.APP_VERSION }}" \
+            --build-number=${{ github.run_number }}
+
+      - name: Build Split per-ABI APKs
+        run: |
+          flutter build apk --release --split-per-abi \
+            --build-name="${{ env.APP_VERSION }}" \
+            --build-number=${{ github.run_number }}
+
+      - name: Build Google Play App Bundle (AAB)
+        run: |
+          flutter build appbundle --release \
+            --build-name="${{ env.APP_VERSION }}" \
+            --build-number=${{ github.run_number }}
+
+      - name: Organize Android Artifacts
+        run: |
+          mkdir -p android_artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk android_artifacts/Noctra-${{ env.APP_VERSION }}-Universal.apk
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk android_artifacts/Noctra-${{ env.APP_VERSION }}-arm64-v8a.apk
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk android_artifacts/Noctra-${{ env.APP_VERSION }}-armeabi-v7a.apk
+          cp build/app/outputs/flutter-apk/app-x86_64-release.apk android_artifacts/Noctra-${{ env.APP_VERSION }}-x86_64.apk
+          cp build/app/outputs/bundle/release/app-release.aab android_artifacts/Noctra-${{ env.APP_VERSION }}.aab
+
+      - name: Archive Android Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Noctra-${{ env.APP_VERSION }}-Android
+          path: android_artifacts/
+
+  build-windows:
+    name: Build Windows (.exe Installer)
+    needs: version
+    runs-on: windows-latest
+    env:
+      APP_VERSION: ${{ needs.version.outputs.app_version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Verify Quality & Architecture
+        run: |
+          flutter analyze
+          flutter test test/architecture_boundaries_test.dart
+
+      - name: Build Windows Release
+        run: |
+          flutter build windows --release `
+            --build-name="${{ env.APP_VERSION }}" `
+            --build-number=${{ github.run_number }}
+
+      - name: Create Inno Setup Installer Script
+        shell: pwsh
+        run: |
+          $issContent = @"
+          [Setup]
+          AppName=Noctra
+          AppVersion=$($env:APP_VERSION)
+          DefaultDirName={autopf}\Noctra
+          DefaultGroupName=Noctra
+          OutputDir=installer_out
+          OutputBaseFilename=Noctra-$($env:APP_VERSION)-Setup-x64
+          Compression=lzma2
+          SolidCompression=yes
+          ArchitecturesInstallIn64BitMode=x64
+
+          [Files]
+          Source: "build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+          [Icons]
+          Name: "{group}\Noctra"; Filename: "{app}\noctra.exe"
+          Name: "{autodesktop}\Noctra"; Filename: "{app}\noctra.exe"
+
+          [Run]
+          Filename: "{app}\noctra.exe"; Description: "{cm:LaunchProgram,Noctra}"; Flags: nowait postinstall skipifsilent
+          "@
+          Set-Content -Path "installer.iss" -Value $issContent
+
+      - name: Compile Inno Setup Installer (.exe)
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+
+      - name: Archive Windows Installer (.exe)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Noctra-${{ env.APP_VERSION }}-Windows
+          path: installer_out/Noctra-${{ env.APP_VERSION }}-Setup-x64.exe
+
+  build-linux:
+    name: Build Linux (.deb Package)
+    needs: version
+    runs-on: ubuntu-latest
+    env:
+      APP_VERSION: ${{ needs.version.outputs.app_version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux Build Tools & Libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Enable Linux Desktop
+        run: flutter config --enable-linux-desktop
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Linux Release
+        run: |
+          flutter build linux --release \
+            --build-name="${{ env.APP_VERSION }}" \
+            --build-number=${{ github.run_number }}
+
+      - name: Package Native Debian Package (.deb)
+        run: |
+          mkdir -p deb-pkg/DEBIAN
+          mkdir -p deb-pkg/usr/lib/noctra
+          mkdir -p deb-pkg/usr/bin
+          mkdir -p deb-pkg/usr/share/applications
+          mkdir -p deb-pkg/usr/share/pixmaps
+
+          cp -r build/linux/x64/release/bundle/* deb-pkg/usr/lib/noctra/
+          ln -s /usr/lib/noctra/noctra deb-pkg/usr/bin/noctra
+          cp assets/images/logo_noctra_noir_white.png deb-pkg/usr/share/pixmaps/noctra.png
+
+          cat << EOF > deb-pkg/DEBIAN/control
+          Package: noctra
+          Version: ${{ env.APP_VERSION }}
+          Section: sound
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Noctra Team <support@noctra.app>
+          Description: Noctra - Autonomous On-Device Music Player
+           High-resolution lossless player with neural taste modeling and local-first library.
+          EOF
+
+          cat << 'EOF' > deb-pkg/usr/share/applications/noctra.desktop
+          [Desktop Entry]
+          Name=Noctra
+          Comment=Autonomous On-Device Music Player
+          Exec=/usr/bin/noctra
+          Icon=noctra
+          Terminal=false
+          Type=Application
+          Categories=AudioVideo;Audio;Player;
+          EOF
+
+          dpkg-deb --build deb-pkg "noctra_${{ env.APP_VERSION }}_amd64.deb"
+
+      - name: Archive Linux Package (.deb)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Noctra-${{ env.APP_VERSION }}-Linux-deb
+          path: "noctra_${{ env.APP_VERSION }}_amd64.deb"
+
+  build-ios:
+    name: Build iOS (.ipa Sideload Package)
+    needs: version
+    runs-on: macos-latest
+    env:
+      APP_VERSION: ${{ needs.version.outputs.app_version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build iOS Application Bundle
+        run: |
+          flutter build ios --release --no-codesign \
+            --build-name="${{ env.APP_VERSION }}" \
+            --build-number=${{ github.run_number }}
+
+      - name: Package Sideloadable IPA (.ipa)
+        run: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -qr "Noctra-${{ env.APP_VERSION }}.ipa" Payload
+
+      - name: Archive iOS Sideload Package (.ipa)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Noctra-${{ env.APP_VERSION }}-iOS-ipa
+          path: "Noctra-${{ env.APP_VERSION }}.ipa"

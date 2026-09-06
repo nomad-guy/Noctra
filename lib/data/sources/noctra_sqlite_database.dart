@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../../core/utils/noctra_logger.dart';
 import '../models/song_model.dart';
 
@@ -31,6 +31,12 @@ class NoctraSqliteDatabase {
         onCreate: SqliteSchemaManager.createDb,
         onUpgrade: SqliteSchemaManager.upgradeDb,
       );
+    }
+    if (defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
     }
     final dbPath = await getDatabasesPath();
     final path = p.join(dbPath, 'noctra_neural_store.db');

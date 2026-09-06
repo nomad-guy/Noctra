@@ -20,6 +20,7 @@ import 'ui/screens/splash_screen.dart';
 import 'ui/widgets/main_navigation_shell.dart';
 import 'core/utils/localization/localization_scope.dart';
 import 'core/utils/noctra_localization.dart';
+import 'ui/widgets/desktop/desktop_keyboard_shortcuts.dart';
 
 /// Media-session handler bridging playback to audio_service. Created during
 /// [main] and attached to the playback service once it is constructed.
@@ -169,7 +170,9 @@ class _NoctraAppState extends ConsumerState<NoctraApp> {
           languageCode: currentLanguage,
           child: Directionality(
             textDirection: textDir,
-            child: NoctraThemeBackdrop(child: child ?? const SizedBox.shrink()),
+            child: DesktopKeyboardShortcuts(
+              child: NoctraThemeBackdrop(child: child ?? const SizedBox.shrink()),
+            ),
           ),
         );
       },

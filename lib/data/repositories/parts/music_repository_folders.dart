@@ -77,4 +77,15 @@ mixin MusicRepositoryFoldersMixin on ChangeNotifier {
       notifyListeners();
     }
   }
+
+  void reorderFolderSongs(String folderName, List<Song> newSongs) {
+    _mutationGeneration++;
+    if (_customFolders.containsKey(folderName)) {
+      _customFolders[folderName] = List<Song>.of(newSongs);
+      if (_initFuture == null) {
+        NoctraLocalDatabase().saveCustomFolders(_customFolders);
+      }
+      notifyListeners();
+    }
+  }
 }

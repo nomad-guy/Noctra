@@ -23,7 +23,7 @@ class LyricsLrclibProvider {
         final searchUri = Uri.parse(
             'https://lrclib.net/api/search?q=${Uri.encodeComponent(q)}');
         final sRes = await http.get(searchUri, headers: {
-          'User-Agent': 'Noctra/1.0.4 (https://noctra.app)'
+          'User-Agent': 'Noctra/1.0.5 (https://noctra.app)'
         }).timeout(const Duration(seconds: 4));
         if (sRes.statusCode == 200) {
           final sList = jsonDecode(sRes.body) as List?;
@@ -137,7 +137,7 @@ class LyricsLrclibProvider {
         final uri = Uri.parse(
             'https://lrclib.net/api/search?q=${Uri.encodeComponent(fq)}');
         final res = await http.get(uri, headers: {
-          'User-Agent': 'Noctra/1.0.4 (https://noctra.app)'
+          'User-Agent': 'Noctra/1.0.5 (https://noctra.app)'
         }).timeout(const Duration(seconds: 4));
         if (res.statusCode == 200) {
           final list = jsonDecode(res.body) as List?;

@@ -3,11 +3,10 @@ part of '../music_service.dart';
 extension MusicServiceCharts on MusicService {
   static Future<List<Song>> fetchSimilarRadioQueue(Song currentSong,
       {Set<String> excludeIds = const {}}) async {
-    if (!kIsWeb && currentSong.id.length == 11) {
+    if (currentSong.id.length == 11) {
       try {
         final List<dynamic>? list =
-            await const MethodChannel('com.nomadguy.noctra/native_resolver')
-                .invokeListMethod('fetchRadio', {'videoId': currentSong.id});
+            await NativeResolverClient.fetchRadio(currentSong.id);
         if (list != null && list.isNotEmpty) {
           final blocked = {currentSong.id, ...excludeIds};
           final seen = <String>{};
