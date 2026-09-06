@@ -275,4 +275,5 @@ abstract final class L10nKeys {
   static const loopOff = 'loop_off';
   static const organizePlaylists = 'organize_playlists';
   static const tracksLongPressDelete = 'tracks_long_press_delete';
+  static const folderEmpty = 'folder_empty';
 }

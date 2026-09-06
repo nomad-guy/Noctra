@@ -273,6 +273,7 @@ const Map<String, String> hindiLocale = {
   'loop_all': 'लूप: सभी',
   'loop_one': 'लूप: एक',
   'loop_off': 'लूप: बंद',
-  'organize_playlists': 'ट्रैक को कस्टम प्लेलिस्ट में व्यवस्थित करें',
+  'organize_playlists': 'कस्टम प्लेलिस्ट में ट्रैक व्यवस्थित करें',
   'tracks_long_press_delete': '{count} ट्रैक • हटाने के लिए देर तक दबाएं',
+  'folder_empty': 'इस फ़ोल्डर में अभी कोई ट्रैक नहीं है।',
 };

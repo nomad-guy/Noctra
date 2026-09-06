@@ -69,8 +69,15 @@ mixin PlayerSessionLoaderMixin on AudioPlayerServiceBase {
       _currentSongController.add(current);
     }
     MusicRepository().recordSongPlayed(current);
+    if (current.artworkUrl == null || current.artworkUrl!.isEmpty) {
+      _enrichArtworkAsync(current, epoch);
+    }
     try {
       await _player.stop();
+      if (initialPosition == null &&
+          !(_lastSavedPosition != null && _lastSavedSongId == song.id)) {
+        await _player.seek(Duration.zero);
+      }
     } catch (_) {}
     _positionSaveEpoch = _playSessionEpoch;
     _lastSavedBucket = -1;
@@ -130,6 +137,11 @@ mixin PlayerSessionLoaderMixin on AudioPlayerServiceBase {
       if (epoch != _playSessionEpoch) {
         return;
       }
+      if (_currentSong != null &&
+          (_currentSong!.artworkUrl == null ||
+              _currentSong!.artworkUrl!.isEmpty)) {
+        _enrichArtworkAsync(_currentSong!, epoch);
+      }
 
       if (url.isEmpty) {
         NoctraLogger.w('playSong: no resolved URL for "${song.title}"');
@@ -187,5 +199,29 @@ mixin PlayerSessionLoaderMixin on AudioPlayerServiceBase {
     } catch (e) {
       NoctraLogger.w('playSong failed for "${song.title}"', e);
     }
+  }
+
+  void _enrichArtworkAsync(Song song, int epoch) {
+    SongArtworkResolver.resolveArtwork(song).then((art) {
+      if (art != null &&
+          art.isNotEmpty &&
+          epoch == _playSessionEpoch &&
+          _currentSong?.id == song.id) {
+        final enriched = _currentSong!.copyWith(artworkUrl: art);
+        _currentSong = enriched;
+        if (!_currentSongController.isClosed) {
+          _currentSongController.add(enriched);
+        }
+        _mutateQueue(() {
+          for (var i = 0; i < _queue.length; i++) {
+            if (_queue[i].id == song.id) {
+              _queue[i] = _queue[i].copyWith(artworkUrl: art);
+            }
+          }
+          return true;
+        });
+        MusicRepository().updateSongMetadata(enriched);
+      }
+    }).catchError((_) {});
   }
 }

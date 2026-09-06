@@ -60,7 +60,12 @@ class MigrationChooseView extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         GestureDetector(
-          onTap: () => UrlImportSheet.show(context, isDark),
+          onTap: () async {
+            final res = await UrlImportSheet.show(context, isDark);
+            if (res == true && context.mounted) {
+              Navigator.of(context).pop();
+            }
+          },
           child: GlassCard(
             radius: 14,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

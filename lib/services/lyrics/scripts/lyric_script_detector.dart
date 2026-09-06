@@ -144,9 +144,10 @@ class LyricScriptDetector {
         ];
       case LyricScript.arabic:
         return const [
-          ScriptOption(code: 'original', label: 'Original (العربية)'),
+          ScriptOption(code: 'original', label: 'Original (اردو / العربية)'),
           ScriptOption(code: 'roman', label: 'Romanized'),
           ScriptOption(code: 'devanagari', label: 'देवनागरी (Hindi)'),
+          ScriptOption(code: 'gurmukhi', label: 'ਗੁਰਮੁਖੀ (Punjabi)'),
         ];
       case LyricScript.greek:
         return const [
@@ -170,12 +171,15 @@ class LyricScriptDetector {
         return const [
           ScriptOption(code: 'original', label: 'मूल (देवनागरी)'),
           ScriptOption(code: 'roman', label: 'Roman (English)'),
+          ScriptOption(code: 'gurmukhi', label: 'ਗੁਰਮੁਖੀ (Punjabi)'),
+          ScriptOption(code: 'urdu', label: 'اردو (Urdu)'),
         ];
       case LyricScript.gurmukhi:
         return const [
           ScriptOption(code: 'original', label: 'ਮੂਲ (ਪੰਜਾਬੀ)'),
           ScriptOption(code: 'roman', label: 'Roman (English)'),
           ScriptOption(code: 'devanagari', label: 'देवनागरी (Hindi)'),
+          ScriptOption(code: 'urdu', label: 'اردو (Urdu)'),
         ];
       case LyricScript.tamil:
       case LyricScript.telugu:
@@ -188,11 +192,14 @@ class LyricScriptDetector {
           ScriptOption(code: 'original', label: 'Original Script'),
           ScriptOption(code: 'roman', label: 'Romanized (English)'),
           ScriptOption(code: 'devanagari', label: 'देवनागरी (Hindi)'),
+          ScriptOption(code: 'gurmukhi', label: 'ਗੁਰਮੁਖੀ (Punjabi)'),
         ];
       case LyricScript.latin:
         return const [
           ScriptOption(code: 'original', label: 'Original (English)'),
           ScriptOption(code: 'devanagari', label: 'देवनागरी (Hindi)'),
+          ScriptOption(code: 'gurmukhi', label: 'ਗੁਰਮੁਖੀ (Punjabi)'),
+          ScriptOption(code: 'urdu', label: 'اردو (Urdu)'),
         ];
     }
   }

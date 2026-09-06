@@ -204,10 +204,11 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
 
         final rawData = snapshot.data ?? LyricsData.empty();
         final options =
-            UniversalLyricsTransliterationEngine.getAvailableScriptOptions(
-                rawData);
-        final data = UniversalLyricsTransliterationEngine.transliterateLyrics(
-            rawData, _selectedScript);
+            UniversalLyricsTransliterationEngine.getAvailableScriptOptions(rawData);
+        LyricsData data = rawData;
+        try {
+          data = UniversalLyricsTransliterationEngine.transliterateLyrics(rawData, _selectedScript);
+        } catch (_) {}
 
         final displayLines = data.isSynced ? data.lines : _cachedLines;
         final isSynced = data.isSynced || _isSynced;

@@ -273,6 +273,7 @@ const Map<String, String> marathiLocale = {
   'loop_all': 'लूप: सर्व',
   'loop_one': 'लूप: एक',
   'loop_off': 'लूप: बंद',
-  'organize_playlists': 'ट्रॅक कस्टम प्लेलिस्टमध्ये व्यवस्थापित करा',
-  'tracks_long_press_delete': '{count} ट्रॅक • हटवण्यासाठी दाबून ठेवा',
+  'organize_playlists': 'कस्टम प्लेलिस्टमध्ये ट्रॅक व्यवस्थापित करा',
+  'tracks_long_press_delete': '{count} ट्रॅक • हटवण्यासाठी दाबा आणि धरून ठेवा',
+  'folder_empty': 'या फोल्डरमध्ये अद्याप कोणतेही ट्रॅक नाहीत.',
 };

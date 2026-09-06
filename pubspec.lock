@@ -336,6 +336,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.2"
+  indic_transliteration_dart:
+    dependency: "direct main"
+    description:
+      name: indic_transliteration_dart
+      sha256: d5602c0c70bb7f22171a8d22186ab15e1f1889b3dd470b53ca2c7561edf32ea3
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.84"
+  indic_transliteration_maps:
+    dependency: transitive
+    description:
+      name: indic_transliteration_maps
+      sha256: "220fb49845f87ddd86e4cb13116865f75dec15f311815703958537362aaaa612"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
   io:
     dependency: transitive
     description:

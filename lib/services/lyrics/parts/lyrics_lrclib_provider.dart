@@ -18,12 +18,10 @@ class LyricsLrclibProvider {
       if (song.title != cleanTitle) song.title,
     ];
 
-    final langHint = preferHindi ? '&lang=hi' : '';
-
     for (final q in queries) {
       try {
         final searchUri = Uri.parse(
-            'https://lrclib.net/api/search?q=${Uri.encodeComponent(q)}$langHint');
+            'https://lrclib.net/api/search?q=${Uri.encodeComponent(q)}');
         final sRes = await http.get(searchUri, headers: {
           'User-Agent': 'Noctra/1.0.4 (https://noctra.app)'
         }).timeout(const Duration(seconds: 4));

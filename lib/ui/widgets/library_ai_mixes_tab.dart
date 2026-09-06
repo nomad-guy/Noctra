@@ -14,8 +14,12 @@ class LibraryAIMixesTab extends ConsumerStatefulWidget {
   ConsumerState<LibraryAIMixesTab> createState() => _LibraryAIMixesTabState();
 }
 
-class _LibraryAIMixesTabState extends ConsumerState<LibraryAIMixesTab> {
-  var _openingCollection = false;
+class _LibraryAIMixesTabState extends ConsumerState<LibraryAIMixesTab>
+    with AutomaticKeepAliveClientMixin {
+  DateTime? _lastOpenTime;
+
+  @override
+  bool get wantKeepAlive => true;
 
   Future<void> _openMix(AIPlaylist playlist) => _open(
         title: playlist.title,
@@ -40,8 +44,12 @@ class _LibraryAIMixesTabState extends ConsumerState<LibraryAIMixesTab> {
     IconData? icon,
     List<dynamic>? initialTracks,
   }) async {
-    if (_openingCollection) return;
-    setState(() => _openingCollection = true);
+    final now = DateTime.now();
+    if (_lastOpenTime != null &&
+        now.difference(_lastOpenTime!) < const Duration(milliseconds: 500)) {
+      return;
+    }
+    _lastOpenTime = now;
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => AiCollectionDetailView(
         isDark: widget.isDark,
@@ -54,17 +62,19 @@ class _LibraryAIMixesTabState extends ConsumerState<LibraryAIMixesTab> {
         initialTracks: initialTracks?.cast() ?? const [],
       ),
     ));
-    if (mounted) setState(() => _openingCollection = false);
   }
 
   @override
-  Widget build(BuildContext context) => LibraryAiMixesContent(
-        isDark: widget.isDark,
-        mixes: widget.repo.getAIGeneratedPlaylists(),
-        folders: widget.repo.getAICuratedFolders(),
-        topArtists: widget.repo.getTopArtists(limit: 5),
-        archetype: widget.repo.getUserMusicalArchetype(),
-        onOpenMix: _openMix,
-        onOpenFolder: _openFolder,
-      );
+  Widget build(BuildContext context) {
+    super.build(context);
+    return LibraryAiMixesContent(
+      isDark: widget.isDark,
+      mixes: widget.repo.getAIGeneratedPlaylists(),
+      folders: widget.repo.getAICuratedFolders(),
+      topArtists: widget.repo.getTopArtists(limit: 5),
+      archetype: widget.repo.getUserMusicalArchetype(),
+      onOpenMix: _openMix,
+      onOpenFolder: _openFolder,
+    );
+  }
 }

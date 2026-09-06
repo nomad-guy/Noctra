@@ -172,6 +172,30 @@ void main() {
       expect(safe, isTrue);
     });
 
+    test('Imported track with Various Artists and Duration.zero -> ACCEPTED', () {
+      final safe = TrackMatchingGuard.isSafeMatch(
+        targetTitle: 'Blinding Lights',
+        targetArtist: 'Various Artists',
+        targetDuration: Duration.zero,
+        candidateTitle: 'The Weeknd - Blinding Lights (Official Audio)',
+        candidateArtist: 'The Weeknd',
+        candidateDuration: const Duration(seconds: 200),
+      );
+      expect(safe, isTrue);
+    });
+
+    test('Imported track with YouTube artist and fallback 210s -> ACCEPTED', () {
+      final safe = TrackMatchingGuard.isSafeMatch(
+        targetTitle: 'Shape of You',
+        targetArtist: 'YouTube',
+        targetDuration: const Duration(seconds: 210),
+        candidateTitle: 'Ed Sheeran - Shape of You [Official Video]',
+        candidateArtist: 'Ed Sheeran',
+        candidateDuration: const Duration(seconds: 233),
+      );
+      expect(safe, isTrue);
+    });
+
     test('Short preview clip (< 45s) -> REJECTED', () {
       final safe = TrackMatchingGuard.isSafeMatch(
         targetTitle: targetTitle,

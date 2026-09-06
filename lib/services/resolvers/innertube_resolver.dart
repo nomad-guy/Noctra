@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import '../../data/models/song_model.dart';
+import '../metadata/song_artwork_resolver.dart';
 import 'innertube/innertube_player_api.dart';
 import 'stream_resolver_base.dart';
 import 'track_matching_guard.dart';
@@ -155,6 +156,8 @@ class InnerTubeMusicResolver implements StreamResolver {
       videoId = found;
     }
     if (videoId.length != 11) return null;
+    SongArtworkResolver.setCachedArtwork(
+        song, 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg');
 
     if (!kIsWeb) {
       // Native fast path (fixed client set in Kotlin). Cannot be cancelled

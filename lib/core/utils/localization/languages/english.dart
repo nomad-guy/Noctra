@@ -275,4 +275,5 @@ const Map<String, String> englishLocale = {
   'loop_off': 'Loop: OFF',
   'organize_playlists': 'Organize tracks into custom playlists',
   'tracks_long_press_delete': '{count} tracks • Long-press to delete',
+  'folder_empty': 'No tracks in this folder yet.',
 };

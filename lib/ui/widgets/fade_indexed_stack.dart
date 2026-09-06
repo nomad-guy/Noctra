@@ -93,28 +93,34 @@ class _FadeIndexedStackState extends State<FadeIndexedStack>
             if (isPrevious) {
               final opacity = (1.0 - progress).clamp(0.0, 1.0);
               final offsetY = -progress * 6.0;
-              return Visibility(
-                visible: true,
-                maintainState: true,
-                child: TickerMode(
-                  enabled: false,
-                  child: Opacity(
-                    opacity: opacity,
-                    child: Transform.translate(
-                      offset: Offset(0, offsetY),
-                      child: widget.children[i],
+              return IgnorePointer(
+                ignoring: true,
+                child: Visibility(
+                  visible: true,
+                  maintainState: true,
+                  child: TickerMode(
+                    enabled: false,
+                    child: Opacity(
+                      opacity: opacity,
+                      child: Transform.translate(
+                        offset: Offset(0, offsetY),
+                        child: widget.children[i],
+                      ),
                     ),
                   ),
                 ),
               );
             }
 
-            return Visibility(
-              visible: false,
-              maintainState: true,
-              child: TickerMode(
-                enabled: false,
-                child: widget.children[i],
+            return IgnorePointer(
+              ignoring: true,
+              child: Visibility(
+                visible: false,
+                maintainState: true,
+                child: TickerMode(
+                  enabled: false,
+                  child: widget.children[i],
+                ),
               ),
             );
           }),

@@ -15,6 +15,7 @@ import '../../data/repositories/music_repository.dart';
 import '../resolvers/stream_resolver.dart';
 import '../ytdlp/music_service.dart';
 import '../ai/implicit_signal_tracker.dart';
+import '../metadata/song_artwork_resolver.dart';
 import 'audio_player_models.dart';
 
 export 'audio_player_models.dart';

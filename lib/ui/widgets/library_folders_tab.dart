@@ -27,10 +27,14 @@ class LibraryFoldersTab extends ConsumerStatefulWidget {
   ConsumerState<LibraryFoldersTab> createState() => _LibraryFoldersTabState();
 }
 
-class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
+class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab>
+    with AutomaticKeepAliveClientMixin {
   String? _openedFolder;
   bool _isCreatingFolder = false;
   final TextEditingController _folderNameCtrl = TextEditingController();
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void dispose() {
@@ -59,32 +63,41 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+
     if (_openedFolder != null) {
       final folderSongs = _openedFolder == 'Favorites'
           ? widget.repo.favorites
           : (widget.repo.customFolders[_openedFolder] ??
               widget.customFolders[_openedFolder] ??
               []);
-      return FolderDetailView(
-        isDark: widget.isDark,
-        repo: widget.repo,
-        folderName: _openedFolder!,
-        songs: folderSongs,
-        onBack: () => setState(() => _openedFolder = null),
+      return PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) {
+            setState(() => _openedFolder = null);
+          }
+        },
+        child: FolderDetailView(
+          isDark: widget.isDark,
+          repo: widget.repo,
+          folderName: _openedFolder!,
+          songs: folderSongs,
+          onBack: () => setState(() => _openedFolder = null),
+        ),
       );
     }
 
-    // Build folder list: Favorites first (if has songs), then custom folders
     final customFolderNames = (widget.repo.customFolders.isNotEmpty
             ? widget.repo.customFolders
             : widget.customFolders)
         .keys
         .toList();
     final folderNames = <String>['Favorites', ...customFolderNames];
+
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        // Create Action
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -94,23 +107,18 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
                     child: GlassCard(
                       radius: 16,
                       isHighlighted: true,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       child: Row(
                         children: [
                           Container(
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: widget.isDark
-                                    ? Colors.white
-                                    : Colors.black),
+                              shape: BoxShape.circle,
+                              color: widget.isDark ? Colors.white : Colors.black,
+                            ),
                             child: Icon(Icons.create_new_folder_outlined,
-                                size: 20,
-                                color: widget.isDark
-                                    ? Colors.black
-                                    : Colors.white),
+                                size: 20, color: widget.isDark ? Colors.black : Colors.white),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -118,26 +126,14 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('+ ${context.tr(L10nKeys.createFolder)}',
-                                    style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w700,
-                                        color: widget.isDark
-                                            ? Colors.white
-                                            : Colors.black)),
+                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: widget.isDark ? Colors.white : Colors.black)),
                                 Text(context.tr(L10nKeys.organizePlaylists),
-                                    style: TextStyle(
-                                        fontSize: 11,
-                                        color: widget.isDark
-                                            ? Colors.white54
-                                            : Colors.black54)),
+                                    style: TextStyle(fontSize: 11, color: widget.isDark ? Colors.white54 : Colors.black54)),
                               ],
                             ),
                           ),
                           Icon(Icons.arrow_forward_ios_rounded,
-                              size: 14,
-                              color: widget.isDark
-                                  ? Colors.white38
-                                  : Colors.black38),
+                              size: 14, color: widget.isDark ? Colors.white38 : Colors.black38),
                         ],
                       ),
                     ),
@@ -150,12 +146,7 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(context.tr(L10nKeys.createFolder),
-                            style: TextStyle(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w700,
-                                color: widget.isDark
-                                    ? Colors.white
-                                    : Colors.black)),
+                            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: widget.isDark ? Colors.white : Colors.black)),
                         const SizedBox(height: 10),
                         Row(
                           children: [
@@ -165,14 +156,9 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
                                 autofocus: true,
                                 decoration: InputDecoration(
                                   hintText: context.tr(L10nKeys.folderNameHint),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 10),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                 ),
-                                style: TextStyle(
-                                    fontSize: 13.5,
-                                    color: widget.isDark
-                                        ? Colors.white
-                                        : Colors.black),
+                                style: TextStyle(fontSize: 13.5, color: widget.isDark ? Colors.white : Colors.black),
                                 onSubmitted: (_) => _submitCreateFolder(),
                               ),
                             ),
@@ -187,20 +173,14 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
                             ),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    widget.isDark ? Colors.white : Colors.black,
-                                foregroundColor:
-                                    widget.isDark ? Colors.black : Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 10),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10)),
+                                backgroundColor: widget.isDark ? Colors.white : Colors.black,
+                                foregroundColor: widget.isDark ? Colors.black : Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
                               onPressed: _submitCreateFolder,
                               child: Text(context.tr(L10nKeys.create),
-                                  style: const TextStyle(
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w700)),
+                                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
                             ),
                           ],
                         ),
@@ -209,10 +189,7 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
                   ),
           ),
         ),
-
         const SliverToBoxAdapter(child: SizedBox(height: 10)),
-
-        // Folder List
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           sliver: SliverList(
@@ -239,17 +216,13 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
                           height: 44,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(10),
-                            color: widget.isDark
-                                ? const Color(0xFF161616)
-                                : const Color(0xFFE5E5E5),
+                            color: widget.isDark ? const Color(0xFF161616) : const Color(0xFFE5E5E5),
                           ),
                           child: Icon(
-                              folderName == 'Favorites'
-                                  ? Icons.favorite_rounded
-                                  : Icons.folder_rounded,
-                              size: 24,
-                              color:
-                                  widget.isDark ? Colors.white : Colors.black),
+                            folderName == 'Favorites' ? Icons.favorite_rounded : Icons.folder_rounded,
+                            size: 24,
+                            color: widget.isDark ? Colors.white : Colors.black,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -257,27 +230,16 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(folderName == 'Favorites' ? context.tr(L10nKeys.favorites) : folderName,
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: widget.isDark
-                                          ? Colors.white
-                                          : Colors.black)),
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: widget.isDark ? Colors.white : Colors.black)),
                               Text(
-                                  context.tr(L10nKeys.tracksLongPressDelete, {'count': folderSongs.length.toString()}),
-                                  style: TextStyle(
-                                      fontSize: 11,
-                                      color: widget.isDark
-                                          ? Colors.white54
-                                          : Colors.black54)),
+                                context.tr(L10nKeys.tracksLongPressDelete, {'count': folderSongs.length.toString()}),
+                                style: TextStyle(fontSize: 11, color: widget.isDark ? Colors.white54 : Colors.black54),
+                              ),
                             ],
                           ),
                         ),
                         Icon(Icons.arrow_forward_ios_rounded,
-                            size: 14,
-                            color: widget.isDark
-                                ? Colors.white38
-                                : Colors.black38),
+                            size: 14, color: widget.isDark ? Colors.white38 : Colors.black38),
                       ],
                     ),
                   ),
@@ -290,5 +252,4 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab> {
       ],
     );
   }
-
 }

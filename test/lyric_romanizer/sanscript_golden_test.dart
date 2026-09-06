@@ -236,9 +236,14 @@ void main() {
     });
 
     test('unsupported script paths return the input unchanged', () {
-      expect(x('namaste', SanscriptEngine.itrans, deva), 'namaste');
-      expect(x('devanagari', deva, SanscriptEngine.iast), 'devanagari');
-      expect(x('x', SanscriptEngine.hk, SanscriptEngine.itrans), 'x');
+      expect(x('namaste', 'unsupported_script', deva), 'namaste');
+      expect(x('devanagari', deva, 'klingon'), 'devanagari');
+      expect(x('x', 'unknown_source', 'unknown_target'), 'x');
+    });
+
+    test('itrans and iast Romanization schemes convert accurately', () {
+      expect(x('namaste', SanscriptEngine.itrans, deva), 'नमस्ते');
+      expect(x('दिल', deva, SanscriptEngine.iast), 'dila');
     });
 
     test('unknown script name is a no-op', () {

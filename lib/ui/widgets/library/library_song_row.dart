@@ -162,23 +162,27 @@ class LibrarySongRow extends ConsumerWidget {
                     ref
                         .read(downloadingSongsProvider.notifier)
                         .update((set) => {...set, s.id});
-                    final dl = await MusicService.downloadTrack(s);
-                    if (dl != null) {
-                      ref
-                          .read(musicRepositoryProvider)
-                          .addDownloadedSong(dl);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Downloaded "${s.title}"'),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
+                    try {
+                      final dl = await MusicService.downloadTrack(s);
+                      if (dl != null) {
+                        ref
+                            .read(musicRepositoryProvider)
+                            .addDownloadedSong(dl);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Downloaded "${s.title}"'),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
                       }
+                    } catch (_) {
+                    } finally {
+                      ref
+                          .read(downloadingSongsProvider.notifier)
+                          .update((set) => {...set}..remove(s.id));
                     }
-                    ref
-                        .read(downloadingSongsProvider.notifier)
-                        .update((set) => {...set}..remove(s.id));
                   },
                 );
               },

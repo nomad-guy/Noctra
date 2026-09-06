@@ -35,6 +35,10 @@ class DevanagariTransliterationEngine {
           RegExp(r'^[\s\p{P}]+', unicode: true).stringMatch(token) ?? '';
       final trailing =
           RegExp(r'[\s\p{P}]+$', unicode: true).stringMatch(token) ?? '';
+      if (leading.length + trailing.length >= token.length) {
+        buffer.write(token);
+        continue;
+      }
       final core =
           token.substring(leading.length, token.length - trailing.length);
       buffer.write(leading);

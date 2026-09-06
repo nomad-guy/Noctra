@@ -3,7 +3,7 @@ import 'dart:io';
 import '../../data/models/migration_models.dart';
 import '../../data/models/song_model.dart';
 import '../../data/repositories/music_repository.dart';
-import '../metadata/artist_metadata_service.dart';
+import '../metadata/song_artwork_resolver.dart';
 import 'library_importers.dart';
 import 'track_matcher.dart';
 
@@ -123,20 +123,23 @@ class LibraryRefreshService {
       int updatedMetadata = 0;
       int updatedArtwork = 0;
 
-      for (final song in [...repo.favorites, ...repo.downloads]) {
+      final allSongs = <Song>[
+        ...repo.favorites,
+        ...repo.downloads,
+        for (final list in repo.customFolders.values) ...list,
+      ];
+      final seenIds = <String>{};
+      final uniqueSongs = allSongs.where((s) => seenIds.add(s.id)).toList();
+
+      for (final song in uniqueSongs) {
         if (song.artworkUrl == null || song.artworkUrl!.isEmpty) {
           try {
-            final artistMeta =
-                await ArtistMetadataService.fetchArtistInfo(song.artist);
-            if (artistMeta.imageUrl != null &&
-                artistMeta.imageUrl!.isNotEmpty) {
-              final updated = song.copyWith(artworkUrl: artistMeta.imageUrl);
-              if (repo.isFavorite(song.id) ||
-                  repo.downloads.any((d) => d.id == song.id)) {
-                repo.updateSongMetadata(updated);
-                updatedArtwork++;
-                updatedMetadata++;
-              }
+            final art = await SongArtworkResolver.resolveArtwork(song);
+            if (art != null && art.isNotEmpty) {
+              final updated = song.copyWith(artworkUrl: art);
+              repo.updateSongMetadata(updated);
+              updatedArtwork++;
+              updatedMetadata++;
             }
           } catch (_) {}
         }

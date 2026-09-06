@@ -273,6 +273,7 @@ const Map<String, String> urduLocale = {
   'loop_all': 'لوپ: سبھی',
   'loop_one': 'لوپ: ایک',
   'loop_off': 'لوپ: بند',
-  'organize_playlists': 'ٹریکس کو حسب ضرورت پلے لسٹس میں ترتیب دیں',
-  'tracks_long_press_delete': '{count} ٹریکس • حذف کرنے کے لیے دیر تک دبائیں',
+  'organize_playlists': 'کسٹم پلے لسٹس میں گانے ترتیب دیں',
+  'tracks_long_press_delete': '{count} گانے • حذف کرنے کے لیے دیر تک دبائیں',
+  'folder_empty': 'اس فولڈر میں ابھی کوئی گانا نہیں ہے۔',
 };

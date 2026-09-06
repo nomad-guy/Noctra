@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/song_model.dart';
 import '../../../providers/app_providers.dart';
+import '../../../services/metadata/song_artwork_resolver.dart';
 import '../../../services/migration/importers/url_playlist_importer.dart';
 import '../../../shared/widgets/glass_card.dart';
 
@@ -11,9 +12,9 @@ class UrlImportSheet extends ConsumerStatefulWidget {
 
   const UrlImportSheet({super.key, required this.isDark});
 
-  static void show(BuildContext context, bool isDark) {
+  static Future<bool?> show(BuildContext context, bool isDark) {
     HapticFeedback.mediumImpact();
-    showModalBottomSheet(
+    return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -73,22 +74,36 @@ class _UrlImportSheetState extends ConsumerState<UrlImportSheet> {
 
       for (int i = 0; i < playlist.tracks.length; i++) {
         final t = playlist.tracks[i];
-        final id =
-            'import_${t.title.toLowerCase().hashCode}_${t.artist.toLowerCase().hashCode}_$i';
+        final id = (t.sourceId != null &&
+                t.sourceId!.length == 11 &&
+                !t.sourceId!.contains('_'))
+            ? t.sourceId!
+            : 'import_${t.title.toLowerCase().hashCode}_${t.artist.toLowerCase().hashCode}_$i';
         final song = Song(
           id: id,
           title: t.title,
           artist: t.artist,
           album: folderName,
-          duration: t.duration ?? const Duration(seconds: 210),
+          artworkUrl: t.artworkUrl ??
+              ((t.sourceId != null && t.sourceId!.length == 11)
+                  ? 'https://i.ytimg.com/vi/${t.sourceId}/hqdefault.jpg'
+                  : null),
+          duration: t.duration ?? Duration.zero,
           genre: playlist.source,
         );
         repo.addSongToFolder(folderName, song);
+        if (song.artworkUrl == null || song.artworkUrl!.isEmpty) {
+          SongArtworkResolver.resolveArtwork(song).then((art) {
+            if (art != null && art.isNotEmpty) {
+              repo.updateSongMetadata(song.copyWith(artworkUrl: art));
+            }
+          }).catchError((_) {});
+        }
       }
 
       HapticFeedback.lightImpact();
       if (mounted) {
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(

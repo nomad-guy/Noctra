@@ -6,6 +6,7 @@ class NormalizedTrack {
   final String artist;
   final String? album;
   final String? albumArtist;
+  final String? artworkUrl;
   final Duration? duration;
   final String? releaseDate;
   final String? isrc;
@@ -20,6 +21,7 @@ class NormalizedTrack {
     required this.artist,
     this.album,
     this.albumArtist,
+    this.artworkUrl,
     this.duration,
     this.releaseDate,
     this.isrc,
@@ -31,12 +33,13 @@ class NormalizedTrack {
     this.originalMetadata = const {},
   });
 
-  NormalizedTrack copyWith({String? title, String? artist, String? album, String? source}) {
+  NormalizedTrack copyWith({String? title, String? artist, String? album, String? source, String? artworkUrl}) {
     return NormalizedTrack(
       title: title ?? this.title,
       artist: artist ?? this.artist,
       album: album ?? this.album,
       albumArtist: albumArtist,
+      artworkUrl: artworkUrl ?? this.artworkUrl,
       duration: duration,
       releaseDate: releaseDate,
       isrc: isrc,

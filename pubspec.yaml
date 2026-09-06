@@ -2,7 +2,7 @@ name: noctra
 description: "Authentication-less on-device agentic music player with dual Noir themes."
 publish_to: 'none'
 
-version: 1.0.2+13002
+version: 1.0.3+17005
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -25,6 +25,7 @@ dependencies:
   crypto: ^3.0.6
   package_info_plus: ^10.2.1
   cryptography: 2.7.0
+  indic_transliteration_dart: ^2.3.84
 
 dev_dependencies:
   flutter_test:

@@ -273,6 +273,7 @@ const Map<String, String> punjabiLocale = {
   'loop_all': 'ਲੂਪ: ਸਾਰੇ',
   'loop_one': 'ਲੂਪ: ਇੱਕ',
   'loop_off': 'ਲੂਪ: ਬੰਦ',
-  'organize_playlists': 'ਟਰੈਕਾਂ ਨੂੰ ਕਸਟਮ ਪਲੇਲਿਸਟਾਂ ਵਿੱਚ ਸੰਭਾਲੋ',
-  'tracks_long_press_delete': '{count} ਟਰੈਕ • ਹਟਾਉਣ ਲਈ ਦਬਾ ਕੇ ਰੱਖੋ',
+  'organize_playlists': 'ਕਸਟਮ ਪਲੇਲਿਸਟਾਂ ਵਿੱਚ ਟਰੈਕਾਂ ਨੂੰ ਸੰਗਠਿਤ ਕਰੋ',
+  'tracks_long_press_delete': '{count} ਟਰੈਕ • ਮਿਟਾਉਣ ਲਈ ਦੇਰ ਤੱਕ ਦਬਾਓ',
+  'folder_empty': 'ਇਸ ਫੋਲਡਰ ਵਿੱਚ ਅਜੇ ਕੋਈ ਟਰੈਕ ਨਹੀਂ ਹੈ।',
 };

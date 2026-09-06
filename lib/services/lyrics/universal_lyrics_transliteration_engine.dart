@@ -143,19 +143,85 @@ class UniversalLyricsTransliterationEngine {
       return romanText;
     }
 
-    if (targetScript == 'devanagari') {
-      if (sourceScript == LyricScript.devanagari) return clean;
-      if (sourceScript == LyricScript.bengali) {
-        return SanscriptEngine.t(
+    // Determine canonical Devanagari representation for Indic routing
+    String canonicalDeva;
+    switch (sourceScript) {
+      case LyricScript.devanagari:
+        canonicalDeva = clean;
+        break;
+      case LyricScript.bengali:
+        canonicalDeva = SanscriptEngine.t(
             clean, SanscriptEngine.bengali, SanscriptEngine.devanagari);
-      }
-      if (sourceScript == LyricScript.gurmukhi) {
-        return SanscriptEngine.t(
+        break;
+      case LyricScript.gurmukhi:
+        canonicalDeva = SanscriptEngine.t(
             clean, SanscriptEngine.gurmukhi, SanscriptEngine.devanagari);
-      }
-      return DevanagariTransliterationService.toDevanagari(romanText);
+        break;
+      case LyricScript.gujarati:
+        canonicalDeva = SanscriptEngine.t(
+            clean, SanscriptEngine.gujarati, SanscriptEngine.devanagari);
+        break;
+      case LyricScript.telugu:
+        canonicalDeva = SanscriptEngine.t(
+            clean, SanscriptEngine.telugu, SanscriptEngine.devanagari);
+        break;
+      case LyricScript.tamil:
+        canonicalDeva = SanscriptEngine.t(
+            clean, SanscriptEngine.tamil, SanscriptEngine.devanagari);
+        break;
+      case LyricScript.kannada:
+        canonicalDeva = SanscriptEngine.t(
+            clean, SanscriptEngine.kannada, SanscriptEngine.devanagari);
+        break;
+      case LyricScript.malayalam:
+        canonicalDeva = SanscriptEngine.t(
+            clean, SanscriptEngine.malayalam, SanscriptEngine.devanagari);
+        break;
+      case LyricScript.odia:
+        canonicalDeva = SanscriptEngine.t(
+            clean, SanscriptEngine.odia, SanscriptEngine.devanagari);
+        break;
+      default:
+        canonicalDeva =
+            DevanagariTransliterationService.toDevanagari(romanText);
+        break;
     }
 
-    return romanText;
+    switch (targetScript) {
+      case 'devanagari':
+        return canonicalDeva;
+      case 'gurmukhi':
+        return SanscriptEngine.t(
+            canonicalDeva, SanscriptEngine.devanagari, SanscriptEngine.gurmukhi);
+      case 'urdu':
+        return SanscriptEngine.t(
+            canonicalDeva, SanscriptEngine.devanagari, SanscriptEngine.urdu);
+      case 'bengali':
+        return SanscriptEngine.t(
+            canonicalDeva, SanscriptEngine.devanagari, SanscriptEngine.bengali);
+      case 'tamil':
+        return SanscriptEngine.t(
+            canonicalDeva, SanscriptEngine.devanagari, SanscriptEngine.tamil);
+      case 'telugu':
+        return SanscriptEngine.t(
+            canonicalDeva, SanscriptEngine.devanagari, SanscriptEngine.telugu);
+      case 'kannada':
+        return SanscriptEngine.t(
+            canonicalDeva, SanscriptEngine.devanagari, SanscriptEngine.kannada);
+      case 'malayalam':
+        return SanscriptEngine.t(
+            canonicalDeva, SanscriptEngine.devanagari, SanscriptEngine.malayalam);
+      case 'gujarati':
+        return SanscriptEngine.t(
+            canonicalDeva, SanscriptEngine.devanagari, SanscriptEngine.gujarati);
+      case 'odia':
+        return SanscriptEngine.t(
+            canonicalDeva, SanscriptEngine.devanagari, SanscriptEngine.odia);
+      case 'iast':
+        return SanscriptEngine.t(
+            canonicalDeva, SanscriptEngine.devanagari, SanscriptEngine.iast);
+      default:
+        return romanText;
+    }
   }
 }

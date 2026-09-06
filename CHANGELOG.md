@@ -1,5 +1,32 @@
 # Changelog
 
+## v1.0.3 (2026-09-06)
+
+### Dynamic Artwork Resolution, AksharaEngine & Universal Playback
+
+- **Dynamic High-Res Artwork Resolution & Library Enrichment**:
+  - Implemented `SongArtworkResolver` with a multi-tier fallback cascade: direct YouTube video thumbnail mapping (<0.1ms), bounded LRU in-memory cache, Apple Music / iTunes Store Search API (official 600x600 HD cover art), Deezer Track Search API (500x500 album art), and dynamic artist photo fallback.
+  - Added playback dynamic artwork enrichment in `PlayerSessionLoaderMixin`: tracks playing without album art automatically resolve high-res cover art in the background, updating Now Playing visualizers (`AmbientGlowArt`), mini-player, lock-screen media item, and local repository.
+  - InnerTube stream resolver now automatically caches discovered YouTube video thumbnails for resolved tracks.
+  - Added post-frame background artwork enrichment in `FolderDetailView` and `UrlImportSheet` for imported playlists and custom folders.
+  - Upgraded `MusicRepository.updateSongMetadata` to match by both song ID and normalized `title + artist`, updating custom folders, favorites, downloads, and recently played while backfilling track durations.
+  - Upgraded `LibraryRefreshService.refresh()` to traverse custom folders alongside favorites and downloads.
+- **AksharaEngine & Canonical Phonetic Matrix Transliteration**:
+  - Integrated `indic_transliteration_dart: ^2.3.84` and built offline, zero-dependency `AksharaEngine` with canonical phonetic matrix covering Devanagari, Gurmukhi, Urdu, and Latin/IAST scripts.
+  - Added deterministic finite-state transducer (FST) for Devanagari-to-Urdu and Urdu-to-Devanagari transliteration with cursive glyph joining and vowelization.
+  - Converted `AksharamukhaService` to 100% offline synchronous conversion (<0.15ms execution), removing network latency and blocking timeouts.
+  - Multi-target lyrics transliteration routing across Gurmukhi, Urdu, Bengali, Tamil, Telugu, Kannada, Malayalam, Gujarati, Odia, IAST, and Romanized Latin.
+- **Navigation Touch Fixes & AI Radio Guard**:
+  - Replaced `FadeIndexedStack` with lazy-mounted `IndexedStack` to eliminate pointer capture bugs when switching between tabs.
+  - Resolved AI Radio duplicate seed loop where the active track was returned at the top of radio recommendations.
+  - Replaced inline folder swaps with standard route navigation (`Navigator.push`) and docked mini-players in `FolderDetailView`.
+  - Removed nested conflicting `PopScope(canPop: false)` from library folders to eliminate touch input swallow.
+- **Universal Playlist Import & Resolver Hardening**:
+  - Extracted full tracklists from Spotify embed payloads via unescaped JSON delimiters.
+  - Added support for modern YouTube `ytInitialData` containing `lockupViewModel` elements alongside legacy `playlistVideoRenderer`.
+  - Extracted direct 11-character YouTube video IDs during import for zero-latency, zero-mismatch audio streaming.
+  - Enhanced `TrackMatchingGuard` with containment ratio matching (`containment >= 0.75`) and generic artist filtering (`Various Artists`, `Unknown`) so version suffixes and multi-artist collaborations resolve streams accurately.
+
 ## v1.0.2 (2026-09-05)
 
 ### Features & Output Routing Hardening

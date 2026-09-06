@@ -251,17 +251,23 @@ mixin MusicRepositoryAICurationMixin on ChangeNotifier {
   }
 
   Future<List<Song>> generateAIRadioForSong(Song seed) async {
+    bool isDuplicateSeed(Song s) {
+      if (s.id == seed.id) return true;
+      final a = s.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      final b = seed.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+      return a.isNotEmpty && (a == b || a.contains(b) || b.contains(a));
+    }
+
     try {
-      final results = await MusicService.search('${seed.artist} ${seed.title}');
-      if (results.isNotEmpty) {
-        final unique = results.where((s) => s.id != seed.id).toList();
-        return [seed, ...unique];
-      }
-      final artistFeed = await MusicService.search('${seed.artist} best songs');
-      if (artistFeed.isNotEmpty) {
-        return [seed, ...artistFeed.where((s) => s.id != seed.id)];
-      }
+      final radio = await MusicServiceCharts.fetchSimilarRadioQueue(seed);
+      final filtered = radio.where((s) => !isDuplicateSeed(s)).toList();
+      if (filtered.isNotEmpty) return filtered;
+
+      final artistFeed = await MusicService.search('${seed.artist} mix');
+      final uniqueArtist =
+          artistFeed.where((s) => !isDuplicateSeed(s)).toList();
+      if (uniqueArtist.isNotEmpty) return uniqueArtist;
     } catch (_) {}
-    return [seed, ..._localLibrary.where((s) => s.id != seed.id)];
+    return _localLibrary.where((s) => !isDuplicateSeed(s)).toList();
   }
 }

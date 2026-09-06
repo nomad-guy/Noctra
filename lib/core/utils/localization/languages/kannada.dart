@@ -275,4 +275,5 @@ const Map<String, String> kannadaLocale = {
   'loop_off': 'ಲೂಪ್: ಆಫ್',
   'organize_playlists': 'ಕಸ್ಟಮ್ ಪ್ಲೇಪಟ್ಟಿಗಳಲ್ಲಿ ಹಾಡುಗಳನ್ನು ಆಯೋಜಿಸಿ',
   'tracks_long_press_delete': '{count} ಹಾಡುಗಳು • ಅಳಿಸಲು ದೀರ್ಘವಾಗಿ ಒತ್ತಿರಿ',
+  'folder_empty': 'ಈ ಫೋಲ್ಡರ್‌ನಲ್ಲಿ ಇನ್ನೂ ಯಾವುದೇ ಹಾಡುಗಳಿಲ್ಲ.',
 };

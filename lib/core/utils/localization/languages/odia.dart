@@ -273,6 +273,7 @@ const Map<String, String> odiaLocale = {
   'loop_all': 'ଲୁପ୍: ସମସ୍ତ',
   'loop_one': 'ଲୁପ୍: ଗୋଟିଏ',
   'loop_off': 'ଲୁପ୍: ବନ୍ଦ',
-  'organize_playlists': 'ଟ୍ରାକ୍‌ଗୁଡ଼ିକୁ କଷ୍ଟମ୍ ପ୍ଲେଲିଷ୍ଟରେ ସଜାନ୍ତୁ',
-  'tracks_long_press_delete': '{count} ଟ୍ରାକ୍ • ହଟାଇବା ପାଇଁ ଦୀର୍ଘ ସମୟ ଦବାନ୍ତୁ',
+  'organize_playlists': 'କଷ୍ଟମ୍ ପ୍ଲେଲିଷ୍ଟରେ ଟ୍ରାକ୍ ବ୍ୟବସ୍ଥିତ କରନ୍ତୁ',
+  'tracks_long_press_delete': '{count} ଟ୍ରାକ୍ • ବିଲୋପ କରିବାକୁ ଦୀର୍ଘ ସମୟ ଦବାନ୍ତୁ',
+  'folder_empty': 'ଏହି ଫୋଲ୍ଡରରେ ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ଟ୍ରାକ୍ ନାହିଁ |',
 };

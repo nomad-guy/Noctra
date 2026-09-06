@@ -6,6 +6,7 @@ import 'package:noctra/data/repositories/music_repository.dart';
 import 'package:noctra/services/lyrics/devanagari_transliteration_service.dart';
 import 'package:noctra/services/lyrics/dynamic_lexicon.dart';
 import 'package:noctra/services/lyrics/romanized_translation_engine.dart';
+import 'package:noctra/services/lyrics/akshara_engine.dart';
 import 'package:noctra/services/lyrics/sanscript_engine.dart';
 import 'package:noctra/services/lyrics/indic_xlit_engine.dart';
 import 'package:noctra/services/lyrics/universal_lyrics_transliteration_engine.dart';
@@ -120,6 +121,46 @@ void main() {
     test('Converts Devanagari to Gurmukhi accurately', () {
       final gurmukhi = SanscriptEngine.t('दिल', SanscriptEngine.devanagari, SanscriptEngine.gurmukhi);
       expect(gurmukhi.isNotEmpty, isTrue);
+      expect(gurmukhi, contains('ਦਿਲ'));
+    });
+
+    test('Converts across Indic scripts using compiled SchemeMaps', () {
+      const text = 'तेरे बिना ज़िन्दगी से कोई शिकवा तो नहीं';
+      final gurmukhi = SanscriptEngine.t(text, SanscriptEngine.devanagari, SanscriptEngine.gurmukhi);
+      final bengali = SanscriptEngine.t(text, SanscriptEngine.devanagari, SanscriptEngine.bengali);
+      final tamil = SanscriptEngine.t(text, SanscriptEngine.devanagari, SanscriptEngine.tamil);
+      final telugu = SanscriptEngine.t(text, SanscriptEngine.devanagari, SanscriptEngine.telugu);
+      final iast = SanscriptEngine.t(text, SanscriptEngine.devanagari, SanscriptEngine.iast);
+
+      expect(gurmukhi, contains('ਤੇਰੇ'));
+      expect(bengali, contains('তেরে'));
+      expect(tamil, contains('தேரே'));
+      expect(telugu, contains('తేరే'));
+      expect(iast, contains('tere binā'));
+
+      // Bidirectional verification
+      final roundTripDeva = SanscriptEngine.t(gurmukhi, SanscriptEngine.gurmukhi, SanscriptEngine.devanagari);
+      expect(roundTripDeva, contains('तेरे बिना'));
+    });
+
+    test('Converts Devanagari to Urdu and Urdu to Devanagari', () {
+      final urdu = SanscriptEngine.t('तेरे दर पर सनम', SanscriptEngine.devanagari, SanscriptEngine.urdu);
+      expect(urdu.trim(), 'تیرے در پر سنم');
+
+      final deva = SanscriptEngine.t('تیرے در پر سنم', SanscriptEngine.urdu, SanscriptEngine.devanagari);
+      expect(deva.isNotEmpty, isTrue);
+    });
+
+    test('AksharaEngine canonical matrix converts Devanagari to Gurmukhi, IAST, and Urdu', () {
+      const lyricLine = 'तेरे दर पर सनम';
+      final gurmukhi = AksharaEngine.instance.convert(lyricLine, from: 'Devanagari', to: 'Gurmukhi');
+      expect(gurmukhi.trim(), 'ਤੇਰੇ ਦਰ ਪਰ ਸਨਮ');
+
+      final iast = AksharaEngine.instance.convert(lyricLine, from: 'Devanagari', to: 'IAST');
+      expect(iast.trim(), 'tere dar par sanam');
+
+      final urdu = AksharaEngine.instance.convert(lyricLine, from: 'Devanagari', to: 'Urdu');
+      expect(urdu.trim(), 'تیرے در پر سنم');
     });
 
     test('IndicXlit transliterates Romanized input to Hindi and Punjabi', () async {
@@ -174,6 +215,26 @@ void main() {
       expect(roman, isNot(contains('ਸਾਰੇ')));
       expect(devanagari, isNot(contains('ਸਾਰੇ')));
       expect(devanagari, contains('सा'));
+    });
+
+    test('Transliterates Devanagari lyrics to Gurmukhi and Urdu', () {
+      const line = 'तेरे बिना ज़िन्दगी';
+      final gurmukhi = UniversalLyricsTransliterationEngine.transliterateText(line, 'gurmukhi');
+      final urdu = UniversalLyricsTransliterationEngine.transliterateText(line, 'urdu');
+
+      expect(gurmukhi, contains('ਤੇਰੇ'));
+      expect(urdu, contains('تیرے'));
+    });
+
+    test('Transliterates Arabic/Urdu lyrics to Devanagari and Gurmukhi', () {
+      const line = 'مشک علی ظفر';
+      final devanagari = UniversalLyricsTransliterationEngine.transliterateText(line, 'devanagari');
+      final gurmukhi = UniversalLyricsTransliterationEngine.transliterateText(line, 'gurmukhi');
+
+      expect(devanagari.isNotEmpty, isTrue);
+      expect(devanagari, isNot(contains('مشک')));
+      expect(gurmukhi.isNotEmpty, isTrue);
+      expect(gurmukhi, isNot(contains('مشک')));
     });
   });
 

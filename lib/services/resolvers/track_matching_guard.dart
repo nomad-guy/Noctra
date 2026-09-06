@@ -96,10 +96,10 @@ class TrackMatchingGuard {
         artistMatched = true;
       }
     } else {
-      artistMatched = true; // No artist provided, skip artist penalty
+      artistMatched = true; // No artist provided or generic placeholder, skip penalty
     }
 
-    if (!artistMatched && targetArtist.trim().isNotEmpty) {
+    if (!artistMatched && primaryTargetArtist.isNotEmpty) {
       return 0.2; // Reject: different artist entirely (e.g. Lionel Richie vs Adele)
     }
 
@@ -116,6 +116,7 @@ class TrackMatchingGuard {
     double durationScore = 1.0;
     if (targetDuration != null &&
         targetDuration.inSeconds > 30 &&
+        targetDuration.inSeconds != 210 &&
         candidateDuration != null &&
         candidateDuration.inSeconds > 0) {
       final targetSec = targetDuration.inSeconds;
@@ -175,11 +176,23 @@ class TrackMatchingGuard {
     return found;
   }
 
+  static const _genericArtists = {
+    'various artists',
+    'various',
+    'unknown',
+    'unknown artist',
+    'youtube',
+    'spotify',
+    'va',
+  };
+
   static String _extractPrimaryArtist(String artist) {
     final cleaned = _normalizeForComparison(artist);
-    if (cleaned.isEmpty) return '';
+    if (cleaned.isEmpty || _genericArtists.contains(cleaned)) return '';
     final parts = cleaned.split(RegExp(r'\s*(?:,|&|feat\.?|ft\.?|vs\.?|\/)\s*'));
-    return parts.first.trim();
+    final primary = parts.first.trim();
+    if (_genericArtists.contains(primary)) return '';
+    return primary;
   }
 
   static String _normalizeForComparison(String input) {
@@ -218,9 +231,13 @@ class TrackMatchingGuard {
     final intersection = t1.intersection(t2).length;
     final union = t1.union(t2).length;
     final jaccard = union > 0 ? (intersection / union) : 0.0;
+    final containment = t1.isNotEmpty ? (intersection / t1.length) : 0.0;
 
     if (s1.contains(s2) || s2.contains(s1)) {
       return max(jaccard, 0.85);
+    }
+    if (containment >= 0.75) {
+      return max(jaccard, 0.80);
     }
 
     return jaccard;

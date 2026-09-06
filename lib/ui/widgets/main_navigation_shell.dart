@@ -9,7 +9,6 @@ import '../screens/ai_studio_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/library_screen.dart';
 import '../screens/search_screen.dart';
-import 'fade_indexed_stack.dart';
 import 'noir_mini_player.dart';
 import 'noir_sidebar.dart';
 
@@ -89,7 +88,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
         drawer: const NoirSidebar(),
         body: Stack(
           children: [
-            FadeIndexedStack(
+            IndexedStack(
               index: currentIndex,
               children: children,
             ),

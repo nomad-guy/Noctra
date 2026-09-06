@@ -171,9 +171,12 @@ mixin PlayerLifecycleMixin on AudioPlayerServiceBase {
           if (!identical(failedPlayer, _player)) {
             return;
           }
-          _recoveryAttemptsByEpoch[epoch] = attempts + 1;
-          CompositeStreamResolver.invalidateCache(active.id);
-          await _playSongInternal(active, initialPosition: _player.position);
+          final resumePos = (_player.duration != null &&
+                  _player.position.inSeconds > 0 &&
+                  _currentSong?.id == active.id)
+              ? _player.position
+              : Duration.zero;
+          await _playSongInternal(active, initialPosition: resumePos);
           _recoveryAttemptsByEpoch.remove(epoch);
         } finally {
           _recoveryInFlight = false;

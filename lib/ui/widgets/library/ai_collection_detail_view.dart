@@ -67,7 +67,11 @@ class _AiCollectionDetailViewState
   void initState() {
     super.initState();
     _tracks = List<Song>.of(widget.initialTracks);
-    if (_tracks.isEmpty) _load();
+    if (_tracks.isNotEmpty) {
+      _resolvedPool = List<Song>.of(widget.initialTracks);
+    } else {
+      _load();
+    }
   }
 
   /// Resolves the collection pool (initial open, retry). The source is
@@ -75,6 +79,7 @@ class _AiCollectionDetailViewState
   /// library already has matching tracks.
   Future<void> _load() async {
     if (_busy) return;
+    final loadEpoch = ++_epoch;
     setState(() {
       _busy = true;
       _error = null;
@@ -83,16 +88,15 @@ class _AiCollectionDetailViewState
       final loader = widget.loader ?? _defaultLoader;
       final result = await loader(widget.vibeKey,
           previousIds: const [], epoch: 0);
-      if (!mounted) return;
+      if (!mounted || loadEpoch != _epoch) return;
       setState(() {
         _resolvedPool = result;
         _tracks = result;
         _previousIds = const [];
-        _epoch = 0;
         _busy = false;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || loadEpoch != _epoch) return;
       setState(() {
         _busy = false;
         _error = 'Could not load this collection right now.';
@@ -143,7 +147,8 @@ class _AiCollectionDetailViewState
     final textSecondary = isDark ? Colors.white54 : Colors.black54;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor:
+          isDark ? const Color(0xFF070709) : const Color(0xFFFFFFFF),
       body: Stack(
         children: [
           SafeArea(

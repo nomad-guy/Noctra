@@ -145,7 +145,7 @@ class _AIRadioSheetState extends ConsumerState<AIRadioSheet> {
                   itemCount: tracks.length,
                   itemBuilder: (context, i) {
                     final song = tracks[i];
-                    final isSeed = i == 0;
+                    final isSeed = song.id == widget.seedSong.id;
                     final matchScore = repo.computeMatchScore(song);
 
                     return Padding(

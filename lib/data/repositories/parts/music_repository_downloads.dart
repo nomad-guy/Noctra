@@ -8,6 +8,7 @@ mixin MusicRepositoryDownloadsMixin on ChangeNotifier {
   List<Song> get _downloads;
   Set<String> get _downloadIds;
   List<Song> get _favorites;
+  List<Song> get _recentlyPlayed;
   Map<String, List<Song>> get _customFolders;
   Future<void>? get _initFuture;
   void Function(Song)? get onSongDownloadedCallback;
@@ -53,14 +54,25 @@ mixin MusicRepositoryDownloadsMixin on ChangeNotifier {
   }
 
   void updateSongMetadata(Song updatedSong) {
+    final cleanT = updatedSong.title.trim().toLowerCase();
+    final cleanA = updatedSong.artist.trim().toLowerCase();
+    bool matches(Song s) =>
+        s.id == updatedSong.id ||
+        (cleanT.isNotEmpty &&
+            s.title.trim().toLowerCase() == cleanT &&
+            s.artist.trim().toLowerCase() == cleanA);
+
     var favTouched = false;
     for (var i = 0; i < _favorites.length; i++) {
-      if (_favorites[i].id == updatedSong.id) {
+      if (matches(_favorites[i])) {
         _favorites[i] = _favorites[i].copyWith(
           title: updatedSong.title,
           artist: updatedSong.artist,
           album: updatedSong.album,
-          artworkUrl: updatedSong.artworkUrl,
+          artworkUrl: updatedSong.artworkUrl ?? _favorites[i].artworkUrl,
+          duration: updatedSong.duration > Duration.zero
+              ? updatedSong.duration
+              : _favorites[i].duration,
           genre: updatedSong.genre,
         );
         favTouched = true;
@@ -68,12 +80,15 @@ mixin MusicRepositoryDownloadsMixin on ChangeNotifier {
     }
     var dlTouched = false;
     for (var i = 0; i < _downloads.length; i++) {
-      if (_downloads[i].id == updatedSong.id) {
+      if (matches(_downloads[i])) {
         _downloads[i] = _downloads[i].copyWith(
           title: updatedSong.title,
           artist: updatedSong.artist,
           album: updatedSong.album,
-          artworkUrl: updatedSong.artworkUrl,
+          artworkUrl: updatedSong.artworkUrl ?? _downloads[i].artworkUrl,
+          duration: updatedSong.duration > Duration.zero
+              ? updatedSong.duration
+              : _downloads[i].duration,
           genre: updatedSong.genre,
         );
         dlTouched = true;
@@ -82,22 +97,45 @@ mixin MusicRepositoryDownloadsMixin on ChangeNotifier {
     var folderTouched = false;
     _customFolders.forEach((_, songs) {
       for (var i = 0; i < songs.length; i++) {
-        if (songs[i].id == updatedSong.id) {
+        if (matches(songs[i])) {
           songs[i] = songs[i].copyWith(
             title: updatedSong.title,
             artist: updatedSong.artist,
             album: updatedSong.album,
-            artworkUrl: updatedSong.artworkUrl,
+            artworkUrl: updatedSong.artworkUrl ?? songs[i].artworkUrl,
+            duration: updatedSong.duration > Duration.zero
+                ? updatedSong.duration
+                : songs[i].duration,
             genre: updatedSong.genre,
           );
           folderTouched = true;
         }
       }
     });
+    var recentsTouched = false;
+    for (var i = 0; i < _recentlyPlayed.length; i++) {
+      if (matches(_recentlyPlayed[i])) {
+        _recentlyPlayed[i] = _recentlyPlayed[i].copyWith(
+          title: updatedSong.title,
+          artist: updatedSong.artist,
+          album: updatedSong.album,
+          artworkUrl: updatedSong.artworkUrl ?? _recentlyPlayed[i].artworkUrl,
+          duration: updatedSong.duration > Duration.zero
+              ? updatedSong.duration
+              : _recentlyPlayed[i].duration,
+          genre: updatedSong.genre,
+        );
+        recentsTouched = true;
+      }
+    }
     if (favTouched) NoctraLocalDatabase().saveFavorites(_favorites);
     if (dlTouched) NoctraLocalDatabase().saveDownloads(_downloads);
     if (folderTouched) NoctraLocalDatabase().saveCustomFolders(_customFolders);
-    if (favTouched || dlTouched || folderTouched) notifyListeners();
+    if (recentsTouched) NoctraLocalDatabase().saveRecent(_recentlyPlayed);
+    if (favTouched || dlTouched || folderTouched || recentsTouched) {
+      _mutationGeneration++;
+      notifyListeners();
+    }
   }
 
   Future<void> removeDownloadedSong(String songId,

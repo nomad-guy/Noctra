@@ -213,14 +213,22 @@ class MusicRepository extends ChangeNotifier
     notifyListeners();
   }
 
-  void _persistState() {
+  Future<void> _persistState() async {
     final db = NoctraLocalDatabase();
-    db.saveFavorites(_favorites);
-    db.saveDownloads(_downloads);
-    db.saveRecent(_recentlyPlayed);
-    db.saveCustomFolders(_customFolders);
-    db.saveTasteVector(_userTasteVector);
+    try {
+      await Future.wait([
+        db.saveFavorites(_favorites),
+        db.saveDownloads(_downloads),
+        db.saveRecent(_recentlyPlayed),
+        db.saveCustomFolders(_customFolders),
+        db.saveTasteVector(_userTasteVector),
+      ]);
+    } catch (e) {
+      NoctraLogger.w('Failed to persist music repository state', e);
+    }
   }
+
+  Future<void> flushPersistence() => _persistState();
 
   bool isDownloaded(String songId) => _downloadIds.contains(songId);
 

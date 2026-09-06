@@ -1,24 +1,32 @@
-import 'package:http/http.dart' as http;
+import 'akshara_engine.dart';
 import 'sanscript_engine.dart';
-import '../../core/utils/noctra_logger.dart';
 
-/// AksharamukhaService: Script conversion engine supporting 120+ scripts
-/// with full orthographic conventions (Devanagari, Gurmukhi, Roman/IAST, Bengali, etc.).
+/// AksharamukhaService: Fully offline, zero-latency script conversion engine
+/// backed by [AksharaEngine] canonical phonetic matrix and [SanscriptEngine].
 class AksharamukhaService {
   AksharamukhaService._();
 
   static final Map<String, String> _cache = {};
-  static const int _maxCacheSize = 250;
-  static const String _endpoint = 'https://aksharamukha-plugin.appspot.com/api/public';
+  static const int _maxCacheSize = 500;
 
-  /// Converts [text] from [sourceScript] to [targetScript].
-  /// Uses offline [SanscriptEngine] as immediate baseline and falls back gracefully.
+  /// Converts [text] from [sourceScript] to [targetScript] with zero network latency.
   static Future<String> convert(
     String text, {
     required String sourceScript,
     required String targetScript,
   }) async {
-    if (text.trim().isEmpty || sourceScript.toLowerCase() == targetScript.toLowerCase()) {
+    return convertSync(text,
+        sourceScript: sourceScript, targetScript: targetScript);
+  }
+
+  /// Synchronous zero-allocation conversion suitable for real-time 60fps lyric rendering.
+  static String convertSync(
+    String text, {
+    required String sourceScript,
+    required String targetScript,
+  }) {
+    if (text.trim().isEmpty ||
+        sourceScript.toLowerCase() == targetScript.toLowerCase()) {
       return text;
     }
 
@@ -27,23 +35,17 @@ class AksharamukhaService {
       return _cache[cacheKey]!;
     }
 
-    // Try online Aksharamukha API for precise orthographic nuance
-    try {
-      final uri = Uri.parse('$_endpoint?source=$sourceScript&target=$targetScript&text=${Uri.encodeComponent(text)}');
-      final resp = await http.get(uri).timeout(const Duration(milliseconds: 1800));
-      if (resp.statusCode == 200 && resp.body.trim().isNotEmpty) {
-        final result = resp.body.trim();
-        _saveToCache(cacheKey, result);
-        return result;
-      }
-    } catch (e) {
-      NoctraLogger.d('Aksharamukha API fallback to local SanscriptEngine: $e');
+    String result;
+    if (AksharaEngine.instance.supports(sourceScript) &&
+        AksharaEngine.instance.supports(targetScript)) {
+      result = AksharaEngine.instance
+          .convert(text, from: sourceScript, to: targetScript);
+    } else {
+      result = SanscriptEngine.t(text, sourceScript, targetScript);
     }
 
-    // High-speed zero-latency local fallback
-    final localResult = SanscriptEngine.t(text, sourceScript, targetScript);
-    _saveToCache(cacheKey, localResult);
-    return localResult;
+    _saveToCache(cacheKey, result);
+    return result;
   }
 
   static void _saveToCache(String key, String value) {
