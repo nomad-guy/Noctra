@@ -11,6 +11,15 @@ import '../../../services/ai/ai_mix_track_source.dart';
 import '../noir_mini_player_dock.dart';
 import 'ai_collection_action_bar.dart';
 import 'export_playlist_sheet.dart';
+import 'folder_recommendations_footer.dart';
+
+enum _FolderSortOption {
+  defaultOrder,
+  titleAZ,
+  artistAZ,
+  durationLongest,
+  durationShortest,
+}
 
 /// Full-screen track list shown when a folder (or Favorites) is opened from
 /// [LibraryFoldersTab]. Pushed over the tabbed shell, owns its own back
@@ -36,12 +45,54 @@ class FolderDetailView extends ConsumerStatefulWidget {
 }
 
 class _FolderDetailViewState extends ConsumerState<FolderDetailView> {
+  bool _showSearch = false;
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+  _FolderSortOption _sortOption = _FolderSortOption.defaultOrder;
+
   @override
   void initState() {
     super.initState();
+    _searchCtrl.addListener(() {
+      final q = _searchCtrl.text.trim();
+      if (q != _searchQuery) {
+        setState(() => _searchQuery = q);
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _enrichMissingArtwork();
     });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<Song> _getDisplaySongs(List<Song> source) {
+    var list = List<Song>.of(source);
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      list = list.where((s) => s.title.toLowerCase().contains(q) || s.artist.toLowerCase().contains(q)).toList();
+    }
+    switch (_sortOption) {
+      case _FolderSortOption.titleAZ:
+        list.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+        break;
+      case _FolderSortOption.artistAZ:
+        list.sort((a, b) => a.artist.toLowerCase().compareTo(b.artist.toLowerCase()));
+        break;
+      case _FolderSortOption.durationLongest:
+        list.sort((a, b) => b.duration.compareTo(a.duration));
+        break;
+      case _FolderSortOption.durationShortest:
+        list.sort((a, b) => a.duration.compareTo(b.duration));
+        break;
+      case _FolderSortOption.defaultOrder:
+        break;
+    }
+    return list;
   }
 
   void _enrichMissingArtwork() {
@@ -113,6 +164,8 @@ class _FolderDetailViewState extends ConsumerState<FolderDetailView> {
         : (repo.customFolders[widget.folderName] ?? widget.songs);
     final isDark = widget.isDark;
 
+    final displaySongs = _getDisplaySongs(currentSongs);
+
     return Scaffold(
       backgroundColor:
           isDark ? const Color(0xFF070709) : const Color(0xFFFFFFFF),
@@ -147,16 +200,107 @@ class _FolderDetailViewState extends ConsumerState<FolderDetailView> {
                           ),
                         ),
                       ),
+                      IconButton(
+                        icon: Icon(
+                          _showSearch ? Icons.search_off_rounded : Icons.search_rounded,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                          size: 20,
+                        ),
+                        tooltip: 'Search tracks in playlist',
+                        onPressed: () {
+                          setState(() {
+                            _showSearch = !_showSearch;
+                            if (!_showSearch) {
+                              _searchCtrl.clear();
+                              _searchQuery = '';
+                            }
+                          });
+                        },
+                      ),
+                      PopupMenuButton<_FolderSortOption>(
+                        icon: Icon(
+                          Icons.sort_rounded,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                          size: 20,
+                        ),
+                        tooltip: 'Sort playlist',
+                        color: isDark ? const Color(0xFF1E1E24) : Colors.white,
+                        onSelected: (opt) => setState(() => _sortOption = opt),
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: _FolderSortOption.defaultOrder,
+                            child: Text('Default (Added Order)'),
+                          ),
+                          const PopupMenuItem(
+                            value: _FolderSortOption.titleAZ,
+                            child: Text('Title (A to Z)'),
+                          ),
+                          const PopupMenuItem(
+                            value: _FolderSortOption.artistAZ,
+                            child: Text('Artist (A to Z)'),
+                          ),
+                          const PopupMenuItem(
+                            value: _FolderSortOption.durationLongest,
+                            child: Text('Duration (Longest first)'),
+                          ),
+                          const PopupMenuItem(
+                            value: _FolderSortOption.durationShortest,
+                            child: Text('Duration (Shortest first)'),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
+                if (_showSearch)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: Container(
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white10 : Colors.black12,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: TextField(
+                        controller: _searchCtrl,
+                        autofocus: true,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Filter in "${widget.folderName}"...',
+                          hintStyle: TextStyle(
+                            fontSize: 13,
+                            color: isDark ? Colors.white38 : Colors.black38,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            size: 18,
+                            color: isDark ? Colors.white38 : Colors.black38,
+                          ),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.close, size: 16),
+                                  onPressed: () {
+                                    _searchCtrl.clear();
+                                    setState(() => _searchQuery = '');
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                      ),
+                    ),
+                  ),
                 AiCollectionActionBar(
                   isDark: isDark,
                   canRemix: currentSongs.length >= 2,
                   busy: false,
                   hasTracks: currentSongs.isNotEmpty,
-                  onPlayAll: () => _playAll(currentSongs),
-                  onShuffle: () => _shuffle(currentSongs),
+                  onPlayAll: () => _playAll(displaySongs),
+                  onShuffle: () => _shuffle(displaySongs),
                   onRemix: () => _remix(currentSongs),
                   onExport: () => _export(currentSongs),
                 ),
@@ -176,9 +320,16 @@ class _FolderDetailViewState extends ConsumerState<FolderDetailView> {
                       : ListView.builder(
                           physics: const BouncingScrollPhysics(),
                           padding: const EdgeInsets.fromLTRB(0, 0, 0, 160),
-                          itemCount: currentSongs.length,
+                          itemCount: displaySongs.length + 1,
                           itemBuilder: (context, i) {
-                            final s = currentSongs[i];
+                            if (i == displaySongs.length) {
+                              return FolderRecommendationsFooter(
+                                folderName: widget.folderName,
+                                playlistSongs: currentSongs,
+                                isDark: isDark,
+                              );
+                            }
+                            final s = displaySongs[i];
                             return ListTile(
                               leading: ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
@@ -235,7 +386,7 @@ class _FolderDetailViewState extends ConsumerState<FolderDetailView> {
                                   .read(audioPlayerServiceProvider)
                                   .playSong(
                                     s,
-                                    newQueue: currentSongs,
+                                    newQueue: displaySongs,
                                     queueIndex: i,
                                   ),
                             );

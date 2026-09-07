@@ -8,6 +8,7 @@ import '../../providers/app_providers.dart';
 import 'add_to_folder_sheet.dart';
 import 'ai_radio_sheet.dart';
 import 'share_story_card_sheet.dart';
+import 'song_credits_sheet.dart';
 
 /// Reusable song context menu bottom sheet.
 /// Shows song info + actions: Play Next, Add to Queue, Add to Folder, AI Radio.
@@ -162,6 +163,16 @@ class SongContextMenu extends ConsumerWidget {
                   backgroundColor: Colors.transparent,
                   builder: (_) => ShareStoryCardSheet(song: song),
                 );
+              },
+            ),
+            _menuTile(
+              context, isDark,
+              icon: Icons.info_outline_rounded,
+              title: 'Show Credits & Liner Notes',
+              subtitle: 'Performers, songwriters, and audio specs',
+              onTap: () {
+                Navigator.of(context).pop();
+                SongCreditsSheet.show(context, song);
               },
             ),
             const SizedBox(height: 8),

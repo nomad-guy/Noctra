@@ -16,6 +16,7 @@ class SleepTimerSheet extends ConsumerWidget {
     final audioPlayer = ref.watch(audioPlayerServiceProvider);
     final remainingStream = ref.watch(sleepTimerStreamProvider);
     final remaining = remainingStream.asData?.value ?? audioPlayer.sleepTimerRemainingMinutes;
+    final isEndOfTrack = audioPlayer.sleepTimerEndOfTrack;
 
     return Align(
       alignment: Alignment.bottomCenter,
@@ -70,13 +71,17 @@ class SleepTimerSheet extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          remaining != null
-                              ? context.tr(L10nKeys.minutesRemaining, {'minutes': remaining.toString()})
-                              : context.tr(L10nKeys.autoFadeOutPause),
+                          isEndOfTrack
+                              ? 'Stops when current track ends'
+                              : (remaining != null
+                                  ? context.tr(L10nKeys.minutesRemaining, {'minutes': remaining.toString()})
+                                  : context.tr(L10nKeys.autoFadeOutPause)),
                           style: TextStyle(
                             fontSize: 11.5,
                             fontFamily: remaining != null ? 'monospace' : null,
-                            color: remaining != null ? Colors.cyanAccent : (isDark ? Colors.white54 : Colors.black54),
+                            color: (isEndOfTrack || remaining != null)
+                                ? Colors.cyanAccent
+                                : (isDark ? Colors.white54 : Colors.black54),
                           ),
                         ),
                       ],
@@ -95,11 +100,12 @@ class SleepTimerSheet extends ConsumerWidget {
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [0, 15, 30, 45, 60, 90].map((m) {
-                  final isSel = m == 0
-                      ? remaining == null
-                      : (remaining != null &&
-                          remaining > 0 &&
-                          m == [15, 30, 45, 60, 90].reduce((a, b) => (a - remaining).abs() < (b - remaining).abs() ? a : b));
+                  final isSel = !isEndOfTrack &&
+                      (m == 0
+                          ? remaining == null
+                          : (remaining != null &&
+                              remaining > 0 &&
+                              m == [15, 30, 45, 60, 90].reduce((a, b) => (a - remaining).abs() < (b - remaining).abs() ? a : b)));
                   return Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 2.5),
@@ -133,6 +139,53 @@ class SleepTimerSheet extends ConsumerWidget {
                     ),
                   );
                 }).toList(),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // End of Track Button
+            InkWell(
+              onTap: () {
+                audioPlayer.setSleepTimerEndOfTrack(!isEndOfTrack);
+                Navigator.of(context).pop();
+              },
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: isEndOfTrack
+                      ? (isDark ? Colors.white : Colors.black)
+                      : (isDark ? Colors.white10 : Colors.black12),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isEndOfTrack
+                        ? Colors.transparent
+                        : (isDark ? Colors.white12 : Colors.black12),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.skip_next_rounded,
+                      size: 18,
+                      color: isEndOfTrack
+                          ? (isDark ? Colors.black : Colors.white)
+                          : (isDark ? Colors.white70 : Colors.black87),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'End of Current Track',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: isEndOfTrack ? FontWeight.w700 : FontWeight.w600,
+                        color: isEndOfTrack
+                            ? (isDark ? Colors.black : Colors.white)
+                            : (isDark ? Colors.white70 : Colors.black87),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 14),

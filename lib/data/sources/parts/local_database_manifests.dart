@@ -75,6 +75,8 @@ extension LocalDatabaseManifests on NoctraLocalDatabase {
     return <String>{..._onboardedLanguages, ...history}.take(limit).toList();
   }
 
+  Map<String, SongManifest> get manifests => _manifestStore.manifests;
+
   Map<String, dynamic> getKnowledgeGraphSummary() => {
         'totalTracksLearned': _manifestStore.manifests.length,
         'topArtists': getTopArtists(limit: 4),

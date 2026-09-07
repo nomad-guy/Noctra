@@ -41,11 +41,15 @@ extension NeuralTrainingEngine on NeuralRecommenderEngine {
 
   static List<double> forwardLayer(
       List<double> input, List<List<double>> weights, List<double> bias) {
-    final output = List<double>.filled(weights.length, 0.0);
-    for (int i = 0; i < weights.length; i++) {
+    final outLen = weights.length;
+    final inLen = input.length;
+    final output = List<double>.filled(outLen, 0.0);
+    for (int i = 0; i < outLen; i++) {
+      final wRow = weights[i];
+      final limit = inLen < wRow.length ? inLen : wRow.length;
       double sum = bias[i];
-      for (int j = 0; j < input.length && j < weights[i].length; j++) {
-        sum += weights[i][j] * input[j];
+      for (int j = 0; j < limit; j++) {
+        sum += wRow[j] * input[j];
       }
       output[i] = sum > 0 ? sum : sum * 0.1;
     }

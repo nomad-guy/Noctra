@@ -9,6 +9,7 @@ import '../../shared/widgets/glass_card.dart';
 import 'library/folder_delete_sheet.dart';
 import 'library/folder_detail_view.dart';
 import 'library/local_scan_card.dart';
+import 'listening_insights_sheet.dart';
 
 class LibraryFoldersTab extends ConsumerStatefulWidget {
   final bool isDark;
@@ -105,41 +106,65 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab>
             child: !_isCreatingFolder
                 ? Column(
                     children: [
-                      GestureDetector(
-                        onTap: () => setState(() => _isCreatingFolder = true),
-                        child: GlassCard(
-                          radius: 16,
-                          isHighlighted: true,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: widget.isDark ? Colors.white : Colors.black,
-                                ),
-                                child: Icon(Icons.create_new_folder_outlined,
-                                    size: 20, color: widget.isDark ? Colors.black : Colors.white),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _isCreatingFolder = true),
+                              child: GlassCard(
+                                radius: 16,
+                                isHighlighted: true,
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                child: Row(
                                   children: [
-                                    Text('+ ${context.tr(L10nKeys.createFolder)}',
-                                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: widget.isDark ? Colors.white : Colors.black)),
-                                    Text(context.tr(L10nKeys.organizePlaylists),
-                                        style: TextStyle(fontSize: 11, color: widget.isDark ? Colors.white54 : Colors.black54)),
+                                    Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: widget.isDark ? Colors.white : Colors.black,
+                                      ),
+                                      child: Icon(Icons.create_new_folder_outlined,
+                                          size: 18, color: widget.isDark ? Colors.black : Colors.white),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text('+ ${context.tr(L10nKeys.createFolder)}',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: widget.isDark ? Colors.white : Colors.black)),
+                                    ),
                                   ],
                                 ),
                               ),
-                              Icon(Icons.arrow_forward_ios_rounded,
-                                  size: 14, color: widget.isDark ? Colors.white38 : Colors.black38),
-                            ],
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () => ListeningInsightsSheet.show(context),
+                            child: GlassCard(
+                              radius: 16,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: widget.isDark ? Colors.white12 : Colors.black12,
+                                    ),
+                                    child: Icon(Icons.analytics_outlined,
+                                        size: 18, color: widget.isDark ? Colors.white : Colors.black),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text('Insights',
+                                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: widget.isDark ? Colors.white : Colors.black)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       LocalScanCard(isDark: widget.isDark, repo: widget.repo),

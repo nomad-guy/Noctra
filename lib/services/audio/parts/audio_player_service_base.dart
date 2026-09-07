@@ -138,6 +138,8 @@ abstract class AudioPlayerServiceBase {
   int get crossfadeSeconds => _crossfadeSeconds;
   int? _sleepTimerRemainingMinutes;
   int? get sleepTimerRemainingMinutes => _sleepTimerRemainingMinutes;
+  bool _sleepTimerEndOfTrack = false;
+  bool get sleepTimerEndOfTrack => _sleepTimerEndOfTrack;
   Timer? _sleepTimer;
   DateTime? _songStartTime;
   Duration? _lastSavedPosition;
@@ -190,4 +192,6 @@ abstract class AudioPlayerServiceBase {
   Future<Map<String, dynamic>> getAudioEngineStatus();
   Future<void> _attachListeners();
   Future<void> _detachListeners();
+  void _emitSettings();
+  Future<void> _runSleepFade();
 }

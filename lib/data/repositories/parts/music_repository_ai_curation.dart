@@ -251,23 +251,54 @@ mixin MusicRepositoryAICurationMixin on ChangeNotifier {
   }
 
   Future<List<Song>> generateAIRadioForSong(Song seed) async {
-    bool isDuplicateSeed(Song s) {
+    String normKey(String t) => t
+        .toLowerCase()
+        .replaceAll(RegExp(r'[\(\[\{].*?[\)\]\}]'), '')
+        .replaceAll(RegExp(r'[^a-z0-9]'), '')
+        .trim();
+
+    final seedTitleKey = normKey(seed.title);
+
+    bool isSeedDuplicate(Song s) {
       if (s.id == seed.id) return true;
-      final a = s.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-      final b = seed.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-      return a.isNotEmpty && (a == b || a.contains(b) || b.contains(a));
+      final k = normKey(s.title);
+      return k.isNotEmpty && (k == seedTitleKey || k.contains(seedTitleKey) || seedTitleKey.contains(k));
+    }
+
+    final seenIds = <String>{seed.id};
+    final seenTitles = <String>{if (seedTitleKey.isNotEmpty) seedTitleKey};
+    final results = <Song>[];
+
+    void addUnique(List<Song> songs) {
+      for (final s in songs) {
+        if (s.id.isEmpty || !seenIds.add(s.id)) continue;
+        if (isSeedDuplicate(s)) continue;
+        final k = normKey(s.title);
+        if (k.isNotEmpty && !seenTitles.add(k)) continue;
+        results.add(s);
+        if (results.length >= 25) return;
+      }
     }
 
     try {
-      final radio = await MusicServiceCharts.fetchSimilarRadioQueue(seed);
-      final filtered = radio.where((s) => !isDuplicateSeed(s)).toList();
-      if (filtered.isNotEmpty) return filtered;
+      final radio = await MusicServiceCharts.fetchSimilarRadioQueue(seed, excludeIds: {seed.id});
+      addUnique(radio);
 
-      final artistFeed = await MusicService.search('${seed.artist} mix');
-      final uniqueArtist =
-          artistFeed.where((s) => !isDuplicateSeed(s)).toList();
-      if (uniqueArtist.isNotEmpty) return uniqueArtist;
+      if (results.length < 15) {
+        final searches = await Future.wait([
+          MusicService.search('${seed.artist} radio').catchError((_) => <Song>[]),
+          MusicService.search('${seed.artist} ${seed.genre ?? "hits"}').catchError((_) => <Song>[]),
+        ]);
+        for (final list in searches) {
+          addUnique(list);
+          if (results.length >= 20) break;
+        }
+      }
     } catch (_) {}
-    return _localLibrary.where((s) => !isDuplicateSeed(s)).toList();
+
+    if (results.length < 5) {
+      addUnique(_localLibrary);
+    }
+    return results;
   }
 }

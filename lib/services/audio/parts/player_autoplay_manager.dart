@@ -49,6 +49,17 @@ mixin PlayerAutoplayMixin on AudioPlayerServiceBase {
     }
   }
 
+  static final List<String> _recentHistoryIds = [];
+  static final List<String> _recentNormalizedTitles = [];
+
+  static String _normalizeTitleKey(String title) {
+    return title
+        .toLowerCase()
+        .replaceAll(RegExp(r'[\(\[\{].*?[\)\]\}]'), '') // remove parenthetical like (Remastered)
+        .replaceAll(RegExp(r'[^a-z0-9]'), '')
+        .trim();
+  }
+
   @override
   Future<List<Song>> _getRadioQueue(Song seed) async {
     final existing = _radioRequests[seed.id];
@@ -56,11 +67,9 @@ mixin PlayerAutoplayMixin on AudioPlayerServiceBase {
       return existing;
     }
 
-    final excludeIds = <String>{seed.id};
-    for (int i = _currentIndex + 1;
-        i < min(_queue.length, _currentIndex + 4);
-        i++) {
-      excludeIds.add(_queue[i].id);
+    final excludeIds = <String>{seed.id, ..._recentHistoryIds};
+    for (final s in _queue) {
+      excludeIds.add(s.id);
     }
     final gen = ++_radioGeneration;
     final request =
@@ -71,7 +80,26 @@ mixin PlayerAutoplayMixin on AudioPlayerServiceBase {
       if (gen != _radioGeneration) {
         return [];
       }
-      return results.where((s) => !_queue.any((q) => q.id == s.id)).toList();
+      final queueIds = _queue.map((s) => s.id).toSet();
+      final queueTitles = _queue.map((s) => _normalizeTitleKey(s.title)).toSet();
+      final historyTitles = _recentNormalizedTitles.toSet();
+
+      final filtered = <Song>[];
+      final seenBatchTitles = <String>{};
+      for (final s in results) {
+        if (s.id == seed.id || queueIds.contains(s.id) || _recentHistoryIds.contains(s.id)) {
+          continue;
+        }
+        final key = _normalizeTitleKey(s.title);
+        if (key.isNotEmpty &&
+            (queueTitles.contains(key) ||
+                historyTitles.contains(key) ||
+                !seenBatchTitles.add(key))) {
+          continue;
+        }
+        filtered.add(s);
+      }
+      return filtered;
     } finally {
       _radioRequests.remove(seed.id);
     }
@@ -100,7 +128,30 @@ mixin PlayerAutoplayMixin on AudioPlayerServiceBase {
           totalDuration: _currentSong!.duration);
       NoctraLocalDatabase().recordManifest(_currentSong!,
           action: 'complete', listenedSeconds: playedSec);
+
+      // Track session history to avoid repetitive AI radio / autoplay recommendations
+      _recentHistoryIds.add(_currentSong!.id);
+      if (_recentHistoryIds.length > 60) {
+        _recentHistoryIds.removeAt(0);
+      }
+      final titleKey = _normalizeTitleKey(_currentSong!.title);
+      if (titleKey.isNotEmpty) {
+        _recentNormalizedTitles.add(titleKey);
+        if (_recentNormalizedTitles.length > 60) {
+          _recentNormalizedTitles.removeAt(0);
+        }
+      }
     }
+
+    if (_sleepTimerEndOfTrack) {
+      _sleepTimerEndOfTrack = false;
+      _emitSettings();
+      await _runSleepFade();
+      await _player.stop();
+      _invalidatePlaybackOperations();
+      return;
+    }
+
     if (_loopMode == LoopMode.one && _currentSong != null) {
       await _player.seek(Duration.zero);
       _playNonBlocking(_player, 'LoopMode.one replay');

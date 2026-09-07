@@ -101,6 +101,7 @@ mixin PlayerEffectsMixin on AudioPlayerServiceBase {
     _emitSettings();
   }
 
+  @override
   void _emitSettings() {
     if (!_playbackSettingsController.isClosed) {
       _playbackSettingsController.add({
@@ -116,9 +117,21 @@ mixin PlayerEffectsMixin on AudioPlayerServiceBase {
 
   // ─── [10] Sleep timer ───────────────────────────────────────────────────
 
-  void cancelSleepTimer() => setSleepTimer(0);
+  void cancelSleepTimer() {
+    _sleepTimerEndOfTrack = false;
+    setSleepTimer(0);
+  }
+
+  void setSleepTimerEndOfTrack(bool enabled) {
+    _sleepTimer?.cancel();
+    _sleepTimer = null;
+    _sleepTimerRemainingMinutes = null;
+    _sleepTimerEndOfTrack = enabled;
+    _emitSettings();
+  }
 
   void setSleepTimer(int minutes) {
+    _sleepTimerEndOfTrack = false;
     _sleepTimer?.cancel();
     _sleepFadeId++;
     _volumeEpoch++;
@@ -145,6 +158,7 @@ mixin PlayerEffectsMixin on AudioPlayerServiceBase {
     });
   }
 
+  @override
   Future<void> _runSleepFade() async {
     final p = _player;
     final originalVolume = p.volume;

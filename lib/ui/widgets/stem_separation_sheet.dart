@@ -5,8 +5,10 @@ import '../../core/theme/noir_theme.dart';
 import '../../core/utils/noctra_localization.dart';
 import '../../core/utils/noctra_logger.dart';
 import '../../data/models/song_model.dart';
+import '../../providers/app_providers.dart';
 import '../../services/audio/audio_stem_separation_service.dart';
 import '../../services/resolvers/native_resolver_client.dart';
+import '../../services/ytdlp/music_service.dart';
 import 'stems/stem_model_selector.dart';
 import 'stems/stem_results_view.dart';
 import 'stems/stem_state_views.dart';
@@ -86,10 +88,23 @@ class _StemSeparationSheetState extends ConsumerState<StemSeparationSheet> {
   }
 
   Future<String?> _resolveStreamUrl(Song song) async {
-    // Platform boundary: never construct MethodChannel in UI code. The native
-    // InnerTube fast path lives behind NativeResolverClient, which returns
-    // null on unsupported platforms/failures so Dart-side fallback applies.
-    return NativeResolverClient.extractInnerTube(song.id);
+    // 1. Check if the currently playing song is this song and already has a streamUrl
+    final active = ref.read(currentSongStreamProvider).value;
+    if (active != null && active.id == song.id && active.streamUrl != null && active.streamUrl!.isNotEmpty) {
+      return active.streamUrl;
+    }
+    // 2. Native fast path where available
+    try {
+      final fast = await NativeResolverClient.extractInnerTube(song.id);
+      if (fast != null && fast.isNotEmpty) return fast;
+    } catch (_) {}
+
+    // 3. Robust multi-source resolver fallback
+    try {
+      return await MusicService.resolveStreamUrl(song);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _playStem(AudioStem stem) async {

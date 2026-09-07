@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../core/utils/noctra_logger.dart';
 import '../../core/utils/path_safe_identifier.dart';
+import 'parts/dart_stem_dsp_engine.dart';
 import 'stem_input_downloader.dart';
 import 'stem_models.dart';
 
@@ -108,12 +109,30 @@ class AudioStemSeparationService {
         message: 'Running spectral band split...',
       ));
 
-      final Map<dynamic, dynamic>? result =
-          await _channel.invokeMethod('separateStems', {
-        'inputPath': inputPath,
-        'outputDir': stemsDir.path,
-        'model': model.name,
-      });
+      Map<dynamic, dynamic>? result;
+      if (Platform.isAndroid) {
+        try {
+          result = await _channel.invokeMethod('separateStems', {
+            'inputPath': inputPath,
+            'outputDir': stemsDir.path,
+            'model': model.name,
+          });
+        } catch (e) {
+          NoctraLogger.w('Native Android stem separation failed: $e, falling back to Dart DSP');
+        }
+      }
+
+      if (result == null) {
+        try {
+          result = await DartStemDspEngine.separate(
+            inputPath: inputPath,
+            outputDir: stemsDir.path,
+            model: model.name,
+          );
+        } catch (e) {
+          NoctraLogger.e('Dart DSP stem separation failed', e);
+        }
+      }
 
       if (result == null) {
         _isProcessing = false;

@@ -97,9 +97,19 @@ class CandidateRetrievalService {
     // Seed song context: "something like this"
     if (seedSong != null) {
       try {
-        final similar =
-            await MusicService.search('${seedSong.artist} ${seedSong.title}');
-        addTracks(similar);
+        final results = await Future.wait([
+          MusicServiceCharts.fetchSimilarRadioQueue(seedSong, excludeIds: {seedSong.id}).catchError((_) => <Song>[]),
+          MusicService.search('${seedSong.artist} radio').catchError((_) => <Song>[]),
+        ]);
+        for (final list in results) {
+          final normSeed = seedSong.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+          for (final s in list) {
+            final norm = s.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+            if (s.id != seedSong.id && (normSeed.isEmpty || norm != normSeed)) {
+              addTracks([s]);
+            }
+          }
+        }
       } catch (_) {}
     }
 
