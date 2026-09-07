@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="https://nomad-guy.github.io/Noctra/"><b>🌐 Official Website</b></a> &bull;
+  <a href="https://noctra-music.vercel.app/"><b>🌐 Official Website</b></a> &bull;
   <a href="https://t.me/Noctra_app"><b>✈️ Telegram Community (@Noctra_app)</b></a> &bull;
   <a href="https://github.com/nomad-guy/Noctra/releases/latest"><b>📦 Downloads & Releases</b></a>
 </p>
