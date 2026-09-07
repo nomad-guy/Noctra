@@ -111,6 +111,26 @@
   line-height: 1.2;
 }
 
+.btnSubtext {
+  font-size: 0.72rem;
+  opacity: 0.75;
+}
+
+.guideLink {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+  text-align: center;
+  transition: color var(--transition-fast);
+}
+
+.guideLink:hover {
+  color: var(--accent);
+}
+
 .osSubtext {
   font-size: 0.78rem;
   color: var(--text-secondary);

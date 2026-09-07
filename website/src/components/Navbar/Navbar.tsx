@@ -60,6 +60,7 @@ export function Navbar({ theme, onCycleTheme }: Props) {
           <a href="#transfer" className={styles.navLink}>Transfer</a>
           <a href="#telemetry" className={styles.navLink}>Telemetry</a>
           <a href="#downloads" className={styles.navLink}>Downloads</a>
+          <a href="#install" className={styles.navLink}>Install Guide</a>
         </nav>
 
         <div className={styles.actions}>

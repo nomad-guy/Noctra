@@ -11,6 +11,7 @@ import { PlaylistTransfer } from './components/PlaylistTransfer/PlaylistTransfer
 import { AppShowcase } from './components/AppShowcase/AppShowcase';
 import { PrivacyAudit } from './components/PrivacyAudit/PrivacyAudit';
 import { AllDownloads } from './components/AllDownloads/AllDownloads';
+import { InstallGuide } from './components/InstallGuide/InstallGuide';
 import { FAQ } from './components/FAQ/FAQ';
 import { Footer } from './components/Footer/Footer';
 import './styles/base.css';
@@ -21,7 +22,7 @@ export default function App() {
     if (saved === 'liquid-glass' || saved === 'noir-black' || saved === 'noir-white') {
       return saved;
     }
-    return 'liquid-glass';
+    return 'noir-black';
   });
 
   useEffect(() => {
@@ -32,9 +33,9 @@ export default function App() {
 
   const cycleTheme = () => {
     setTheme((prev) => {
-      if (prev === 'liquid-glass') return 'noir-black';
-      if (prev === 'noir-black') return 'noir-white';
-      return 'liquid-glass';
+      if (prev === 'noir-black') return 'liquid-glass';
+      if (prev === 'liquid-glass') return 'noir-white';
+      return 'noir-black';
     });
   };
 
@@ -57,6 +58,7 @@ export default function App() {
         <AppShowcase />
         <PrivacyAudit />
         <AllDownloads />
+        <InstallGuide />
         <FAQ />
       </main>
 

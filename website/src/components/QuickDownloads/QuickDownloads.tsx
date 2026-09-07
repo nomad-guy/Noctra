@@ -32,6 +32,7 @@ export function QuickDownloads() {
             <Download size={15} />
             <span>Download .exe</span>
           </a>
+          <a href="#install" className={styles.guideLink}>Installation Guide &rarr;</a>
         </div>
 
         {/* Linux */}
@@ -61,6 +62,7 @@ export function QuickDownloads() {
             <Download size={15} />
             <span>Download .deb</span>
           </a>
+          <a href="#install" className={styles.guideLink}>Installation Guide &rarr;</a>
         </div>
 
         {/* Android */}
@@ -90,6 +92,7 @@ export function QuickDownloads() {
             <Download size={15} />
             <span>Download APK</span>
           </a>
+          <a href="#install" className={styles.guideLink}>Installation Guide &rarr;</a>
         </div>
 
         {/* iOS */}
@@ -119,6 +122,7 @@ export function QuickDownloads() {
             <Download size={15} />
             <span>Download .ipa</span>
           </a>
+          <a href="#install" className={styles.guideLink}>Installation Guide &rarr;</a>
         </div>
       </div>
     </section>

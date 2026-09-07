@@ -1,13 +1,46 @@
 import { useState } from 'react';
+import {
+  Headphones,
+  Mic2,
+  Sliders,
+  Library,
+  Cpu,
+  Compass,
+  Search,
+  Palette,
+} from 'lucide-react';
 import type { ShowcaseItem } from '../../types';
 import styles from './AppShowcase.module.css';
+
+function getShowcaseIcon(id: string) {
+  switch (id) {
+    case 'player':
+      return <Headphones size={18} strokeWidth={2} />;
+    case 'lyrics':
+      return <Mic2 size={18} strokeWidth={2} />;
+    case 'equalizer':
+      return <Sliders size={18} strokeWidth={2} />;
+    case 'library':
+      return <Library size={18} strokeWidth={2} />;
+    case 'ai_studio':
+      return <Cpu size={18} strokeWidth={2} />;
+    case 'home':
+      return <Compass size={18} strokeWidth={2} />;
+    case 'search':
+      return <Search size={18} strokeWidth={2} />;
+    case 'settings':
+      return <Palette size={18} strokeWidth={2} />;
+    default:
+      return <Headphones size={18} strokeWidth={2} />;
+  }
+}
 
 const SHOWCASE_ITEMS: ShowcaseItem[] = [
   {
     id: 'player',
     title: 'Hi-Res Player',
     desc: 'Bit-depth & telemetry',
-    icon: '🎧',
+    icon: 'player',
     screenshot: 'screenshots/player.png',
     captionTitle: 'Pragmatic Audio Telemetry',
     captionDesc: 'Master 320k & 24-bit Hi-Res badges, real-time waveform seekbar, 3D soundstage virtualizer, and concert hall acoustic presets.',
@@ -17,7 +50,7 @@ const SHOWCASE_ITEMS: ShowcaseItem[] = [
     id: 'lyrics',
     title: 'Bilingual Lyrics',
     desc: 'Subtitles & transliteration',
-    icon: '🎤',
+    icon: 'lyrics',
     screenshot: 'screenshots/lyrics.png',
     captionTitle: 'Apple Music / Spotify Style Subtitles',
     captionDesc: 'Bilingual LRC lines sharing matching timestamps consolidate automatically into a primary sung vocal with a subtle, dimmed italic translation subtitle.',
@@ -27,7 +60,7 @@ const SHOWCASE_ITEMS: ShowcaseItem[] = [
     id: 'equalizer',
     title: 'IEM DSP Curves',
     desc: "Harman, Moondrop & Wan'er",
-    icon: '🎚️',
+    icon: 'equalizer',
     screenshot: 'screenshots/equalizer.png',
     captionTitle: 'Audiophile IEM Target Presets',
     captionDesc: "Hardware-level parametric frequency curves for Harman IEM, Moondrop VDSF, and Tangzu Wan'er with 5-band DSP and Bass Boost.",
@@ -37,7 +70,7 @@ const SHOWCASE_ITEMS: ShowcaseItem[] = [
     id: 'library',
     title: 'Library & Remix',
     desc: 'Shuffle, remix & transfer',
-    icon: '📁',
+    icon: 'library',
     screenshot: 'screenshots/library.png',
     captionTitle: 'Custom Folders, Shuffle & Algorithmic Remix',
     captionDesc: 'One-tap Shuffle and deterministic algorithmic Remix for all custom playlists, Spotify imports, and local collections with SQLite persistence.',
@@ -47,7 +80,7 @@ const SHOWCASE_ITEMS: ShowcaseItem[] = [
     id: 'ai_studio',
     title: 'AI Taste Studio',
     desc: 'On-device taste vectors',
-    icon: '🧠',
+    icon: 'ai_studio',
     screenshot: 'screenshots/ai_studio.png',
     captionTitle: 'Neural Taste Modeling',
     captionDesc: '120-dimensional neural embedding maps user acoustic traits and classifies listening into archetypes with zero cloud telemetry.',
@@ -57,7 +90,7 @@ const SHOWCASE_ITEMS: ShowcaseItem[] = [
     id: 'home',
     title: 'Discovery Feed',
     desc: 'Global charts & artists',
-    icon: '🌌',
+    icon: 'home',
     screenshot: 'screenshots/home.png',
     captionTitle: 'Curated Charts & Artists',
     captionDesc: 'Real-time trending charts, Wikipedia artist discographies, and locally embedded recommendation graphs.',
@@ -67,7 +100,7 @@ const SHOWCASE_ITEMS: ShowcaseItem[] = [
     id: 'search',
     title: 'Instant Search',
     desc: 'High-fidelity catalog filters',
-    icon: '🔍',
+    icon: 'search',
     screenshot: 'screenshots/search.png',
     captionTitle: 'Multi-Source Catalog Explorer',
     captionDesc: 'Instant as-you-type search across Deezer Hi-Fi, Qobuz, Apple Music catalogs, and direct YouTube audio streams.',
@@ -77,7 +110,7 @@ const SHOWCASE_ITEMS: ShowcaseItem[] = [
     id: 'settings',
     title: 'Triple Noir',
     desc: 'Obsidian & Liquid Glass',
-    icon: '⚙️',
+    icon: 'settings',
     screenshot: 'screenshots/settings.png',
     captionTitle: 'Swiss Minimalist Themes',
     captionDesc: 'Choose between Obsidian Noir Black, Editorial Noir White, or Sapphire Liquid Glass with synchronized Android launcher icons.',
@@ -110,7 +143,7 @@ export function AppShowcase() {
                 onClick={() => setActiveItem(item)}
               >
                 <div className={styles.tabHeader}>
-                  <span className={styles.tabIcon}>{item.icon}</span>
+                  <span className={styles.tabIcon}>{getShowcaseIcon(item.id)}</span>
                   <span className={styles.tabTitle}>{item.title}</span>
                 </div>
                 <span className={styles.tabDesc}>{item.desc}</span>
