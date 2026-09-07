@@ -2,14 +2,18 @@ name: Cross-Platform Native Packaging & Release
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - 'pubspec.yaml'
     tags:
       - 'v*'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Desired Version (e.g. 1.0.5)'
+        description: 'Desired Version (leave empty to auto-detect from pubspec.yaml)'
         required: false
-        default: '1.0.6'
+        default: ''
 
 permissions:
   contents: write
@@ -408,6 +412,7 @@ jobs:
         with:
           name: "Noctra v${{ needs.version.outputs.app_version }}"
           tag_name: "v${{ needs.version.outputs.app_version }}"
+          target_commitish: ${{ github.sha }}
           body_path: release_body.md
           files: |
             release_dist/*
