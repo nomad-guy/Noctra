@@ -238,12 +238,8 @@ mixin MusicRepositoryAICurationMixin on ChangeNotifier {
       final score = ((sim * 85) + 14).round().clamp(10, 99);
       final exp =
           TasteVectorEngine.generateExplanation(s, score, vibeKey, cleanPrompt);
-      return {
-        'song': s,
-        'score': score,
-        'matchPercentage': score,
-        'explanation': exp
-      };
+          TasteVectorEngine.generateExplanation(s, score, vibeKey, cleanPrompt);
+      return {'song': s, 'score': score, 'matchPercentage': score, 'explanation': exp};
     }).toList();
 
     scored.sort((a, b) => (b['score'] as int).compareTo(a['score'] as int));
@@ -251,12 +247,7 @@ mixin MusicRepositoryAICurationMixin on ChangeNotifier {
   }
 
   Future<List<Song>> generateAIRadioForSong(Song seed) async {
-    String normKey(String t) => t
-        .toLowerCase()
-        .replaceAll(RegExp(r'[\(\[\{].*?[\)\]\}]'), '')
-        .replaceAll(RegExp(r'[^a-z0-9]'), '')
-        .trim();
-
+    String normKey(String t) => t.toLowerCase().replaceAll(RegExp(r'[\(\[\{].*?[\)\]\}]'), '').replaceAll(RegExp(r'[^a-z0-9]'), '').trim();
     final seedTitleKey = normKey(seed.title);
 
     bool isSeedDuplicate(Song s) {
@@ -271,8 +262,7 @@ mixin MusicRepositoryAICurationMixin on ChangeNotifier {
 
     void addUnique(List<Song> songs) {
       for (final s in songs) {
-        if (s.id.isEmpty || !seenIds.add(s.id)) continue;
-        if (isSeedDuplicate(s)) continue;
+        if (s.id.isEmpty || !seenIds.add(s.id) || isSeedDuplicate(s)) continue;
         final k = normKey(s.title);
         if (k.isNotEmpty && !seenTitles.add(k)) continue;
         results.add(s);
@@ -283,7 +273,6 @@ mixin MusicRepositoryAICurationMixin on ChangeNotifier {
     try {
       final radio = await MusicServiceCharts.fetchSimilarRadioQueue(seed, excludeIds: {seed.id});
       addUnique(radio);
-
       if (results.length < 15) {
         final searches = await Future.wait([
           MusicService.search('${seed.artist} radio').catchError((_) => <Song>[]),
@@ -296,9 +285,7 @@ mixin MusicRepositoryAICurationMixin on ChangeNotifier {
       }
     } catch (_) {}
 
-    if (results.length < 5) {
-      addUnique(_localLibrary);
-    }
+    if (results.length < 5) addUnique(_localLibrary);
     return results;
   }
 }

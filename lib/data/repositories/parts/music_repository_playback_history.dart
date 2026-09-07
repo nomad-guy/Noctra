@@ -66,4 +66,25 @@ mixin MusicRepositoryPlaybackHistoryMixin on ChangeNotifier {
         NoctraLocalDatabase().getArtistAffinity(song.artist);
     return ((sim * 80) + (historyAffinity * 19)).round().clamp(10, 99);
   }
+
+  Map<String, dynamic> getListeningInsightsStats() {
+    int totalListenSec = 0;
+    int totalPlays = 0;
+    final artistPlays = <String, int>{};
+    final genrePlays = <String, int>{};
+    for (final m in NoctraLocalDatabase().manifests.values) {
+      totalListenSec += m.totalListenSeconds;
+      totalPlays += m.playCount;
+      artistPlays[m.artist] = (artistPlays[m.artist] ?? 0) + m.playCount;
+      if (m.genre.isNotEmpty) {
+        genrePlays[m.genre] = (genrePlays[m.genre] ?? 0) + m.playCount;
+      }
+    }
+    return {
+      'totalListenSec': totalListenSec,
+      'totalPlays': totalPlays,
+      'artistPlays': artistPlays,
+      'genrePlays': genrePlays,
+    };
+  }
 }

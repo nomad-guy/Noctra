@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
-import '../../data/sources/noctra_local_database.dart';
+import '../../data/repositories/music_repository.dart';
 import '../../providers/app_providers.dart';
 import '../../shared/widgets/glass_card.dart';
+import 'listening_insights_components.dart';
 
 class ListeningInsightsSheet extends ConsumerWidget {
   const ListeningInsightsSheet({super.key});
@@ -21,26 +22,13 @@ class ListeningInsightsSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
-    final db = NoctraLocalDatabase();
-    final manifests = db.manifests.values.toList();
+    final repo = MusicRepository.instance;
+    final stats = repo.getListeningInsightsStats();
 
-    int totalListenSec = 0;
-    int totalPlays = 0;
-    final artistPlays = <String, int>{};
-    final genrePlays = <String, int>{};
-
-    for (final m in manifests) {
-      totalListenSec += m.totalListenSeconds;
-      totalPlays += m.playCount;
-      artistPlays[m.artist] = (artistPlays[m.artist] ?? 0) + m.playCount;
-      if (m.genre.isNotEmpty) {
-        genrePlays[m.genre] = (genrePlays[m.genre] ?? 0) + m.playCount;
-      }
-    }
-
-    final sortedSongs = List.of(manifests)
-      ..sort((a, b) => b.playCount.compareTo(a.playCount));
-    final topSongs = sortedSongs.take(5).toList();
+    final int totalListenSec = stats['totalListenSec'] as int? ?? 0;
+    final int totalPlays = stats['totalPlays'] as int? ?? 0;
+    final artistPlays = (stats['artistPlays'] as Map<String, int>?) ?? {};
+    final genrePlays = (stats['genrePlays'] as Map<String, int>?) ?? {};
 
     final sortedArtists = artistPlays.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -128,14 +116,13 @@ class ListeningInsightsSheet extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 18),
-                // Stat counters
                 Row(
                   children: [
-                    _metricCard('Time Listened', formattedTime, isDark),
+                    insightsMetricCard('Time Listened', formattedTime, isDark),
                     const SizedBox(width: 8),
-                    _metricCard('Tracks Played', totalPlays.toString(), isDark),
+                    insightsMetricCard('Tracks Played', totalPlays.toString(), isDark),
                     const SizedBox(width: 8),
-                    _metricCard('Top Artist', topArtists.isNotEmpty ? topArtists.first.key : 'None', isDark),
+                    insightsMetricCard('Top Artist', topArtists.isNotEmpty ? topArtists.first.key : 'None', isDark),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -145,11 +132,10 @@ class ListeningInsightsSheet extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Top Artists
-                        _sectionTitle('TOP ARTISTS', isDark),
+                        insightsSectionTitle('TOP ARTISTS', isDark),
                         const SizedBox(height: 8),
                         if (topArtists.isEmpty)
-                          _emptyState('Listen to music to generate your artist rankings', isDark)
+                          insightsEmptyState('Listen to music to generate your artist rankings', isDark)
                         else
                           GlassCard(
                             radius: 14,
@@ -198,129 +184,55 @@ class ListeningInsightsSheet extends ConsumerWidget {
                             ),
                           ),
                         const SizedBox(height: 16),
-                        // Top Songs
-                        _sectionTitle('TOP SONGS', isDark),
+                        insightsSectionTitle('TOP GENRES', isDark),
                         const SizedBox(height: 8),
-                        if (topSongs.isEmpty)
-                          _emptyState('No tracks completed yet', isDark)
+                        if (topGenres.isEmpty)
+                          insightsEmptyState('Explore more genres to discover your patterns', isDark)
                         else
-                          GlassCard(
-                            radius: 14,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            child: Column(
-                              children: List.generate(topSongs.length, (i) {
-                                final s = topSongs[i];
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 6),
-                                  child: Row(
-                                    children: [
-                                      SizedBox(
-                                        width: 24,
-                                        child: Text(
-                                          '#${i + 1}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w700,
-                                            color: isDark ? Colors.white38 : Colors.black38,
-                                          ),
-                                        ),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: topGenres.map((g) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E1E24) : const Color(0xFFEEEEF2),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      g.key,
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: isDark ? Colors.white : Colors.black,
                                       ),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              s.title,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                                color: isDark ? Colors.white : Colors.black,
-                                              ),
-                                            ),
-                                            Text(
-                                              s.artist,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color: isDark ? Colors.white54 : Colors.black54,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? Colors.white10 : Colors.black12,
+                                        borderRadius: BorderRadius.circular(6),
                                       ),
-                                      Text(
-                                        '${s.playCount} plays',
+                                      child: Text(
+                                        '${g.value}',
                                         style: TextStyle(
-                                          fontSize: 11.5,
-                                          color: isDark ? Colors.white54 : Colors.black54,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                          color: isDark ? Colors.white70 : Colors.black54,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                );
-                              }),
-                            ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
                           ),
-                        const SizedBox(height: 16),
-                        // Genres
-                        if (topGenres.isNotEmpty) ...[
-                          _sectionTitle('GENRE DIVERSITY', isDark),
-                          const SizedBox(height: 8),
-                          GlassCard(
-                            radius: 14,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                            child: Column(
-                              children: topGenres.map((g) {
-                                final maxVal = topGenres.first.value;
-                                final ratio = maxVal > 0 ? (g.value / maxVal) : 0.0;
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 5),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            g.key,
-                                            style: TextStyle(
-                                              fontSize: 12.5,
-                                              fontWeight: FontWeight.w600,
-                                              color: isDark ? Colors.white : Colors.black,
-                                            ),
-                                          ),
-                                          Text(
-                                            '${g.value} plays',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: isDark ? Colors.white54 : Colors.black54,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 4),
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(4),
-                                        child: LinearProgressIndicator(
-                                          value: ratio.clamp(0.05, 1.0),
-                                          minHeight: 5,
-                                          backgroundColor: isDark ? Colors.white10 : Colors.black12,
-                                          valueColor: AlwaysStoppedAnimation<Color>(
-                                            isDark ? Colors.white70 : Colors.black87,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
@@ -328,66 +240,6 @@ class ListeningInsightsSheet extends ConsumerWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _metricCard(String label, String value, bool isDark) {
-    return Expanded(
-      child: GlassCard(
-        radius: 14,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-                color: isDark ? Colors.white38 : Colors.black38,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: isDark ? Colors.white : Colors.black,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _sectionTitle(String title, bool isDark) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w800,
-        letterSpacing: 1.2,
-        color: isDark ? Colors.white38 : Colors.black38,
-      ),
-    );
-  }
-
-  Widget _emptyState(String text, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Center(
-        child: Text(
-          text,
-          style: TextStyle(fontSize: 12, color: isDark ? Colors.white38 : Colors.black38),
         ),
       ),
     );

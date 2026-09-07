@@ -48,16 +48,21 @@ class SearchCatalogGrid extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                isLoadingCatalogTopics
-                    ? context.tr(L10nKeys.updatingLiveCatalog)
-                    : context.tr(L10nKeys.exploreLiveCatalogs),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white70 : Colors.black87,
+              Expanded(
+                child: Text(
+                  isLoadingCatalogTopics
+                      ? context.tr(L10nKeys.updatingLiveCatalog)
+                      : context.tr(L10nKeys.exploreLiveCatalogs),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white70 : Colors.black87,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
