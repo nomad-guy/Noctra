@@ -16,6 +16,26 @@ void main() {
           'Simon & Garfunkel');
     });
 
+    test('filters out track type badges like Song, Video, Single from polluting artist name', () {
+      expect(
+          ArtistMetadataNormalizer.fromLegacyText(
+              'Song • The Weeknd • After Hours • 3:20'),
+          'The Weeknd');
+      expect(
+          ArtistMetadataNormalizer.fromLegacyText(
+              'Video • Arijit Singh • 4:12'),
+          'Arijit Singh');
+      expect(
+          ArtistMetadataNormalizer.fromYouTubeRuns([
+            {'text': 'Song'},
+            {'text': ' • '},
+            {'text': 'Pixies'},
+            {'text': ' • '},
+            {'text': 'Surfer Rosa'},
+          ]),
+          'Pixies');
+    });
+
     test('prefers structured YouTube artist runs over subtitle metadata', () {
       final artist = ArtistMetadataNormalizer.fromYouTubeRuns([
         {

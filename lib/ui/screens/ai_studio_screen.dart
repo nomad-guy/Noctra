@@ -16,6 +16,7 @@ class AIStudioScreen extends ConsumerStatefulWidget {
 
 class _AIStudioScreenState extends ConsumerState<AIStudioScreen> {
   final _promptController = TextEditingController();
+  final _focusNode = FocusNode(debugLabel: 'AIStudio_PromptField');
   final _requestGate = LatestRequestGate();
   var _isLoading = false;
   var _activeChip = '';
@@ -31,6 +32,7 @@ class _AIStudioScreenState extends ConsumerState<AIStudioScreen> {
   void dispose() {
     _requestGate.invalidate();
     _promptController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -136,6 +138,7 @@ class _AIStudioScreenState extends ConsumerState<AIStudioScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: TextField(
           controller: _promptController,
+          focusNode: _focusNode,
           onSubmitted: _submitPrompt,
           textInputAction: TextInputAction.search,
           style: TextStyle(color: isDark ? Colors.white : Colors.black),

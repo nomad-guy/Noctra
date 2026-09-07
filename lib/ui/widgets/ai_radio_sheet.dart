@@ -30,13 +30,17 @@ class _AIRadioSheetState extends ConsumerState<AIRadioSheet> {
     final isDark = themeMode.isDark;
     final repo = ref.watch(musicRepositoryProvider);
 
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.85,
-      ),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xF2080808) : const Color(0xF2FFFFFF),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.85,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xF2080808) : const Color(0xF2FFFFFF),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -249,6 +253,8 @@ class _AIRadioSheetState extends ConsumerState<AIRadioSheet> {
             ),
           ),
         ],
+      ),
+        ),
       ),
     );
   }

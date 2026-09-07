@@ -56,11 +56,15 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
     final currentSong = player.currentSong;
     final currentIndex = player.currentIndex;
 
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.75,
-      child: Material(
-        color: isDark ? const Color(0xFF0D0D0D) : const Color(0xFFFAFAFA),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.75,
+          child: Material(
+            color: isDark ? const Color(0xFF0D0D0D) : const Color(0xFFFAFAFA),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         clipBehavior: Clip.antiAlias,
         child: SafeArea(
           child: Column(
@@ -211,6 +215,8 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
               ),
             ],
           ),
+        ),
+      ),
         ),
       ),
     );

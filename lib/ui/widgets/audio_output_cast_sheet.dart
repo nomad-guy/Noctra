@@ -47,12 +47,16 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
     final router = ref.watch(audioRouterServiceProvider);
     final isDark = widget.isDark;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0D0D0D) : const Color(0xFFFAFAFA),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      ),
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF0D0D0D) : const Color(0xFFFAFAFA),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          ),
       child: SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -258,6 +262,8 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
             ),
             const SizedBox(height: 12),
           ],
+        ),
+      ),
         ),
       ),
     );

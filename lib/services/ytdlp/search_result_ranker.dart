@@ -13,7 +13,11 @@ class SearchResultRanker {
   static const List<String> modifierTags = [
     'remix', 'slowed', 'reverb', 'sped', 'cover', 'karaoke',
     'instrumental', 'live', 'acoustic', 'dj', 'mashup', 'loop',
-    'reprise', 'trap', 'drill',
+    'reprise', 'trap', 'drill', 'remake', 'tribute', 'rendition',
+    'originally performed', 'originally by', 'in the style of',
+    'made famous by', 'piano version', 'piano cover', 'guitar cover',
+    'vocal cover', 'harp', 'orchestral', 'lofi', 'lo-fi', 'bass boosted',
+    'nightcore', 'parody', '1 hour', '10 hour', 'extended edit',
   ];
 
   /// Bucket priority: JioSaavn, YouTube Music, iTunes, LRCLIB.
@@ -64,44 +68,113 @@ class SearchResultRanker {
   static double score(String query, String title, String artist) {
     final q = _norm(query);
     final t = _norm(title);
+    final a = _norm(artist);
     if (q.isEmpty || t.isEmpty) return 0;
+
     final qt = q.split(' ').where((w) => w.isNotEmpty).toList();
     final tt = t.split(' ').where((w) => w.isNotEmpty).toList();
+    final at = a.split(' ').where((w) => w.isNotEmpty).toList();
     if (qt.isEmpty) return 0;
 
-    // Strong signals for exact and prefix matches.
+    final wantsModifier = modifierTags.any((m) => q.contains(m));
+
+    // 1. Natural language query intent: "<Title> by <Artist>"
+    if (query.toLowerCase().contains(' by ')) {
+      final parts = query.split(RegExp(r'\s+by\s+', caseSensitive: false));
+      if (parts.length >= 2) {
+        final explicitTitle = _norm(parts[0]);
+        final explicitArtist = _norm(parts.sublist(1).join(' '));
+
+        if (explicitTitle.isNotEmpty && explicitArtist.isNotEmpty) {
+          final titleExact = t == explicitTitle;
+          final titlePrefix = t.startsWith(explicitTitle) || explicitTitle.startsWith(t);
+          final titleContains = t.contains(explicitTitle) || explicitTitle.contains(t);
+
+          final artistExact = a == explicitArtist;
+          final artistContains = a.contains(explicitArtist) || explicitArtist.contains(a);
+
+          if ((titleExact || titlePrefix || titleContains) && (artistExact || artistContains)) {
+            var s = titleExact ? 1.0 : (titlePrefix ? 0.98 : 0.94);
+            if (artistExact) s += 0.05;
+            if (!wantsModifier) {
+              for (final m in modifierTags) {
+                if (t.contains(m)) {
+                  s *= 0.35;
+                  break;
+                }
+              }
+            }
+            return s.clamp(0.0, 1.0);
+          } else if ((titleExact || titlePrefix) && !artistContains) {
+            // Title matches, but artist is someone else (remake/cover by another person)
+            var s = 0.40;
+            if (!wantsModifier) {
+              for (final m in modifierTags) {
+                if (t.contains(m)) s *= 0.50;
+              }
+            }
+            return s;
+          }
+        }
+      }
+    }
+
+    // 2. Dash separated query intent: "<Artist> - <Title>" or "<Title> - <Artist>"
+    if (query.contains(' - ')) {
+      final parts = query.split(' - ');
+      if (parts.length == 2) {
+        final p1 = _norm(parts[0]);
+        final p2 = _norm(parts[1]);
+
+        final caseA = (t == p1 || t.contains(p1)) && (a == p2 || a.contains(p2));
+        final caseB = (a == p1 || a.contains(p1)) && (t == p2 || t.contains(p2));
+
+        if (caseA || caseB) {
+          var s = 1.0;
+          if (!wantsModifier) {
+            for (final m in modifierTags) {
+              if (t.contains(m)) {
+                s *= 0.35;
+                break;
+              }
+            }
+          }
+          return s;
+        }
+      }
+    }
+
+    // 3. Exact full string match
     if (t == q) return 1.0;
     if (t.startsWith(q)) return 0.96;
     if (t.contains(q)) return 0.92;
 
-    // Word-level overlap on the title.
+    // 4. Word-level overlap across title AND artist
     final titleMatched = qt.where((w) => tt.contains(w)).length;
-    var ratio = qt.isEmpty ? 0.0 : titleMatched / qt.length;
+    final artistMatched = qt.where((w) => at.contains(w)).length;
+    final totalMatched = titleMatched + artistMatched;
 
-    // Artist tokens also help when the query names the artist.
-    final a = _norm(artist);
-    final at = a.split(' ').where((w) => w.isNotEmpty).toList();
-    if (at.isNotEmpty) {
-      final artistMatched = qt.where((w) => at.contains(w)).length;
-      ratio += (artistMatched / qt.length) * 0.35;
+    var ratio = qt.isEmpty ? 0.0 : totalMatched / qt.length;
+
+    // Boost if query matched both the title AND the artist
+    if (titleMatched > 0 && artistMatched > 0) {
+      ratio *= 1.25;
     }
 
     var s = ratio.clamp(0.0, 1.0);
     if (s == 0) return 0;
 
-    // Demote edition variants the user did not ask for.
-    final wantsModifier =
-        modifierTags.any((m) => q.contains(m));
+    // Demote edition variants (remakes, covers, live, slowed) the user did not ask for
     if (!wantsModifier) {
       for (final m in modifierTags) {
         if (t.contains(m)) {
-          s *= 0.55;
+          s *= 0.35;
           break;
         }
       }
     }
-    // Mild boost for "(Original Score)"/OST-context extras that carry an
-    // exact base title match.
+
+    // Mild boost for "(Original Score)"/OST-context extras that carry an exact base title match
     if (s >= 0.7 && (t.contains('original score') || t.contains('ost'))) {
       s *= 1.06;
     }
@@ -124,44 +197,64 @@ class SearchResultRanker {
     if (qt.isEmpty) return songs;
     final primary = <Song>[];
     final secondary = <Song>[];
+    final compilationNoise = <Song>[];
     final seen = <String>{};
+
     for (final s in songs) {
       if (s.title.isEmpty) continue;
       final key = '${_norm(s.title)}\u0000${_norm(s.artist)}';
       if (!seen.add(key)) continue;
+
       final at = _tokens(s.artist);
       final artistHits = qt.where(at.contains).length;
       final artistIsQueried = artistHits > 0 && artistHits == qt.length;
       final mentionsInTitle = _tokens(s.title)
           .where((w) => qt.contains(w))
           .isNotEmpty;
-      if (artistIsQueried) {
+
+      // Detect compilation uploads, loop videos, or tracks where title == artist name
+      final tNorm = _norm(s.title);
+      final isNoise = tNorm == _norm(artistName) ||
+          tNorm.contains('full album') ||
+          tNorm.contains('greatest hits') ||
+          tNorm.contains('best songs of') ||
+          tNorm.contains('jukebox') ||
+          tNorm.contains('1 hour') ||
+          tNorm.contains('non stop');
+
+      if (isNoise) {
+        compilationNoise.add(s);
+      } else if (artistIsQueried) {
         primary.add(s);
       } else if (mentionsInTitle || artistHits > 0) {
         secondary.add(s);
       }
-      // Rows with no relation to the queried artist are dropped.
     }
+
     if (primary.isEmpty && secondary.isEmpty) {
-      // Nothing related surfaced; never empty a profile because of it.
       return songs;
     }
-    return [..._scoredOrder(primary, artistName),
-        ..._scoredOrder(secondary, artistName)];
+
+    // Rank primary tracks keeping natural provider popularity, demoting remix/slowed
+    final cleanPrimary = _demoteModifiers(primary);
+    final cleanSecondary = _demoteModifiers(secondary);
+
+    return [...cleanPrimary, ...cleanSecondary, ...compilationNoise];
   }
 
-  static List<Song> _scoredOrder(List<Song> songs, String query) {
-    var seq = 0;
-    final scored = songs
-        .map((s) =>
-            (song: s, score: score(query, s.title, s.artist), seq: seq++))
-        .toList();
-    scored.sort((a, b) {
-      final byScore = b.score.compareTo(a.score);
-      if (byScore != 0) return byScore;
-      return a.seq.compareTo(b.seq); // stable within a score band
-    });
-    return scored.map((e) => e.song).toList();
+  static List<Song> _demoteModifiers(List<Song> songs) {
+    final regular = <Song>[];
+    final modifiers = <Song>[];
+    for (final s in songs) {
+      final t = _norm(s.title);
+      final hasMod = modifierTags.any((m) => t.contains(m));
+      if (hasMod) {
+        modifiers.add(s);
+      } else {
+        regular.add(s);
+      }
+    }
+    return [...regular, ...modifiers];
   }
 
   static List<String> _tokens(String input) => _norm(input)

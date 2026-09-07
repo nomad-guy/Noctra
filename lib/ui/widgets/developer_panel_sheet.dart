@@ -37,12 +37,16 @@ class _DeveloperPanelSheetState extends ConsumerState<DeveloperPanelSheet> with 
     final currentSong = ref.watch(currentSongStreamProvider).value;
     final telemetry = ref.watch(streamResolutionStreamProvider).value;
 
-    return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-      child: Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.90,
-        ),
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.90,
+            ),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xF4080808) : const Color(0xF4FFFFFF),
@@ -144,6 +148,8 @@ class _DeveloperPanelSheetState extends ConsumerState<DeveloperPanelSheet> with 
           ],
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }

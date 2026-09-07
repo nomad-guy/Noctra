@@ -59,11 +59,15 @@ class _ShareStoryCardSheetState extends ConsumerState<ShareStoryCardSheet> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final activeTheme = kStoryThemes[_selectedThemeIndex];
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF111111) : const Color(0xFFFAFAFA),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF111111) : const Color(0xFFFAFAFA),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
       child: SafeArea(
         top: false,
         child: SingleChildScrollView(
@@ -170,6 +174,8 @@ class _ShareStoryCardSheetState extends ConsumerState<ShareStoryCardSheet> {
               ),
             ],
           ),
+        ),
+      ),
         ),
       ),
     );

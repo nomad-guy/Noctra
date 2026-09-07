@@ -17,11 +17,15 @@ class SleepTimerSheet extends ConsumerWidget {
     final remainingStream = ref.watch(sleepTimerStreamProvider);
     final remaining = remainingStream.asData?.value ?? audioPlayer.sleepTimerRemainingMinutes;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0D0D0D) : const Color(0xFFFAFAFA),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF0D0D0D) : const Color(0xFFFAFAFA),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
       ),
       child: SafeArea(
@@ -133,6 +137,8 @@ class SleepTimerSheet extends ConsumerWidget {
             ),
             const SizedBox(height: 14),
           ],
+        ),
+      ),
         ),
       ),
     );

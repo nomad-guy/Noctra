@@ -65,6 +65,30 @@ void main() {
       final ranked = SearchResultRanker.mergeAndRank([[a], [b]], '  RUPOSH! ');
       expect(ranked.first.title, 'Ruposh');
     });
+
+    test('natural query "Where is my mind by Pixies" puts original Pixies song first over remakes and other singers', () {
+      final original = s('pix1', 'Where Is My Mind?', 'Pixies');
+      final remake = s('cov1', 'Where Is My Mind? (Remake)', 'Pixies');
+      final otherCover = s('cov2', 'Where Is My Mind', 'Sunday Girl');
+      final pianoCover = s('cov3', 'Where Is My Mind (Piano Version)', 'Maxence Cyrin');
+      final videoRemake = s('cov4', 'Where is my mind by Pixies (Bass Boosted)', 'BassDrop');
+
+      final ranked = SearchResultRanker.mergeAndRank(
+        [[otherCover, remake], [videoRemake], [original, pianoCover]],
+        'Where is my mind by Pixies',
+      );
+
+      expect(ranked.first.id, 'pix1');
+      expect(ranked.first.artist, 'Pixies');
+      expect(
+        SearchResultRanker.score('Where is my mind by Pixies', original.title, original.artist),
+        greaterThan(SearchResultRanker.score('Where is my mind by Pixies', otherCover.title, otherCover.artist)),
+      );
+      expect(
+        SearchResultRanker.score('Where is my mind by Pixies', original.title, original.artist),
+        greaterThan(SearchResultRanker.score('Where is my mind by Pixies', remake.title, remake.artist)),
+      );
+    });
   });
 
   group('merge determinism', () {

@@ -40,11 +40,15 @@ class ExportPlaylistSheet extends StatelessWidget {
     final textPrimary = isDark ? Colors.white : Colors.black;
     final textSecondary = isDark ? Colors.white54 : Colors.black54;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Container(
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF141419) : const Color(0xFFF7F7FA),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -156,7 +160,9 @@ class ExportPlaylistSheet extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _exportOption(

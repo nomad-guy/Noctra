@@ -14,15 +14,19 @@ void showFolderDeleteSheet(
     context: context,
     useRootNavigator: true,
     backgroundColor: Colors.transparent,
-    builder: (ctx) => BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xF40E0E0E) : const Color(0xF4FFFFFF),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
-        ),
+    builder: (ctx) => Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xF40E0E0E) : const Color(0xF4FFFFFF),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+            ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -85,5 +89,7 @@ void showFolderDeleteSheet(
         ),
       ),
     ),
+        ),
+      ),
   );
 }

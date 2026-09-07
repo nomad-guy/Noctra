@@ -126,13 +126,17 @@ class _StemSeparationSheetState extends ConsumerState<StemSeparationSheet> {
   Widget build(BuildContext context) {
     final tokens = context.noctraTokens;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
-      decoration: BoxDecoration(
-        color: tokens.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border.all(color: tokens.subtleBorder),
-      ),
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: BoxDecoration(
+            color: tokens.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border.all(color: tokens.subtleBorder),
+          ),
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,6 +203,8 @@ class _StemSeparationSheetState extends ConsumerState<StemSeparationSheet> {
               child: _buildContent(),
             ),
           ],
+        ),
+      ),
         ),
       ),
     );

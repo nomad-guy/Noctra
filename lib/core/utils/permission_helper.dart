@@ -3,7 +3,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 class PermissionHelper {
   static Future<bool> requestStoragePermissions() async {
-    if (kIsWeb) return true;
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return true;
     try {
       // Android 11+ needs MANAGE_EXTERNAL_STORAGE for custom folders
       final manageStatus = await Permission.manageExternalStorage.request();

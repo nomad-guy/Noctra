@@ -30,12 +30,14 @@ class UrlImportSheet extends ConsumerStatefulWidget {
 
 class _UrlImportSheetState extends ConsumerState<UrlImportSheet> {
   final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode(debugLabel: 'UrlImportSheet_TextField');
   bool _isLoading = false;
   String? _errorMsg;
 
   @override
   void dispose() {
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -149,17 +151,21 @@ class _UrlImportSheetState extends ConsumerState<UrlImportSheet> {
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
 
-    return Container(
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF111111) : const Color(0xFFFAFAFA),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: Container(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF111111) : const Color(0xFFFAFAFA),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
       child: SafeArea(
         top: false,
         child: SingleChildScrollView(
@@ -218,6 +224,7 @@ class _UrlImportSheetState extends ConsumerState<UrlImportSheet> {
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 child: TextField(
                   controller: _controller,
+                  focusNode: _focusNode,
                   maxLines: 4,
                   minLines: 2,
                   style: TextStyle(
@@ -268,6 +275,8 @@ class _UrlImportSheetState extends ConsumerState<UrlImportSheet> {
               ),
             ],
           ),
+        ),
+      ),
         ),
       ),
     );

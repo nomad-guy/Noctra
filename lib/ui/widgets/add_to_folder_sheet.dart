@@ -45,10 +45,14 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
     final repo = ref.watch(musicRepositoryProvider);
     final folders = repo.customFolders;
 
-    return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-      child: Container(
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xF40A0A0A) : const Color(0xF4FFFFFF),
@@ -210,6 +214,8 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
           ],
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }

@@ -86,12 +86,16 @@ class _MusicPreferencesSheetState extends State<MusicPreferencesSheet> {
   Widget build(BuildContext context) {
     final isDark = widget.isDark;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF141416) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF141416) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,6 +204,8 @@ class _MusicPreferencesSheetState extends State<MusicPreferencesSheet> {
             ),
           ),
         ],
+      ),
+        ),
       ),
     );
   }

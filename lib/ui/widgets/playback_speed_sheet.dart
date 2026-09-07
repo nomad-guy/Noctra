@@ -13,14 +13,18 @@ class PlaybackSpeedSheet extends ConsumerWidget {
     final currentSpeed = ref.watch(playbackSpeedStateProvider);
     final accent = context.noctraTokens.accent;
 
-    return RepaintBoundary(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xF2000000) : const Color(0xF2FFFFFF),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: RepaintBoundary(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xF2000000) : const Color(0xF2FFFFFF),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
           ),
           child: SafeArea(
@@ -192,6 +196,8 @@ class PlaybackSpeedSheet extends ConsumerWidget {
               ],
             ),
           ),
+        ),
+      ),
         ),
       ),
     );

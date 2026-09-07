@@ -115,21 +115,63 @@ class JioSaavnPureEngine {
     final encryptedUrl = (moreInfo?['encrypted_media_url'] ?? '').toString();
     final streamUrl = decryptMediaUrl(encryptedUrl);
 
-    final rawArtist = (item['subtitle'] ?? '').toString();
-    String cleanArtist;
-    if (rawArtist.isNotEmpty) {
-      cleanArtist = rawArtist
-          .replaceAll('&quot;', '"')
-          .replaceAll('&#039;', "'")
-          .replaceAll('&amp;', '&');
-    } else {
+    // 1. Prioritize structured primary artists
+    String cleanArtist = '';
+    final primaryArtistsStr = (moreInfo?['primary_artists'] ?? '').toString().trim();
+    if (primaryArtistsStr.isNotEmpty) {
+      cleanArtist = primaryArtistsStr;
+    }
+
+    // 2. Structured artistMap['primary_artists'] list
+    if (cleanArtist.isEmpty) {
       final artistMap = moreInfo?['artistMap'] as Map<String, dynamic>?;
       final primary = artistMap?['primary_artists'] as List<dynamic>?;
-      if (primary != null && primary.isNotEmpty && primary.first is Map) {
-        cleanArtist = (primary.first['name'] ?? 'Popular Artist').toString();
-      } else {
-        cleanArtist = 'Popular Artist';
+      if (primary != null && primary.isNotEmpty) {
+        final names = primary
+            .whereType<Map>()
+            .map((a) => (a['name'] ?? '').toString().trim())
+            .where((n) => n.isNotEmpty)
+            .toList();
+        if (names.isNotEmpty) {
+          cleanArtist = names.join(', ');
+        }
       }
+    }
+
+    // 3. Structured singers or music from more_info
+    if (cleanArtist.isEmpty) {
+      final singers = (moreInfo?['singers'] ?? '').toString().trim();
+      final music = (moreInfo?['music'] ?? '').toString().trim();
+      if (singers.isNotEmpty && music.isNotEmpty && singers != music) {
+        cleanArtist = '$singers, $music';
+      } else if (singers.isNotEmpty) {
+        cleanArtist = singers;
+      } else if (music.isNotEmpty) {
+        cleanArtist = music;
+      }
+    }
+
+    // 4. Subtitle fallback (handling "Artist - Album" or ensuring it is not the album name)
+    final albumName = (moreInfo?['album'] ?? item['album'] ?? '').toString().trim();
+    if (cleanArtist.isEmpty) {
+      final rawSubtitle = (item['subtitle'] ?? '').toString().trim();
+      if (rawSubtitle.isNotEmpty) {
+        if (rawSubtitle.contains(' - ')) {
+          cleanArtist = rawSubtitle.split(' - ').first.trim();
+        } else if (albumName.isEmpty || rawSubtitle.toLowerCase() != albumName.toLowerCase()) {
+          cleanArtist = rawSubtitle;
+        }
+      }
+    }
+
+    if (cleanArtist.isEmpty) {
+      cleanArtist = 'Unknown Artist';
+    } else {
+      cleanArtist = cleanArtist
+          .replaceAll('&quot;', '"')
+          .replaceAll('&#039;', "'")
+          .replaceAll('&apos;', "'")
+          .replaceAll('&amp;', '&');
     }
 
     final rawImg = (item['image'] ?? '').toString();
@@ -141,12 +183,19 @@ class JioSaavnPureEngine {
     }
 
     final durationSec = int.tryParse(moreInfo?['duration']?.toString() ?? '180') ?? 180;
+    final cleanAlbum = albumName.isNotEmpty
+        ? albumName
+            .replaceAll('&quot;', '"')
+            .replaceAll('&#039;', "'")
+            .replaceAll('&apos;', "'")
+            .replaceAll('&amp;', '&')
+        : 'Single Release';
 
     return {
       'id': 'saavn_${item['id'] ?? cleanTitle.hashCode.toString()}',
       'title': cleanTitle,
       'artist': cleanArtist,
-      'album': moreInfo?['album']?.toString() ?? 'CD Master Edition',
+      'album': cleanAlbum,
       'thumbnail': highResImg,
       'stream_url': streamUrl ?? '',
       'duration': durationSec,

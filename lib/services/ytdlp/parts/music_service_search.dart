@@ -158,9 +158,10 @@ extension MusicServiceSearch on MusicService {
     if (queryItunes) {
       futures.add(() async {
         try {
+          final itunesQuery = clean.replaceAll(RegExp(r'\s+by\s+', caseSensitive: false), ' ').trim();
           final res = await http
               .get(Uri.parse(
-                  'https://itunes.apple.com/search?term=${Uri.encodeComponent(clean)}&entity=song&limit=25'))
+                  'https://itunes.apple.com/search?term=${Uri.encodeComponent(itunesQuery)}&entity=song&limit=25'))
               .timeout(const Duration(seconds: 4));
           if (res.statusCode == 200) {
             final results = jsonDecode(res.body)['results'] as List?;

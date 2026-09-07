@@ -29,10 +29,14 @@ class SongContextMenu extends ConsumerWidget {
     final isDark = themeMode.isDark;
     final audioPlayer = ref.watch(audioPlayerServiceProvider);
 
-    return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-      child: Container(
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.65),
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.65),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         decoration: BoxDecoration(
           color: isDark ? const Color(0xF40A0A0A) : const Color(0xF4FFFFFF),
@@ -164,7 +168,9 @@ class SongContextMenu extends ConsumerWidget {
           ],
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _menuTile(BuildContext context, bool isDark, {
