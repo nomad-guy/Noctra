@@ -96,7 +96,7 @@ export function Navbar({ theme, onCycleTheme }: Props) {
           {/* Quick CTA */}
           <a href="#downloads" className={styles.downloadCta}>
             <Download size={14} />
-            <span>Get v1.0.5</span>
+            <span>Get v1.0.6</span>
           </a>
         </div>
       </div>

@@ -15,7 +15,7 @@ class ArtistWikipediaResult {
 
 class ArtistWikipediaService {
   static const String _userAgent =
-      'NoctraPlayer/1.0.5 (https://github.com/nomad-guy/Noctra; dev@noctra.app)';
+      'NoctraPlayer/1.0.6 (https://github.com/nomad-guy/Noctra; dev@noctra.app)';
 
   static Future<ArtistWikipediaResult?> fetchBioAndImage(
       String effectiveName) async {

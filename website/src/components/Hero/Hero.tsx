@@ -32,7 +32,7 @@ export function Hero() {
     <section id="hero" className={styles.hero} ref={heroRef}>
       <div className={styles.releasePill}>
         <span className={styles.pulseDot} />
-        <span>v1.0.5 Production Release &bull; Windows &bull; Linux &bull; Android &bull; iOS</span>
+        <span>v1.0.6 Production Release &bull; Windows &bull; Linux &bull; Android &bull; iOS</span>
       </div>
 
       <h1 className={styles.title}>
@@ -69,16 +69,16 @@ export function Hero() {
 
       <div className={styles.osPills}>
         <span className={styles.pillsLabel}>Direct 1-Click:</span>
-        <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.5/Noctra-1.0.5-Setup-x64.exe" className={styles.osPill}>
+        <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6-Setup-x64.exe" className={styles.osPill}>
           <Monitor size={13} /> Windows (.exe)
         </a>
-        <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.5/noctra_1.0.5_amd64.deb" className={styles.osPill}>
+        <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/noctra_1.0.6_amd64.deb" className={styles.osPill}>
           <Terminal size={13} /> Linux (.deb)
         </a>
-        <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.5/Noctra-1.0.5-arm64-v8a.apk" className={styles.osPill}>
+        <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6-arm64-v8a.apk" className={styles.osPill}>
           <Smartphone size={13} /> Android (.apk)
         </a>
-        <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.5/Noctra-1.0.5.ipa" className={styles.osPill}>
+        <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6.ipa" className={styles.osPill}>
           <Sparkles size={13} /> iOS (.ipa)
         </a>
       </div>

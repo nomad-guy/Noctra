@@ -11,12 +11,12 @@ export function FAQ() {
       <div className={styles.accordion}>
         <details className={styles.item} open>
           <summary className={styles.question}>
-            <span>What is new in Noctra v1.0.5?</span>
+            <span>What is new in Noctra v1.0.6?</span>
             <span className={styles.arrow}>+</span>
           </summary>
           <div className={styles.answer}>
             <p>
-              v1.0.5 introduces single-file native standalone packages for <strong>Windows (.exe)</strong>, <strong>Linux (.deb)</strong>, and <strong>iOS (.ipa)</strong> alongside Android. It also brings 1-tap Shuffle & Algorithmic Remix for playlists, plus a pure-Dart cross-device playlist transfer protocol supporting JSON manifests (.noctra.json) and universal CSV.
+              v1.0.6 introduces on-device stem separation with real-time multi-band DSP isolation (vocals, drums, bass, instruments), intelligent AI Radio repeat prevention with a 60-track sliding LRU window, on-device neural recommendation optimizations, sleep timer &quot;End of Track&quot; mode, in-playlist search and multi-criteria sorting, full artist discography sections (Singles, EPs, Albums), and complete song credits with liner notes.
             </p>
           </div>
         </details>
@@ -52,7 +52,7 @@ export function FAQ() {
           </summary>
           <div className={styles.answer}>
             <p>
-              Download <code>Noctra-1.0.5.ipa</code> from the downloads section. Open AltStore, SideStore, Sideloadly, or TrollStore, select the IPA, and install it to your iPhone or iPad with zero jailbreaking required.
+              Download <code>Noctra-1.0.6.ipa</code> from the downloads section. Open AltStore, SideStore, Sideloadly, or TrollStore, select the IPA, and install it to your iPhone or iPad with zero jailbreaking required.
             </p>
           </div>
         </details>

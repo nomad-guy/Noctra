@@ -197,7 +197,7 @@ extension MusicServiceSearch on MusicService {
           final lUri = Uri.parse(
               'https://lrclib.net/api/search?q=${Uri.encodeComponent(clean)}');
           final lRes = await http.get(lUri, headers: {
-            'User-Agent': 'Noctra/1.0.5'
+            'User-Agent': 'Noctra/1.0.6'
           }).timeout(const Duration(seconds: 4));
           if (lRes.statusCode == 200) {
             final lData = jsonDecode(lRes.body) as List?;

@@ -4,7 +4,7 @@ import styles from './PlaylistTransfer.module.css';
 
 const SAMPLE_MANIFEST_JSON = `{
   "format": "noctra_playlist_v1",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "exportedAt": "2026-09-06T21:30:00Z",
   "playlist": {
     "name": "Midnight Audiophile Studio",
@@ -53,7 +53,7 @@ export function PlaylistTransfer() {
   return (
     <section id="transfer" className={styles.section}>
       <div className="section-header">
-        <span className="section-tag">NEW IN V1.0.5</span>
+        <span className="section-tag">NEW IN V1.0.6</span>
         <h2 className="section-title">Universal Playlist Transfer & Algorithmic Remix</h2>
         <p className="section-subtitle">
           Export and transfer playlists across devices via lossless JSON manifest (<code>.noctra.json</code>) or spreadsheet CSV (<code>.csv</code>). 100% on-device with zero account lock-in.
@@ -120,7 +120,7 @@ export function PlaylistTransfer() {
                 <Sparkles size={28} />
               </div>
               <h4 className={styles.panelTitle}>Midnight Audiophile Studio</h4>
-              <span className={styles.panelTag}>v1.0.5 SQLite Folder</span>
+              <span className={styles.panelTag}>v1.0.6 SQLite Folder</span>
               <p className={styles.panelDesc}>
                 Preserves track order, high-res cover art links, and sample rate telemetry.
               </p>

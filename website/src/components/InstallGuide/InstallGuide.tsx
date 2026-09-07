@@ -37,16 +37,16 @@ const GUIDES: Record<PlatformType, PlatformGuide> = {
     id: 'windows',
     name: 'Windows',
     badge: 'Standalone x64 Setup',
-    fileName: 'Noctra-1.0.5-Setup-x64.exe',
+    fileName: 'Noctra-1.0.6-Setup-x64.exe',
     fileSize: '54 MB',
     downloadUrl:
-      'https://github.com/nomad-guy/Noctra/releases/download/v1.0.5/Noctra-1.0.5-Setup-x64.exe',
+      'https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6-Setup-x64.exe',
     sha256:
       '47fe0543666fcf8ae676ff38a209930f7be522d0571fa088beba7f43ec8adce5',
     steps: [
       {
         title: 'Download the Official Installer',
-        desc: 'Click the download button above to get Noctra-1.0.5-Setup-x64.exe, pre-compiled with all audio engines and codecs bundled.',
+        desc: 'Click the download button above to get Noctra-1.0.6-Setup-x64.exe, pre-compiled with all audio engines and codecs bundled.',
       },
       {
         title: 'Run Setup & Security Confirmation',
@@ -68,10 +68,10 @@ const GUIDES: Record<PlatformType, PlatformGuide> = {
     id: 'android',
     name: 'Android',
     badge: 'Universal & Multi-ABI APK',
-    fileName: 'Noctra-1.0.5-arm64-v8a.apk',
+    fileName: 'Noctra-1.0.6-arm64-v8a.apk',
     fileSize: '36 MB',
     downloadUrl:
-      'https://github.com/nomad-guy/Noctra/releases/download/v1.0.5/Noctra-1.0.5-arm64-v8a.apk',
+      'https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6-arm64-v8a.apk',
     sha256:
       '79b47e8ebdb3cf0bf00f40d6c975a5933a364177d61eb1a4da605f63968ae2ad',
     steps: [
@@ -99,21 +99,21 @@ const GUIDES: Record<PlatformType, PlatformGuide> = {
     id: 'linux',
     name: 'Linux',
     badge: 'Debian / Ubuntu Package',
-    fileName: 'noctra_1.0.5_amd64.deb',
+    fileName: 'noctra_1.0.6_amd64.deb',
     fileSize: '46 MB',
     downloadUrl:
-      'https://github.com/nomad-guy/Noctra/releases/download/v1.0.5/noctra_1.0.5_amd64.deb',
+      'https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/noctra_1.0.6_amd64.deb',
     sha256:
       '9c5237895e6919dbb3fe27e462d159048a1b69828fa6b98668383f7e53f1da73',
     steps: [
       {
         title: 'Download the Debian Package',
-        desc: 'Download noctra_1.0.5_amd64.deb to your Downloads folder or fetch it directly via terminal.',
+        desc: 'Download noctra_1.0.6_amd64.deb to your Downloads folder or fetch it directly via terminal.',
       },
       {
         title: 'Install via DPKG',
         desc: 'Run the package installer using sudo dpkg in your terminal.',
-        command: 'sudo dpkg -i noctra_1.0.5_amd64.deb',
+        command: 'sudo dpkg -i noctra_1.0.6_amd64.deb',
       },
       {
         title: 'Resolve Dependencies (If Required)',
@@ -130,22 +130,22 @@ const GUIDES: Record<PlatformType, PlatformGuide> = {
     id: 'ios',
     name: 'iOS',
     badge: 'Sideloadable IPA Bundle',
-    fileName: 'Noctra-1.0.5.ipa',
+    fileName: 'Noctra-1.0.6.ipa',
     fileSize: '48 MB',
     downloadUrl:
-      'https://github.com/nomad-guy/Noctra/releases/download/v1.0.5/Noctra-1.0.5.ipa',
+      'https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6.ipa',
     sha256:
       'b7faad7df8dfad86bc778bba9ae3298cb3d2a7c490a6e0df2e5b7b938f29ab0e',
     steps: [
       {
         title: 'Download the IPA Package',
-        desc: 'Download Noctra-1.0.5.ipa. Compatible with AltStore, SideStore, Sideloadly, and TrollStore on iOS 15.0+.',
+        desc: 'Download Noctra-1.0.6.ipa. Compatible with AltStore, SideStore, Sideloadly, and TrollStore on iOS 15.0+.',
       },
       {
         title: '1-Click Install with AltStore (Optional)',
         desc: 'If AltStore is installed on your device, tap the deep-link below to start direct installation.',
         command:
-          'altstore://install?url=https://github.com/nomad-guy/Noctra/releases/download/v1.0.5/Noctra-1.0.5.ipa',
+          'altstore://install?url=https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6.ipa',
       },
       {
         title: 'Trust Developer Certificate',
