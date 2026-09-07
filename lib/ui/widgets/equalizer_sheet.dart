@@ -38,17 +38,25 @@ class EqualizerSheet extends ConsumerWidget {
     final virtualizer = ref.watch(virtualizerProvider);
     final audioPlayer = ref.watch(audioPlayerServiceProvider);
 
+    final isDesktop = MediaQuery.of(context).size.width >= 720;
+
     return RepaintBoundary(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-        child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xF2000000) : const Color(0xF2FFFFFF),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
-        ),
-        child: Column(
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: isDesktop ? 640 : double.infinity,
+          ),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xF2000000) : const Color(0xF2FFFFFF),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+              ),
+              child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -272,6 +280,9 @@ class EqualizerSheet extends ConsumerWidget {
           ],
         ),
       ),
-    ),);
+    ),
+  ),
+),
+    );
   }
 }

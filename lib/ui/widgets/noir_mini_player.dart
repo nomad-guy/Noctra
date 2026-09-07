@@ -90,72 +90,77 @@ class _NoirMiniPlayerViewState extends ConsumerState<NoirMiniPlayerView> {
             ref.read(audioPlayerServiceProvider).stopAndDismiss();
           }
         },
-        child: GlassCard(
-          radius: 24,
-          padding: EdgeInsets.zero,
-          isHighlighted: true,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 2),
-                child: Row(children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: 46, height: 46,
-                      color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE0E0E0),
-                      child: song.artworkUrl != null
-                          ? Image.network(song.artworkUrl!, fit: BoxFit.cover, cacheWidth: 150, cacheHeight: 150,
-                              errorBuilder: (c, e, st) => Icon(Icons.music_note_outlined, color: isDark ? Colors.white54 : Colors.black54))
-                          : Icon(Icons.music_note_outlined, color: isDark ? Colors.white54 : Colors.black54),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                      Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary)),
-                      const SizedBox(height: 2),
-                      Row(children: [
-                        LiveAudioWave(isPlaying: isPlaying, color: isDark ? Colors.white70 : Colors.black87, height: 8, barCount: 3),
-                        const SizedBox(width: 4),
-                        Expanded(child: Text(song.artist, maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 11, color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary))),
-                      ]),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 960),
+            child: GlassCard(
+              radius: 24,
+              padding: EdgeInsets.zero,
+              isHighlighted: true,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 2),
+                    child: Row(children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: 46, height: 46,
+                          color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE0E0E0),
+                          child: song.artworkUrl != null
+                              ? Image.network(song.artworkUrl!, fit: BoxFit.cover, cacheWidth: 150, cacheHeight: 150,
+                                  errorBuilder: (c, e, st) => Icon(Icons.music_note_outlined, color: isDark ? Colors.white54 : Colors.black54))
+                              : Icon(Icons.music_note_outlined, color: isDark ? Colors.white54 : Colors.black54),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                          Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary)),
+                          const SizedBox(height: 2),
+                          Row(children: [
+                            LiveAudioWave(isPlaying: isPlaying, color: isDark ? Colors.white70 : Colors.black87, height: 8, barCount: 3),
+                            const SizedBox(width: 4),
+                            Expanded(child: Text(song.artist, maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 11, color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary))),
+                          ]),
+                        ]),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.equalizer_rounded, size: 20, color: isDark ? Colors.white60 : Colors.black54),
+                        tooltip: context.tr(L10nKeys.equalizer),
+                        onPressed: () {
+                          HapticFeedback.selectionClick();
+                          showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const EqualizerSheet());
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(repo.isFavorite(song.id) ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                          size: 20,
+                          color: repo.isFavorite(song.id) ? Colors.redAccent : (isDark ? Colors.white60 : Colors.black54)),
+                        onPressed: () {
+                          HapticFeedback.mediumImpact();
+                          ref.read(musicRepositoryProvider).toggleFavorite(song);
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
+                          size: 32, color: isDark ? Colors.white : Colors.black),
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          ref.read(audioPlayerServiceProvider).togglePlayPause();
+                        },
+                      ),
                     ]),
                   ),
-                  IconButton(
-                    icon: Icon(Icons.equalizer_rounded, size: 20, color: isDark ? Colors.white60 : Colors.black54),
-                    tooltip: context.tr(L10nKeys.equalizer),
-                    onPressed: () {
-                      HapticFeedback.selectionClick();
-                      showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (c) => const EqualizerSheet());
-                    },
-                  ),
-                  IconButton(
-                    icon: Icon(repo.isFavorite(song.id) ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                      size: 20,
-                      color: repo.isFavorite(song.id) ? Colors.redAccent : (isDark ? Colors.white60 : Colors.black54)),
-                    onPressed: () {
-                      HapticFeedback.mediumImpact();
-                      ref.read(musicRepositoryProvider).toggleFavorite(song);
-                    },
-                  ),
-                  IconButton(
-                    icon: Icon(isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
-                      size: 32, color: isDark ? Colors.white : Colors.black),
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      ref.read(audioPlayerServiceProvider).togglePlayPause();
-                    },
-                  ),
-                ]),
+                  // Progress bar + timestamps. Owns the position stream watch so
+                  // this mini-player card does not rebuild on every position tick.
+                  _MiniSeekArea(song: song, isDark: isDark, accentColor: accentColor),
+                ],
               ),
-              // Progress bar + timestamps. Owns the position stream watch so
-              // this mini-player card does not rebuild on every position tick.
-              _MiniSeekArea(song: song, isDark: isDark, accentColor: accentColor),
-            ],
+            ),
           ),
         ),
       ),

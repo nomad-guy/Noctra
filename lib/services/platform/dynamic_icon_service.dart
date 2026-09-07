@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../../data/sources/noctra_local_database.dart';
 import '../../core/platform/noctra_capabilities.dart';
 
 /// Available launcher icon variants. These are visual icon styles, NOT themes.
@@ -84,6 +85,13 @@ class DynamicIconService {
   /// and returns the actual icon. Android is the source of truth.
   static Future<void> init() async {
     if (!NoctraCapabilities.supportsLauncherIcons) {
+      try {
+        final savedKey = NoctraLocalDatabase().getCachedAppIcon();
+        final parsed = NoctraAppIconX.fromKey(savedKey);
+        if (parsed != null) {
+          _actualIcon = parsed;
+        }
+      } catch (_) {}
       _initialized = true;
       return;
     }
@@ -117,7 +125,11 @@ class DynamicIconService {
   static Future<IconChangeResult> setIcon(NoctraAppIcon icon) async {
     if (_actualIcon == icon) return IconChangeResult.applied;
     if (!NoctraCapabilities.supportsLauncherIcons) {
-      return IconChangeResult.failed;
+      _actualIcon = icon;
+      try {
+        await NoctraLocalDatabase().saveAppIcon(icon.key);
+      } catch (_) {}
+      return IconChangeResult.applied;
     }
 
     final completer = Completer<IconChangeResult>();

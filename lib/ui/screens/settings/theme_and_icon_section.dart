@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
+import '../../../core/platform/noctra_capabilities.dart';
 import '../../../core/theme/noir_theme.dart';
 import '../../../core/utils/noctra_localization.dart';
 import '../../../services/platform/dynamic_icon_service.dart';
@@ -168,6 +170,15 @@ class ThemeAndIconSection extends ConsumerWidget {
       NoctraAppIcon icon, String title) async {
     final currentIcon = ref.read(appIconProvider);
     if (currentIcon == icon) return;
+
+    if (!NoctraCapabilities.isAndroid) {
+      // On PC / desktop, apply icon & logo change immediately with 1-click tactile feedback
+      HapticFeedback.selectionClick();
+      await DynamicIconService.setIcon(icon);
+      ref.read(appIconProvider.notifier).state =
+          DynamicIconService.currentIcon;
+      return;
+    }
 
     final tokens = context.noctraTokens;
     final isDark = Theme.of(context).brightness == Brightness.dark;

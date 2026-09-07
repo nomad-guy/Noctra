@@ -19,6 +19,8 @@ class SearchScreen extends ConsumerStatefulWidget {
 
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode =
+      FocusNode(debugLabel: 'SearchScreen_TextField');
   Timer? _debounceTimer;
   String _selectedSource = 'all';
 
@@ -28,6 +30,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   void dispose() {
     _debounceTimer?.cancel();
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -168,6 +171,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ),
                 child: TextField(
                   controller: _searchController,
+                  focusNode: _searchFocusNode,
                   onChanged: _onSearchChanged,
                   onSubmitted: _performSearch,
                   style: TextStyle(

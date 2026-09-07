@@ -47,22 +47,30 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
 
     final hasAnyMatch = showTheme || showLang || showMusicPref || showStorage || showPlayback || showLyrics || showDev;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.88,
-      decoration: BoxDecoration(
-        color: themeMode.isLiquidGlass
-            ? tokens.surface.withValues(alpha: .90)
-            : (isDark ? const Color(0xFF0D0D0D) : const Color(0xFFFAFAFA)),
-        gradient: themeMode.isLiquidGlass
-            ? LinearGradient(colors: [
-                tokens.surfaceVariant.withValues(alpha: .94),
-                tokens.canvas.withValues(alpha: .88)
-              ])
-            : null,
-        border: Border.all(color: tokens.subtleBorder),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: SafeArea(
+    final isDesktop = MediaQuery.of(context).size.width >= 720;
+
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: isDesktop ? 680 : double.infinity,
+        ),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.88,
+          decoration: BoxDecoration(
+            color: themeMode.isLiquidGlass
+                ? tokens.surface.withValues(alpha: .90)
+                : (isDark ? const Color(0xFF0D0D0D) : const Color(0xFFFAFAFA)),
+            gradient: themeMode.isLiquidGlass
+                ? LinearGradient(colors: [
+                    tokens.surfaceVariant.withValues(alpha: .94),
+                    tokens.canvas.withValues(alpha: .88)
+                  ])
+                : null,
+            border: Border.all(color: tokens.subtleBorder),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -238,6 +246,8 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
           ),
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 }

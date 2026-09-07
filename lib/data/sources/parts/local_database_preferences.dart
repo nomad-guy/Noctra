@@ -79,4 +79,24 @@ extension LocalDatabasePreferences on NoctraLocalDatabase {
       }
     });
   }
+
+  String getCachedAppIcon() {
+    try {
+      return _prefs?.getString('noctra_app_icon') ?? 'default';
+    } catch (_) {
+      return 'default';
+    }
+  }
+
+  Future<void> saveAppIcon(String iconKey) {
+    return _enqueuePrefsWrite(() async {
+      try {
+        final prefs = _prefs ?? await SharedPreferences.getInstance();
+        _prefs = prefs;
+        await prefs.setString('noctra_app_icon', iconKey);
+      } catch (e) {
+        NoctraLogger.w('Failed to persist app icon', e);
+      }
+    });
+  }
 }

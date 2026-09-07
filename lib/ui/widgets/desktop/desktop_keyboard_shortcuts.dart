@@ -7,7 +7,8 @@ import '../../../providers/app_providers.dart';
 /// Wraps desktop UI with global keyboard shortcut controls.
 ///
 /// Supports Space (Play/Pause), N (Next), P (Previous), Left/Right (Seek ±5s), and M (Mute).
-/// Automatically ignores shortcuts when focus is inside a text input field.
+/// Automatically and strictly ignores shortcuts when focus is inside any text input field
+/// (TextField, TextFormField, EditableText) or when modifier keys (Ctrl/Alt/Meta) are held.
 class DesktopKeyboardShortcuts extends ConsumerWidget {
   final Widget child;
 
@@ -16,13 +17,93 @@ class DesktopKeyboardShortcuts extends ConsumerWidget {
   bool _isEditingText() {
     final focus = FocusManager.instance.primaryFocus;
     if (focus == null) return false;
-    final widget = focus.context?.widget;
-    return widget is EditableText;
+
+    // Check debug label on focus node
+    final label = focus.debugLabel?.toLowerCase() ?? '';
+    if (label.contains('editabletext') ||
+        label.contains('textfield') ||
+        label.contains('textformfield')) {
+      return true;
+    }
+
+    // Check focus node descendants
+    for (final node in focus.descendants) {
+      final nodeLabel = node.debugLabel?.toLowerCase() ?? '';
+      if (nodeLabel.contains('editabletext') ||
+          nodeLabel.contains('textfield') ||
+          nodeLabel.contains('textformfield')) {
+        return true;
+      }
+      final ctx = node.context;
+      if (ctx != null && (ctx.widget is EditableText || ctx.widget is TextField)) {
+        return true;
+      }
+    }
+
+    final context = focus.context;
+    if (context == null) return false;
+
+    // Direct widget check
+    if (context.widget is EditableText ||
+        context.widget is TextField ||
+        context.widget is TextFormField) {
+      return true;
+    }
+
+    if (context.findAncestorWidgetOfExactType<EditableText>() != null ||
+        context.findAncestorWidgetOfExactType<TextField>() != null ||
+        context.findAncestorWidgetOfExactType<TextFormField>() != null ||
+        context.findAncestorStateOfType<EditableTextState>() != null) {
+      return true;
+    }
+
+    // Walk up ancestor elements in the element tree
+    bool isEditing = false;
+    try {
+      context.visitAncestorElements((element) {
+        if (element.widget is EditableText ||
+            element.widget is TextField ||
+            element.widget is TextFormField) {
+          isEditing = true;
+          return false; // stop visiting
+        }
+        return true; // continue visiting
+      });
+    } catch (_) {}
+    if (isEditing) return true;
+
+    // Walk down descendant elements in the element tree
+    void visitor(Element element) {
+      if (isEditing) return;
+      if (element.widget is EditableText ||
+          element.widget is TextField ||
+          element.widget is TextFormField) {
+        isEditing = true;
+        return;
+      }
+      element.visitChildren(visitor);
+    }
+
+    try {
+      (context as Element).visitChildren(visitor);
+    } catch (_) {}
+
+    return isEditing;
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event, WidgetRef ref) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    // Strictly ignore if user is typing in any text field or input
     if (_isEditingText()) return KeyEventResult.ignored;
+
+    // Ignore if modifier keys are pressed (Ctrl, Alt, Meta/Windows key)
+    // to avoid interfering with shortcuts like Ctrl+C, Ctrl+V, Ctrl+A, Alt+Tab, etc.
+    if (HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isAltPressed ||
+        HardwareKeyboard.instance.isMetaPressed) {
+      return KeyEventResult.ignored;
+    }
 
     final player = ref.read(audioPlayerServiceProvider);
 

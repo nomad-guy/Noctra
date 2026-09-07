@@ -33,7 +33,9 @@ class PlayerSheet extends ConsumerWidget {
 
     if (song == null) return const SizedBox.shrink();
     final isDownloaded = repo.downloads.any((d) => d.id == song.id);
-    final screenH = MediaQuery.of(context).size.height;
+    final size = MediaQuery.of(context).size;
+    final screenH = size.height;
+    final isDesktop = size.width >= 720;
     final heroH = displayMode == PlayerDisplayMode.lyrics
         ? (screenH * 0.38).clamp(260.0, 340.0)
         : (screenH * 0.30).clamp(200.0, 280.0);
@@ -46,31 +48,37 @@ class PlayerSheet extends ConsumerWidget {
         if (velocity > 400 && dragStartY < 80) Navigator.of(context).pop();
       },
       child: RepaintBoundary(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-          child: Container(
-          constraints: BoxConstraints(maxHeight: screenH * 0.96),
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-          decoration: BoxDecoration(
-            color: themeMode.isLiquidGlass
-                ? null
-                : tokens.surface.withValues(alpha: 0.96),
-            gradient: themeMode.isLiquidGlass
-                ? LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      tokens.surfaceVariant.withValues(alpha: 0.94),
-                      tokens.canvas.withValues(alpha: 0.88),
-                      tokens.secondaryAccent.withValues(alpha: 0.18),
-                    ],
-                  )
-                : null,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-            border: Border.all(color: tokens.subtleBorder),
-          ),
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isDesktop ? 640.0 : double.infinity,
+              maxHeight: screenH * (isDesktop ? 0.90 : 0.96),
+            ),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                decoration: BoxDecoration(
+                  color: themeMode.isLiquidGlass
+                      ? null
+                      : tokens.surface.withValues(alpha: 0.96),
+                  gradient: themeMode.isLiquidGlass
+                      ? LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            tokens.surfaceVariant.withValues(alpha: 0.94),
+                            tokens.canvas.withValues(alpha: 0.88),
+                            tokens.secondaryAccent.withValues(alpha: 0.18),
+                          ],
+                        )
+                      : null,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                  border: Border.all(color: tokens.subtleBorder),
+                ),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,12 +122,14 @@ class PlayerSheet extends ConsumerWidget {
                 ),
                 const SizedBox(height: 20),
                 PlayerBottomActions(song: song),
-                const SizedBox(height: 16),
               ],
             ),
           ),
         ),
       ),
-    ),);
+    ),
+  ),
+),
+    );
   }
 }
