@@ -94,6 +94,23 @@
 .tabName {
   font-size: 0.95rem;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.yourOsTag {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--btn-primary-color);
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 8px rgba(126, 200, 255, 0.4);
 }
 
 .tabBadge {

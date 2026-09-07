@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Monitor,
   Smartphone,
@@ -10,6 +10,7 @@ import {
   AlertCircle,
   ShieldCheck,
 } from 'lucide-react';
+import { detectUserPlatform } from '../../utils/detectPlatform';
 import type { PlatformType } from '../../types';
 import styles from './InstallGuide.module.css';
 
@@ -163,7 +164,15 @@ const GUIDES: Record<PlatformType, PlatformGuide> = {
 export function InstallGuide() {
   const [selectedPlatform, setSelectedPlatform] =
     useState<PlatformType>('windows');
+  const [userPlatform, setUserPlatform] =
+    useState<PlatformType>('windows');
   const [copiedText, setCopiedText] = useState<string | null>(null);
+
+  useEffect(() => {
+    const detected = detectUserPlatform();
+    setUserPlatform(detected);
+    setSelectedPlatform(detected);
+  }, []);
 
   const guide = GUIDES[selectedPlatform];
 
@@ -202,6 +211,7 @@ export function InstallGuide() {
         <div className={styles.tabs} role="tablist">
           {(Object.keys(GUIDES) as PlatformType[]).map((platform) => {
             const isActive = platform === selectedPlatform;
+            const isUserPlatform = platform === userPlatform;
             const item = GUIDES[platform];
             return (
               <button
@@ -213,7 +223,12 @@ export function InstallGuide() {
                 onClick={() => setSelectedPlatform(platform)}
               >
                 {getPlatformIcon(platform)}
-                <span className={styles.tabName}>{item.name}</span>
+                <span className={styles.tabName}>
+                  {item.name}
+                  {isUserPlatform && (
+                    <span className={styles.yourOsTag}>YOUR OS</span>
+                  )}
+                </span>
                 <span className={styles.tabBadge}>{item.badge}</span>
               </button>
             );

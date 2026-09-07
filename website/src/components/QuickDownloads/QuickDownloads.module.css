@@ -47,6 +47,18 @@
 .featuredCard {
   border-color: var(--accent);
   box-shadow: 0 0 24px var(--accent-glow);
+  animation: pulseCardGlow 2.8s ease-in-out infinite;
+}
+
+@keyframes pulseCardGlow {
+  0%, 100% {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+  50% {
+    border-color: rgba(255, 255, 255, 0.65);
+    box-shadow: 0 0 32px var(--accent-glow), 0 0 12px rgba(255, 255, 255, 0.2);
+  }
 }
 
 .badgeRow {
@@ -68,14 +80,55 @@
 }
 
 .featuredBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-family: var(--font-mono);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.06em;
-  padding: 3px 8px;
+  padding: 3px 10px;
   border-radius: var(--radius-pill);
   background: var(--accent);
   color: var(--btn-primary-color);
+}
+
+.flashingBadge {
+  animation: flashRecommended 1.8s ease-in-out infinite;
+}
+
+@keyframes flashRecommended {
+  0%, 100% {
+    box-shadow: 0 0 6px rgba(126, 200, 255, 0.4), 0 0 14px rgba(126, 200, 255, 0.2);
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(126, 200, 255, 0.9), 0 0 28px rgba(126, 200, 255, 0.5);
+    transform: scale(1.04);
+    filter: brightness(1.2);
+  }
+}
+
+.pulseDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: inline-block;
+  box-shadow: 0 0 6px #ffffff;
+  animation: pulseDotAnimation 1.2s ease-in-out infinite;
+}
+
+@keyframes pulseDotAnimation {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(0.6);
+  }
 }
 
 .versionPill {

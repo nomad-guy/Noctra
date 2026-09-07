@@ -1,15 +1,31 @@
+import { useState, useEffect } from 'react';
 import { Monitor, Terminal, Smartphone, Sparkles, Download } from 'lucide-react';
+import { detectUserPlatform } from '../../utils/detectPlatform';
+import type { PlatformType } from '../../types';
 import styles from './QuickDownloads.module.css';
 
 export function QuickDownloads() {
+  const [userPlatform, setUserPlatform] = useState<PlatformType>('windows');
+
+  useEffect(() => {
+    setUserPlatform(detectUserPlatform());
+  }, []);
+
   return (
     <section className={styles.section}>
       <div className={styles.grid}>
         {/* Windows */}
-        <div className={styles.card}>
+        <div className={`${styles.card} ${userPlatform === 'windows' ? styles.featuredCard : ''}`}>
           <div className={styles.badgeRow}>
             <span className={styles.platformTag}>WINDOWS</span>
-            <span className={styles.versionPill}>v1.0.5</span>
+            {userPlatform === 'windows' ? (
+              <span className={`${styles.featuredBadge} ${styles.flashingBadge}`}>
+                <span className={styles.pulseDot} />
+                RECOMMENDED
+              </span>
+            ) : (
+              <span className={styles.versionPill}>v1.0.5</span>
+            )}
           </div>
           <div className={styles.iconTitleRow}>
             <div className={styles.osIcon}><Monitor size={22} /></div>
@@ -36,10 +52,17 @@ export function QuickDownloads() {
         </div>
 
         {/* Linux */}
-        <div className={styles.card}>
+        <div className={`${styles.card} ${userPlatform === 'linux' ? styles.featuredCard : ''}`}>
           <div className={styles.badgeRow}>
             <span className={styles.platformTag}>LINUX</span>
-            <span className={styles.versionPill}>v1.0.5</span>
+            {userPlatform === 'linux' ? (
+              <span className={`${styles.featuredBadge} ${styles.flashingBadge}`}>
+                <span className={styles.pulseDot} />
+                RECOMMENDED
+              </span>
+            ) : (
+              <span className={styles.versionPill}>v1.0.5</span>
+            )}
           </div>
           <div className={styles.iconTitleRow}>
             <div className={styles.osIcon}><Terminal size={22} /></div>
@@ -66,10 +89,17 @@ export function QuickDownloads() {
         </div>
 
         {/* Android */}
-        <div className={`${styles.card} ${styles.featuredCard}`}>
+        <div className={`${styles.card} ${userPlatform === 'android' ? styles.featuredCard : ''}`}>
           <div className={styles.badgeRow}>
             <span className={styles.platformTag}>ANDROID</span>
-            <span className={styles.featuredBadge}>RECOMMENDED</span>
+            {userPlatform === 'android' ? (
+              <span className={`${styles.featuredBadge} ${styles.flashingBadge}`}>
+                <span className={styles.pulseDot} />
+                RECOMMENDED
+              </span>
+            ) : (
+              <span className={styles.versionPill}>v1.0.5</span>
+            )}
           </div>
           <div className={styles.iconTitleRow}>
             <div className={styles.osIcon}><Smartphone size={22} /></div>
@@ -96,10 +126,17 @@ export function QuickDownloads() {
         </div>
 
         {/* iOS */}
-        <div className={styles.card}>
+        <div className={`${styles.card} ${userPlatform === 'ios' ? styles.featuredCard : ''}`}>
           <div className={styles.badgeRow}>
             <span className={styles.platformTag}>APPLE IOS</span>
-            <span className={styles.versionPill}>v1.0.5</span>
+            {userPlatform === 'ios' ? (
+              <span className={`${styles.featuredBadge} ${styles.flashingBadge}`}>
+                <span className={styles.pulseDot} />
+                RECOMMENDED
+              </span>
+            ) : (
+              <span className={styles.versionPill}>v1.0.5</span>
+            )}
           </div>
           <div className={styles.iconTitleRow}>
             <div className={styles.osIcon}><Sparkles size={22} /></div>
