@@ -1,82 +1,15 @@
 import { useState } from 'react';
 import { Monitor, Terminal, Smartphone, Sparkles, Download, Copy, Check } from 'lucide-react';
 import type { PlatformType } from '../../types';
+import { useRelease } from '../../context/ReleaseContext';
 import styles from './AllDownloads.module.css';
-
-interface PlatformDetails {
-  platform: PlatformType;
-  title: string;
-  badge: string;
-  desc: string;
-  filename: string;
-  size: string;
-  arch: string;
-  downloadUrl: string;
-  sha256: string;
-  commandLabel: string;
-  command: string;
-}
-
-const PLATFORMS: Record<PlatformType, PlatformDetails> = {
-  windows: {
-    platform: 'windows',
-    title: 'Windows 10 / 11 (64-bit)',
-    badge: 'Inno Setup Standalone',
-    desc: 'Bundles JustAudio C++ bitstream driver, taskbar audio preview, media keys, and lossless audio pipeline.',
-    filename: 'Noctra-1.0.6-Setup-x64.exe',
-    size: '24.5 MB',
-    arch: 'x86_64',
-    downloadUrl: 'https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6-Setup-x64.exe',
-    sha256: '9587f5f5e37b2587f43e9f55fa92f06068154cb9f905d3beb2edb1ca626b0577',
-    commandLabel: 'Silent Inno Setup Installation (PowerShell)',
-    command: 'Start-Process .\\Noctra-1.0.6-Setup-x64.exe -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES" -Wait',
-  },
-  linux: {
-    platform: 'linux',
-    title: 'Linux (Debian / Ubuntu / Mint / Arch)',
-    badge: 'Native .deb Package',
-    desc: 'Seamless pipewire/pulseaudio ALSA bitstream passthrough with desktop icons and native MPRIS controls.',
-    filename: 'noctra_1.0.6_amd64.deb',
-    size: '18.2 MB',
-    arch: 'amd64 / x86_64',
-    downloadUrl: 'https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/noctra_1.0.6_amd64.deb',
-    sha256: 'e4c4a285325374a58cba0b8fb9d0913e82086ab09fe02f24110748565e2c7284',
-    commandLabel: 'Terminal dpkg Installation',
-    command: 'sudo dpkg -i noctra_1.0.6_amd64.deb && sudo apt-get install -f',
-  },
-  android: {
-    platform: 'android',
-    title: 'Android 8.0+ (ARM64 & Universal)',
-    badge: 'Official Keystore Signed',
-    desc: 'Hardware DAC bit-perfect output, in-app updates, notification bar controller, lockscreen artwork, and offline database.',
-    filename: 'Noctra-1.0.6-arm64-v8a.apk',
-    size: '22.9 MB',
-    arch: 'arm64-v8a',
-    downloadUrl: 'https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6-arm64-v8a.apk',
-    sha256: 'dcadce6ca90e6301b77061c36a4fd8b671a89cd124d3cd7b19187a16890df171',
-    commandLabel: 'ADB Sideload Command',
-    command: 'adb install -r Noctra-1.0.6-arm64-v8a.apk',
-  },
-  ios: {
-    platform: 'ios',
-    title: 'Apple iOS 14.0+ (iPhone & iPad)',
-    badge: 'Sideloadable IPA Bundle',
-    desc: 'Self-hosted and sideloadable with AltStore, SideStore, Sideloadly, or TrollStore. Zero jailbreak required.',
-    filename: 'Noctra-1.0.6.ipa',
-    size: '19.8 MB',
-    arch: 'arm64',
-    downloadUrl: 'https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6.ipa',
-    sha256: '2138122f3f52a5e8ac62964509319f5aa44077add32c33d8c9f701ed3d9e269d',
-    commandLabel: 'AltStore Sideload URL',
-    command: 'altstore://install?url=https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6.ipa',
-  },
-};
 
 export function AllDownloads() {
   const [activePlatform, setActivePlatform] = useState<PlatformType>('windows');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const { release } = useRelease();
 
-  const current = PLATFORMS[activePlatform];
+  const current = release.binaries[activePlatform];
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -88,7 +21,7 @@ export function AllDownloads() {
     <section id="downloads" className={styles.section}>
       <div className="section-header">
         <span className="section-tag">NATIVE CROSS-PLATFORM HUB</span>
-        <h2 className="section-title">Download Noctra v1.0.6</h2>
+        <h2 className="section-title">Download Noctra {release.tag}</h2>
         <p className="section-subtitle">
           Single-file standalone native packages compiled directly from source with cryptographic SHA-256 integrity verification.
         </p>
@@ -117,7 +50,7 @@ export function AllDownloads() {
           onClick={() => setActivePlatform('android')}
         >
           <Smartphone size={16} />
-          <span>Android (APK)</span>
+          <span>Android (.apk)</span>
         </button>
         <button
           type="button"
@@ -125,7 +58,7 @@ export function AllDownloads() {
           onClick={() => setActivePlatform('ios')}
         >
           <Sparkles size={16} />
-          <span>iOS (.ipa)</span>
+          <span>Apple iOS (.ipa)</span>
         </button>
       </div>
 
@@ -133,7 +66,7 @@ export function AllDownloads() {
         <div className={styles.cardHeader}>
           <div className={styles.titleArea}>
             <div className={styles.titleRow}>
-              <h3 className={styles.osTitle}>{current.title}</h3>
+              <h3 className={styles.osTitle}>{current.name}</h3>
               <span className={styles.badge}>{current.badge}</span>
             </div>
             <p className={styles.osDesc}>{current.desc}</p>
@@ -144,7 +77,7 @@ export function AllDownloads() {
           <div className={styles.fileInfo}>
             <span className={styles.fileName}>{current.filename}</span>
             <span className={styles.fileDetails}>
-              {current.size} &bull; Architecture: {current.arch} &bull; Release: v1.0.6
+              {current.size} &bull; Architecture: {current.arch} &bull; Release: {release.tag}
             </span>
           </div>
 
@@ -155,24 +88,26 @@ export function AllDownloads() {
         </div>
 
         {/* SHA256 Verification Hash Box */}
-        <div className={styles.hashBox}>
-          <div className={styles.hashHeader}>
-            <span className={styles.hashLabel}>Cryptographic SHA-256 Checksum</span>
-            <button
-              type="button"
-              className="btn btn-glass btn-sm"
-              onClick={() => handleCopy(current.sha256, 'hash')}
-            >
-              {copiedKey === 'hash' ? <Check size={13} /> : <Copy size={13} />}
-              <span>{copiedKey === 'hash' ? 'Copied' : 'Copy Hash'}</span>
-            </button>
+        {current.sha256 && (
+          <div className={styles.hashBox}>
+            <div className={styles.hashHeader}>
+              <span className={styles.hashLabel}>Cryptographic SHA-256 Checksum</span>
+              <button
+                type="button"
+                className="btn btn-glass btn-sm"
+                onClick={() => handleCopy(current.sha256 || '', 'hash')}
+              >
+                {copiedKey === 'hash' ? <Check size={13} /> : <Copy size={13} />}
+                <span>{copiedKey === 'hash' ? 'Copied' : 'Copy Hash'}</span>
+              </button>
+            </div>
+            <code className={styles.hashVal}>{current.sha256}</code>
           </div>
-          <code className={styles.hashVal}>{current.sha256}</code>
-        </div>
+        )}
 
         {/* Terminal Box */}
         <div className={styles.terminalBox}>
-          <span className={styles.terminalLabel}>{current.commandLabel}</span>
+          <span className={styles.terminalLabel}>{current.commandLabel || 'Installation Command'}</span>
           <div className={styles.terminalCode}>
             <code>{current.command}</code>
             <button
@@ -188,12 +123,12 @@ export function AllDownloads() {
       </div>
 
       <div className={styles.moreLinks}>
-        <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6-Universal.apk" className={styles.linkTag}>Universal APK</a>
-        <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6-armeabi-v7a.apk" className={styles.linkTag}>armeabi-v7a APK</a>
-        <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6-x86_64.apk" className={styles.linkTag}>x86_64 APK</a>
-        <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6.aab" className={styles.linkTag}>Google Play .aab</a>
-        <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/SHA256SUMS.txt" className={styles.linkTag}>Official SHA256SUMS.txt</a>
-        <a href="https://github.com/nomad-guy/Noctra/releases/tag/v1.0.6" target="_blank" rel="noopener noreferrer" className={styles.linkTag}>&rarr; GitHub Release v1.0.6</a>
+        <a href={release.binaries.android.universalUrl} className={styles.linkTag}>Universal APK</a>
+        <a href={release.binaries.android.armeabiUrl} className={styles.linkTag}>armeabi-v7a APK</a>
+        <a href={release.binaries.android.x86_64Url} className={styles.linkTag}>x86_64 APK</a>
+        <a href={release.binaries.android.aabUrl} className={styles.linkTag}>Google Play .aab</a>
+        <a href={release.binaries.sha256sumsUrl} className={styles.linkTag}>Official SHA256SUMS.txt</a>
+        <a href={release.releaseUrl} target="_blank" rel="noopener noreferrer" className={styles.linkTag}>&rarr; GitHub Release {release.tag}</a>
       </div>
     </section>
   );

@@ -1,5 +1,6 @@
 import { Download } from 'lucide-react';
 import type { ThemeType } from '../../types';
+import { useRelease } from '../../context/ReleaseContext';
 import styles from './Navbar.module.css';
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function Navbar({ theme, onCycleTheme }: Props) {
+  const { release } = useRelease();
   // Brand Logo variants
   const getBrandLogo = () => {
     switch (theme) {
@@ -96,7 +98,7 @@ export function Navbar({ theme, onCycleTheme }: Props) {
           {/* Quick CTA */}
           <a href="#downloads" className={styles.downloadCta}>
             <Download size={14} />
-            <span>Get v1.0.6</span>
+            <span>Get {release.tag}</span>
           </a>
         </div>
       </div>

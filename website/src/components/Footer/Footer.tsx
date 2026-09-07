@@ -1,4 +1,5 @@
 import type { ThemeType } from '../../types';
+import { useRelease } from '../../context/ReleaseContext';
 import styles from './Footer.module.css';
 
 interface Props {
@@ -6,6 +7,7 @@ interface Props {
 }
 
 export function Footer({ theme }: Props) {
+  const { release, openChangelog } = useRelease();
   const getBrandLogo = () => {
     switch (theme) {
       case 'noir-black':
@@ -37,9 +39,12 @@ export function Footer({ theme }: Props) {
             <a href="https://github.com/nomad-guy/Noctra" target="_blank" rel="noopener noreferrer" className={styles.link}>
               GitHub Repository
             </a>
-            <a href="https://github.com/nomad-guy/Noctra/releases/tag/v1.0.6" target="_blank" rel="noopener noreferrer" className={styles.link}>
-              Release v1.0.6
+            <a href={release.releaseUrl} target="_blank" rel="noopener noreferrer" className={styles.link}>
+              Release {release.tag}
             </a>
+            <button type="button" onClick={openChangelog} className={styles.link} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', font: 'inherit' }}>
+              Changelog & Notes
+            </button>
             <a href="https://github.com/nomad-guy/Noctra/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className={styles.link}>
               GPL-3.0 License
             </a>

@@ -2,14 +2,18 @@ import { useState, useEffect } from 'react';
 import { Monitor, Terminal, Smartphone, Sparkles, Download } from 'lucide-react';
 import { detectUserPlatform } from '../../utils/detectPlatform';
 import type { PlatformType } from '../../types';
+import { useRelease } from '../../context/ReleaseContext';
 import styles from './QuickDownloads.module.css';
 
 export function QuickDownloads() {
   const [userPlatform, setUserPlatform] = useState<PlatformType>('windows');
+  const { release } = useRelease();
 
   useEffect(() => {
     setUserPlatform(detectUserPlatform());
   }, []);
+
+  const { windows, linux, android, ios } = release.binaries;
 
   return (
     <section className={styles.section}>
@@ -24,7 +28,7 @@ export function QuickDownloads() {
                 RECOMMENDED
               </span>
             ) : (
-              <span className={styles.versionPill}>v1.0.6</span>
+              <span className={styles.versionPill}>{release.tag}</span>
             )}
           </div>
           <div className={styles.iconTitleRow}>
@@ -38,11 +42,11 @@ export function QuickDownloads() {
             Inno Setup standalone installer bundling JustAudio C++ bitstream engine, desktop shortcuts & file associations.
           </p>
           <div className={styles.fileMeta}>
-            <code>Noctra-1.0.6-Setup-x64.exe</code>
-            <span className={styles.metaSize}>24.5 MB</span>
+            <code>{windows.filename}</code>
+            <span className={styles.metaSize}>{windows.size}</span>
           </div>
           <a
-            href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6-Setup-x64.exe"
+            href={windows.downloadUrl}
             className={styles.downloadBtn}
           >
             <Download size={15} />
@@ -61,7 +65,7 @@ export function QuickDownloads() {
                 RECOMMENDED
               </span>
             ) : (
-              <span className={styles.versionPill}>v1.0.6</span>
+              <span className={styles.versionPill}>{release.tag}</span>
             )}
           </div>
           <div className={styles.iconTitleRow}>
@@ -75,11 +79,11 @@ export function QuickDownloads() {
             Native .deb package with ALSA & PulseAudio pipewire integration, app menu launcher, and low-latency audio.
           </p>
           <div className={styles.fileMeta}>
-            <code>noctra_1.0.6_amd64.deb</code>
-            <span className={styles.metaSize}>18.2 MB</span>
+            <code>{linux.filename}</code>
+            <span className={styles.metaSize}>{linux.size}</span>
           </div>
           <a
-            href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/noctra_1.0.6_amd64.deb"
+            href={linux.downloadUrl}
             className={styles.downloadBtn}
           >
             <Download size={15} />
@@ -98,7 +102,7 @@ export function QuickDownloads() {
                 RECOMMENDED
               </span>
             ) : (
-              <span className={styles.versionPill}>v1.0.6</span>
+              <span className={styles.versionPill}>{release.tag}</span>
             )}
           </div>
           <div className={styles.iconTitleRow}>
@@ -112,11 +116,11 @@ export function QuickDownloads() {
             ARM64 & Universal APKs with media notification controls, lockscreen artwork, and verified release keystore.
           </p>
           <div className={styles.fileMeta}>
-            <code>Noctra-1.0.6-arm64-v8a.apk</code>
-            <span className={styles.metaSize}>22.9 MB</span>
+            <code>{android.filename}</code>
+            <span className={styles.metaSize}>{android.size}</span>
           </div>
           <a
-            href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6-arm64-v8a.apk"
+            href={android.downloadUrl}
             className={styles.downloadBtn}
           >
             <Download size={15} />
@@ -135,7 +139,7 @@ export function QuickDownloads() {
                 RECOMMENDED
               </span>
             ) : (
-              <span className={styles.versionPill}>v1.0.6</span>
+              <span className={styles.versionPill}>{release.tag}</span>
             )}
           </div>
           <div className={styles.iconTitleRow}>
@@ -149,11 +153,11 @@ export function QuickDownloads() {
             Sideloadable IPA bundle ready for AltStore, SideStore, and Sideloadly with zero jailbreaking required.
           </p>
           <div className={styles.fileMeta}>
-            <code>Noctra-1.0.6.ipa</code>
-            <span className={styles.metaSize}>19.8 MB</span>
+            <code>{ios.filename}</code>
+            <span className={styles.metaSize}>{ios.size}</span>
           </div>
           <a
-            href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6.ipa"
+            href={ios.downloadUrl}
             className={styles.downloadBtn}
           >
             <Download size={15} />

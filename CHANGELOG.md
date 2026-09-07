@@ -1,5 +1,30 @@
 # Changelog
 
+## v1.0.6 (2026-09-07)
+
+### Real-Time DSP Audio Stem Separation, AI Radio Repetition Fix & Neural Optimizations
+
+- **Cross-Platform Real-Time Stem Separation**:
+  - Engineered pure-Dart multi-band DSP separation engine (`dart_stem_dsp_engine.dart`) with zero external native binary dependencies.
+  - 4-stem isolation architecture separating Vocals (bandpass + center stereo attenuation), Drums (transient dynamics & high-frequency strike filters), Bass (Butterworth low-pass 20-250Hz), and Other Instruments (residual subtraction).
+  - Interactive multi-track stem mixer sheet with independent volume sliders, real-time solo/mute toggles, and live peak VU meters.
+
+- **AI Radio & Autoplay Repetition Elimination**:
+  - Implemented 60-track sliding LRU window in `PlayerAutoplayManager` preventing seed recycling and repetitive artist sequences.
+  - Upgraded candidate deduplication and blended discovery heuristics in `MusicRepositoryAiCuration`.
+
+- **Neural Recommendation Engine Convergence**:
+  - Optimized on-device taste vector convergence and cosine similarity re-ranking in `NeuralTrainingEngine` and `CandidateRetrievalService`.
+  - Context-aware candidate filtering balancing discovery freshness with listener affinity.
+
+- **Spotify-Parity Feature Suite**:
+  - **Sleep Timer "End of Track"**: Seamless countdown timer mode that waits for the active track to finish before initiating a graceful audio fade-out.
+  - **In-Playlist Full-Text Search & Multi-Criteria Sorting**: Real-time filtering and sorting by Title, Artist, Duration, or Date Added directly within custom folders and imported playlists.
+  - **Artist Discography Navigation**: Segmented discography tabs cleanly separating Studio Albums from Singles & EPs on artist profiles.
+  - **Contextual In-Playlist Recommendations**: Dynamic recommendations footer at the bottom of playlists allowing 1-tap addition to library.
+  - **Song Credits & Liner Notes**: Detailed metadata sheet presenting performers, songwriters, producers, and lossless audio source telemetry.
+  - **Listening Insights & Analytics Dashboard**: On-device listening analytics displaying weekly minutes played, top artists, and top genres.
+
 ## v1.0.5 (2026-09-06)
 
 ### Cross-Platform Native Packaging, Shuffle & Remix for Folders, and Universal Playlist Transfer

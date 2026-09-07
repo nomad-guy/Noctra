@@ -1,10 +1,16 @@
 import { useState } from 'react';
 import { Music, FileJson, FileSpreadsheet, Copy, Check, Shuffle, Sparkles } from 'lucide-react';
+import { useRelease } from '../../context/ReleaseContext';
 import styles from './PlaylistTransfer.module.css';
 
-const SAMPLE_MANIFEST_JSON = `{
+export function PlaylistTransfer() {
+  const [tab, setTab] = useState<'preview' | 'json' | 'csv'>('preview');
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const { release } = useRelease();
+
+  const sampleManifestJson = `{
   "format": "noctra_playlist_v1",
-  "version": "1.0.6",
+  "version": "${release.version}",
   "exportedAt": "2026-09-06T21:30:00Z",
   "playlist": {
     "name": "Midnight Audiophile Studio",
@@ -35,14 +41,10 @@ const SAMPLE_MANIFEST_JSON = `{
   }
 }`;
 
-const SAMPLE_CSV = `Title,Artist,Duration (sec),Format,Tags
+  const sampleCsv = `Title,Artist,Duration (sec),Format,Tags
 "Tum Se Hi","Mohit Chauhan, Pritam",321,"FLAC 24/192","Audiophile, Acoustic"
 "Midnight City","M83",243,"FLAC 16/44.1","Synthwave, Electronic"
 "Starboy","The Weeknd, Daft Punk",230,"Opus 48k","Pop, R&B"`;
-
-export function PlaylistTransfer() {
-  const [tab, setTab] = useState<'preview' | 'json' | 'csv'>('preview');
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -53,7 +55,7 @@ export function PlaylistTransfer() {
   return (
     <section id="transfer" className={styles.section}>
       <div className="section-header">
-        <span className="section-tag">NEW IN V1.0.6</span>
+        <span className="section-tag">FEATURED IN {release.tag.toUpperCase()}</span>
         <h2 className="section-title">Universal Playlist Transfer & Algorithmic Remix</h2>
         <p className="section-subtitle">
           Export and transfer playlists across devices via lossless JSON manifest (<code>.noctra.json</code>) or spreadsheet CSV (<code>.csv</code>). 100% on-device with zero account lock-in.
@@ -94,7 +96,7 @@ export function PlaylistTransfer() {
               <button
                 type="button"
                 className="btn btn-glass btn-sm"
-                onClick={() => handleCopy(SAMPLE_MANIFEST_JSON, 'json')}
+                onClick={() => handleCopy(sampleManifestJson, 'json')}
               >
                 {copiedKey === 'json' ? <Check size={14} /> : <Copy size={14} />}
                 <span>{copiedKey === 'json' ? 'Copied Manifest!' : 'Copy JSON'}</span>
@@ -104,7 +106,7 @@ export function PlaylistTransfer() {
               <button
                 type="button"
                 className="btn btn-glass btn-sm"
-                onClick={() => handleCopy(SAMPLE_CSV, 'csv')}
+                onClick={() => handleCopy(sampleCsv, 'csv')}
               >
                 {copiedKey === 'csv' ? <Check size={14} /> : <Copy size={14} />}
                 <span>{copiedKey === 'csv' ? 'Copied CSV!' : 'Copy CSV'}</span>
@@ -120,7 +122,7 @@ export function PlaylistTransfer() {
                 <Sparkles size={28} />
               </div>
               <h4 className={styles.panelTitle}>Midnight Audiophile Studio</h4>
-              <span className={styles.panelTag}>v1.0.6 SQLite Folder</span>
+              <span className={styles.panelTag}>{release.tag} SQLite Folder</span>
               <p className={styles.panelDesc}>
                 Preserves track order, high-res cover art links, and sample rate telemetry.
               </p>
@@ -175,13 +177,13 @@ export function PlaylistTransfer() {
 
         {tab === 'json' && (
           <pre className={styles.codeBlock}>
-            <code>{SAMPLE_MANIFEST_JSON}</code>
+            <code>{sampleManifestJson}</code>
           </pre>
         )}
 
         {tab === 'csv' && (
           <pre className={styles.codeBlock}>
-            <code>{SAMPLE_CSV}</code>
+            <code>{sampleCsv}</code>
           </pre>
         )}
       </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { ThemeType } from './types';
+import { ReleaseProvider } from './context/ReleaseContext';
 import { ThreeBackdrop } from './components/ThreeBackdrop/ThreeBackdrop';
 import { Navbar } from './components/Navbar/Navbar';
 import { Hero } from './components/Hero/Hero';
@@ -14,6 +15,7 @@ import { AllDownloads } from './components/AllDownloads/AllDownloads';
 import { InstallGuide } from './components/InstallGuide/InstallGuide';
 import { FAQ } from './components/FAQ/FAQ';
 import { Footer } from './components/Footer/Footer';
+import { ChangelogModal } from './components/ChangelogModal/ChangelogModal';
 import './styles/base.css';
 
 export default function App() {
@@ -40,30 +42,35 @@ export default function App() {
   };
 
   return (
-    <div className="noctra-root">
-      {/* 3D Interactive Three.js Backdrop */}
-      <ThreeBackdrop theme={theme} />
+    <ReleaseProvider>
+      <div className="noctra-root">
+        {/* 3D Interactive Three.js Backdrop */}
+        <ThreeBackdrop theme={theme} />
 
-      {/* Minimal Floating Navigation Bar */}
-      <Navbar theme={theme} onCycleTheme={cycleTheme} />
+        {/* Minimal Floating Navigation Bar */}
+        <Navbar theme={theme} onCycleTheme={cycleTheme} />
 
-      {/* Main Page Content */}
-      <main style={{ position: 'relative', zIndex: 1 }}>
-        <Hero />
-        <QuickDownloads />
-        <LyricsPlayer />
-        <AudiophileDSP />
-        <AudioTelemetry />
-        <PlaylistTransfer />
-        <AppShowcase />
-        <PrivacyAudit />
-        <AllDownloads />
-        <InstallGuide />
-        <FAQ />
-      </main>
+        {/* Main Page Content */}
+        <main style={{ position: 'relative', zIndex: 1 }}>
+          <Hero />
+          <QuickDownloads />
+          <LyricsPlayer />
+          <AudiophileDSP />
+          <AudioTelemetry />
+          <PlaylistTransfer />
+          <AppShowcase />
+          <PrivacyAudit />
+          <AllDownloads />
+          <InstallGuide />
+          <FAQ />
+        </main>
 
-      {/* Footer */}
-      <Footer theme={theme} />
-    </div>
+        {/* Footer */}
+        <Footer theme={theme} />
+
+        {/* Dynamic Changelog Modal */}
+        <ChangelogModal />
+      </div>
+    </ReleaseProvider>
   );
 }

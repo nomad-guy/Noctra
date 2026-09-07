@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { animate, stagger } from 'animejs';
 import { Download, Send, Monitor, Terminal, Smartphone, Sparkles } from 'lucide-react';
+import { useRelease } from '../../context/ReleaseContext';
 import styles from './Hero.module.css';
 
 export function Hero() {
   const heroRef = useRef<HTMLElement>(null);
+  const { release, openChangelog } = useRelease();
 
   useEffect(() => {
     if (!heroRef.current) return;
@@ -30,9 +32,17 @@ export function Hero() {
 
   return (
     <section id="hero" className={styles.hero} ref={heroRef}>
-      <div className={styles.releasePill}>
+      <div
+        className={styles.releasePill}
+        onClick={openChangelog}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === 'Enter' && openChangelog()}
+        title="Click to view release highlights"
+      >
         <span className={styles.pulseDot} />
-        <span>v1.0.6 Production Release &bull; Windows &bull; Linux &bull; Android &bull; iOS</span>
+        <span>{release.tag} Production Release &bull; Windows &bull; Linux &bull; Android &bull; iOS</span>
+        <span className={styles.whatsNewPill}>What's New &rarr;</span>
       </div>
 
       <h1 className={styles.title}>
@@ -69,16 +79,16 @@ export function Hero() {
 
       <div className={styles.osPills}>
         <span className={styles.pillsLabel}>Direct 1-Click:</span>
-        <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6-Setup-x64.exe" className={styles.osPill}>
+        <a href={release.binaries.windows.downloadUrl} className={styles.osPill}>
           <Monitor size={13} /> Windows (.exe)
         </a>
-        <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/noctra_1.0.6_amd64.deb" className={styles.osPill}>
+        <a href={release.binaries.linux.downloadUrl} className={styles.osPill}>
           <Terminal size={13} /> Linux (.deb)
         </a>
-        <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6-arm64-v8a.apk" className={styles.osPill}>
+        <a href={release.binaries.android.downloadUrl} className={styles.osPill}>
           <Smartphone size={13} /> Android (.apk)
         </a>
-        <a href="https://github.com/nomad-guy/Noctra/releases/download/v1.0.6/Noctra-1.0.6.ipa" className={styles.osPill}>
+        <a href={release.binaries.ios.downloadUrl} className={styles.osPill}>
           <Sparkles size={13} /> iOS (.ipa)
         </a>
       </div>
