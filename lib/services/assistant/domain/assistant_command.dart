@@ -71,6 +71,15 @@ class SearchAndPlayCommand extends AssistantCommand {
   const SearchAndPlayCommand(this.query, [this.extras]);
 }
 
+/// Search-only command: resolves tracks but does NOT start playback.
+/// Used by MediaBrowserService.search() so Android Auto / Wear OS can
+/// populate a browse result without inadvertently queuing a song.
+class SearchCommand extends AssistantCommand {
+  final String query;
+  final Map<String, dynamic>? extras;
+  const SearchCommand(this.query, [this.extras]);
+}
+
 class PlayTrackCommand extends AssistantCommand {
   final String trackId;
   final String? title;

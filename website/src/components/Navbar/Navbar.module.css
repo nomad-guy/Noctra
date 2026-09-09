@@ -98,6 +98,11 @@
   transition: filter var(--transition-fast);
 }
 
+.themeIcon {
+  color: var(--text-primary);
+  transition: color var(--transition-fast);
+}
+
 .shardGlow {
   filter: drop-shadow(0 0 6px rgba(126, 200, 255, 0.8));
 }

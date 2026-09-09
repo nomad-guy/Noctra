@@ -57,14 +57,16 @@ class AssistantIntentDelegate {
 
         val dataString = intent.dataString
 
+        val intentId = java.util.UUID.randomUUID().toString()
         val payload = mapOf(
+            "intentId" to intentId,
             "query" to query,
             "action" to action,
             "data" to dataString,
             "extras" to extrasMap
         )
 
-        Log.d(TAG, "Captured assistant/media intent: action=$action, query='$query', data='$dataString'")
+        Log.d(TAG, "Captured assistant/media intent ($intentId): action=$action, query='$query', data='$dataString'")
 
         // Always cache as pending intent to survive cold start
         pendingIntentData = payload

@@ -1,67 +1,55 @@
-# Noctra v1.0.3 Release Notes
+# Noctra v1.0.7 Release Notes
 
-**Autonomous, privacy-first, on-device music intelligence platform.**
+**Authentication-less on-device music intelligence platform.**
 
-This is the official **v1.0.3** release of Noctra. Every artifact in this release is signed with the Noctra production release key, packaged with R8 bytecode optimization, and verified with detached SHA-256 digests and JSON update manifests for the in-app updater.
-
----
-
-## APK Download Guide
-
-| File | Architecture | Size | Recommended Device Target | SHA-256 Checksum |
-| :--- | :--- | :--- | :--- | :--- |
-| `Noctra-1.0.3-arm64-v8a.apk` | `arm64-v8a` | 22.9 MB | **Recommended for most users** — modern 64-bit Android devices (Android 8.0+). | `a377827d98f072685db73fff2cd177505e82476ea9482093f4ad5e0d74a35b55` |
-| `Noctra-1.0.3-armeabi-v7a.apk` | `armeabi-v7a` | 20.9 MB | Legacy 32-bit ARM devices. | `17c51cb766b947af551554160651e58a4ed58ff5e6219745a3e05dec6cd9b7a5` |
-| `Noctra-1.0.3-x86_64.apk` | `x86_64` | 24.4 MB | Android emulators, Chromebooks, Intel/AMD tablets. | `5dbf8ed72789e24638ec867b3e23d77187009452b06e5f923e2cddffb0aa21f9` |
-| `Noctra-1.0.3-universal.apk` | Universal | 24.7 MB | Multi-ABI compatibility fallback containing every architecture. | `3d2fe058c1fdb6a67ccf620c00f7d769d13ddc884cc6cc683e5efe8b2fdcff99` |
-
-> Unsure which to pick? Choose **arm64-v8a**. The in-app updater automatically selects the matching ABI and verifies SHA-256 before installation.
-
-### Integrity
-
-`SHA256SUMS.txt` and `noctra-update-manifest.json` on the release page allow full cryptographic verification of every APK:
-
-```bash
-sha256sum -c SHA256SUMS.txt
-```
-
-### Installation
-
-Android may prompt you to allow installation from the source you downloaded the APK from ("Install unknown apps"). Noctra's integrated in-app updater performs package, signer identity, and SHA-256 integrity verification before handing an APK to the system package installer.
+This is the official **v1.0.7** release of Noctra. Every artifact in this release is packaged with multi-architecture native builds, verified with detached SHA-256 digests, and automated via GitHub Actions CI/CD workflows.
 
 ---
 
-## What's New in v1.0.3
+## Native Platform Packages
 
-### Dynamic High-Resolution Artwork Resolution
-- **Multi-Tier Artwork Resolver**: Brand new `SongArtworkResolver` pipeline with instant YouTube HQ thumbnail mapping (<0.1ms), LRU memory cache, Apple Music / iTunes Store Search API (crisp 600x600 HD cover art), and Deezer Track Graph API fallback.
-- **Playback Dynamic Artwork Enrichment**: Imported songs playing without artwork automatically resolve high-res cover art in the background, updating Now Playing ambient glow visualizers, mini-player tiles, and Android system lock-screen media items.
-- **Folder & Library Auto-Enrichment**: Opening imported playlists automatically fills in missing artwork and updates local storage.
-- **Universal Metadata Persistence**: `MusicRepository.updateSongMetadata` matches by both track ID and normalized title + artist, updating custom folders, favorites, downloads, and recently played tracks.
+| Platform | Package File | Architecture | Target / Description |
+| :--- | :--- | :--- | :--- |
+| **Android** | `Noctra-1.0.7-arm64-v8a.apk` | `arm64-v8a` | **Recommended** — modern 64-bit Android smartphones & tablets (Android 8.0+) |
+| **Android** | `Noctra-1.0.7-Universal.apk` | Universal | Multi-ABI fallback containing all native architectures |
+| **Android** | `Noctra-1.0.7-armeabi-v7a.apk` | `armeabi-v7a` | Legacy 32-bit ARM smartphones |
+| **Android** | `Noctra-1.0.7-x86_64.apk` | `x86_64` | Android emulators, ChromeOS, Windows Subsystem for Android |
+| **Android** | `Noctra-1.0.7.aab` | Google Play | Official Android App Bundle |
+| **Windows** | `Noctra-1.0.7-Setup-x64.exe` | `x86_64` | Windows 10 & 11 standalone 1-click Inno Setup installer |
+| **Linux** | `noctra_1.0.7_amd64.deb` | `amd64 / x86_64` | Debian / Ubuntu / Mint native package (`sudo dpkg -i`) |
+| **iOS** | `Noctra-1.0.7.ipa` | `arm64` | Sideloadable via AltStore / SideStore / TrollStore (iOS 14.0+) |
 
-### Offline AksharaEngine & Indic Transliteration
-- **Native Indic Transliteration**: Integrated `indic_transliteration_dart: ^2.3.84` for comprehensive Indic script support.
-- **Offline Phonetic Matrix Engine**: Zero-dependency `AksharaEngine` using a canonical phonetic matrix covering Devanagari, Gurmukhi, Urdu, and Latin/IAST.
-- **Urdu FST Glyph Joining**: Deterministic finite-state transducer handling Perso-Arabic cursive glyph joining, virama merging, and vowelization.
-- **Zero Network Latency**: `AksharamukhaService` is now 100% offline and synchronous (<0.15ms execution time), eliminating external network timeouts.
-- **Multi-Script Lyric Routing**: Full support across Gurmukhi, Urdu, Bengali, Tamil, Telugu, Kannada, Malayalam, Gujarati, Odia, IAST, and Romanized Latin.
-
-### Touch Responsiveness & Navigation Stabilization
-- **Fixed Tab Touch Lock**: Replaced `FadeIndexedStack` with lazy-mounted `IndexedStack` to eliminate pointer capture issues when switching between tabs.
-- **AI Radio Loop Guard**: Resolved infinite loop bug where the seed track was re-suggested at the top of recommendations.
-- **Navigation Modernization**: Replaced inline view swaps with proper `Navigator.push` route navigation in `FolderDetailView` and removed conflicting `PopScope` handlers.
-
-### Universal Playlist Scraper & Stream Resolver
-- **Spotify Embed Extraction**: Full tracklist and metadata extraction from Spotify embed payloads.
-- **YouTube `lockupViewModel` Parsing**: Support for modern YouTube playlist data models alongside legacy renderers.
-- **Lossless Stream Matching**: `TrackMatchingGuard` containment matching for clean stream resolution without mismatches.
+> **Verification**: Check your downloaded packages against `SHA256SUMS.txt` attached on the GitHub Release page:
+> ```bash
+> sha256sum -c SHA256SUMS.txt
+> ```
 
 ---
 
-## Verified
+## What's New in v1.0.7
 
-```
-flutter analyze:  0 issues (100% clean)
-flutter test:     100% passing across engine, UI state, and network suites
-LOC <= 300:       100% compliant across all lib/ files
-```
+### 1. Android Predictive Back & System Navigation Architecture
+- **Resolved Back Freeze Bug**: Completely eliminated the touch freeze and animation desynchronization bug that occurred when backing out of Artist profiles, playlists, and sub-views using system back gestures or the Android back button.
+- **`RouteAware` Integration**: `MainNavigationShell` now implements Flutter's official `RouteAware` lifecycle subscribed to a global `appRouteObserver`. Ahead-of-time `canPop` evaluates to `true` whenever child routes sit above the shell, allowing Android's native back gesture handler to smoothly pop the top route without imperative `Navigator.pop()` desynchronization.
+- **Native Predictive Back Restored**: Re-enabled `android:enableOnBackInvokedCallback="true"` in `AndroidManifest.xml` for full Android 14+ predictive back slide gestures.
+
+### 2. Seamless 120 FPS UI Transitions & Repaint Boundary Isolation
+- **Hardware-Accelerated Slide Transitions**: Configured `CupertinoPageTransitionsBuilder` for Android & iOS in `NoirTheme`, providing buttery-smooth 120 FPS slide animations with background parallax dimming. Desktop platforms use `FadeUpwardsPageTransitionsBuilder`.
+- **Repaint Isolation**: Wrapped `IndexedStack` in `MainNavigationShell`, `MiniPlayerDock`, and heavy sliver sections in `ArtistScreen` with `RepaintBoundary` to eliminate cascaded repaints during timeline ticks and list scrolling.
+- **O(1) Set Lookups**: Replaced $O(N)$ linear scans with $O(1)$ set lookup `repo.isDownloaded(song.id)` in `ArtistTrackTile`.
+
+### 3. Player Download Spiral Progress Indicator
+- Converted `PlayerTrackInfoBar` to a stateful consumer widget with reactive download tracking.
+- Replaced the static download icon with a spinning spiral progress indicator (`CircularProgressIndicator`) during active track downloads, seamlessly transitioning to `download_done_rounded` upon completion.
+
+### 4. Website Theme Icon Port
+- Updated website navigation header (`Navbar.tsx` and `Navbar.module.css`) to match Noctra's mobile top-bar theme icons:
+  - **Noir Black**: Lucide `<Moon size={18} />`
+  - **Noir White**: Lucide `<Sun size={18} />`
+  - **Liquid Glass**: Liquid glass shard with aurora cyan glow.
+
+### 5. Multi-Platform Assistant & State Hardening
+- Introduced `SearchCommand` and `handleSearch` so assistant and media browser queries execute library and online searches without inadvertently triggering playback.
+- Added UUID `intentId` tracking and deduplication in `AssistantIntentChannel` and Android `AssistantIntentDelegate` to drop duplicate voice intents on cold start.
+- Refined noise token filtering in `SongSimilarityDeduplicator` so legitimate title words like "Original" or "From" are not stripped during deduplication.
+- Guarded folder mutations in `MusicRepositoryFolders` to prevent redundant mutation generation increments on no-op operations.

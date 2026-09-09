@@ -24,7 +24,7 @@ class ArtistTrackTile extends ConsumerWidget {
     final audioPlayer = ref.watch(audioPlayerServiceProvider);
     final repo = ref.watch(musicRepositoryProvider);
     final isDownloaded =
-        repo.downloads.any((s) => s.id == song.id) || song.isDownloaded;
+        repo.isDownloaded(song.id) || song.isDownloaded;
     final downloadingSet = ref.watch(downloadingSongsProvider);
     final isDownloading = downloadingSet.contains(song.id);
 

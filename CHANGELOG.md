@@ -1,5 +1,39 @@
 # Changelog
 
+## v1.0.7 (2026-09-09)
+
+### Android Predictive Back Architecture, 120 FPS UI Transitions, & Seamless Player Experience
+
+- **Android Predictive Back & System Navigation Architecture**:
+  - Fixed touch freeze and animation desynchronization when navigating back from `ArtistScreen`, `FolderDetailView`, and playlist routes using system back gestures.
+  - Implemented `RouteAware` on `MainNavigationShell` subscribed to `appRouteObserver`: dynamically sets `canPop: true` ahead of time whenever a child route sits above the shell, allowing the native predictive back engine to handle popping cleanly without imperative `Navigator.pop()` desynchronization.
+  - Re-enabled `android:enableOnBackInvokedCallback="true"` in `AndroidManifest.xml` for native Android 14+ predictive back slide animations.
+  - Refactored `CustomBottomNavBar` into a dedicated modular widget staying strictly within project $\le 300$ LOC requirements.
+
+- **Seamless 120 FPS UI Transitions & Repaint Isolation**:
+  - Integrated `CupertinoPageTransitionsBuilder` for Android & iOS in `NoirTheme`, providing hardware-accelerated slide-and-fade page transitions with parallax background dimming.
+  - Configured `FadeUpwardsPageTransitionsBuilder` for desktop platforms (Windows, Linux, macOS).
+  - Wrapped `IndexedStack` in `MainNavigationShell` with `RepaintBoundary` to prevent tab view hierarchies from repainting during bottom bar or mini-player updates.
+  - Wrapped `MiniPlayerDock` and heavy sliver sections in `ArtistScreen` with `RepaintBoundary` to maintain a steady 120 FPS during scrolling and playback timeline ticks.
+  - Replaced $O(N)$ linear scans with $O(1)$ set lookup `repo.isDownloaded(song.id)` in `ArtistTrackTile`.
+
+- **Player Downloading Spiral Progress Indicator**:
+  - Converted `PlayerTrackInfoBar` to a stateful consumer widget with reactive download tracking.
+  - Replaced static download icon with a spinning spiral progress indicator (`CircularProgressIndicator`) during active track downloads, transitioning smoothly to `download_done_rounded` upon completion.
+
+- **Website Landing Page Theme Port**:
+  - Ported Noctra mobile app top-bar theme icons to the website navigation header (`Navbar.tsx` and `Navbar.module.css`):
+    - **Noir Black**: Lucide `<Moon size={18} />` (matching `Icons.dark_mode_outlined`).
+    - **Noir White**: Lucide `<Sun size={18} />` (matching `Icons.light_mode_outlined`).
+    - **Liquid Glass**: Liquid glass shard with aurora cyan glow.
+
+- **Cross-Platform Parity & Assistant Router Hardening**:
+  - Introduced `SearchCommand` and `handleSearch` so assistant and media browser queries execute library and online searches without inadvertently triggering playback.
+  - Added UUID `intentId` tracking and deduplication in `AssistantIntentChannel` and Android `AssistantIntentDelegate` to drop duplicate voice intents on cold start.
+  - Refined noise token filtering in `SongSimilarityDeduplicator` so legitimate title words like "Original" or "From" are not stripped during deduplication.
+  - Guarded folder mutations in `MusicRepositoryFolders` to prevent redundant mutation generation increments on no-op operations.
+  - Added `mounted` safety guards in `FolderDetailView` post-frame callbacks.
+
 ## v1.0.6 (2026-09-07)
 
 ### Real-Time DSP Audio Stem Separation, AI Radio Repetition Fix & Neural Optimizations

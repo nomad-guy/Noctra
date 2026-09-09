@@ -78,7 +78,7 @@ class SongSimilarityDeduplicator {
     // 3. Remove common YouTube/streaming noise tokens
     t = t.replaceAll(
       RegExp(
-        r'\b(official|music\s+video|video|audio|lyric|lyrics|remix|lofi|slowed|reverb|hd|4k|feat|ft|full\s+song|original|ost|soundtrack|version|mix|clean|explicit|reprise|cover|unplugged|from)\b',
+        r'\b(official|music\s+video|video|audio|lyric|lyrics|remix|lofi|slowed|reverb|hd|4k|feat|ft|full\s+song|ost|soundtrack|clean|explicit|reprise|cover|unplugged)\b',
         caseSensitive: false,
       ),
       ' ',

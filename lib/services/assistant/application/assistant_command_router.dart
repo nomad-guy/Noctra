@@ -61,6 +61,8 @@ class AssistantCommandRouter {
           _contentRouter.handlePlayPlaylist(playlistIdOrName, shuffle: shuffle),
         PlayRecommendationCommand(:final intent) =>
           _contentRouter.handlePlayRecommendation(intent),
+        SearchCommand(:final query, :final extras) =>
+          _contentRouter.handleSearch(query, extras),
         AddToQueueCommand(:final queryOrTrackId) =>
           _contentRouter.handleAddToQueue(queryOrTrackId),
         PlayNextCommand(:final queryOrTrackId) =>

@@ -12,7 +12,7 @@ import '../../widgets/song_context_menu.dart';
 import '../../widgets/stream_quality_sheet.dart';
 import '../artist_screen.dart';
 
-class PlayerTrackInfoBar extends ConsumerWidget {
+class PlayerTrackInfoBar extends ConsumerStatefulWidget {
   final Song song;
   final bool isDownloaded;
 
@@ -23,10 +23,19 @@ class PlayerTrackInfoBar extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PlayerTrackInfoBar> createState() =>
+      _PlayerTrackInfoBarState();
+}
+
+class _PlayerTrackInfoBarState extends ConsumerState<PlayerTrackInfoBar> {
+  bool _isDownloading = false;
+
+  @override
+  Widget build(BuildContext context) {
     final tokens = context.noctraTokens;
     final repo = ref.watch(musicRepositoryProvider);
-    final streamInfo = CompositeStreamResolver.getAudioStreamInfo(song.id);
+    final streamInfo =
+        CompositeStreamResolver.getAudioStreamInfo(widget.song.id);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -34,7 +43,7 @@ class PlayerTrackInfoBar extends ConsumerWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(14),
           child: Image.network(
-            song.artworkUrl ?? '',
+            widget.song.artworkUrl ?? '',
             width: 58,
             height: 58,
             fit: BoxFit.cover,
@@ -55,7 +64,7 @@ class PlayerTrackInfoBar extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                song.title,
+                widget.song.title,
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
@@ -73,13 +82,13 @@ class PlayerTrackInfoBar extends ConsumerWidget {
                         Navigator.of(context).pop();
                         Navigator.of(context).push(MaterialPageRoute(
                           builder: (c) => ArtistScreen(
-                            artistName: song.artist,
-                            artistImageUrl: song.artworkUrl,
+                            artistName: widget.song.artist,
+                            artistImageUrl: widget.song.artworkUrl,
                           ),
                         ));
                       },
                       child: Text(
-                        song.artist,
+                        widget.song.artist,
                         style: TextStyle(
                           fontSize: 13.5,
                           color: tokens.secondaryText,
@@ -98,30 +107,44 @@ class PlayerTrackInfoBar extends ConsumerWidget {
         ),
         IconButton(
           icon: Icon(
-            repo.isFavorite(song.id)
+            repo.isFavorite(widget.song.id)
                 ? Icons.favorite_rounded
                 : Icons.favorite_border_rounded,
             size: 22,
             color: tokens.primaryText,
           ),
-          onPressed: () => repo.toggleFavorite(song),
+          onPressed: () => repo.toggleFavorite(widget.song),
         ),
         IconButton(
           icon: Icon(Icons.playlist_add_rounded,
               size: 22, color: tokens.primaryText),
-          onPressed: () => SongContextMenu.show(context, song),
+          onPressed: () => SongContextMenu.show(context, widget.song),
         ),
+        // Download button: shows a spinning CircularProgressIndicator while
+        // downloading, download_done_rounded when done, download_rounded otherwise.
         IconButton(
-          icon: Icon(
-            isDownloaded
-                ? Icons.download_done_rounded
-                : Icons.download_rounded,
-            size: 22,
-            color: isDownloaded
-                ? tokens.tertiaryAccent
-                : tokens.tertiaryText,
-          ),
-          onPressed: () => _handleDownload(context, repo, song, isDownloaded),
+          icon: _isDownloading
+              ? SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: tokens.secondaryText,
+                  ),
+                )
+              : Icon(
+                  widget.isDownloaded
+                      ? Icons.download_done_rounded
+                      : Icons.download_rounded,
+                  size: 22,
+                  color: widget.isDownloaded
+                      ? tokens.tertiaryAccent
+                      : tokens.tertiaryText,
+                ),
+          onPressed: _isDownloading
+              ? null
+              : () => _handleDownload(context, repo, widget.song,
+                  widget.isDownloaded),
         ),
       ],
     );
@@ -132,7 +155,8 @@ class PlayerTrackInfoBar extends ConsumerWidget {
     AudioStreamInfo? info,
     NoctraThemeTokens tokens,
   ) {
-    final isLocal = song.localFilePath != null && song.localFilePath!.isNotEmpty;
+    final isLocal = widget.song.localFilePath != null &&
+        widget.song.localFilePath!.isNotEmpty;
     final label = info?.shortLabel ?? (isLocal ? 'LOCAL' : '320K');
     final isHiRes = info?.tier == AudioQualityTier.hiResLossless;
     final isLossless = info?.tier == AudioQualityTier.lossless;
@@ -187,8 +211,7 @@ class PlayerTrackInfoBar extends ConsumerWidget {
         context: context,
         builder: (ctx) => AlertDialog(
           title: Text(context.tr(L10nKeys.removeDownloadQ)),
-          content:
-              Text(context.tr(L10nKeys.removeDownload)),
+          content: Text(context.tr(L10nKeys.removeDownload)),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
@@ -206,19 +229,26 @@ class PlayerTrackInfoBar extends ConsumerWidget {
       }
       return;
     }
+
+    final downloadingMsg =
+        context.tr(L10nKeys.downloadingSong, {'title': song.title});
+    final successMsg =
+        context.tr(L10nKeys.downloadedSong, {'title': song.title});
+    final errorMsg = context.tr(L10nKeys.error);
+
+    setState(() => _isDownloading = true);
     sm.showSnackBar(SnackBar(
-      content: Text(context.tr(L10nKeys.downloadingSong, {'title': song.title})),
+      content: Text(downloadingMsg),
       duration: const Duration(seconds: 2),
     ));
     final res = await MusicService.downloadTrack(song);
-    if (res != null) {
-      repo.addDownloadedSong(res);
-    }
-    if (context.mounted) {
+    if (mounted) {
+      setState(() => _isDownloading = false);
+      if (res != null) {
+        repo.addDownloadedSong(res);
+      }
       sm.showSnackBar(SnackBar(
-        content: Text(res != null
-            ? context.tr(L10nKeys.downloadedSong, {'title': song.title})
-            : context.tr(L10nKeys.error)),
+        content: Text(res != null ? successMsg : errorMsg),
         duration: const Duration(seconds: 3),
       ));
     }

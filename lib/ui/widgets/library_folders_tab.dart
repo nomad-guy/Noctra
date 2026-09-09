@@ -90,11 +90,7 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab>
   Widget build(BuildContext context) {
     super.build(context);
 
-    final customFolderNames = (widget.repo.customFolders.isNotEmpty
-            ? widget.repo.customFolders
-            : widget.customFolders)
-        .keys
-        .toList();
+    final customFolderNames = widget.repo.customFolders.keys.toList();
     final folderNames = <String>['Favorites', ...customFolderNames];
 
     return CustomScrollView(
@@ -230,7 +226,7 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab>
                 final folderName = folderNames[i];
                 final folderSongs = folderName == 'Favorites'
                     ? widget.repo.favorites
-                    : (widget.customFolders[folderName] ?? []);
+                    : (widget.repo.customFolders[folderName] ?? []);
 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),

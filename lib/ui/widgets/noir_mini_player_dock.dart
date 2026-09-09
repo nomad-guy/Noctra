@@ -14,11 +14,13 @@ class MiniPlayerDock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SafeArea(
-      top: false,
-      child: Padding(
-        padding: EdgeInsets.only(top: 4, bottom: 2),
-        child: NoirMiniPlayer(),
+    return const RepaintBoundary(
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.only(top: 4, bottom: 2),
+          child: NoirMiniPlayer(),
+        ),
       ),
     );
   }

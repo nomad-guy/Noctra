@@ -200,6 +200,7 @@ class NoctraAudioHandler extends BaseAudioHandler {
             : _svc.currentSong;
         if (song != null) {
           MusicRepository().toggleFavorite(song);
+          await MusicRepository().flushPersistence();
           _push(forceSong: true);
           return true;
         }
@@ -226,7 +227,7 @@ class NoctraAudioHandler extends BaseAudioHandler {
 
   @override
   Future<List<MediaItem>> search(String query, [Map<String, dynamic>? extras]) async {
-    final song = await router.execute(SearchAndPlayCommand(query, extras));
+    final song = await router.execute(SearchCommand(query, extras));
     if (song is AssistantSuccess && song.data is Song) {
       return [AssistantMediaTree.songToMediaItem(song.data as Song)];
     }

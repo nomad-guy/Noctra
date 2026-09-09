@@ -55,6 +55,7 @@ class _FolderDetailViewState extends ConsumerState<FolderDetailView> {
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _enrichMissingArtwork();
     });
   }

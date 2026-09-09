@@ -1,14 +1,12 @@
-import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
-import '../../core/utils/noctra_localization.dart';
 import '../../providers/app_providers.dart';
 import '../screens/ai_studio_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/library_screen.dart';
 import '../screens/search_screen.dart';
+import 'custom_bottom_nav_bar.dart';
 import 'noir_mini_player.dart';
 import 'noir_sidebar.dart';
 
@@ -20,13 +18,20 @@ class MainNavigationShell extends ConsumerStatefulWidget {
       _MainNavigationShellState();
 }
 
-class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
+class _MainNavigationShellState extends ConsumerState<MainNavigationShell>
+    with RouteAware {
   /// Lazy tab instantiation: each screen is created only on its first visit
   /// (then kept alive inside the IndexedStack so its state survives tab
   /// switches). Avoids eagerly booting Search/Library/AI Studio — and their
   /// network fetches — at app startup for users who never open those tabs.
   final List<Widget?> _screens = List<Widget?>.filled(4, null);
   final Set<int> _visitedTabs = {0};
+
+  /// True while a child route (e.g. ArtistScreen, FolderDetailView) is pushed
+  /// on top of this shell. When true, [canPop] is set to `true` ahead of time
+  /// so the system-back handler / predictive back engine pops the child route
+  /// natively without any imperative Navigator.pop() call from the shell.
+  bool _isCoveredByRoute = false;
 
   Widget _screenFor(int index) {
     switch (index) {
@@ -43,6 +48,33 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    appRouteObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  /// Called when a new route is pushed on top of this shell.
+  @override
+  void didPushNext() {
+    if (!_isCoveredByRoute) setState(() => _isCoveredByRoute = true);
+  }
+
+  /// Called when the route above this shell is popped.
+  @override
+  void didPopNext() {
+    if (_isCoveredByRoute) setState(() => _isCoveredByRoute = false);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final currentIndex = ref.watch(bottomNavIndexProvider);
     final scaffoldKey = ref.watch(rootScaffoldKeyProvider);
@@ -53,13 +85,9 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
       _screens[currentIndex] = _screenFor(currentIndex);
     }
     // IMPORTANT: IndexedStack.index is an index INTO [children], not a tab
-    // id. The list must therefore stay tab-aligned (fixed length) so a
-    // restored/selected tab id like 2 or 3 is always valid even when the
-    // lower tabs were never visited. Unvisited tabs get a trivial
-    // placeholder — they are still never instantiated (lazy), they just
-    // occupy their slot. A sparse/compacted children list made index 2
-    // crash with the IndexedStack range assertion once Home was the only
-    // built tab.
+    // id. The list must therefore stay tab-aligned (fixed length 4) so any
+    // tab id is always a valid list index. Unvisited slots are trivial
+    // SizedBox placeholders so the lazy guarantee holds.
     final children = <Widget>[
       for (var i = 0; i < _screens.length; i++)
         _visitedTabs.contains(i)
@@ -67,18 +95,19 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
             : const SizedBox.shrink(),
     ];
 
-    final canPop =
-        currentIndex == 0 && !(scaffoldKey.currentState?.isDrawerOpen ?? false);
+    // When covered by a child route (_isCoveredByRoute), canPop=true so the
+    // native back engine pops the child without any imperative call here.
+    // At the root shell: allow exit only when on tab 0 with no drawer open.
+    final canPop = _isCoveredByRoute ||
+        (currentIndex == 0 &&
+            !(scaffoldKey.currentState?.isDrawerOpen ?? false));
 
     return PopScope(
       canPop: canPop,
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        final nav = Navigator.of(context);
-        if (nav.canPop()) {
-          nav.pop();
-          return;
-        }
+        // If the pop was handled natively (child route), or we're covered —
+        // do nothing. Never call Navigator.pop() imperatively from the shell.
+        if (didPop || _isCoveredByRoute) return;
         if (scaffoldKey.currentState?.isDrawerOpen ?? false) {
           scaffoldKey.currentState?.closeDrawer();
         } else if (currentIndex != 0) {
@@ -100,9 +129,11 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
                   Expanded(
                     child: Stack(
                       children: [
-                        IndexedStack(
-                          index: currentIndex,
-                          children: children,
+                        RepaintBoundary(
+                          child: IndexedStack(
+                            index: currentIndex,
+                            children: children,
+                          ),
                         ),
                         const Positioned(
                           left: 0,
@@ -129,9 +160,11 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
             drawer: const NoirSidebar(),
             body: Stack(
               children: [
-                IndexedStack(
-                  index: currentIndex,
-                  children: children,
+                RepaintBoundary(
+                  child: IndexedStack(
+                    index: currentIndex,
+                    children: children,
+                  ),
                 ),
                 const Positioned(
                   left: 0,
@@ -152,131 +185,6 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-class CustomBottomNavBar extends ConsumerWidget {
-  const CustomBottomNavBar({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(appLanguageProvider);
-    final currentIndex = ref.watch(bottomNavIndexProvider);
-    final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode.isDark;
-    final tokens = context.noctraTokens;
-
-    final navContent = AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      height: 58,
-      decoration: BoxDecoration(
-        color: themeMode.isLiquidGlass
-            ? null
-            : (isDark ? const Color(0xF2080808) : const Color(0xF2FFFFFF)),
-        gradient: themeMode.isLiquidGlass
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                    tokens.surfaceVariant.withValues(alpha: .86),
-                    tokens.surface.withValues(alpha: .80),
-                    tokens.secondaryAccent.withValues(alpha: .18)
-                  ])
-            : null,
-        border: Border(
-          top: BorderSide(
-            color: tokens.subtleBorder,
-            width: 0.8,
-          ),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _navItem(context, ref, 0, Icons.home_filled, Icons.home_outlined,
-              NoctraLocalization.tr('home'), currentIndex == 0, isDark),
-          _navItem(context, ref, 1, Icons.search_rounded,
-              Icons.search_rounded, NoctraLocalization.tr('search'), currentIndex == 1, isDark),
-          _navItem(
-              context,
-              ref,
-              2,
-              Icons.library_music_rounded,
-              Icons.library_music_outlined,
-              NoctraLocalization.tr('library'),
-              currentIndex == 2,
-              isDark),
-          _navItem(
-              context,
-              ref,
-              3,
-              Icons.auto_awesome_rounded,
-              Icons.auto_awesome_outlined,
-              NoctraLocalization.tr('ai_studio'),
-              currentIndex == 3,
-              isDark),
-        ],
-      ),
-    );
-
-    return RepaintBoundary(
-      child: themeMode.isLiquidGlass
-          ? ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                child: navContent,
-              ),
-            )
-          : navContent,
-    );
-  }
-
-  Widget _navItem(
-    BuildContext context,
-    WidgetRef ref,
-    int index,
-    IconData activeIcon,
-    IconData inactiveIcon,
-    String label,
-    bool isSelected,
-    bool isDark,
-  ) {
-    return InkWell(
-      onTap: () {
-        if (!isSelected) {
-          HapticFeedback.selectionClick();
-          ref.read(bottomNavIndexProvider.notifier).state = index;
-        }
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isSelected ? activeIcon : inactiveIcon,
-              size: 24,
-              color: isSelected
-                  ? (isDark ? Colors.white : Colors.black)
-                  : (isDark ? Colors.white38 : Colors.black38),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected
-                    ? (isDark ? Colors.white : Colors.black)
-                    : (isDark ? Colors.white38 : Colors.black38),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

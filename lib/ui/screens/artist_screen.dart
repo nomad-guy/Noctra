@@ -111,19 +111,23 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
                   ),
                 ),
                 SliverToBoxAdapter(
-                  child: ArtistProfileHeader(
-                    artistName: widget.artistName,
-                    avatarUrl: avatarUrl,
-                    artistMetadata: _artistMetadata,
-                    tracks: tracks,
-                    isDark: isDark,
+                  child: RepaintBoundary(
+                    child: ArtistProfileHeader(
+                      artistName: widget.artistName,
+                      avatarUrl: avatarUrl,
+                      artistMetadata: _artistMetadata,
+                      tracks: tracks,
+                      isDark: isDark,
+                    ),
                   ),
                 ),
                 if (_discography != null)
                   SliverToBoxAdapter(
-                    child: ArtistAlbumsSection(
-                      discography: _discography!,
-                      isDark: isDark,
+                    child: RepaintBoundary(
+                      child: ArtistAlbumsSection(
+                        discography: _discography!,
+                        isDark: isDark,
+                      ),
                     ),
                   ),
                 SliverToBoxAdapter(
@@ -182,9 +186,11 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
                   ),
                 if (_discography != null)
                   SliverToBoxAdapter(
-                    child: ArtistSimilarSection(
-                      discography: _discography!,
-                      isDark: isDark,
+                    child: RepaintBoundary(
+                      child: ArtistSimilarSection(
+                        discography: _discography!,
+                        isDark: isDark,
+                      ),
                     ),
                   ),
                 // Clearance for the floating mini-player dock.

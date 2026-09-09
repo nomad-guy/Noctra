@@ -31,6 +31,11 @@ final onboardingCompletedProvider =
 final rootScaffoldKeyProvider =
     Provider<GlobalKey<ScaffoldState>>((ref) => GlobalKey<ScaffoldState>());
 
+// Global route observer — registered in MaterialApp.navigatorObservers.
+// Widgets that implement RouteAware can subscribe to know when a child route
+// is pushed above them so canPop can be set ahead of time.
+final appRouteObserver = RouteObserver<ModalRoute<void>>();
+
 // App Language state
 final appLanguageProvider = StateProvider<String>((ref) {
   final cached = NoctraLocalDatabase().getCachedLanguage();

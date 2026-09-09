@@ -179,26 +179,24 @@ function buildReleaseData(tag: string, rawData?: any, isLive = false): ReleaseDa
   };
 }
 
-const FALLBACK_RELEASE = buildReleaseData('v1.0.6', {
-  name: 'Noctra v1.0.6',
-  published_at: '2026-09-07T03:40:26Z',
-  body: `### Real-Time DSP Audio Stem Separation
-- Cross-platform 4-stem real-time separation engine isolating Vocals, Drums, Bass, and Other Instruments.
-- Pure Dart digital signal processing (DSP) pipeline with high-pass, band-pass, low-pass, and spectral sub-band isolation.
+const FALLBACK_RELEASE = buildReleaseData('v1.0.7', {
+  name: 'Noctra v1.0.7',
+  published_at: '2026-09-09T12:00:00Z',
+  body: `### Android Predictive Back & System Navigation Architecture
+- Fixed touch freeze and animation desynchronization when backing out of artist profiles and playlists with system back gestures.
+- RouteAware lifecycle integration with ahead-of-time canPop evaluation.
+- Native Android 14+ predictive back slide gestures enabled.
 
-### AI Radio & Autoplay Repetition Prevention
-- 60-track sliding LRU window prevents track looping, seed recycling, and repetitive artist sequences.
+### Seamless 120 FPS UI Transitions & Repaint Boundary Isolation
+- Hardware-accelerated Cupertino page transitions on mobile and FadeUpwards on desktop.
+- Repaint isolation on IndexedStack, MiniPlayerDock, and heavy sliver sections.
+- O(1) set lookup for downloaded track status.
 
-### Neural Recommendation Engine Optimization
-- Optimized on-device taste vector convergence with accelerated cosine similarity ranking.
+### Player Download Spiral Progress Indicator
+- Reactive circular progress indicator during song downloads in the full player sheet.
 
-### Spotify-Parity Feature Suite
-- Sleep Timer "End of Track" with graceful audio fade-out.
-- In-Playlist Full-Text Search and Multi-Criteria Sorting.
-- Artist Profile Discography Segmented Navigation.
-- Contextual In-Playlist Recommendations Footer.
-- Comprehensive Song Credits & Liner Notes.
-- Listening Insights & Stats Dashboard.`,
+### Website Theme Port
+- Synchronized mobile app top-bar theme icons with the website header navigation.`,
 }, false);
 
 export const ReleaseContext = createContext<ReleaseContextValue>({

@@ -164,6 +164,7 @@ class _NoctraAppState extends ConsumerState<NoctraApp> {
       theme: activeThemeData,
       darkTheme: activeThemeData,
       themeMode: themeMode.isDark ? ThemeMode.dark : ThemeMode.light,
+      navigatorObservers: [appRouteObserver],
       builder: (context, child) {
         final textDir = NoctraLocalization.textDirection(currentLanguage);
         return NoctraLocalizationScope(

@@ -31,6 +31,15 @@ class AssistantContentRouter {
     return AssistantSuccess(song);
   }
 
+  /// Search without playback — returns the resolved song (or AssistantNotFound)
+  /// but does NOT call playSong(). Safe to call from MediaBrowserService.search().
+  Future<AssistantResult> handleSearch(
+      String query, Map<String, dynamic>? extras) async {
+    final song = await searchPipeline.resolveSearch(query, extras: extras);
+    if (song == null) return const AssistantNotFound('Song not found');
+    return AssistantSuccess(song);
+  }
+
   Future<AssistantResult> handlePlayTrack(String trackId,
       {String? title, String? artist}) async {
     final local = findLocalSong(trackId);

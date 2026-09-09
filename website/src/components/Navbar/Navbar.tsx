@@ -1,4 +1,4 @@
-import { Download } from 'lucide-react';
+import { Download, Moon, Sun } from 'lucide-react';
 import type { ThemeType } from '../../types';
 import { useRelease } from '../../context/ReleaseContext';
 import styles from './Navbar.module.css';
@@ -23,16 +23,21 @@ export function Navbar({ theme, onCycleTheme }: Props) {
     }
   };
 
-  // The actual theme toggle logo from the Flutter app
-  const getThemeToggleIcon = () => {
+  const renderThemeIcon = () => {
     switch (theme) {
-      case 'noir-black':
-        return './images/logo_noctra_noir_black.png';
-      case 'noir-white':
-        return './images/logo_noctra_noir_white.png';
       case 'liquid-glass':
+        return (
+          <img
+            src="./images/liquid_glass_shard.png"
+            alt="Liquid Glass"
+            className={`${styles.themeIconImg} ${styles.shardGlow}`}
+          />
+        );
+      case 'noir-white':
+        return <Sun size={18} className={styles.themeIcon} />;
+      case 'noir-black':
       default:
-        return './images/liquid_glass_shard.png';
+        return <Moon size={18} className={styles.themeIcon} />;
     }
   };
 
@@ -75,11 +80,7 @@ export function Navbar({ theme, onCycleTheme }: Props) {
             type="button"
             aria-label="Toggle App Theme"
           >
-            <img
-              src={getThemeToggleIcon()}
-              alt="Theme"
-              className={`${styles.themeIconImg} ${theme === 'liquid-glass' ? styles.shardGlow : ''}`}
-            />
+            {renderThemeIcon()}
           </button>
 
           {/* Telegram Logo Only */}
