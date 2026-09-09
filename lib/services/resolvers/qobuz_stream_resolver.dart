@@ -37,7 +37,10 @@ class QobuzStreamResolver implements StreamResolver {
     if (song.streamUrl != null && song.streamUrl!.contains('qobuz.com')) {
       return true;
     }
-    return song.title.trim().isNotEmpty && song.artist.trim().isNotEmpty;
+    if (customEndpoint != null && customEndpoint!.trim().isNotEmpty) {
+      return song.title.trim().isNotEmpty && song.artist.trim().isNotEmpty;
+    }
+    return false;
   }
 
   @override

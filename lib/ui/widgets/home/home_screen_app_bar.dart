@@ -123,36 +123,48 @@ class _HomeScreenAppBarState extends ConsumerState<HomeScreenAppBar>
             if (isLargeDesktop)
               HomeScreenAppBarDesktopSearch(isDark: isDark)
             else
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (!isWide)
-                    IconButton(
-                      icon: Icon(Icons.menu_rounded,
-                          color: isDark ? Colors.white : Colors.black, size: 22),
-                      tooltip: context.tr(L10nKeys.openSidebar),
-                      onPressed: () {
-                        HapticFeedback.lightImpact();
-                        ref
-                            .read(rootScaffoldKeyProvider)
-                            .currentState
-                            ?.openDrawer();
-                      },
+              Expanded(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!isWide)
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                        constraints:
+                            const BoxConstraints(minWidth: 30, minHeight: 30),
+                        icon: Icon(Icons.menu_rounded,
+                            color: isDark ? Colors.white : Colors.black,
+                            size: 22),
+                        tooltip: context.tr(L10nKeys.openSidebar),
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          ref
+                              .read(rootScaffoldKeyProvider)
+                              .currentState
+                              ?.openDrawer();
+                        },
+                      ),
+                    const SizedBox(width: 4),
+                    NoctraAppLogo(size: 22, radius: 6, isDark: isDark),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        'NOCTRA',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.5,
+                          color: isDark
+                              ? NoirColors.blackTextPrimary
+                              : NoirColors.whiteTextPrimary,
+                        ),
+                      ),
                     ),
-                  NoctraAppLogo(size: 24, radius: 6, isDark: isDark),
-                  const SizedBox(width: 6),
-                  Text(
-                    'NOCTRA',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 2.0,
-                      color: isDark
-                          ? NoirColors.blackTextPrimary
-                          : NoirColors.whiteTextPrimary,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             HomeScreenAppBarActions(
               isDark: isDark,

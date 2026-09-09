@@ -176,8 +176,8 @@ class _FolderDetailViewState extends ConsumerState<FolderDetailView> {
                   onBack: () {
                     if (widget.onBack != null) {
                       widget.onBack!();
-                    } else {
-                      Navigator.of(context).maybePop();
+                    } else if (Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
                     }
                   },
                   onToggleSearch: () {

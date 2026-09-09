@@ -134,21 +134,17 @@ mixin MusicRepositoryAICurationMixin on ChangeNotifier {
       TasteVectorEngine.calculateArchetype(_userTasteVector);
 
   List<Map<String, dynamic>> getDominantAxes() {
-    final List<MapEntry<String, double>> pairs = [];
-    for (int i = 0;
-        i < TasteVectorEngine.axisNames.length && i < _userTasteVector.length;
-        i++) {
-      pairs.add(MapEntry(TasteVectorEngine.axisNames[i], _userTasteVector[i]));
-    }
-    pairs.sort((a, b) => b.value.compareTo(a.value));
-    return pairs
-        .take(4)
-        .map((e) => {
-              'name': e.key,
-              'percentage': (e.value * 100).toInt(),
-              'weight': e.value
-            })
-        .toList();
+    final pairs = <MapEntry<String, double>>[
+      for (int i = 0;
+          i < TasteVectorEngine.axisNames.length && i < _userTasteVector.length;
+          i++)
+        MapEntry(TasteVectorEngine.axisNames[i], _userTasteVector[i])
+    ]..sort((a, b) => b.value.compareTo(a.value));
+    return pairs.take(4).map((e) => {
+      'name': e.key,
+      'percentage': (e.value * 100).toInt(),
+      'weight': e.value,
+    }).toList();
   }
 
   /// Public vibe curation (AI Studio prompt chips etc.). Kept on the old
@@ -224,11 +220,11 @@ mixin MusicRepositoryAICurationMixin on ChangeNotifier {
     }
     final target = TasteVectorEngine.getTargetVector(
         vibeKey: vibeKey, prompt: cleanPrompt, defaultTaste: _userTasteVector);
-    final candidates = (searched.isNotEmpty
-            ? searched
-            : {..._localLibrary, ..._downloads, ..._recentlyPlayed})
-        .map((s) => s.copyWith())
-        .toList();
+    final dedup = SongSimilarityDeduplicator();
+    final rawCandidates = searched.isNotEmpty
+        ? searched
+        : {..._localLibrary, ..._downloads, ..._recentlyPlayed};
+    final candidates = dedup.filterUnique(rawCandidates);
 
     final scored = candidates.map((s) {
       final songEmbedding = s.hasUsableEmbedding
@@ -238,7 +234,6 @@ mixin MusicRepositoryAICurationMixin on ChangeNotifier {
       final score = ((sim * 85) + 14).round().clamp(10, 99);
       final exp =
           TasteVectorEngine.generateExplanation(s, score, vibeKey, cleanPrompt);
-          TasteVectorEngine.generateExplanation(s, score, vibeKey, cleanPrompt);
       return {'song': s, 'score': score, 'matchPercentage': score, 'explanation': exp};
     }).toList();
 
@@ -247,26 +242,15 @@ mixin MusicRepositoryAICurationMixin on ChangeNotifier {
   }
 
   Future<List<Song>> generateAIRadioForSong(Song seed) async {
-    String normKey(String t) => t.toLowerCase().replaceAll(RegExp(r'[\(\[\{].*?[\)\]\}]'), '').replaceAll(RegExp(r'[^a-z0-9]'), '').trim();
-    final seedTitleKey = normKey(seed.title);
-
-    bool isSeedDuplicate(Song s) {
-      if (s.id == seed.id) return true;
-      final k = normKey(s.title);
-      return k.isNotEmpty && (k == seedTitleKey || k.contains(seedTitleKey) || seedTitleKey.contains(k));
-    }
-
-    final seenIds = <String>{seed.id};
-    final seenTitles = <String>{if (seedTitleKey.isNotEmpty) seedTitleKey};
+    final dedup = SongSimilarityDeduplicator(seedSong: seed);
     final results = <Song>[];
 
     void addUnique(List<Song> songs) {
       for (final s in songs) {
-        if (s.id.isEmpty || !seenIds.add(s.id) || isSeedDuplicate(s)) continue;
-        final k = normKey(s.title);
-        if (k.isNotEmpty && !seenTitles.add(k)) continue;
-        results.add(s);
-        if (results.length >= 25) return;
+        if (dedup.addIfUnique(s)) {
+          results.add(s);
+          if (results.length >= 25) return;
+        }
       }
     }
 

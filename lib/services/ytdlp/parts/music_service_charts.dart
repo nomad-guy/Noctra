@@ -1,6 +1,32 @@
 part of '../music_service.dart';
 
 extension MusicServiceCharts on MusicService {
+  static bool _isDuplicateTitle(String a, String b) {
+    String clean(String s) => s
+        .toLowerCase()
+        .replaceAll(RegExp(r'[\(\[\{].*?[\)\]\}]'), ' ')
+        .replaceAll(
+            RegExp(r'\b(official|video|audio|lyric|lyrics|remix|lofi|slowed|reverb|hd|4k|feat|ft)\b',
+                caseSensitive: false),
+            ' ')
+        .replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
+    final ca = clean(a);
+    final cb = clean(b);
+    if (ca.isEmpty || cb.isEmpty) return false;
+    if (ca == cb) return true;
+    final wa = ca.split(' ').where((w) => w.isNotEmpty).toSet();
+    final wb = cb.split(' ').where((w) => w.isNotEmpty).toSet();
+    if (wa.length >= 2 && wb.length >= 2) {
+      final overlap = wa.intersection(wb).length;
+      final union = wa.union(wb).length;
+      if (union > 0 && (overlap / union) >= 0.6) return true;
+    }
+    return false;
+  }
+
   static Future<List<Song>> fetchSimilarRadioQueue(Song currentSong,
       {Set<String> excludeIds = const {}}) async {
     if (currentSong.id.length == 11) {
@@ -18,13 +44,15 @@ extension MusicServiceCharts on MusicService {
             final vid = rawId.trim();
             if (vid.length != 11) continue;
             if (blocked.contains(vid) || !seen.add(vid)) continue;
+            final trackTitle = (m['title'] ?? 'Similar Track').toString();
+            if (_isDuplicateTitle(trackTitle, currentSong.title)) continue;
             final rawDur = m['duration'];
             final durSecs = rawDur is num
                 ? rawDur.toInt()
                 : int.tryParse(rawDur?.toString() ?? '') ?? 0;
             results.add(Song(
                 id: vid,
-                title: (m['title'] ?? 'Similar Track').toString(),
+                title: trackTitle,
                 artist: (m['artist'] ?? currentSong.artist).toString(),
                 album: (m['album']?.toString().isNotEmpty == true)
                     ? m['album'].toString()
@@ -36,7 +64,7 @@ extension MusicServiceCharts on MusicService {
                     : const Duration(seconds: 210),
                 genre: currentSong.genre,
                 featureVector: MusicService._deriveFeatureVector(
-                    m['title']?.toString() ?? '',
+                    trackTitle,
                     artist: m['artist']?.toString() ?? currentSong.artist,
                     genre: currentSong.genre ?? '')));
           }
@@ -44,8 +72,13 @@ extension MusicServiceCharts on MusicService {
         }
       } catch (_) {}
     }
-    return MusicService.searchTracks(
-        '${currentSong.title} ${currentSong.artist}');
+    final rawSearch =
+        await MusicService.searchTracks('${currentSong.artist} radio');
+    return rawSearch
+        .where((s) =>
+            s.id != currentSong.id &&
+            !_isDuplicateTitle(s.title, currentSong.title))
+        .toList();
   }
 
   static const Map<String, String> _languageToCountry = {
@@ -71,6 +104,7 @@ extension MusicServiceCharts on MusicService {
   };
 
   static const Set<String> _regionalIndianLanguages = {
+    'hindi',
     'punjabi',
     'tamil',
     'telugu',
@@ -114,6 +148,15 @@ extension MusicServiceCharts on MusicService {
             : '$selectedLang Latest Chartbusters';
         final regionalRes = await MusicService.searchTracks(query);
         if (regionalRes.isNotEmpty) return regionalRes;
+      } else if (low == 'korean') {
+        final res = await MusicService.searchTracks('K-Pop Top Hits Trending');
+        if (res.isNotEmpty) return res;
+      } else if (low == 'japanese') {
+        final res = await MusicService.searchTracks('J-Pop Top Hits Trending');
+        if (res.isNotEmpty) return res;
+      } else if (low == 'spanish') {
+        final res = await MusicService.searchTracks('Latin Top Hits Trending');
+        if (res.isNotEmpty) return res;
       }
     }
 
@@ -181,7 +224,8 @@ extension MusicServiceCharts on MusicService {
     return MusicService.searchTracks('Billboard Hot 100 Today');
   }
 
-  static Future<List<Song>> fetchVibeFeed(String vibeKey) async {
+  static Future<List<Song>> fetchVibeFeed(String vibeKey,
+      {List<String>? languages}) async {
     final Map<String, String> vibeSearches = {
       'noir_night': 'The Weeknd Dark Synthwave',
       'deep_focus': 'Lofi Chill Beats Study',
@@ -190,7 +234,13 @@ extension MusicServiceCharts on MusicService {
       'retro_synth': 'Outrun Synthwave Retrowave 80s',
       'late_night': 'Night Drive Phonk Synthwave'
     };
-    final q = vibeSearches[vibeKey] ?? 'Synthwave Noir';
+    var q = vibeSearches[vibeKey] ?? 'Synthwave Noir';
+    if (languages != null && languages.isNotEmpty) {
+      final lang = languages.first.trim();
+      if (lang.isNotEmpty && lang.toLowerCase() != 'english') {
+        q = '$lang $q';
+      }
+    }
     return MusicService.searchTracks(q);
   }
 }

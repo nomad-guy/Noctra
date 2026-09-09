@@ -120,36 +120,10 @@ extension MusicServiceSearch on MusicService {
           final sRes = await http.post(sUri, body: sBody, headers: {
             'Content-Type': 'application/json',
             'User-Agent': 'Mozilla/5.0'
-          }).timeout(const Duration(seconds: 4));
+          }).timeout(const Duration(milliseconds: 2500));
           if (sRes.statusCode == 200) {
             final sData = jsonDecode(sRes.body);
             _parseYtMusicSearchResults(sData, (s) => collect(ytSongs, s));
-
-            if (ytSongs.length < 3) {
-              try {
-                final aUri =
-                    Uri.parse('https://music.youtube.com/youtubei/v1/search');
-                final aBody = jsonEncode({
-                  'query': '$clean songs',
-                  'context': {
-                    'client': {
-                      'clientName': 'WEB_REMIX',
-                      'clientVersion': '1.20240820.01.00',
-                      'hl': 'en',
-                      'gl': 'US'
-                    }
-                  }
-                });
-                final aRes = await http.post(aUri, body: aBody, headers: {
-                  'Content-Type': 'application/json',
-                  'User-Agent': 'Mozilla/5.0'
-                }).timeout(const Duration(seconds: 4));
-                if (aRes.statusCode == 200) {
-                  _parseYtMusicSearchResults(jsonDecode(aRes.body),
-                      (s) => collect(ytSongs, s));
-                }
-              } catch (_) {}
-            }
           }
         } catch (_) {}
       }());
@@ -162,7 +136,7 @@ extension MusicServiceSearch on MusicService {
           final res = await http
               .get(Uri.parse(
                   'https://itunes.apple.com/search?term=${Uri.encodeComponent(itunesQuery)}&entity=song&limit=25'))
-              .timeout(const Duration(seconds: 4));
+              .timeout(const Duration(milliseconds: 2500));
           if (res.statusCode == 200) {
             final results = jsonDecode(res.body)['results'] as List?;
             if (results != null) {
@@ -190,45 +164,9 @@ extension MusicServiceSearch on MusicService {
       }());
     }
 
-    if (src == 'all' &&
-        (clean.split(' ').length >= 2 || clean.length > 10)) {
-      futures.add(() async {
-        try {
-          final lUri = Uri.parse(
-              'https://lrclib.net/api/search?q=${Uri.encodeComponent(clean)}');
-          final lRes = await http.get(lUri, headers: {
-            'User-Agent': 'Noctra/1.0.6'
-          }).timeout(const Duration(seconds: 4));
-          if (lRes.statusCode == 200) {
-            final lData = jsonDecode(lRes.body) as List?;
-            if (lData != null) {
-              for (final it in lData.take(5)) {
-                final t = (it['trackName'] ?? '').toString(),
-                    a = (it['artistName'] ?? '').toString();
-                if (t.isNotEmpty && a.isNotEmpty) {
-                  collect(lrcSongs, Song(
-                      id: 'lrc_${it['id']}',
-                      title: t,
-                      artist: a,
-                      album: '${it['albumName'] ?? 'Lyrics'} • Lyric Match',
-                      artworkUrl: null,
-                      streamUrl: null,
-                      duration: Duration(
-                          seconds: (it['duration'] as num?)?.toInt() ?? 210),
-                      genre: 'Matched Lyrics',
-                      featureVector:
-                          MusicService._deriveFeatureVector(t, artist: a)));
-                }
-              }
-            }
-          }
-        } catch (_) {}
-      }());
-    }
-
     await Future.wait(futures);
     final ranked = SearchResultRanker.mergeAndRank(
-        [saavn, ytSongs, itunesSongs, lrcSongs], clean);
+        [saavn, ytSongs, itunesSongs], clean);
     NoctraLogger.d('Search "$clean" (src=$src) ranked ${ranked.length} '
         '(saavn=${saavn.length}, yt=${ytSongs.length}, '
         'itunes=${itunesSongs.length}, lrc=${lrcSongs.length})');

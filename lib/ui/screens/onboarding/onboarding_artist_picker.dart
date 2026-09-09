@@ -2,18 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/noir_theme.dart';
 import '../../../services/metadata/artist_metadata_service.dart';
+import '../../../services/ytdlp/music_service.dart';
 
 class OnboardingArtistPicker extends StatefulWidget {
+  final List<String> selectedLanguages;
   final List<String> selectedArtists;
   final Function(String artistName) onToggle;
 
   const OnboardingArtistPicker({
     super.key,
+    this.selectedLanguages = const [],
     required this.selectedArtists,
     required this.onToggle,
   });
 
   static const int maxArtistsLimit = 50;
+
+  static const Map<String, List<String>> languageArtists = {
+    'hindi': ['Arijit Singh', 'Shreya Ghoshal', 'Pritam', 'Atif Aslam', 'Badshah', 'Sachin-Jigar'],
+    'punjabi': ['Sidhu Moose Wala', 'Karan Aujla', 'Diljit Dosanjh', 'AP Dhillon', 'Shubh'],
+    'tamil': ['Anirudh Ravichander', 'A.R. Rahman', 'Sid Sriram', 'Yuvan Shankar Raja', 'Harris Jayaraj'],
+    'telugu': ['Devi Sri Prasad', 'S. Thaman', 'Sid Sriram', 'Anurag Kulkarni', 'Ram Miriyala'],
+    'malayalam': ['Sushin Shyam', 'Hesham Abdul Wahab', 'K.S. Harisankar', 'Job Kurian'],
+    'kannada': ['Sanjith Hegde', 'Ravi Basrur', 'Charan Raj', 'Vijay Prakash'],
+    'marathi': ['Ajay-Atul', 'Swapnil Bandodkar', 'Avadhoot Gupte'],
+    'bengali': ['Anupam Roy', 'Arijit Singh', 'Shreya Ghoshal', 'Rupam Islam'],
+    'urdu': ['Atif Aslam', 'Ali Sethi', 'Rahat Fateh Ali Khan', 'Asim Azhar'],
+    'english': ['The Weeknd', 'Taylor Swift', 'Drake', 'Billie Eilish', 'Dua Lipa', 'Coldplay'],
+    'spanish': ['Bad Bunny', 'Rosalía', 'J Balvin', 'Peso Pluma', 'Karol G'],
+    'korean': ['BTS', 'BLACKPINK', 'NewJeans', 'Stray Kids', 'IU'],
+    'japanese': ['YOASOBI', 'Kenshi Yonezu', 'Fujii Kaze', 'Ado'],
+    'french': ['Stromae', 'Indila', 'Gims', 'Aya Nakamura'],
+  };
 
   static const List<String> popularArtists = [
     'Arijit Singh', 'The Weeknd', 'Sidhu Moose Wala', 'Diljit Dosanjh',
@@ -28,12 +48,53 @@ class OnboardingArtistPicker extends StatefulWidget {
 
 class _OnboardingArtistPickerState extends State<OnboardingArtistPicker> {
   final Map<String, String?> _resolvedPhotos = {};
-  final List<String> _displayedArtists = List.from(OnboardingArtistPicker.popularArtists);
+  late final List<String> _displayedArtists;
 
   @override
   void initState() {
     super.initState();
+    final ordered = <String>[];
+    for (final lang in widget.selectedLanguages) {
+      final list = OnboardingArtistPicker.languageArtists[lang.toLowerCase().trim()];
+      if (list != null) {
+        for (final a in list) {
+          if (!ordered.contains(a)) ordered.add(a);
+        }
+      }
+    }
+    for (final a in OnboardingArtistPicker.popularArtists) {
+      if (!ordered.contains(a)) ordered.add(a);
+    }
+    _displayedArtists = ordered.take(30).toList();
     _loadPhotos(_displayedArtists);
+    _fetchDynamicArtists();
+  }
+
+  void _fetchDynamicArtists() async {
+    final dynamicArtists = <String>[];
+    for (final lang in widget.selectedLanguages) {
+      try {
+        final songs = await MusicService.searchTracks('$lang top hits');
+        for (final s in songs) {
+          final a = s.artist.split(RegExp(r'[,&/]| feat\.? | ft\.? ', caseSensitive: false)).first.trim();
+          if (a.length > 2 && !dynamicArtists.contains(a)) {
+            dynamicArtists.add(a);
+            if (dynamicArtists.length >= 20) break;
+          }
+        }
+      } catch (_) {}
+    }
+    if (dynamicArtists.isNotEmpty && mounted) {
+      setState(() {
+        for (final a in dynamicArtists.reversed) {
+          if (_displayedArtists.length >= OnboardingArtistPicker.maxArtistsLimit) break;
+          if (!_displayedArtists.contains(a)) {
+            _displayedArtists.insert(0, a);
+          }
+        }
+      });
+      _loadPhotos(dynamicArtists);
+    }
   }
 
   void _loadPhotos(List<String> artists) async {

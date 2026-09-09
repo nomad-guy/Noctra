@@ -1,5 +1,6 @@
 import '../../data/models/song_model.dart';
 import '../../data/repositories/taste_vector_engine.dart';
+import '../../data/repositories/song_similarity_deduplicator.dart';
 
 class ScoredCandidate {
   final Song song;
@@ -27,10 +28,18 @@ class MMRDiversityFilter {
     int targetCount = 15,
     double lambda = 0.72,
   }) {
-    if (candidates.length <= targetCount) return candidates;
+    final dedup = SongSimilarityDeduplicator();
+    final List<ScoredCandidate> uniqueCandidates = [];
+    for (final c in candidates) {
+      if (dedup.addIfUnique(c.song)) {
+        uniqueCandidates.add(c);
+      }
+    }
+
+    if (uniqueCandidates.length <= targetCount) return uniqueCandidates;
 
     final List<ScoredCandidate> selected = [];
-    final List<ScoredCandidate> pool = List<ScoredCandidate>.from(candidates);
+    final List<ScoredCandidate> pool = List<ScoredCandidate>.from(uniqueCandidates);
     final Map<String, int> artistFrequency = {};
 
     while (selected.length < targetCount && pool.isNotEmpty) {
@@ -43,6 +52,12 @@ class MMRDiversityFilter {
         final artist = c.song.artist.trim().toLowerCase();
         // Hard constraint: Max 2 tracks per artist in Top 15
         if ((artistFrequency[artist] ?? 0) >= 2) continue;
+
+        // Hard constraint: Never duplicate an already selected track
+        final isDup = selected.any(
+          (s) => SongSimilarityDeduplicator.areDuplicates(c.song, s.song),
+        );
+        if (isDup) continue;
 
         final candidateVector = _embedding(c.song);
         double maxSimToSelected = 0.0;
@@ -69,11 +84,19 @@ class MMRDiversityFilter {
         pool.removeAt(bestIndex);
       } else {
         // Fallback if hard constraint exhausted pool
-        if (pool.isNotEmpty) {
-          selected.add(pool.removeAt(0));
-        } else {
-          break;
+        var added = false;
+        while (pool.isNotEmpty) {
+          final next = pool.removeAt(0);
+          final isDup = selected.any(
+            (s) => SongSimilarityDeduplicator.areDuplicates(next.song, s.song),
+          );
+          if (!isDup) {
+            selected.add(next);
+            added = true;
+            break;
+          }
         }
+        if (!added) break;
       }
     }
 

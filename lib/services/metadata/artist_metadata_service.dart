@@ -80,79 +80,79 @@ class ArtistMetadataService {
           .trim();
       final effectiveName = primaryArtist.isNotEmpty ? primaryArtist : cleanName;
 
-      // 1. Tier 1: Deezer Official Music Graph (Zero false disambiguations, 500x500 HD photos)
-      try {
-        final uri = Uri.parse(
-            'https://api.deezer.com/search/artist?q=${Uri.encodeComponent(effectiveName)}&limit=1');
-        final res = await http.get(uri, headers: {
-          'User-Agent': 'Mozilla/5.0'
-        }).timeout(const Duration(milliseconds: 2500));
-        if (res.statusCode == 200) {
-          final data = jsonDecode(res.body) as Map<String, dynamic>;
-          final list = data['data'] as List?;
-          if (list != null && list.isNotEmpty) {
-            final a = list.first as Map<String, dynamic>;
-            final pic =
-                a['picture_big'] ?? a['picture_medium'] ?? a['picture_xl'];
-            if (pic != null &&
-                pic.toString().isNotEmpty &&
-                !pic.toString().contains('artist-default')) {
-              resolvedImageUrl = pic.toString();
-            }
-          }
-        }
-      } catch (e) {
-        NoctraLogger.d('Deezer artist photo lookup fallback: $e');
-      }
-
-      // 2. Tier 2: JioSaavn Autocomplete Music Directory (For Desi, Punjabi, Bollywood artists)
-      if (resolvedImageUrl == null || resolvedImageUrl.isEmpty) {
-        try {
-          final saavnUri = Uri.parse(
-              'https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query=${Uri.encodeComponent(effectiveName)}');
-          final res = await http.get(saavnUri, headers: {
-            'User-Agent': 'Mozilla/5.0'
-          }).timeout(const Duration(milliseconds: 2500));
-          if (res.statusCode == 200) {
-            final data = jsonDecode(res.body) as Map<String, dynamic>;
-            final artists = data['artists']?['data'] as List?;
-            if (artists != null && artists.isNotEmpty) {
-              for (final item in artists) {
-                final rawImg = item['image']?.toString() ?? '';
-                if (rawImg.isNotEmpty && !rawImg.contains('artist-default')) {
-                  resolvedImageUrl = rawImg
-                      .replaceAll('50x50', '500x500')
-                      .replaceAll('150x150', '500x500');
-                  break;
+      // Parallel retrieval across Deezer, JioSaavn, and iTunes for ultra-fast load
+      final photoResults = await Future.wait([
+        () async {
+          try {
+            final uri = Uri.parse(
+                'https://api.deezer.com/search/artist?q=${Uri.encodeComponent(effectiveName)}&limit=1');
+            final res = await http.get(uri, headers: {
+              'User-Agent': 'Mozilla/5.0'
+            }).timeout(const Duration(milliseconds: 2000));
+            if (res.statusCode == 200) {
+              final data = jsonDecode(res.body) as Map<String, dynamic>;
+              final list = data['data'] as List?;
+              if (list != null && list.isNotEmpty) {
+                final a = list.first as Map<String, dynamic>;
+                final pic = a['picture_big'] ?? a['picture_medium'] ?? a['picture_xl'];
+                if (pic != null &&
+                    pic.toString().isNotEmpty &&
+                    !pic.toString().contains('artist-default')) {
+                  return pic.toString();
                 }
               }
             }
-          }
-        } catch (_) {}
-      }
-
-      // 3. Tier 3: Apple Music / iTunes Store
-      if (resolvedImageUrl == null || resolvedImageUrl.isEmpty) {
-        try {
-          final itunesUri = Uri.parse(
-              'https://itunes.apple.com/search?term=${Uri.encodeComponent(effectiveName)}&entity=song&limit=1');
-          final res = await http.get(itunesUri, headers: {
-            'User-Agent': 'Mozilla/5.0'
-          }).timeout(const Duration(milliseconds: 2500));
-          if (res.statusCode == 200) {
-            final data = jsonDecode(res.body) as Map<String, dynamic>;
-            final results = data['results'] as List?;
-            if (results != null && results.isNotEmpty) {
-              final raw = results.first['artworkUrl100']?.toString() ?? '';
-              if (raw.isNotEmpty) {
-                resolvedImageUrl = raw.replaceAll('100x100bb', '600x600bb');
+          } catch (_) {}
+          return null;
+        }(),
+        () async {
+          try {
+            final saavnUri = Uri.parse(
+                'https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query=${Uri.encodeComponent(effectiveName)}');
+            final res = await http.get(saavnUri, headers: {
+              'User-Agent': 'Mozilla/5.0'
+            }).timeout(const Duration(milliseconds: 2000));
+            if (res.statusCode == 200) {
+              final data = jsonDecode(res.body) as Map<String, dynamic>;
+              final artists = data['artists']?['data'] as List?;
+              if (artists != null && artists.isNotEmpty) {
+                for (final item in artists) {
+                  final rawImg = item['image']?.toString() ?? '';
+                  if (rawImg.isNotEmpty && !rawImg.contains('artist-default')) {
+                    return rawImg
+                        .replaceAll('50x50', '500x500')
+                        .replaceAll('150x150', '500x500');
+                  }
+                }
               }
             }
-          }
-        } catch (_) {}
-      }
+          } catch (_) {}
+          return null;
+        }(),
+        () async {
+          try {
+            final itunesUri = Uri.parse(
+                'https://itunes.apple.com/search?term=${Uri.encodeComponent(effectiveName)}&entity=song&limit=1');
+            final res = await http.get(itunesUri, headers: {
+              'User-Agent': 'Mozilla/5.0'
+            }).timeout(const Duration(milliseconds: 2000));
+            if (res.statusCode == 200) {
+              final data = jsonDecode(res.body) as Map<String, dynamic>;
+              final results = data['results'] as List?;
+              if (results != null && results.isNotEmpty) {
+                final raw = results.first['artworkUrl100']?.toString() ?? '';
+                if (raw.isNotEmpty) {
+                  return raw.replaceAll('100x100bb', '600x600bb');
+                }
+              }
+            }
+          } catch (_) {}
+          return null;
+        }(),
+      ]);
 
-      // 4. Tier 4: Wikipedia Biography & Musician summary with disambiguation defense
+      resolvedImageUrl = photoResults[0] ?? photoResults[1] ?? photoResults[2];
+
       final wikiResult =
           await ArtistWikipediaService.fetchBioAndImage(effectiveName);
       if (wikiResult != null) {

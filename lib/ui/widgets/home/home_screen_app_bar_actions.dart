@@ -113,9 +113,11 @@ class HomeScreenAppBarActions extends ConsumerWidget {
 
     return IconButton(
       tooltip: isOffline ? 'Offline Mode (Active)' : 'Downloads Only (Offline)',
-      iconSize: 20,
+      iconSize: 18,
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
       constraints: BoxConstraints(
-          minWidth: isDesktop ? 38 : 36, minHeight: isDesktop ? 38 : 36),
+          minWidth: isDesktop ? 38 : 30, minHeight: isDesktop ? 38 : 30),
       icon: Container(
         padding: isDesktop ? const EdgeInsets.all(7) : EdgeInsets.zero,
         decoration: isDesktop
@@ -151,9 +153,11 @@ class HomeScreenAppBarActions extends ConsumerWidget {
   }) {
     return IconButton(
       tooltip: tooltip,
-      iconSize: 20,
+      iconSize: 18,
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
       constraints: BoxConstraints(
-          minWidth: isDesktop ? 38 : 36, minHeight: isDesktop ? 38 : 36),
+          minWidth: isDesktop ? 38 : 30, minHeight: isDesktop ? 38 : 30),
       icon: Container(
         padding: isDesktop ? const EdgeInsets.all(7) : EdgeInsets.zero,
         decoration: isDesktop
@@ -187,9 +191,11 @@ class HomeScreenAppBarActions extends ConsumerWidget {
   Widget _refreshButton(BuildContext context) {
     return IconButton(
       tooltip: context.tr(L10nKeys.refreshFeed),
-      iconSize: 20,
+      iconSize: 18,
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
       constraints: BoxConstraints(
-          minWidth: isDesktop ? 38 : 36, minHeight: isDesktop ? 38 : 36),
+          minWidth: isDesktop ? 38 : 30, minHeight: isDesktop ? 38 : 30),
       icon: Container(
         padding: isDesktop ? const EdgeInsets.all(7) : EdgeInsets.zero,
         decoration: isDesktop
@@ -281,8 +287,8 @@ class HomeScreenAppBarActions extends ConsumerWidget {
         ref.read(themeModeProvider.notifier).state = nextTheme();
       },
       child: Container(
-        padding: const EdgeInsets.all(6),
-        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+        padding: const EdgeInsets.all(5),
+        constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
         child: icon,
       ),
     );

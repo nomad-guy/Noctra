@@ -91,13 +91,18 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
                           ),
                           onPressed: () => Navigator.of(context).pop(),
                         ),
-                        Text(
-                          context.tr(L10nKeys.officialArtistProfile).toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 2.0,
-                            color: isDark ? Colors.white60 : Colors.black54,
+                        Expanded(
+                          child: Text(
+                            context.tr(L10nKeys.officialArtistProfile).toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.5,
+                              color: isDark ? Colors.white60 : Colors.black54,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 48),

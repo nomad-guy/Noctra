@@ -1,0 +1,223 @@
+.dockContainer {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  width: calc(100% - 32px);
+  max-width: 820px;
+  background: rgba(10, 10, 14, 0.88);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  padding: 10px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme='liquid-glass'] .dockContainer {
+  background: rgba(22, 46, 74, 0.88);
+  border-color: rgba(208, 228, 255, 0.35);
+  box-shadow: 0 16px 40px -10px rgba(10, 22, 40, 0.7);
+}
+
+[data-theme='noir-white'] .dockContainer {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(0, 0, 0, 0.14);
+  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.15);
+}
+
+.dockContainer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  pointer-events: none;
+}
+
+.mainRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.trackInfoGroup {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex: 1;
+}
+
+.artWrapper {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.albumArt {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.vinylSpin {
+  animation: spin 10s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.textMeta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trackTitle {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badgeLossless {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  background: rgba(229, 192, 123, 0.18);
+  color: #F3BA2F;
+  border: 1px solid rgba(243, 186, 47, 0.35);
+  white-space: nowrap;
+}
+
+.trackArtist {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Waveform Canvas */
+.waveformContainer {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 26px;
+  padding: 0 8px;
+}
+
+.waveBar {
+  width: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: height 0.08s ease;
+  min-height: 4px;
+}
+
+/* Controls */
+.controlsGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  background: transparent;
+  transition: all 0.15s ease;
+}
+
+.iconBtn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.playBtn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px var(--accent-glow);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.playBtn:hover {
+  transform: scale(1.06);
+  background: var(--btn-primary-hover);
+}
+
+/* Scrubber Line */
+.scrubBar {
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme='noir-white'] .scrubBar {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.scrubProgress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  background: var(--accent);
+  border-radius: 3px;
+  transition: width 0.1s linear;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .waveformContainer {
+    display: none;
+  }
+  .dockContainer {
+    bottom: 14px;
+    padding: 8px 14px;
+  }
+}

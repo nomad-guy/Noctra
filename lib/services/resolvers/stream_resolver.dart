@@ -49,11 +49,11 @@ class CompositeStreamResolver {
   static final List<StreamResolver> _resolvers = [
     LocalFileResolver(),
     DirectOpenStreamResolver(),
-    TidalStreamResolver(),
-    QobuzStreamResolver(),
     JioSaavnDirectResolver(),
     NativeKotlinResolver(),
     InnerTubeMusicResolver(),
+    TidalStreamResolver(),
+    QobuzStreamResolver(),
     YoutubeWebSearchResolver(),
   ];
 
@@ -66,11 +66,11 @@ class CompositeStreamResolver {
       _resolvers.addAll([
         LocalFileResolver(),
         DirectOpenStreamResolver(),
-        TidalStreamResolver(),
-        QobuzStreamResolver(),
         JioSaavnDirectResolver(),
         NativeKotlinResolver(),
         InnerTubeMusicResolver(),
+        TidalStreamResolver(),
+        QobuzStreamResolver(),
         YoutubeWebSearchResolver(),
       ]);
     }

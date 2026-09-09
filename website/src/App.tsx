@@ -16,6 +16,7 @@ import { InstallGuide } from './components/InstallGuide/InstallGuide';
 import { FAQ } from './components/FAQ/FAQ';
 import { Footer } from './components/Footer/Footer';
 import { ChangelogModal } from './components/ChangelogModal/ChangelogModal';
+import { FloatingPlayer } from './components/FloatingPlayer/FloatingPlayer';
 import './styles/base.css';
 
 export default function App() {
@@ -70,6 +71,9 @@ export default function App() {
 
         {/* Dynamic Changelog Modal */}
         <ChangelogModal />
+
+        {/* Persistent Floating Noir Mini-Player Dock (Matching Flutter App 1:1) */}
+        <FloatingPlayer />
       </div>
     </ReleaseProvider>
   );

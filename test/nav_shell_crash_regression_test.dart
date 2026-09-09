@@ -55,6 +55,12 @@ void main() {
   }
 
   Future<void> pumpShell(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(600, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
     await tester.pumpWidget(shellScope());
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 20));

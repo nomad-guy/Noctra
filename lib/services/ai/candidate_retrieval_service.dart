@@ -5,6 +5,7 @@ import '../../data/repositories/neural_recommender_engine.dart';
 import '../../data/repositories/taste_vector_engine.dart';
 import '../../services/metadata/deezer_audio_features_service.dart';
 import '../../services/ytdlp/music_service.dart';
+import '../../data/repositories/song_similarity_deduplicator.dart';
 import 'mmr_diversity_filter.dart';
 import 'session_context_tracker.dart';
 
@@ -81,11 +82,11 @@ class CandidateRetrievalService {
         : longTerm;
 
     // Stage 1: Candidate pool (~100 items)
-    final Set<String> seenIds = {};
+    final dedup = SongSimilarityDeduplicator(seedSong: seedSong);
     final List<Song> pool = [];
     void addTracks(List<Song> tracks) {
       for (final s in tracks) {
-        if (s.id.isNotEmpty && seenIds.add(s.id)) pool.add(s);
+        if (dedup.addIfUnique(s)) pool.add(s);
       }
     }
 
@@ -102,13 +103,7 @@ class CandidateRetrievalService {
           MusicService.search('${seedSong.artist} radio').catchError((_) => <Song>[]),
         ]);
         for (final list in results) {
-          final normSeed = seedSong.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-          for (final s in list) {
-            final norm = s.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-            if (s.id != seedSong.id && (normSeed.isEmpty || norm != normSeed)) {
-              addTracks([s]);
-            }
-          }
+          addTracks(list);
         }
       } catch (_) {}
     }
@@ -127,10 +122,16 @@ class CandidateRetrievalService {
           addTracks(list);
         }
       } else if (vibeKey != null) {
-        final vibeTracks = await MusicService.fetchVibeFeed(vibeKey);
+        final vibeTracks = await MusicService.fetchVibeFeed(
+          vibeKey,
+          languages: repo.onboardedLanguages,
+        );
         addTracks(vibeTracks);
       } else {
-        final trending = await MusicService.fetchTrendingFeed();
+        final trending = await MusicService.fetchTrendingFeed(
+          languages: repo.onboardedLanguages,
+          genres: repo.onboardedGenres,
+        );
         addTracks(trending);
       }
     } catch (_) {}
@@ -141,7 +142,7 @@ class CandidateRetrievalService {
       for (final item in repo.curateByVibe(
           vibeKey: vibeKey, naturalPrompt: naturalPrompt)) {
         final song = item['song'];
-        if (song is Song && song.id.isNotEmpty && seenIds.add(song.id)) {
+        if (song is Song && dedup.addIfUnique(song)) {
           pool.add(song);
         }
       }

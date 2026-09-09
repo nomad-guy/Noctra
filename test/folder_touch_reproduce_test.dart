@@ -55,24 +55,42 @@ void main() {
     );
   }
 
+  Future<void> pumpShell(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(600, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    await tester.pumpWidget(shellScope());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+
+  Future<void> settle(WidgetTester tester, [int millis = 600]) async {
+    final steps = (millis / 50).ceil();
+    for (var i = 0; i < steps; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+  }
+
   testWidgets('TEST A: Open folder -> folder back button -> switch tabs',
       (tester) async {
-    await tester.pumpWidget(shellScope());
-    await tester.pumpAndSettle();
+    await pumpShell(tester);
 
     // 1. Switch to Library (tab 2)
     await tester.tap(find.byIcon(Icons.library_music_outlined).first);
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(find.text('Library'), findsWidgets);
 
     // 2. Switch to Folders tab inside Library
     await tester.tap(find.widgetWithText(Tab, 'Folders'));
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     // 3. Tap on Favorites or Rock Classics folder
     expect(find.text('Rock Classics'), findsOneWidget);
     await tester.tap(find.text('Rock Classics'));
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     // Verify FolderDetailView is opened
     expect(find.byType(FolderDetailView), findsOneWidget);
@@ -82,7 +100,7 @@ void main() {
     final backBtn = find.byIcon(Icons.arrow_back_rounded);
     expect(backBtn, findsOneWidget);
     await tester.tap(backBtn);
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     // Verify back in Library
     expect(find.byType(FolderDetailView), findsNothing);
@@ -91,7 +109,7 @@ void main() {
     final homeIcon = find.byIcon(Icons.home_outlined);
     expect(homeIcon, findsOneWidget);
     await tester.tap(homeIcon);
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     // Verify Home tab is selected
     final currentIndex = tester
@@ -102,26 +120,25 @@ void main() {
 
   testWidgets('TEST B: Open folder -> system back -> switch tabs',
       (tester) async {
-    await tester.pumpWidget(shellScope());
-    await tester.pumpAndSettle();
+    await pumpShell(tester);
 
     // 1. Switch to Library (tab 2)
     await tester.tap(find.byIcon(Icons.library_music_outlined).first);
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     // 2. Switch to Folders tab
     await tester.tap(find.widgetWithText(Tab, 'Folders'));
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     // 3. Open folder
     await tester.tap(find.text('Rock Classics'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(find.byType(FolderDetailView), findsOneWidget);
 
     // 4. Simulate Android system back
     final dynamic widgetsAppState = tester.state(find.byType(WidgetsApp));
     await widgetsAppState.didPopRoute();
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     // Verify FolderDetailView is popped
     expect(find.byType(FolderDetailView), findsNothing);
@@ -130,7 +147,7 @@ void main() {
     final searchIcon = find.byIcon(Icons.search_rounded);
     expect(searchIcon, findsWidgets);
     await tester.tap(searchIcon.first);
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     final currentIndex = tester
         .widget<IndexedStack>(find.byType(IndexedStack).first)
@@ -139,57 +156,55 @@ void main() {
   });
 
   testWidgets('TEST C & E: Rapid back + immediate tab tap', (tester) async {
-    await tester.pumpWidget(shellScope());
-    await tester.pumpAndSettle();
+    await pumpShell(tester);
 
     // Go to Library
     await tester.tap(find.byIcon(Icons.library_music_outlined).first);
-    await tester.pumpAndSettle();
+    await settle(tester);
     await tester.tap(find.widgetWithText(Tab, 'Folders'));
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     // Open folder
     await tester.tap(find.text('Rock Classics'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(find.byType(FolderDetailView), findsOneWidget);
 
     // Rapid back + tab tap before settling
     await tester.tap(find.byIcon(Icons.arrow_back_rounded));
     await tester.pump(); // single frame, not pumpAndSettle
     await tester.pump(const Duration(milliseconds: 300));
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     expect(find.byType(FolderDetailView), findsNothing);
     await tester.tap(find.byIcon(Icons.home_outlined));
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     final idx = tester.widget<IndexedStack>(find.byType(IndexedStack).first).index;
     expect(idx, 0);
   });
 
   testWidgets('TEST F: Folder scroll drag then back and switch tab', (tester) async {
-    await tester.pumpWidget(shellScope());
-    await tester.pumpAndSettle();
+    await pumpShell(tester);
 
     await tester.tap(find.byIcon(Icons.library_music_outlined).first);
-    await tester.pumpAndSettle();
+    await settle(tester);
     await tester.tap(find.widgetWithText(Tab, 'Folders'));
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     await tester.tap(find.text('Rock Classics'));
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     // Fling scroll
     await tester.fling(find.byType(ListView), const Offset(0, -300), 1000);
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     // Back
     await tester.tap(find.byIcon(Icons.arrow_back_rounded));
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     // Switch tab
     await tester.tap(find.byIcon(Icons.home_outlined));
-    await tester.pumpAndSettle();
+    await settle(tester);
 
     final idx = tester.widget<IndexedStack>(find.byType(IndexedStack).first).index;
     expect(idx, 0);
@@ -199,27 +214,26 @@ void main() {
     LibraryFoldersTab.debugDisableDebounce = true;
     addTearDown(() => LibraryFoldersTab.debugDisableDebounce = false);
 
-    await tester.pumpWidget(shellScope());
-    await tester.pumpAndSettle();
+    await pumpShell(tester);
 
     for (int i = 0; i < 10; i++) {
       // Library
       await tester.tap(find.byIcon(Icons.library_music_outlined).first);
-      await tester.pumpAndSettle();
+      await settle(tester);
       await tester.tap(find.widgetWithText(Tab, 'Folders'));
-      await tester.pumpAndSettle();
+      await settle(tester);
 
       // Folder
       await tester.tap(find.text('Rock Classics'));
-      await tester.pumpAndSettle();
+      await settle(tester);
 
       // Back
       await tester.tap(find.byIcon(Icons.arrow_back_rounded));
-      await tester.pumpAndSettle();
+      await settle(tester);
 
       // Home
       await tester.tap(find.byIcon(Icons.home_outlined));
-      await tester.pumpAndSettle();
+      await settle(tester);
 
       final idx = tester.widget<IndexedStack>(find.byType(IndexedStack).first).index;
       expect(idx, 0);

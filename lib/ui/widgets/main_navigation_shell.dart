@@ -74,6 +74,11 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
       canPop: canPop,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
+        final nav = Navigator.of(context);
+        if (nav.canPop()) {
+          nav.pop();
+          return;
+        }
         if (scaffoldKey.currentState?.isDrawerOpen ?? false) {
           scaffoldKey.currentState?.closeDrawer();
         } else if (currentIndex != 0) {

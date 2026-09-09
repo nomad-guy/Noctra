@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../../core/platform/noctra_capabilities.dart';
 import '../../features/discovery/infrastructure/jiosaavn_pure_engine.dart';
+import 'innertube/innertube_player_api.dart';
+import 'innertube/innertube_radio_api.dart';
 
 /// Single unified client for track resolution, search, and decryption across all platforms.
 ///
@@ -75,8 +77,11 @@ class NativeResolverClient {
     return null;
   }
 
-  /// Asks the native engine to extract an InnerTube stream URL for [videoId].
+  /// Extracts an InnerTube stream URL for [videoId] using pure Dart with native fallback.
   static Future<String?> extractInnerTube(String videoId) async {
+    final pure = await resolveInnerTubeStreamUrl(videoId);
+    if (pure != null && pure.isNotEmpty) return pure;
+
     if (kIsWeb || !NoctraCapabilities.supportsNativeResolver) return null;
     try {
       return await _channel
@@ -86,8 +91,11 @@ class NativeResolverClient {
     }
   }
 
-  /// Fetches radio tracks for [videoId].
+  /// Fetches radio tracks for [videoId] using pure Dart with native fallback.
   static Future<List<dynamic>?> fetchRadio(String videoId) async {
+    final pure = await InnerTubeRadioApi.fetchRadioTracks(videoId);
+    if (pure != null && pure.isNotEmpty) return pure;
+
     if (kIsWeb || !NoctraCapabilities.supportsNativeResolver) return null;
     try {
       return await _channel

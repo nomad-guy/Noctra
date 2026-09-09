@@ -3,6 +3,8 @@ import 'package:noctra/services/audio/stream_quality_service.dart';
 import 'package:noctra/services/audio/audio_stem_separation_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('StreamQualityService', () {
     late StreamQualityService service;
 

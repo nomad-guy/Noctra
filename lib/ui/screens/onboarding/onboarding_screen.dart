@@ -193,6 +193,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       );
     } else {
       return OnboardingArtistPicker(
+        selectedLanguages: _selectedLanguages,
         selectedArtists: _selectedArtists,
         onToggle: (artist) {
           setState(() {

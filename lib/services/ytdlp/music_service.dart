@@ -126,8 +126,9 @@ class MusicService {
   static Future<List<Song>> fetchTrendingTracks() =>
       MusicServiceCharts.fetchTrendingTracks();
 
-  static Future<List<Song>> fetchVibeFeed(String vibeKey) =>
-      MusicServiceCharts.fetchVibeFeed(vibeKey);
+  static Future<List<Song>> fetchVibeFeed(String vibeKey,
+          {List<String>? languages}) =>
+      MusicServiceCharts.fetchVibeFeed(vibeKey, languages: languages);
 
   static Future<ArtistDiscography> fetchArtistCatalog(String artistName) =>
       MusicServiceArtist.fetchArtistCatalog(artistName);

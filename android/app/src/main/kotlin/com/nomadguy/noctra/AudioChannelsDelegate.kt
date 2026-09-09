@@ -147,23 +147,23 @@ object AudioChannelsDelegate {
     }
 
     private fun speakerPlusBluetoothResultToMap(
-        r: NoctraAudioRouter.SpeakerPlusBluetoothResult?
+        r: SpeakerPlusBluetoothResult?
     ): Map<String, Any> = when (r) {
-        is NoctraAudioRouter.SpeakerPlusBluetoothResult.Ok ->
+        is SpeakerPlusBluetoothResult.Ok ->
             mapOf("ok" to true, "status" to "ok")
-        is NoctraAudioRouter.SpeakerPlusBluetoothResult.NothingSelected ->
+        is SpeakerPlusBluetoothResult.NothingSelected ->
             mapOf("ok" to false, "status" to "nothing_selected")
-        is NoctraAudioRouter.SpeakerPlusBluetoothResult.DeviceNotFound ->
+        is SpeakerPlusBluetoothResult.DeviceNotFound ->
             mapOf("ok" to false, "status" to "device_not_found")
-        is NoctraAudioRouter.SpeakerPlusBluetoothResult.SpeakerOnly ->
+        is SpeakerPlusBluetoothResult.SpeakerOnly ->
             // API 31+ has no public multi-sink API. The speaker is on;
             // the user must use the system media output panel for
             // their Bluetooth device. The Dart side can offer that
             // affordance directly from this response.
             mapOf("ok" to true, "status" to "speaker_only", "needsSystemPanel" to true)
-        is NoctraAudioRouter.SpeakerPlusBluetoothResult.SingleDeviceRouted ->
+        is SpeakerPlusBluetoothResult.SingleDeviceRouted ->
             mapOf("ok" to true, "status" to "single_device_routed")
-        is NoctraAudioRouter.SpeakerPlusBluetoothResult.Failed ->
+        is SpeakerPlusBluetoothResult.Failed ->
             mapOf("ok" to false, "status" to "failed", "reason" to r.reason)
         null -> mapOf("ok" to false, "status" to "no_router")
     }

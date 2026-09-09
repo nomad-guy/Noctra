@@ -16,12 +16,10 @@ class DartStemDspEngine {
     if (!inputFile.existsSync() || inputFile.lengthSync() < 128) {
       throw Exception('Input audio file does not exist or is too small');
     }
-
     final outDir = Directory(outputDir);
     if (!outDir.existsSync()) {
       outDir.createSync(recursive: true);
     }
-
     final bytes = await inputFile.readAsBytes();
     final pcmData = _extractPcm(bytes);
 

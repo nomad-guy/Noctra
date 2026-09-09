@@ -208,7 +208,11 @@ class _AiCollectionDetailViewState
         children: [
           IconButton(
             icon: Icon(Icons.arrow_back_rounded, color: textPrimary),
-            onPressed: () => Navigator.of(context).maybePop(),
+            onPressed: () {
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+            },
           ),
           Expanded(
             child: Column(

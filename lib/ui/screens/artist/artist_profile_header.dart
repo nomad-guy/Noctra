@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/song_model.dart';
 import '../../../providers/app_providers.dart';
 import '../../../services/metadata/artist_metadata_service.dart';
+import '../../../services/metadata/artist_wikipedia_service.dart';
 import '../../widgets/ai_radio_sheet.dart';
 import '../../../shared/widgets/glass_card.dart';
 
-class ArtistProfileHeader extends ConsumerWidget {
+class ArtistProfileHeader extends ConsumerStatefulWidget {
   final String artistName;
   final String? avatarUrl;
   final ArtistMetadata? artistMetadata;
@@ -23,8 +24,23 @@ class ArtistProfileHeader extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ArtistProfileHeader> createState() =>
+      _ArtistProfileHeaderState();
+}
+
+class _ArtistProfileHeaderState extends ConsumerState<ArtistProfileHeader> {
+  bool _isBioExpanded = false;
+
+  String _formatBio(String fullBio, bool expanded) {
+    if (expanded) return fullBio;
+    return ArtistWikipediaService.formatBioSnippet(fullBio, maxSentences: 2, maxChars: 220);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final audioPlayer = ref.watch(audioPlayerServiceProvider);
+    final isDark = widget.isDark;
+    final tracks = widget.tracks;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -45,7 +61,7 @@ class ArtistProfileHeader extends ConsumerWidget {
               ),
               child: ClipOval(
                 child: Image.network(
-                  avatarUrl ?? '',
+                  widget.avatarUrl ?? '',
                   fit: BoxFit.cover,
                   cacheWidth: 200,
                   cacheHeight: 200,
@@ -58,7 +74,7 @@ class ArtistProfileHeader extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              artistName,
+              widget.artistName,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 20,
@@ -68,7 +84,7 @@ class ArtistProfileHeader extends ConsumerWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              artistMetadata?.shortDescription ??
+              widget.artistMetadata?.shortDescription ??
                   '${tracks.length} Master Releases • 320 kbps High-Fidelity',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -76,25 +92,42 @@ class ArtistProfileHeader extends ConsumerWidget {
                 color: isDark ? Colors.white54 : Colors.black54,
               ),
             ),
-            if (artistMetadata?.bio != null &&
-                artistMetadata!.bio!.isNotEmpty) ...[
+            if (widget.artistMetadata?.bio != null &&
+                widget.artistMetadata!.bio!.isNotEmpty) ...[
               const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.black.withValues(alpha: 0.04),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  artistMetadata!.bio!,
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    height: 1.4,
-                    color: isDark ? Colors.white70 : Colors.black87,
+              GestureDetector(
+                onTap: () => setState(() => _isBioExpanded = !_isBioExpanded),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.black.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _formatBio(widget.artistMetadata!.bio!, _isBioExpanded),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          height: 1.45,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                      if (widget.artistMetadata!.bio!.length > 160) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          _isBioExpanded ? 'Show less' : 'Read more',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white54 : Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ),

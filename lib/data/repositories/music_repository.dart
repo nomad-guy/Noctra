@@ -8,6 +8,7 @@ import '../models/ai_playlist_model.dart';
 import '../sources/noctra_local_database.dart';
 import 'taste_vector_engine.dart';
 import '../../services/ytdlp/music_service.dart';
+import 'song_similarity_deduplicator.dart';
 import '../../core/utils/noctra_logger.dart';
 
 export '../models/ai_playlist_model.dart';

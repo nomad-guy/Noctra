@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/platform/noctra_capabilities.dart';
@@ -14,46 +15,36 @@ class DesktopKeyboardShortcuts extends ConsumerWidget {
 
   const DesktopKeyboardShortcuts({super.key, required this.child});
 
-  bool _isEditingText() {
-    final focus = FocusManager.instance.primaryFocus;
-    if (focus == null) return false;
-
-    // Check debug label on focus node
-    final label = focus.debugLabel?.toLowerCase() ?? '';
-    if (label.contains('editabletext') ||
-        label.contains('textfield') ||
-        label.contains('textformfield')) {
-      return true;
-    }
-
-    // Check focus node descendants
-    for (final node in focus.descendants) {
-      final nodeLabel = node.debugLabel?.toLowerCase() ?? '';
-      if (nodeLabel.contains('editabletext') ||
-          nodeLabel.contains('textfield') ||
-          nodeLabel.contains('textformfield')) {
-        return true;
+  bool _hasRenderEditable(RenderObject? ro) {
+    if (ro == null) return false;
+    if (ro is RenderEditable) return true;
+    bool found = false;
+    ro.visitChildren((child) {
+      if (!found && _hasRenderEditable(child)) {
+        found = true;
       }
-      final ctx = node.context;
-      if (ctx != null && (ctx.widget is EditableText || ctx.widget is TextField)) {
-        return true;
-      }
-    }
+    });
+    return found;
+  }
 
-    final context = focus.context;
+  bool _isNodeEditing(FocusNode node) {
+    final context = node.context;
     if (context == null) return false;
 
-    // Direct widget check
+    // Direct widget or ancestor widget check
     if (context.widget is EditableText ||
         context.widget is TextField ||
-        context.widget is TextFormField) {
-      return true;
-    }
-
-    if (context.findAncestorWidgetOfExactType<EditableText>() != null ||
+        context.widget is TextFormField ||
+        context.findAncestorWidgetOfExactType<EditableText>() != null ||
         context.findAncestorWidgetOfExactType<TextField>() != null ||
         context.findAncestorWidgetOfExactType<TextFormField>() != null ||
         context.findAncestorStateOfType<EditableTextState>() != null) {
+      return true;
+    }
+
+    // RenderObject check: RenderEditable is always the underlying render object of text inputs
+    final renderObject = context.findRenderObject();
+    if (_hasRenderEditable(renderObject)) {
       return true;
     }
 
@@ -63,39 +54,50 @@ class DesktopKeyboardShortcuts extends ConsumerWidget {
       context.visitAncestorElements((element) {
         if (element.widget is EditableText ||
             element.widget is TextField ||
-            element.widget is TextFormField) {
+            element.widget is TextFormField ||
+            element is StatefulElement && element.state is EditableTextState) {
           isEditing = true;
-          return false; // stop visiting
+          return false;
         }
-        return true; // continue visiting
+        return true;
       });
     } catch (_) {}
-    if (isEditing) return true;
+    return isEditing;
+  }
 
-    // Walk down descendant elements in the element tree
-    void visitor(Element element) {
-      if (isEditing) return;
-      if (element.widget is EditableText ||
-          element.widget is TextField ||
-          element.widget is TextFormField) {
-        isEditing = true;
-        return;
-      }
-      element.visitChildren(visitor);
+  bool _isEditingText(FocusNode shortcutNode) {
+    FocusNode? active = FocusManager.instance.primaryFocus;
+    if (active == null || active == shortcutNode) return false;
+
+    // If focused node is a FocusScopeNode, resolve to its leaf focused child
+    while (active is FocusScopeNode && active.focusedChild != null) {
+      active = active.focusedChild;
+    }
+    if (active == null || active == shortcutNode) return false;
+
+    // Check debug label on focus node (works in debug/profile mode)
+    final label = active.debugLabel?.toLowerCase() ?? '';
+    if (label.contains('editabletext') ||
+        label.contains('textfield') ||
+        label.contains('textformfield')) {
+      return true;
     }
 
-    try {
-      (context as Element).visitChildren(visitor);
-    } catch (_) {}
+    if (_isNodeEditing(active)) return true;
 
-    return isEditing;
+    // Check focus node descendants
+    for (final desc in active.descendants) {
+      if (_isNodeEditing(desc)) return true;
+    }
+
+    return false;
   }
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event, WidgetRef ref) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
     // Strictly ignore if user is typing in any text field or input
-    if (_isEditingText()) return KeyEventResult.ignored;
+    if (_isEditingText(node)) return KeyEventResult.ignored;
 
     // Ignore if modifier keys are pressed (Ctrl, Alt, Meta/Windows key)
     // to avoid interfering with shortcuts like Ctrl+C, Ctrl+V, Ctrl+A, Alt+Tab, etc.

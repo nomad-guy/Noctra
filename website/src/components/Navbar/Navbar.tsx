@@ -57,6 +57,7 @@ export function Navbar({ theme, onCycleTheme }: Props) {
 
         <nav className={styles.navLinks}>
           <a href="#hero" className={styles.navLink}>Home</a>
+          <a href="#showcase" className={styles.navLink}>App Demo</a>
           <a href="#lyrics" className={styles.navLink}>Lyrics</a>
           <a href="#audiophile" className={styles.navLink}>DSP Curves</a>
           <a href="#transfer" className={styles.navLink}>Transfer</a>

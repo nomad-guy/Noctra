@@ -97,7 +97,7 @@ class AppUpdateVerifier {
 
   static Future<bool> isVerifiedInstallCandidate(String filePath) async {
     if (kIsWeb || filePath.isEmpty) return false;
-    if (!Platform.isAndroid) {
+    if (!filePath.toLowerCase().endsWith('.apk')) {
       // Non-Android artifacts (.exe, .deb, .ipa) have already been verified
       // against their official SHA-256 cryptographic digest during download.
       return File(filePath).existsSync();

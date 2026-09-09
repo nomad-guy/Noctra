@@ -227,16 +227,16 @@ final dynamicTrendingFeedProvider = FutureProvider<List<Song>>((ref) async {
 // Dynamic Spotify Charts Future Provider
 final selectedSpotifyChartKeyProvider = StateProvider<String>((ref) {
   final repo = ref.watch(musicRepositoryProvider);
+  final langs = repo.onboardedLanguages.map((l) => l.toLowerCase()).toList();
   final genres = repo.onboardedGenres.map((g) => g.toLowerCase()).toList();
-  if (genres.any((g) => g.contains('bollywood') || g.contains('sufi'))) {
+  if (langs.any((l) => l.contains('hindi') || l.contains('punjabi') || l.contains('urdu')) ||
+      genres.any((g) => g.contains('bollywood') || g.contains('sufi'))) {
     return 'bollywood';
   }
-  if (genres.any((g) =>
-      g.contains('hip-hop') || g.contains('rap') || g.contains('phonk'))) {
+  if (genres.any((g) => g.contains('hip-hop') || g.contains('rap') || g.contains('phonk'))) {
     return 'rap_caviar';
   }
-  if (genres.any((g) =>
-      g.contains('lo-fi') || g.contains('acoustic') || g.contains('indie'))) {
+  if (genres.any((g) => g.contains('lo-fi') || g.contains('acoustic') || g.contains('indie'))) {
     return 'chill_hits';
   }
   if (genres.any((g) => g.contains('edm') || g.contains('synthwave'))) {
@@ -264,7 +264,7 @@ final dynamicVibeTracksProvider = FutureProvider<List<Song>>((ref) async {
   }
   ref.watch(homeFeedRefreshNonceProvider);
   final vibe = ref.watch(selectedVibeKeyProvider) ?? 'late_night';
-  return MusicService.fetchVibeFeed(vibe);
+  return MusicService.fetchVibeFeed(vibe, languages: repo.onboardedLanguages);
 });
 
 // Curated songs provider (Synchronous Fast Knowledge Graph)

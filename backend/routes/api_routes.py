@@ -145,30 +145,59 @@ def get_vibe_feed():
 
 @api_bp.route('/ai_radio', methods=['GET'])
 def ai_radio():
-    """AI Radio: search for songs similar to a seed track by title+artist."""
+    """AI Radio: search for songs similar to a seed track without duplicate seed versions."""
     try:
         title = request.args.get('title', '').strip()
         artist = request.args.get('artist', '').strip()
         limit = _bounded_limit(request.args.get('limit'), default=15)
-        if not title:
+        if not title and not artist:
             return jsonify({"results": []})
-        # Search by artist first (most relevant), then by title keywords
+
+        def norm_title(t):
+            t = re.sub(r'[\(\[\{].*?[\)\]\}]', '', t.lower())
+            t = re.sub(r'\b(official|video|audio|lyric|lyrics|remix|lofi|slowed|reverb|hd|4k)\b', '', t)
+            return re.sub(r'\s+', ' ', t).strip()
+
+        seed_norm = norm_title(title)
+        seed_words = set(seed_norm.split()) if seed_norm else set()
+
+        def is_seed_dup(candidate_title):
+            if not seed_norm:
+                return False
+            cand_norm = norm_title(candidate_title)
+            if not cand_norm or cand_norm == seed_norm:
+                return bool(cand_norm)
+            cand_words = set(cand_norm.split())
+            if len(seed_words) >= 2 and len(cand_words) >= 2:
+                overlap = len(seed_words & cand_words)
+                if (overlap / len(seed_words | cand_words)) >= 0.6:
+                    return True
+            return False
+
         queries = []
         if artist:
-            queries.append(artist)
-            queries.append(f"{artist} songs")
-        queries.append(title)
-        all_results = []
-        seen_ids = set()
+            queries.extend([f"{artist} top songs", f"{artist} radio", artist])
+        else:
+            queries.append(f"{title} similar songs")
+
+        all_results, seen_ids, seen_norms = [], set(), {seed_norm} if seed_norm else set()
         for q in queries:
-            tracks = search_jiosaavn_music(q, limit=8)
-            for t in tracks:
-                if t['id'] not in seen_ids:
-                    seen_ids.add(t['id'])
-                    all_results.append(t)
-            if len(all_results) >= limit:
+            for t in search_jiosaavn_music(q, limit=12):
+                tid, ttitle = t.get('id', ''), t.get('title', '')
+                if not tid or tid in seen_ids or is_seed_dup(ttitle):
+                    continue
+                cn = norm_title(ttitle)
+                if cn and cn in seen_norms:
+                    continue
+                if cn:
+                    seen_norms.add(cn)
+                seen_ids.add(tid)
+                all_results.append(t)
+            if len(all_results) >= limit * 2:
                 break
-        ranked = hybrid_dense_rag_rerank(title, all_results)
+
+        rerank_query = f"{artist} style" if artist else title
+        ranked = hybrid_dense_rag_rerank(rerank_query, all_results)
         return jsonify({"results": ranked[:limit]})
     except Exception as e:
         logger.error(f"AI Radio error: {e}")
