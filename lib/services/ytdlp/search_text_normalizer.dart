@@ -9,6 +9,22 @@
 class SearchTextNormalizer {
   SearchTextNormalizer._();
 
+  /// Lowercase fold of precomposed Latin diacritics to their base letters
+  /// plus removal of combining marks, without any tokenization. Used by
+  /// matching layers that keep their own punctuation/token rules but must
+  /// not treat "Beyoncé" and "Beyonce" as different words.
+  static String foldDiacritics(String input) {
+    final lowered = input.toLowerCase();
+    final sb = StringBuffer();
+    for (final rune in lowered.runes) {
+      if (rune >= 0x0300 && rune <= 0x036F) continue;
+      final ch = String.fromCharCode(rune);
+      final folded = _latinDiacritics[ch];
+      sb.write(folded ?? ch);
+    }
+    return sb.toString();
+  }
+
   /// Lowercase, de-accented, token-safe normalization.
   ///
   /// Keeps Unicode letters/digits so Roman-Urdu, Devanagari and Arabic

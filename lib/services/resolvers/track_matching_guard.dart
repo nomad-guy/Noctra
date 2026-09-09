@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import '../ytdlp/search_text_normalizer.dart';
+
 /// High-precision song matching guard preventing wrong-song/wrong-stream substitution.
 /// Ensures version tag consistency, primary artist presence, and duration boundaries.
 class TrackMatchingGuard {
@@ -209,9 +211,10 @@ class TrackMatchingGuard {
   }
 
   static String _normalizeForComparison(String input) {
-    var s = input.toLowerCase();
-    // Remove diacritics / accents
-    s = s.replaceAll(RegExp(r'[\u0300-\u036f]'), '');
+    // Fold precomposed diacritics too (Beyoncé → beyonce). The old
+    // combining-marks-only pass let the ASCII punctuation filter below
+    // split accented words in two (beyon ce), rejecting the correct track.
+    var s = SearchTextNormalizer.foldDiacritics(input);
     // Replace punctuation with whitespace
     s = s.replaceAll(RegExp(r'[^\w\s]'), ' ');
     // Collapse multiple whitespaces

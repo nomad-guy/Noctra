@@ -44,7 +44,6 @@ extension MusicServiceSearch on MusicService {
     final saavn = <Song>[];
     final ytSongs = <Song>[];
     final itunesSongs = <Song>[];
-    final lrcSongs = <Song>[];
 
     void collect(List<Song> bucket, Song s) {
       if (s.title.isNotEmpty) bucket.add(s);
@@ -126,7 +125,7 @@ extension MusicServiceSearch on MusicService {
           final sRes = await http.post(sUri, body: sBody, headers: {
             'Content-Type': 'application/json',
             'User-Agent': 'Mozilla/5.0'
-          }).timeout(const Duration(milliseconds: 2500));
+          }).timeout(const Duration(milliseconds: 3500));
           if (sRes.statusCode == 200) {
             final sData = jsonDecode(sRes.body);
             _parseYtMusicSearchResults(sData, (s) => collect(ytSongs, s));
@@ -142,7 +141,7 @@ extension MusicServiceSearch on MusicService {
           final res = await http
               .get(Uri.parse(
                   'https://itunes.apple.com/search?term=${Uri.encodeComponent(itunesQuery)}&entity=song&limit=25'))
-              .timeout(const Duration(milliseconds: 2500));
+              .timeout(const Duration(milliseconds: 3500));
           if (res.statusCode == 200) {
             final results = jsonDecode(res.body)['results'] as List?;
             if (results != null) {
@@ -175,7 +174,7 @@ extension MusicServiceSearch on MusicService {
         [saavn, ytSongs, itunesSongs], clean);
     NoctraLogger.d('Search "$clean" (src=$src) ranked ${ranked.length} '
         '(saavn=${saavn.length}, yt=${ytSongs.length}, '
-        'itunes=${itunesSongs.length}, lrc=${lrcSongs.length})');
+        'itunes=${itunesSongs.length})');
     if (ranked.isNotEmpty) {
       NoctraLogger.d('  top: ${ranked.take(5).map((s) => '${s.title} | ${s.artist}').join(' || ')}');
     }
