@@ -15,9 +15,14 @@ untestable in the current environment.
 | macOS    | no                | no             | no               |
 | Web      | partial (Chrome)  | no             | no               |
 
-`ios/`, `macos/`, `windows/`, `web/` directories exist as framework scaffolds
-but only Android is a configured, migrated, release-built platform. Desktop
-and iOS work therefore cannot be claimed or verified here.
+`ios/`, `macos/`, `windows/`, `web/` directories exist as framework scaffolds.
+Android remains the flagship release platform, and since v1.0.8 all release
+artifacts are produced by GitHub Actions (`.github/workflows/cross_platform_build.yml`):
+Android universal + per-ABI APKs + AAB (release-keystore signed via repo
+secrets), Windows Inno Setup installer, Linux `.deb`, and a sideloadable iOS
+`.ipa` — checksummed with `SHA256SUMS.txt` and published automatically on
+`v*` tags. The local machine still cannot verify desktop/iOS builds; those
+claims rest on the workflow runners, not this environment.
 
 ## Capability contracts
 

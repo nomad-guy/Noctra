@@ -10,12 +10,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/nomad-guy/Noctra/releases/latest"><img src="https://img.shields.io/badge/Release-v1.0.5-000000.svg?style=flat-square" alt="Release v1.0.5" /></a>
+  <a href="https://github.com/nomad-guy/Noctra/releases/latest"><img src="https://img.shields.io/badge/Release-v1.0.8-000000.svg?style=flat-square" alt="Release v1.0.8" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-000000.svg?style=flat-square" alt="License GPL-3.0" /></a>
   <a href="SECURITY.md"><img src="https://img.shields.io/badge/Security-Policy-000000.svg?style=flat-square" alt="Security Policy" /></a>
   <a href="#privacy-architecture"><img src="https://img.shields.io/badge/Telemetry-0%25-000000.svg?style=flat-square" alt="Zero Telemetry" /></a>
   <a href="#streaming--audiophile-playback"><img src="https://img.shields.io/badge/Audio-Hi--Res%20FLAC%2024--bit%2F192kHz-000000.svg?style=flat-square" alt="Hi-Res FLAC" /></a>
-  <a href="#automated-verification"><img src="https://img.shields.io/badge/Tests-780%2B%20Passing-000000.svg?style=flat-square" alt="780+ Tests Passing" /></a>
+  <a href="#automated-verification"><img src="https://img.shields.io/badge/Tests-900%2B%20Passing-000000.svg?style=flat-square" alt="900+ Tests Passing" /></a>
   <a href="#codebase-architecture"><img src="https://img.shields.io/badge/Architecture-%E2%89%A4300%20LOC-000000.svg?style=flat-square" alt="Modular Architecture" /></a>
   <a href="https://flutter.dev"><img src="https://img.shields.io/badge/Framework-Flutter%203.47-000000.svg?style=flat-square" alt="Flutter" /></a>
 </p>
@@ -29,7 +29,7 @@
 <p align="center">
   <a href="#overview">Overview</a> &bull;
   <a href="#screenshots">Screenshots</a> &bull;
-  <a href="#whats-new-in-v105">What's New</a> &bull;
+  <a href="#whats-new-in-v108">What's New</a> &bull;
   <a href="#features">Features</a> &bull;
   <a href="#installation--downloads">Downloads</a> &bull;
   <a href="#architecture">Architecture</a> &bull;
@@ -87,7 +87,7 @@ Built with Flutter, Dart, Riverpod, and native platform digital signal processin
 
 - [Overview](#overview)
 - [Screenshots](#screenshots)
-- [What's New in v1.0.5](#whats-new-in-v105)
+- [What's New in v1.0.8](#whats-new-in-v108)
 - [Features](#features)
   - [Streaming & Audiophile Playback](#streaming--audiophile-playback)
   - [Responsive Cross-Platform Shell](#responsive-cross-platform-shell)
@@ -103,25 +103,23 @@ Built with Flutter, Dart, Riverpod, and native platform digital signal processin
 
 ---
 
-## What's New in v1.0.5
+## What's New in v1.0.8
 
-- **Cross-Platform Native Packaging**:
-  - **Windows**: Single-file standalone `Noctra-1.0.5-Setup-x64.exe` installer compiled with Inno Setup and branded with native high-definition `app_icon.ico`.
-  - **Linux**: Native Debian/Ubuntu package (`noctra_1.0.5_amd64.deb`) with system icons and desktop entry.
-  - **Android**: Universal APK, Split-ABI APKs (`arm64-v8a`, `armeabi-v7a`, `x86_64`), and Google Play App Bundle (`.aab`).
-  - **iOS**: Sideloadable `Noctra-1.0.5.ipa` bundle ready for AltStore, SideStore, Sideloadly, and TrollStore.
-- **Adaptive Desktop & Mobile Layout**:
-  - Automatically adapts between wide desktop screens ($\ge 720\text{px}$) with a permanently docked `NoirSidebar` and fluid mini-player, and mobile devices ($< 720\text{px}$) with an ergonomic bottom navigation bar.
-- **Accurate Artist Biographies**:
-  - Built `ArtistWikipediaService` with music entity validation keywords (`singer`, `musician`, `band`, `rapper`, `album`, `playback singer`) and multi-candidate disambiguation defense.
-- **Native Cross-Platform Rollback & Updater**:
-  - Dynamic OS asset detection selects `.exe` installers on Windows and executes native desktop setup processes instead of calling Android package managers.
-- **Modular Official Website**:
-  - Interactive Three.js 3D crystal shards canvas, Anime.js micro-animations, and live AksharaEngine bilingual lyrics demonstration.
-- **Shuffle & Algorithmic Remix for Folders**:
-  - Integrated `AiCollectionActionBar` into all imported playlists and custom folders with 1-tap random shuffle and deterministic remix reordering persisted directly to the local SQLite database.
-- **Universal Playlist & Library Transfer Protocol**:
-  - Pure-Dart `NoctraTransferService` supporting lossless JSON manifest (`.noctra.json`) and spreadsheet-compatible universal CSV (`.csv`) export and import with 1-tap clipboard copying and device saving.
+- **Search Accuracy — Missing Songs & Artists Found**:
+  - Accented artists match plain queries and vice versa (`Beyoncé`/`Beyonce`, `Björk`/`Bjork`), including decomposed Unicode spellings.
+  - One-letter typos no longer hide songs (`midnight ciy` still finds *Midnight City*); fuzzy matching stays off for very short tokens to avoid false positives.
+  - Apostrophe variants agree (`Don't` = `Dont`), and pasted Spotify links that resolve but don't match now fall back to a title search instead of returning nothing.
+  - Artist-profile ordering tolerates accent and spelling variants; provider search timeouts raised 2.5s → 3.5s for weak networks.
+- **Playback Wrong-Track Guard Fixed**:
+  - The stream-resolution matching guard split accented words in two (`Beyoncé` → `beyon ce`), which could reject the correct stream. Diacritic folding now precedes punctuation stripping; genuinely different artists are still rejected.
+- **AI Libraries & Recommendations**:
+  - AI folders/mixes open instantly from locally curated tracks (no network wait); remix reorders the cached pool deterministically; curation is memoized so Home/Library rebuilds stop re-running the nine-vibe scoring pipeline.
+- **UI Fixes**:
+  - Synthwave spectrum visualizer recolors with the active theme; mini player appears inside library and artist pages; playback position stuck at 1:10 resolved.
+- **Website Overhaul**:
+  - Real mobile hamburger navigation (links were previously hidden on phones); 3D backdrop pauses when the tab is hidden, honors reduced motion, and lowers GPU cost on phones; changelog modal is a proper accessible dialog; robots.txt, sitemap, web manifest, absolute social-preview images, and FAQ structured data added.
+- **Verified for real**:
+  - A live-network end-to-end suite hits the actual providers for every previously-missing reported song/artist, plus on-device adb verification with zero crashes. Analyzer clean, 900+ tests passing.
 
 ---
 
@@ -172,12 +170,12 @@ Pre-compiled production binaries for all operating systems are available on the 
 
 | Operating System | Package Name | Target Architecture | Installation Guide |
 |---|---|---|---|
-| **Windows** | `Noctra-1.0.5-Setup-x64.exe` | x86_64 / x64 | Run installer &bull; Installs to `AppData` with Desktop shortcut |
-| **Linux** | `noctra_1.0.5_amd64.deb` | x86_64 / amd64 | Run `sudo dpkg -i noctra_1.0.5_amd64.deb` |
-| **Android** | `Noctra-1.0.5-Universal.apk` | All Devices | Install on any Android 8.0+ device |
-| **Android (Optimized)** | `Noctra-1.0.5-arm64-v8a.apk` | 64-bit Mobile | Smallest file size for modern 64-bit phones |
-| **Android (Play Store)** | `Noctra-1.0.5.aab` | Google Play | Android App Bundle for store distribution |
-| **iOS** | `Noctra-1.0.5.ipa` | ARM64 / iPhone & iPad | Sideload via [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/), or [TrollStore](https://github.com/opa334/TrollStore) |
+| **Windows** | `Noctra-1.0.8-Setup-x64.exe` | x86_64 / x64 | Run installer &bull; Installs to `AppData` with Desktop shortcut |
+| **Linux** | `noctra_1.0.8_amd64.deb` | x86_64 / amd64 | Run `sudo dpkg -i noctra_1.0.8_amd64.deb` |
+| **Android** | `Noctra-1.0.8-Universal.apk` | All Devices | Install on any Android 8.0+ device |
+| **Android (Optimized)** | `Noctra-1.0.8-arm64-v8a.apk` | 64-bit Mobile | Smallest file size for modern 64-bit phones |
+| **Android (Play Store)** | `Noctra-1.0.8.aab` | Google Play | Android App Bundle for store distribution |
+| **iOS** | `Noctra-1.0.8.ipa` | ARM64 / iPhone & iPad | Sideload via [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/), or [TrollStore](https://github.com/opa334/TrollStore) |
 
 > **Verification**: Every release includes `SHA256SUMS.txt` to cryptographically verify binary integrity.
 

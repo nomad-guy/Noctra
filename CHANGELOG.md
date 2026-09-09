@@ -1,5 +1,34 @@
 # Changelog
 
+## v1.0.8 (2026-09-09)
+
+### Search Accuracy: Missing Songs & Artists Fixed
+
+- **Diacritic-aware matching everywhere**: a new shared `SearchTextNormalizer` folds precomposed Latin diacritics (Beyoncé → Beyonce, Björk → Bjork), strips Unicode combining marks (NFD decomposed forms normalize identically), and removes apostrophes as word-internal characters (Don't = Dont). Applied to both the search ranker and the playback matching guard.
+- **Ranker no longer hides real results**: previously, accented spellings scored zero against plain queries and were pruned by the noise filter; single-letter typos and apostrophe variants failed token matching the same way. Word/artist matching now uses exact-or-one-edit token equality (fuzzy disabled for tokens shorter than 4 characters so `cat`/`cap` never collide).
+- **Spotify link searches no longer dead-end**: when link metadata resolves but no provider matches it, the search now falls back to a title-only query instead of searching the raw URL (which could only return zero results).
+- **Artist profiles tolerate spelling variants**: artist-page ordering accepts accent and one-edit variants when matching the queried artist name.
+- **Playback wrong-track guard fixed**: `TrackMatchingGuard` split accented words in two (`Beyoncé` → `beyon ce`) before the punctuation filter, which could reject the correct stream during resolution. Diacritic folding now happens before punctuation stripping.
+- **Provider timeouts raised**: YouTube Music and iTunes search timeouts increased 2.5s → 3.5s so slow networks stop silently losing whole provider buckets.
+- **Dead code removed**: unused `lrcSongs` bucket removed from the search pipeline.
+- **Live verification**: new live-network E2E suite hitting real providers for every previously-missing reported song/artist (Kahin Deep Jalay, Mere Hamsafar, Khuda Aur Mohabbat, Ruposh, Jhoom, Awargi, Sidney Gish, accented artists, typo queries), plus on-device testing via adb.
+
+### Website Overhaul
+
+- **Mobile navigation restored**: a real hamburger menu with a slide-down panel (nav links were simply hidden below 820px before), with Escape-to-close, scroll lock, and auto-close on resize.
+- **3D backdrop performance & accessibility**: the Three.js render loop now pauses while the tab is hidden, honors `prefers-reduced-motion` with static themed frames, and caps mobile pixel ratio at 1.5 for phone GPUs.
+- **Modal accessibility**: the changelog dialog is now a proper `role="dialog"` with `aria-modal`, a focus trap, and focus restore on close.
+- **React render hygiene**: removed synchronous `setState` calls from effect bodies across AudioTelemetry, FloatingPlayer, InstallGuide, QuickDownloads, and AppShowcase (cascading-render prevention; oxlint warnings 8 → 2, both pre-existing fast-refresh notes).
+- **SEO/PWA layer**: `robots.txt`, `sitemap.xml`, web app manifest, absolute Open-Graph/Twitter image URLs, and FAQPage structured data for search-engine rich results.
+
+### UI Polish (from the device-verified fix stream)
+
+- Synthwave spectrum visualizer recolors with the active theme (Noir Black/White accent, Liquid Glass glass-blue).
+- Mini player visibility fixed inside library and artist pages; playback position stuck-at-1:10 bug resolved.
+- AI generated libraries/folders open instantly from locally curated tracks (no network wait), remix reorders the cached pool deterministically, and curation results are memoized so Home/Library rebuilds stop re-running the nine-vibe scoring pipeline.
+
+---
+
 ## v1.0.7 (2026-09-09)
 
 ### Android Predictive Back Architecture, 120 FPS UI Transitions, & Seamless Player Experience
