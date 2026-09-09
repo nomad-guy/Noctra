@@ -1,26 +1,49 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { X, ExternalLink, Sparkles, CheckCircle2, RefreshCw, Calendar, Tag, ShieldCheck } from 'lucide-react';
 import { useRelease } from '../../context/ReleaseContext';
 import styles from './ChangelogModal.module.css';
 
 export function ChangelogModal() {
   const { release, isChangelogOpen, closeChangelog, refreshRelease } = useRelease();
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isChangelogOpen) {
         closeChangelog();
       }
+      // Simple focus trap: keep Tab cycling inside the dialog while open.
+      if (e.key === 'Tab' && isChangelogOpen && dialogRef.current) {
+        const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
     if (isChangelogOpen) {
+      previouslyFocused.current = document.activeElement as HTMLElement | null;
       document.body.style.overflow = 'hidden';
       window.addEventListener('keydown', handleKeyDown);
+      // Move focus into the dialog for screen-reader/keyboard users.
+      requestAnimationFrame(() => dialogRef.current?.focus());
     } else {
       document.body.style.overflow = '';
     }
     return () => {
       document.body.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown);
+      // Restore focus to where the user was before opening.
+      previouslyFocused.current?.focus?.();
     };
   }, [isChangelogOpen, closeChangelog]);
 
@@ -28,7 +51,15 @@ export function ChangelogModal() {
 
   return (
     <div className={styles.overlay} onClick={closeChangelog}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div
+        className={styles.modal}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Release notes for ${release.tag}`}
+        tabIndex={-1}
+        ref={dialogRef}
+      >
         {/* Header */}
         <div className={styles.header}>
           <div className={styles.headerLeft}>

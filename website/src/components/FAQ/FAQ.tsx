@@ -4,6 +4,53 @@ import styles from './FAQ.module.css';
 export function FAQ() {
   const { release, openChangelog } = useRelease();
 
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `What is new in Noctra ${release.tag}?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'On-device stem separation with real-time multi-band DSP isolation, AI Radio repeat prevention with a 60-track sliding LRU window, on-device neural recommendation optimizations, sleep timer End of Track mode, in-playlist search and multi-criteria sorting, full artist discography sections, and complete song credits with liner notes.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Do I need an account or subscription to use Noctra?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'No. Noctra is completely authentication-less. All playlists, favorites, and listening records are saved on your local device in an encrypted SQLite database.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Is the audio stream bit-perfect lossless?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. Noctra resolves pure FLAC bitstreams up to 24-bit / 192 kHz from uncompressed streaming repositories. Live codec, sample rate, and bit depth are displayed in the player.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How do I install Noctra on iOS?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Download the IPA from the downloads section, then install it with AltStore, SideStore, Sideloadly, or TrollStore. No jailbreak required.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How do bilingual synchronized lyrics work?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Where synchronized dual-language transcripts exist, Noctra consolidates identical timestamps (150ms or less) so the translated line displays as a subtle italic subtitle beneath the active vocal line.',
+        },
+      },
+    ],
+  };
+
   return (
     <section id="faq" className={styles.section}>
       <div className="section-header">
@@ -82,6 +129,12 @@ export function FAQ() {
           </div>
         </details>
       </div>
+
+      {/* FAQ structured data for search-engine rich results */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
     </section>
   );
 }

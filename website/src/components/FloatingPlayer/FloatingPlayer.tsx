@@ -60,25 +60,34 @@ export function FloatingPlayer({ currentTrackIndex = 0, onTrackChange }: Props) 
   const [progressSec, setProgressSec] = useState(42);
   const [waveHeights, setWaveHeights] = useState<number[]>([12, 18, 24, 16, 20, 14, 22, 10]);
   const animFrameRef = useRef<number | null>(null);
+  // Always-current handleNext for the progress ticker without re-subscribing.
+  const handleNextRef = useRef<() => void>(() => {});
 
   const activeTrack = DEMO_TRACKS[trackIdx % DEMO_TRACKS.length];
 
   const togglePlay = async () => {
     const nextState = webAudioSynth.toggle();
+    if (!nextState) {
+      setWaveHeights([4, 6, 8, 5, 7, 4, 6, 4]);
+    }
     setIsPlaying(nextState);
   };
 
   const handleNext = () => {
     setInternalTrackIdx((prev) => (prev + 1) % DEMO_TRACKS.length);
     setProgressSec(0);
+    setWaveHeights([12, 18, 24, 16, 20, 14, 22, 10]);
     onTrackChange?.((trackIdx + 1) % DEMO_TRACKS.length);
   };
 
   const handlePrev = () => {
     setInternalTrackIdx((prev) => (prev - 1 + DEMO_TRACKS.length) % DEMO_TRACKS.length);
     setProgressSec(0);
+    setWaveHeights([12, 18, 24, 16, 20, 14, 22, 10]);
     onTrackChange?.((trackIdx - 1 + DEMO_TRACKS.length) % DEMO_TRACKS.length);
   };
+
+  handleNextRef.current = handleNext;
 
   const toggleMute = () => {
     if (isMuted) {
@@ -90,33 +99,33 @@ export function FloatingPlayer({ currentTrackIndex = 0, onTrackChange }: Props) 
     }
   };
 
-  // Waveform animation loop
+  // Waveform animation loop. Only runs while playing; the idle shape is
+  // set in the toggle handlers so the effect body never calls setState
+  // synchronously.
   useEffect(() => {
+    if (!isPlaying) return;
+
     const updateWave = () => {
-      if (isPlaying) {
-        const analyser = webAudioSynth.getAnalyser();
-        if (analyser) {
-          const buffer = new Uint8Array(analyser.frequencyBinCount);
-          analyser.getByteFrequencyData(buffer);
-          const newHeights = [
-            Math.max(6, (buffer[1] || 20) / 7),
-            Math.max(6, (buffer[3] || 35) / 6),
-            Math.max(6, (buffer[5] || 50) / 5.5),
-            Math.max(6, (buffer[7] || 40) / 6.5),
-            Math.max(6, (buffer[9] || 45) / 6),
-            Math.max(6, (buffer[11] || 30) / 7),
-            Math.max(6, (buffer[13] || 48) / 5.8),
-            Math.max(6, (buffer[15] || 25) / 7.5),
-          ];
-          setWaveHeights(newHeights);
-        } else {
-          // Fallback natural oscillation
-          setWaveHeights((prev) =>
-            prev.map(() => 6 + Math.floor(Math.random() * 20))
-          );
-        }
+      const analyser = webAudioSynth.getAnalyser();
+      if (analyser) {
+        const buffer = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(buffer);
+        const newHeights = [
+          Math.max(6, (buffer[1] || 20) / 7),
+          Math.max(6, (buffer[3] || 35) / 6),
+          Math.max(6, (buffer[5] || 50) / 5.5),
+          Math.max(6, (buffer[7] || 40) / 6.5),
+          Math.max(6, (buffer[9] || 45) / 6),
+          Math.max(6, (buffer[11] || 30) / 7),
+          Math.max(6, (buffer[13] || 48) / 5.8),
+          Math.max(6, (buffer[15] || 25) / 7.5),
+        ];
+        setWaveHeights(newHeights);
       } else {
-        setWaveHeights([4, 6, 8, 5, 7, 4, 6, 4]);
+        // Fallback natural oscillation
+        setWaveHeights((prev) =>
+          prev.map(() => 6 + Math.floor(Math.random() * 20))
+        );
       }
       animFrameRef.current = requestAnimationFrame(updateWave);
     };
@@ -133,13 +142,17 @@ export function FloatingPlayer({ currentTrackIndex = 0, onTrackChange }: Props) 
     const interval = setInterval(() => {
       setProgressSec((prev) => {
         if (prev >= activeTrack.durationSec) {
-          handleNext();
+          // Advance inside a microtask: calling handleNext() during the
+          // setState updater is a side effect inside render-phase state
+          // computation, which React warns against.
+          queueMicrotask(() => handleNextRef.current());
           return 0;
         }
         return prev + 1;
       });
     }, 1000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- durationSec drives the boundary
   }, [isPlaying, activeTrack.durationSec]);
 
   const progressPercent = Math.min(100, (progressSec / activeTrack.durationSec) * 100);

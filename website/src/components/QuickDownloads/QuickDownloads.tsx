@@ -6,11 +6,14 @@ import { useRelease } from '../../context/ReleaseContext';
 import styles from './QuickDownloads.module.css';
 
 export function QuickDownloads() {
+  // Platform detection touches navigator/UA data and must run after the
+  // first commit; 'windows' is the deterministic pre-hydration default.
   const [userPlatform, setUserPlatform] = useState<PlatformType>('windows');
   const { release } = useRelease();
 
   useEffect(() => {
-    setUserPlatform(detectUserPlatform());
+    const id = requestAnimationFrame(() => setUserPlatform(detectUserPlatform()));
+    return () => cancelAnimationFrame(id);
   }, []);
 
   const { windows, linux, android, ios } = release.binaries;

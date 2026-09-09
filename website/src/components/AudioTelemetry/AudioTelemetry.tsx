@@ -10,12 +10,11 @@ export function AudioTelemetry() {
     65, 80, 45, 90, 70, 85, 95, 60, 75, 90, 80, 65, 88, 72, 92, 58, 84, 66, 78, 88, 70, 85, 90, 60
   ]);
 
-  // Live bar fluctuation when playing
+  // Live bar fluctuation when playing. The idle flattening happens in the
+  // toggle handler, not the effect, so pausing never triggers a cascading
+  // render from a synchronous setState inside the effect body.
   useEffect(() => {
-    if (!isPlaying) {
-      setBarHeights((prev) => prev.map(() => 15));
-      return;
-    }
+    if (!isPlaying) return;
 
     const interval = setInterval(() => {
       setBarHeights((prev) =>
@@ -43,7 +42,10 @@ export function AudioTelemetry() {
             <button
               type="button"
               className={styles.playOverlayBtn}
-              onClick={() => setIsPlaying(!isPlaying)}
+              onClick={() => {
+                if (isPlaying) setBarHeights((prev) => prev.map(() => 15));
+                setIsPlaying(!isPlaying);
+              }}
               title={isPlaying ? 'Pause simulated stream' : 'Play simulated stream'}
               aria-label={isPlaying ? 'Pause' : 'Play'}
             >

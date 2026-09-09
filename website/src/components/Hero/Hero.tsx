@@ -10,6 +10,9 @@ export function Hero() {
 
   useEffect(() => {
     if (!heroRef.current) return;
+    // Users who prefer reduced motion get the fully-rendered page with no
+    // entrance animation.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     animate(
       [

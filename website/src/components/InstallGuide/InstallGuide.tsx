@@ -158,22 +158,30 @@ function buildGuides(release: ReleaseData): Record<PlatformType, PlatformGuide> 
 }
 
 export function InstallGuide() {
-  const [selectedPlatform, setSelectedPlatform] =
-    useState<PlatformType>('windows');
-  const [userPlatform, setUserPlatform] =
-    useState<PlatformType>('windows');
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
   const { release } = useRelease();
   const guides = useMemo(() => buildGuides(release), [release]);
 
+  // Platform detection touches navigator/UA data, so it cannot run during
+  // render (SSR safety + hydration stability). Lazy state initialization
+  // defers it to the first commit without a second render pass.
+  const [userPlatform, setUserPlatform] = useState<PlatformType | null>(null);
+  const [selectedPlatform, setSelectedPlatform] = useState<PlatformType | null>(null);
+
   useEffect(() => {
-    const detected = detectUserPlatform();
-    setUserPlatform(detected);
-    setSelectedPlatform(detected);
+    // Defer past commit: detection is a post-commit side effect, not a
+    // synchronous effect-phase state change.
+    const raf = requestAnimationFrame(() => {
+      const detected = detectUserPlatform();
+      setUserPlatform(detected);
+      setSelectedPlatform(detected);
+    });
+    return () => cancelAnimationFrame(raf);
   }, []);
 
-  const guide = guides[selectedPlatform];
+  const activePlatform: PlatformType = selectedPlatform ?? 'windows';
+  const guide = guides[activePlatform];
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);

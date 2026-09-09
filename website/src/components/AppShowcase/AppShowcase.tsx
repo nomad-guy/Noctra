@@ -197,11 +197,9 @@ export function AppShowcase() {
 
   const getFormattedBio = (bio: string, expanded: boolean) => {
     if (expanded || bio.length <= 140) return bio;
-    finalPeriod: {
-      const period = bio.indexOf('. ', 100);
-      if (period !== -1 && period <= 180) {
-        return bio.substring(0, period + 1);
-      }
+    const period = bio.indexOf('. ', 100);
+    if (period !== -1 && period <= 180) {
+      return bio.substring(0, period + 1);
     }
     const slice = bio.substring(0, 150);
     const lastSpace = slice.lastIndexOf(' ');
@@ -215,9 +213,14 @@ export function AppShowcase() {
       const m = String(now.getMinutes()).padStart(2, '0');
       setCurrentTimeStr(`${h}:${m}`);
     };
-    updateTime();
+    // Defer the first sync past commit so the effect body never calls
+    // setState synchronously.
+    const raf = requestAnimationFrame(updateTime);
     const timer = setInterval(updateTime, 30000);
-    return () => clearInterval(timer);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearInterval(timer);
+    };
   }, []);
 
   const handlePlaySong = (song: typeof RANKED_CHARTS[0]) => {

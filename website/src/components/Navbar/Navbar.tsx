@@ -1,7 +1,19 @@
-import { Download, Moon, Sun } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Download, Menu, Moon, Sun, X } from 'lucide-react';
 import type { ThemeType } from '../../types';
 import { useRelease } from '../../context/ReleaseContext';
 import styles from './Navbar.module.css';
+
+const NAV_LINKS = [
+  { href: '#hero', label: 'Home' },
+  { href: '#showcase', label: 'App Demo' },
+  { href: '#lyrics', label: 'Lyrics' },
+  { href: '#audiophile', label: 'DSP Curves' },
+  { href: '#transfer', label: 'Transfer' },
+  { href: '#telemetry', label: 'Telemetry' },
+  { href: '#downloads', label: 'Downloads' },
+  { href: '#install', label: 'Install Guide' },
+];
 
 interface Props {
   theme: ThemeType;
@@ -10,7 +22,32 @@ interface Props {
 
 export function Navbar({ theme, onCycleTheme }: Props) {
   const { release } = useRelease();
-  // Brand Logo variants
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Close the mobile panel once the viewport is desktop-sized again.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onResize = () => {
+      if (window.innerWidth > 820) setMobileOpen(false);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [mobileOpen]);
+
+  // Scroll lock + Escape while the mobile panel is open.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileOpen(false);
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mobileOpen]);
+
   const getBrandLogo = () => {
     switch (theme) {
       case 'noir-black':
@@ -55,20 +92,17 @@ export function Navbar({ theme, onCycleTheme }: Props) {
   return (
     <header className={styles.header}>
       <div className={styles.container}>
-        <a href="#" className={styles.brand}>
+        <a href="#hero" className={styles.brand}>
           <img src={getBrandLogo()} alt="Noctra" className={styles.brandLogo} />
           <span className={styles.brandName}>NOCTRA</span>
         </a>
 
-        <nav className={styles.navLinks}>
-          <a href="#hero" className={styles.navLink}>Home</a>
-          <a href="#showcase" className={styles.navLink}>App Demo</a>
-          <a href="#lyrics" className={styles.navLink}>Lyrics</a>
-          <a href="#audiophile" className={styles.navLink}>DSP Curves</a>
-          <a href="#transfer" className={styles.navLink}>Transfer</a>
-          <a href="#telemetry" className={styles.navLink}>Telemetry</a>
-          <a href="#downloads" className={styles.navLink}>Downloads</a>
-          <a href="#install" className={styles.navLink}>Install Guide</a>
+        <nav className={styles.navLinks} aria-label="Primary">
+          {NAV_LINKS.map((link) => (
+            <a key={link.href} href={link.href} className={styles.navLink}>
+              {link.label}
+            </a>
+          ))}
         </nav>
 
         <div className={styles.actions}>
@@ -102,8 +136,49 @@ export function Navbar({ theme, onCycleTheme }: Props) {
             <Download size={14} />
             <span>Get {release.tag}</span>
           </a>
+
+          {/* Mobile hamburger */}
+          <button
+            type="button"
+            className={styles.hamburgerBtn}
+            onClick={() => setMobileOpen((open) => !open)}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-nav-panel"
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+          >
+            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile slide-down panel */}
+      <nav
+        id="mobile-nav-panel"
+        className={`${styles.mobilePanel} ${mobileOpen ? styles.mobilePanelOpen : ''}`}
+        aria-label="Mobile"
+        aria-hidden={!mobileOpen}
+      >
+        {NAV_LINKS.map((link) => (
+          <a
+            key={link.href}
+            href={link.href}
+            className={styles.mobileLink}
+            onClick={() => setMobileOpen(false)}
+            tabIndex={mobileOpen ? 0 : -1}
+          >
+            {link.label}
+          </a>
+        ))}
+        <a
+          href="#downloads"
+          className={styles.mobileDownload}
+          onClick={() => setMobileOpen(false)}
+          tabIndex={mobileOpen ? 0 : -1}
+        >
+          <Download size={15} />
+          <span>Download {release.tag}</span>
+        </a>
+      </nav>
     </header>
   );
 }

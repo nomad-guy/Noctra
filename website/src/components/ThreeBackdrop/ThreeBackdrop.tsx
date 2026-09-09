@@ -10,7 +10,16 @@ interface Props {
 export function ThreeBackdrop({ theme }: Props) {
   const mountRef = useRef<HTMLDivElement>(null);
   const themeRef = useRef(theme);
-  themeRef.current = theme;
+  // Lets the theme-change effect re-render a single static frame when the
+  // animation loop is disabled (reduced motion).
+  const staticRenderRef = useRef<(() => void) | null>(null);
+
+  // Keep the render loop's theme view current without touching refs
+  // during render.
+  useEffect(() => {
+    themeRef.current = theme;
+    staticRenderRef.current?.();
+  }, [theme]);
 
   useEffect(() => {
     const container = mountRef.current;
@@ -23,9 +32,16 @@ export function ThreeBackdrop({ theme }: Props) {
 
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Cap pixel ratio harder on small/mobile screens: the shader cost of
+    // MeshPhysicalMaterial scales with fragment count, and phone DPRs of
+    // 2.5-3+ buy nothing visually on a decorative backdrop.
+    const isSmallViewport = window.innerWidth < 820;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, isSmallViewport ? 1.5 : 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     container.appendChild(renderer.domElement);
+
+    // Accessibility: honor reduced motion by rendering static frames only.
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // Group for floating glass objects
     const mainGroup = new THREE.Group();
@@ -129,27 +145,13 @@ export function ThreeBackdrop({ theme }: Props) {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+      if (prefersReducedMotion) applyThemeAndRender();
     };
 
     window.addEventListener('resize', handleResize);
 
-    // Animation Loop
-    let animationFrameId: number;
-    let clock = new THREE.Clock();
-
-    const animate = () => {
-      animationFrameId = requestAnimationFrame(animate);
-      const elapsedTime = clock.getElapsedTime();
-      const currentTheme = themeRef.current;
-
-      // Smooth mouse interpolation
-      currentMouseX += (targetMouseX - currentMouseX) * 0.04;
-      currentMouseY += (targetMouseY - currentMouseY) * 0.04;
-
-      mainGroup.rotation.y = currentMouseX * 0.25;
-      mainGroup.rotation.x = -currentMouseY * 0.2;
-
-      // Update appearance based on active theme
+    // Apply theme-dependent appearance without advancing time.
+    const applyThemeAppearance = (currentTheme: ThemeType) => {
       if (currentTheme === 'noir-black') {
         light1.color.setHex(0xffffff);
         light1.intensity = 0.8;
@@ -188,6 +190,32 @@ export function ThreeBackdrop({ theme }: Props) {
           s.material = glassMaterial;
         });
       }
+    };
+
+    const applyThemeAndRender = () => {
+      applyThemeAppearance(themeRef.current);
+      renderer.render(scene, camera);
+    };
+
+    // Animation Loop
+    let animationFrameId: number;
+    let isPaused = false;
+    const clock = new THREE.Clock();
+
+    const animate = () => {
+      animationFrameId = requestAnimationFrame(animate);
+      if (isPaused) return;
+      const elapsedTime = clock.getElapsedTime();
+      const currentTheme = themeRef.current;
+
+      // Smooth mouse interpolation
+      currentMouseX += (targetMouseX - currentMouseX) * 0.04;
+      currentMouseY += (targetMouseY - currentMouseY) * 0.04;
+
+      mainGroup.rotation.y = currentMouseX * 0.25;
+      mainGroup.rotation.x = -currentMouseY * 0.2;
+
+      applyThemeAppearance(currentTheme);
 
       // Floating Shards gentle orbit & breathing
       shards.forEach((shard, idx) => {
@@ -203,10 +231,32 @@ export function ThreeBackdrop({ theme }: Props) {
       renderer.render(scene, camera);
     };
 
-    animate();
+    // Stop burning GPU/CPU while the tab is hidden — requestAnimationFrame
+    // is throttled by browsers, but the RAF keeps rescheduling; cancel it
+    // outright and resume on return.
+    const handleVisibility = () => {
+      if (document.hidden) {
+        isPaused = true;
+        cancelAnimationFrame(animationFrameId);
+      } else if (!prefersReducedMotion) {
+        isPaused = false;
+        clock.getDelta(); // discard the elapsed hidden time
+        animationFrameId = requestAnimationFrame(animate);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    if (prefersReducedMotion) {
+      applyThemeAndRender();
+      staticRenderRef.current = applyThemeAndRender;
+    } else {
+      animationFrameId = requestAnimationFrame(animate);
+    }
 
     return () => {
       cancelAnimationFrame(animationFrameId);
+      staticRenderRef.current = null;
+      document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('resize', handleResize);
       if (container.contains(renderer.domElement)) {

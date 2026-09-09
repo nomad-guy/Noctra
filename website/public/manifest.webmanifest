@@ -1,0 +1,23 @@
+{
+  "name": "Noctra — Autonomous, Privacy-Sovereign Music Platform",
+  "short_name": "Noctra",
+  "description": "Bit-perfect Hi-Res FLAC streaming, on-device stem separation, and zero-telemetry audioplayback across Windows, Linux, Android, and iOS.",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#070709",
+  "theme_color": "#070709",
+  "icons": [
+    {
+      "src": "/images/logo_noctra_liquid_glass.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
