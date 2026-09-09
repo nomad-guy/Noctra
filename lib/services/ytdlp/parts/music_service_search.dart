@@ -5,7 +5,7 @@ extension MusicServiceSearch on MusicService {
       {String source = 'all'}) async {
     if (SpotifyOEmbedService.isSpotifyUrl(clean)) {
       final spotifyMeta = await SpotifyOEmbedService.fetchMetadata(clean);
-      if (spotifyMeta != null) {
+      if (spotifyMeta != null && spotifyMeta.title.isNotEmpty) {
         final matches = await MusicService.searchTracks(
             '${spotifyMeta.title} ${spotifyMeta.authorName}');
         if (matches.isNotEmpty) {
@@ -22,6 +22,12 @@ extension MusicServiceSearch on MusicService {
               featureVector: first.featureVector);
           return [sSong, ...matches.skip(1)];
         }
+        // Metadata resolved but no provider matched it: fall back to a
+        // title-only query rather than the raw URL (which can only ever
+        // return zero results).
+        final titleOnly =
+            await MusicService.searchTracks(spotifyMeta.title);
+        if (titleOnly.isNotEmpty) return titleOnly;
       }
     }
 

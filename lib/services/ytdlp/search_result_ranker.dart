@@ -1,4 +1,5 @@
 import '../../data/models/song_model.dart';
+import 'search_text_normalizer.dart';
 
 /// Deterministic search-result merge and ranking.
 ///
@@ -52,8 +53,7 @@ class SearchResultRanker {
     // Drop zero-overlap noise (providers occasionally surface unrelated
     // rows), except for impractically short queries where exact-token
     // matching is meaningless.
-    final qt =
-        _norm(query).split(' ').where((w) => w.isNotEmpty).toList();
+    final qt = SearchTextNormalizer.tokens(query);
     final lenient = qt.length == 1 && query.trim().length <= 2;
     scored.retainWhere((e) => lenient || e.score > 0);
     scored.sort((a, b) {
@@ -149,9 +149,12 @@ class SearchResultRanker {
     if (t.startsWith(q)) return 0.96;
     if (t.contains(q)) return 0.92;
 
-    // 4. Word-level overlap across title AND artist
-    final titleMatched = qt.where((w) => tt.contains(w)).length;
-    final artistMatched = qt.where((w) => at.contains(w)).length;
+    // 4. Word-level overlap across title AND artist (one-edit typo
+    // tolerance so "Beyonce"/"Beyoncé" and single-letter typos still hit).
+    bool hits(List<String> haystack, String w) =>
+        haystack.any((t) => _tokenEq(t, w));
+    final titleMatched = qt.where((w) => hits(tt, w)).length;
+    final artistMatched = qt.where((w) => hits(at, w)).length;
     final totalMatched = titleMatched + artistMatched;
 
     var ratio = qt.isEmpty ? 0.0 : totalMatched / qt.length;
@@ -193,7 +196,7 @@ class SearchResultRanker {
   /// all. Duplicates collapse deterministically (first occurrence wins).
   static List<Song> orderForArtistProfile(
       List<Song> songs, String artistName) {
-    final qt = _tokens(artistName);
+    final qt = SearchTextNormalizer.tokens(artistName);
     if (qt.isEmpty) return songs;
     final primary = <Song>[];
     final secondary = <Song>[];
@@ -205,12 +208,11 @@ class SearchResultRanker {
       final key = '${_norm(s.title)}\u0000${_norm(s.artist)}';
       if (!seen.add(key)) continue;
 
-      final at = _tokens(s.artist);
-      final artistHits = qt.where(at.contains).length;
+      final at = SearchTextNormalizer.tokens(s.artist);
+      final artistHits = qt.where((w) => at.any((t) => _tokenEq(t, w))).length;
       final artistIsQueried = artistHits > 0 && artistHits == qt.length;
-      final mentionsInTitle = _tokens(s.title)
-          .where((w) => qt.contains(w))
-          .isNotEmpty;
+      final mentionsInTitle = SearchTextNormalizer.tokens(s.title)
+          .any((w) => qt.any((q) => _tokenEq(w, q)));
 
       // Detect compilation uploads, loop videos, or tracks where title == artist name
       final tNorm = _norm(s.title);
@@ -257,25 +259,13 @@ class SearchResultRanker {
     return [...regular, ...modifiers];
   }
 
-  static List<String> _tokens(String input) => _norm(input)
-      .split(' ')
-      .where((w) => w.isNotEmpty)
-      .toList();
+  /// Exact or one-edit token equality (typo tolerance for artist names).
 
-  /// Lowercase, de-accented, token-safe normalization. Keeps Unicode
-  /// letters/digits so Roman-Urdu, Devanagari and Arabic queries work.
-  static String _norm(String input) {
-    final decomposed = input.toLowerCase();
-    final sb = StringBuffer();
-    for (final rune in decomposed.runes) {
-      final ch = String.fromCharCode(rune);
-      if (RegExp(r'[\p{L}\p{N}]', unicode: true).hasMatch(ch)) {
-        sb.write(ch);
-      } else {
-        sb.write(' ');
-      }
-    }
-    final joined = sb.toString().replaceAll(RegExp(r'\s+'), ' ').trim();
-    return joined == ' ' ? '' : joined;
-  }
+  /// Lowercase, de-accented, token-safe normalization. Kept as a thin
+  /// wrapper so existing callers/tests can stay on the ranker itself.
+  static String _norm(String input) => SearchTextNormalizer.norm(input);
+
+  static bool _tokenEq(String candidate, String queryToken) =>
+      candidate == queryToken ||
+      SearchTextNormalizer.withinOneEdit(candidate, queryToken);
 }

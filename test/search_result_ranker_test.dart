@@ -224,4 +224,50 @@ void main() {
       expect(ranked.first.title, 'Ruposh');
     });
   });
+
+  group('diacritics, apostrophes and typos (missing-song regressions)', () {
+    test('accented artist matches unaccented query both ways', () {
+      // Pre-fix: "Beyonce" query scored the Beyoncé row 0 → dropped.
+      final row = s('d10', 'Halo', 'Beyoncé');
+      final ranked = SearchResultRanker.mergeAndRank([[row]], 'halo beyonce');
+      expect(ranked, hasLength(1));
+      expect(ranked.first.id, 'd10');
+      expect(SearchResultRanker.score('beyonce halo', 'Halo', 'Beyoncé'),
+          greaterThan(0));
+      // And the reverse direction: accented query, plain metadata.
+      expect(SearchResultRanker.score('beyoncé halo', 'Halo', 'Beyonce'),
+          greaterThan(0));
+    });
+
+    test('decomposed (NFD) spellings normalize like precomposed ones', () {
+      // NFD e + combining acute must not split the word in two.
+      expect(SearchResultRanker.score('cafe\u0301', 'Caf\u00e9', ''), 1.0);
+      expect(
+          SearchResultRanker.score('Bjo\u0308rk', 'Biophilia', 'Bjo\u0308rk'),
+          greaterThan(0));
+    });
+
+    test('apostrophe spellings agree (dont vs don\'t)', () {
+      expect(SearchResultRanker.score('dont stop', "Don't Stop", ''), 1.0);
+      expect(SearchResultRanker.score("don't stop", 'Dont Stop', ''), 1.0);
+    });
+
+    test('single-letter typo still finds the song', () {
+      final row = s('d11', 'Midnight City', 'M83');
+      final ranked = SearchResultRanker.mergeAndRank([[row]], 'midnight ciy');
+      expect(ranked.first.id, 'd11');
+    });
+
+    test('fuzzy matching never fires on short tokens', () {
+      // cat/cap differ by one edit but are different words.
+      expect(SearchResultRanker.score('cat', 'Cap', ''), 0);
+      expect(SearchResultRanker.score('run', 'Rug', ''), 0);
+    });
+
+    test('artist-profile ordering tolerates accent and typo variants', () {
+      final own = s('d12', 'Divide', 'Beyoncé');
+      final ordered = SearchResultRanker.orderForArtistProfile([own], 'Beyonce');
+      expect(ordered.first.id, 'd12');
+    });
+  });
 }
