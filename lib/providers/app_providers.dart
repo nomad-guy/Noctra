@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import '../core/theme/noir_theme.dart';
 import '../services/platform/dynamic_icon_service.dart';
 import '../core/utils/noctra_localization.dart';
+import '../core/utils/playback_settings_store.dart';
 import '../data/models/song_model.dart';
 import '../data/models/catalog_topic.dart';
 import '../data/repositories/music_repository.dart';
@@ -80,8 +81,10 @@ final audioQualityProvider =
     StateProvider<String>((ref) => 'Master (320 kbps High-Fidelity)');
 final lyricsPreferenceProvider =
     StateProvider<String>((ref) => 'English / Global (Standard)');
-final autoplayDelayProvider = StateProvider<int>((ref) => 3);
-final audioFadeTransitionProvider = StateProvider<bool>((ref) => true);
+final autoplayDelayProvider =
+    StateProvider<int>((ref) => PlaybackSettingsStore.instance.autoplayDelaySeconds);
+final audioFadeTransitionProvider =
+    StateProvider<bool>((ref) => PlaybackSettingsStore.instance.fadeEnabled);
 final downloadLocationProvider = StateProvider<String>(
     (ref) => NoctraLocalDatabase().getCachedDownloadLocation());
 

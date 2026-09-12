@@ -74,6 +74,7 @@ mixin PlayerPlaybackMixin on AudioPlayerServiceBase {
     final newVol = (vol.isNaN || vol.isInfinite) ? 1.0 : vol.clamp(0.0, 1.0);
     _targetVolume = newVol;
     _volumeEpoch++;
+    PlaybackSettingsStore.instance.save(volume: newVol);
     return _player.setVolume(newVol);
   }
 

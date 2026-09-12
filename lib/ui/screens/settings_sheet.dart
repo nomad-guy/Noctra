@@ -10,6 +10,8 @@ import 'settings/music_preferences_section.dart';
 import 'settings/download_storage_section.dart';
 import 'settings/lyrics_and_neural_section.dart';
 import 'settings/playback_and_audio_section.dart';
+import 'settings/library_download_section.dart';
+import 'settings/diagnostics_section.dart';
 import 'settings/theme_and_icon_section.dart';
 
 class SettingsSheet extends ConsumerStatefulWidget {
@@ -44,8 +46,9 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
     final showPlayback = q.isEmpty || 'playback audio sleep timer fade crossfade quality codec data saver flac stream equalizer dsp harman iem buffer'.contains(q) || q.contains('audio') || q.contains('quality') || q.contains('data saver');
     final showLyrics = q.isEmpty || 'lyrics akshara neural profile taste ai recommendation archetype transliteration karaoke'.contains(q) || q.contains('lyric') || q.contains('neural');
     final showDev = q.isEmpty || 'developer debug logs panel developer console'.contains(q) || q.contains('dev');
+    final showDiag = q.isEmpty || 'diagnostics logs log export bug report crash error debug'.contains(q) || q.contains('diag') || q.contains('log');
 
-    final hasAnyMatch = showTheme || showLang || showMusicPref || showStorage || showPlayback || showLyrics || showDev;
+    final hasAnyMatch = showTheme || showLang || showMusicPref || showStorage || showPlayback || showLyrics || showDev || showDiag;
 
     final isDesktop = MediaQuery.of(context).size.width >= 720;
 
@@ -176,6 +179,8 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
               if (showStorage) ...[
                 DownloadStorageSection(isDark: isDark),
                 const SizedBox(height: 18),
+                LibraryDownloadSection(isDark: isDark),
+                const SizedBox(height: 18),
               ],
               if (showPlayback) ...[
                 PlaybackAndAudioSection(isDark: isDark),
@@ -198,6 +203,10 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                     ),
                   ),
                 ),
+              ],
+              if (showDiag) ...[
+                DiagnosticsSection(isDark: isDark),
+                const SizedBox(height: 18),
               ],
               if (showDev) ...[
                 const SizedBox(height: 18),

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/noir_theme.dart';
 import 'services/platform/dynamic_icon_service.dart';
 import 'core/utils/noctra_logger.dart';
+import 'core/utils/playback_settings_store.dart';
 import 'core/utils/permission_helper.dart';
 import 'data/repositories/music_repository.dart';
 import 'data/sources/noctra_local_database.dart';
@@ -28,6 +29,7 @@ NoctraAudioHandler? noctraAudioHandler;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  NoctraLogger.install();
 
   // Edge-to-edge system overlays
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -59,8 +61,7 @@ void main() async {
           androidStopForegroundOnPause: true,
         ),
       );
-      AssistantIntentChannel(router: noctraAudioHandler!.router).initialize();
-    } catch (e, st) {
+      AssistantIntentChannel(router: noctraAudioHandler!.router).initialize();    } catch (e, st) {
       NoctraLogger.e('AudioService.init failed', e, st);
     }
   }
@@ -69,6 +70,14 @@ void main() async {
     await NoctraLocalDatabase().init();
   } catch (e) {
     NoctraLogger.e('Database init error', e);
+  }
+  // Hydrate persisted playback settings (fade/crossfade/volume/...) BEFORE
+  // the audio service singleton can be constructed — on Windows the process
+  // fully exits between launches, so nothing survives except what we load.
+  try {
+    await PlaybackSettingsStore.instance.load();
+  } catch (e) {
+    NoctraLogger.w('Playback settings load error', e);
   }
   try {
     await NeuralRecommenderEngine.restoreFromDatabase();

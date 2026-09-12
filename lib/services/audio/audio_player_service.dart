@@ -8,6 +8,7 @@ import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
 import '../../core/platform/noctra_capabilities.dart';
 import '../../core/utils/noctra_logger.dart';
+import '../../core/utils/playback_settings_store.dart';
 import '../../data/models/song_model.dart';
 import '../../data/models/stream_metadata_model.dart';
 import '../../data/sources/noctra_local_database.dart';
@@ -65,9 +66,28 @@ class AudioPlayerService extends AudioPlayerServiceBase
   static AudioPlayerService get instance => _instance;
 
   AudioPlayerService._internal() {
+    _applyPersistedSettings();
     _initAudioSession();
     _attachListeners();
     MusicRepository().onSongDownloadedCallback = onSongDownloaded;
+  }
+
+  /// Hydrates fade / crossfade / autoplay-delay / shuffle / loop / volume from
+  /// persisted settings so they survive restarts (critical on Windows where
+  /// the process fully exits when the window closes).
+  void _applyPersistedSettings() {
+    final s = PlaybackSettingsStore.instance;
+    _isFadeEnabled = s.fadeEnabled;
+    _crossfadeSeconds = s.crossfadeSeconds.clamp(0, 12);
+    _autoplayDelaySeconds = s.autoplayDelaySeconds.clamp(0, 30);
+    _isShuffleEnabled = s.shuffleEnabled;
+    _loopMode = switch (s.loopMode) {
+      'all' => LoopMode.all,
+      'one' => LoopMode.one,
+      _ => LoopMode.off,
+    };
+    _targetVolume = s.volume;
+    _player.setVolume(s.volume);
   }
 
   /// Pure helper: current-first playback order for shuffle. The current

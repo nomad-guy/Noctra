@@ -7,11 +7,13 @@ mixin PlayerEffectsMixin on AudioPlayerServiceBase {
 
   void setAutoplayDelay(int sec) {
     _autoplayDelaySeconds = sec.clamp(0, 30);
+    PlaybackSettingsStore.instance.save(autoplayDelaySeconds: _autoplayDelaySeconds);
     _emitSettings();
   }
 
   void setCrossfadeSeconds(int sec) {
     _crossfadeSeconds = sec.clamp(0, 12);
+    PlaybackSettingsStore.instance.save(crossfadeSeconds: _crossfadeSeconds);
     _invalidatePlaybackOperations();
     _transitionEpoch++; // Also invalidate any active crossfade
     _emitSettings();
@@ -19,6 +21,7 @@ mixin PlayerEffectsMixin on AudioPlayerServiceBase {
 
   void toggleFade(bool enable) {
     _isFadeEnabled = enable;
+    PlaybackSettingsStore.instance.save(fadeEnabled: enable);
     _invalidatePlaybackOperations();
     _transitionEpoch++;
     if (!enable) {
@@ -40,6 +43,7 @@ mixin PlayerEffectsMixin on AudioPlayerServiceBase {
 
   Future<void> toggleShuffle() async {
     _isShuffleEnabled = !_isShuffleEnabled;
+    PlaybackSettingsStore.instance.save(shuffleEnabled: _isShuffleEnabled);
     _invalidatePlaybackOperations();
     if (_isShuffleEnabled && _queue.length > 2) {
       // Save canonical order before first shuffle.
@@ -98,6 +102,7 @@ mixin PlayerEffectsMixin on AudioPlayerServiceBase {
         _loopMode = LoopMode.off;
         break;
     }
+    PlaybackSettingsStore.instance.save(loopMode: _loopMode.name);
     _emitSettings();
   }
 
