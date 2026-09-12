@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/nomad-guy/Noctra/releases/latest"><img src="https://img.shields.io/badge/Release-v1.0.8-000000.svg?style=flat-square" alt="Release v1.0.8" /></a>
+  <a href="https://github.com/nomad-guy/Noctra/releases/latest"><img src="https://img.shields.io/badge/Release-v1.0.9-000000.svg?style=flat-square" alt="Release v1.0.9" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-000000.svg?style=flat-square" alt="License GPL-3.0" /></a>
   <a href="SECURITY.md"><img src="https://img.shields.io/badge/Security-Policy-000000.svg?style=flat-square" alt="Security Policy" /></a>
   <a href="#privacy-architecture"><img src="https://img.shields.io/badge/Telemetry-0%25-000000.svg?style=flat-square" alt="Zero Telemetry" /></a>
@@ -87,7 +87,7 @@ Built with Flutter, Dart, Riverpod, and native platform digital signal processin
 
 - [Overview](#overview)
 - [Screenshots](#screenshots)
-- [What's New in v1.0.8](#whats-new-in-v108)
+- [What's New in v1.0.9](#whats-new-in-v109)
 - [Features](#features)
   - [Streaming & Audiophile Playback](#streaming--audiophile-playback)
   - [Responsive Cross-Platform Shell](#responsive-cross-platform-shell)
@@ -103,7 +103,18 @@ Built with Flutter, Dart, Riverpod, and native platform digital signal processin
 
 ---
 
-## What's New in v1.0.8
+## What's New in v1.0.9
+
+- **Playlist imports fixed past 100 songs**: Spotify and YouTube imports now page through the *entire* playlist (the embed/HTML payloads silently truncated at ~100 tracks) — a 500-song playlist imports all 500 songs.
+- **Windows settings persistence**: fade, crossfade, autoplay delay, shuffle, loop, and volume survive app restarts (they were memory-only, so closing the app reset them).
+- **No more silent track starts**: track transitions guarantee volume lands on your target even with fade transitions disabled (previously volume stuck at zero until the slider was touched).
+- **Diagnostics & log system**: runtime errors are captured automatically; Settings → Diagnostics & Logs views and exports the log as .txt for bug reports.
+- **Download Full Library**: one-tap offline backup of your whole library from Settings → Downloads, with live progress and Stop.
+- **Speaker Mesh groundwork**: clock sync, anchored playback planning, BT latency profiles, mesh protocol, and an authenticated WebSocket transport — verified by loopback integration tests; UI lands next release.
+- **Quality**: analyzer clean, 968 tests passing (33 new), architecture rules hold.
+
+<details>
+<summary>What's New in v1.0.8</summary>
 
 - **Search Accuracy — Missing Songs & Artists Found**:
   - Accented artists match plain queries and vice versa (`Beyoncé`/`Beyonce`, `Björk`/`Bjork`), including decomposed Unicode spellings.
@@ -120,6 +131,8 @@ Built with Flutter, Dart, Riverpod, and native platform digital signal processin
   - Real mobile hamburger navigation (links were previously hidden on phones); 3D backdrop pauses when the tab is hidden, honors reduced motion, and lowers GPU cost on phones; changelog modal is a proper accessible dialog; robots.txt, sitemap, web manifest, absolute social-preview images, and FAQ structured data added.
 - **Verified for real**:
   - A live-network end-to-end suite hits the actual providers for every previously-missing reported song/artist, plus on-device adb verification with zero crashes. Analyzer clean, 900+ tests passing.
+
+</details>
 
 ---
 
@@ -170,12 +183,12 @@ Pre-compiled production binaries for all operating systems are available on the 
 
 | Operating System | Package Name | Target Architecture | Installation Guide |
 |---|---|---|---|
-| **Windows** | `Noctra-1.0.8-Setup-x64.exe` | x86_64 / x64 | Run installer &bull; Installs to `AppData` with Desktop shortcut |
-| **Linux** | `noctra_1.0.8_amd64.deb` | x86_64 / amd64 | Run `sudo dpkg -i noctra_1.0.8_amd64.deb` |
-| **Android** | `Noctra-1.0.8-Universal.apk` | All Devices | Install on any Android 8.0+ device |
-| **Android (Optimized)** | `Noctra-1.0.8-arm64-v8a.apk` | 64-bit Mobile | Smallest file size for modern 64-bit phones |
-| **Android (Play Store)** | `Noctra-1.0.8.aab` | Google Play | Android App Bundle for store distribution |
-| **iOS** | `Noctra-1.0.8.ipa` | ARM64 / iPhone & iPad | Sideload via [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/), or [TrollStore](https://github.com/opa334/TrollStore) |
+| **Windows** | `Noctra-1.0.9-Setup-x64.exe` | x86_64 / x64 | Run installer &bull; Installs to `AppData` with Desktop shortcut |
+| **Linux** | `noctra_1.0.9_amd64.deb` | x86_64 / amd64 | Run `sudo dpkg -i noctra_1.0.9_amd64.deb` |
+| **Android** | `Noctra-1.0.9-Universal.apk` | All Devices | Install on any Android 8.0+ device |
+| **Android (Optimized)** | `Noctra-1.0.9-arm64-v8a.apk` | 64-bit Mobile | Smallest file size for modern 64-bit phones |
+| **Android (Play Store)** | `Noctra-1.0.9.aab` | Google Play | Android App Bundle for store distribution |
+| **iOS** | `Noctra-1.0.9.ipa` | ARM64 / iPhone & iPad | Sideload via [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/), or [TrollStore](https://github.com/opa334/TrollStore) |
 
 > **Verification**: Every release includes `SHA256SUMS.txt` to cryptographically verify binary integrity.
 

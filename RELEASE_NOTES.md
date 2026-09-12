@@ -1,77 +1,82 @@
-# Noctra v1.0.8 Release Notes
+# Noctra v1.0.9
 
-**Authentication-less on-device music intelligence platform.**
+**Release date:** 2026-09-12
+**Previous release:** v1.0.8
 
-This is the official **v1.0.8** release of Noctra. Every artifact is packaged with multi-architecture native builds, verified with detached SHA-256 digests, and published via GitHub Releases with a machine-readable update manifest consumed by the in-app updater.
+## Highlights
 
----
+The four bugs you reported are fixed: playlists longer than 100 songs now
+import completely, Windows settings no longer reset when you close the app,
+tracks no longer start silently after switching, and the app finally tells
+you what's wrong inside it — plus a one-tap Download Full Library.
 
-## Native Platform Packages
+## Fixes
 
-| Platform | Package File | Architecture | Target / Description |
-| :--- | :--- | :--- | :--- |
-| **Android** | `Noctra-1.0.8-arm64-v8a.apk` | `arm64-v8a` | **Recommended** — modern 64-bit Android smartphones & tablets (Android 8.0+) |
-| **Android** | `Noctra-1.0.8-Universal.apk` | Universal | Multi-ABI fallback containing all native architectures |
-| **Android** | `Noctra-1.0.8-armeabi-v7a.apk` | `armeabi-v7a` | Legacy 32-bit ARM smartphones |
-| **Android** | `Noctra-1.0.8-x86_64.apk` | `x86_64` | Android emulators, ChromeOS, Windows Subsystem for Android |
-| **Windows** | `Noctra-1.0.8-Setup-x64.exe` | `x86_64` | Windows 10 & 11 standalone 1-click Inno Setup installer |
-| **Linux** | `noctra_1.0.8_amd64.deb` | `amd64 / x86_64` | Debian / Ubuntu / Mint native package (`sudo dpkg -i`) |
-| **iOS** | `Noctra-1.0.8.ipa` | `arm64` | Sideloadable via AltStore / SideStore / TrollStore (iOS 14.0+) |
+### Playlist imports: no more 100-song cap
+- Spotify imports now page through the **entire** playlist (up to 2,000
+  tracks) via Spotify's private web API instead of trusting the embed page
+  that silently truncates at ~100 songs.
+- YouTube imports follow InnerTube continuation tokens through the whole
+  playlist (the initial page payload only embeds the first ~100 videos).
+- Duplicate-safe: tracks found by both paths are merged on title+artist.
 
-> **Verification**: Check your downloaded packages against `SHA256SUMS.txt` attached on the GitHub Release page:
-> ```bash
-> sha256sum -c SHA256SUMS.txt
-> ```
+### Windows settings persistence
+- Fade transitions, crossfade seconds, autoplay delay, shuffle, loop mode,
+  and volume now **persist across restarts**. They were previously in-memory
+  only — Android's process recycling masked it, but on Windows every app
+  close reset them to defaults.
+- The settings screen and the audio service now agree on defaults (the fade
+  toggle previously defaulted differently in each).
 
-> **Note**: Android artifacts are built and attached with this release. Windows/Linux/iOS packages are produced by their respective platform CI jobs when toolchains are available (see `docs/PLATFORM.md` for the current build matrix).
+### Audio output stability
+- **Silent track starts fixed.** Every transition prepares the player at
+  volume zero, and the fade-in path used to skip restoring volume when the
+  fade setting was off — so tracks played silently until you touched the
+  volume slider. Volume restoration is now guaranteed on every track start,
+  fades on or off.
+- Your preferred volume is restored on every launch.
 
----
+### Diagnostics & log system (new)
+- Runtime errors — widget build failures, unhandled async exceptions — are
+  captured automatically into a 2,000-entry log.
+- **Settings → Diagnostics & Logs**: live counts, log viewer, clear, and
+  **Export .txt** through the native save dialog. Attach it to bug reports.
 
-## What's New in v1.0.8
+### Download Full Library (new)
+- **Settings → Downloads → Offline Library**: shows "X of Y songs saved
+  offline" and downloads every remaining track sequentially with live
+  progress and a Stop button.
 
-### 1. Search Accuracy — Missing Songs & Artists Found
+## Engineering
 
-The most user-visible fix in this release. If songs or artists previously "didn't come" in search, this is the release that fixes it.
+- **Speaker Mesh groundwork**: clock-sync estimator (NTP-style, min-RTT
+  filtering), anchor planner, Bluetooth latency profiles with per-device
+  trim, mesh packet protocol with replay protection, drift monitor with
+  echo-exit policy, and a WebSocket transport with HMAC challenge auth —
+  proven by loopback integration tests over real sockets. Jam/P2P untouched.
+  User-facing mesh UI lands in the next release.
+- Analyzer: 0 issues · **968 tests passing** (33 new) · architecture rules
+  enforced (≤300 LOC per file, platform boundaries hold).
 
-- **Accented artists now match plain queries**: `Halo Beyonce` finds Beyoncé's tracks; `bjork` finds Björk. Both directions work, including decomposed (NFD) Unicode spellings.
-- **Typos stop hiding songs**: one-letter misses like `midnight ciy` still find *Midnight City*. Fuzzy matching is disabled for tokens shorter than four letters so it never invents false matches.
-- **Apostrophe variants agree**: `Don't` and `Dont` are the same word to the ranker.
-- **Spotify link searches fixed**: pasting a track link that resolves but doesn't match a provider row now falls back to a title search instead of returning nothing.
-- **Artist pages**: artist-profile ordering accepts accent and one-edit spelling variants of the queried name.
-- **Slow networks**: YouTube Music and iTunes search timeouts raised 2.5s → 3.5s, so weak connections stop silently dropping whole provider result buckets.
-- **Verified against reality**: a live-network test suite queries the real providers for every reported-missing song (Kahin Deep Jalay, Mere Hamsafar, Khuda Aur Mohabbat, Ruposh, Jhoom, Awargi, Sidney Gish, …) and asserts they come back; all also re-verified on a physical device with zero crashes.
+## Downloads
 
-### 2. Playback Wrong-Track Guard Fixed
+| Platform | File | Notes |
+|---|---|---|
+| Android (most phones) | `Noctra-1.0.9-arm64-v8a.apk` | Android 8.0+ |
+| Android (older 32-bit) | `Noctra-1.0.9-armeabi-v7a.apk` | legacy ARM |
+| Android (emulators/x86) | `Noctra-1.0.9-x86_64.apk` | x86_64 |
+| Android (any device) | `Noctra-1.0.9-Universal.apk` | compatibility fallback |
+| Android (Play-style) | `Noctra-1.0.9.aab` | sideload via bundletool |
+| Windows | `Noctra-1.0.9-Setup-x64.exe` | installer, per-user |
+| Linux | `noctra_1.0.9_amd64.deb` | Debian/Ubuntu |
+| iOS | `Noctra-1.0.9.ipa` | sideload via AltStore/Sign tools |
 
-The native stream-resolution matching guard split accented words in two (`Beyoncé` → `beyon ce`) before its punctuation filter, which could reject the correct stream during playback resolution. Diacritic folding now happens before punctuation stripping, so accented library metadata resolves against plain-text provider candidates — and genuinely different artists are still rejected.
+SHA-256 checksums for every artifact ship in `SHA256SUMS.txt`. Verify before
+installing: `sha256sum -c SHA256SUMS.txt` (or `certutil -hashfile <file>
+SHA256` on Windows).
 
-### 3. AI Libraries & Recommendations
+## Upgrade notes
 
-- **AI folders/mixes open instantly** from locally curated tracks — no more network wait before the view appears.
-- **Remix works**: re-orders the already-resolved pool deterministically instead of re-running network resolution.
-- **No more rebuild storms**: curation results are memoized on a content signature, so Home/Library rebuilds stop re-running the nine-vibe scoring pipeline on every frame.
-
-### 4. UI Fixes
-
-- Synthwave spectrum visualizer recolors with the active theme (Noir Black/White accent, Liquid Glass glass-blue).
-- Mini player now appears inside library and artist pages.
-- Fixed playback position/progress stuck at 1:10 with the play/pause button desynced.
-
-### 5. Website Overhaul
-
-- **Mobile navigation restored** — real hamburger menu + slide-down panel (links were previously just hidden on phones).
-- **3D backdrop**: pauses when the tab is hidden, honors reduced-motion, lighter GPU cost on phones.
-- **Accessibility**: proper dialog semantics + focus management on the changelog modal.
-- **SEO/PWA**: robots.txt, sitemap, web manifest, absolute social-preview image URLs, FAQ structured data.
-
----
-
-## Upgrade Notes
-
-Install over any previous version — the package name and signing identity are unchanged, so Android offers a direct in-place upgrade (or use the in-app updater's one-tap flow). No data migration is involved; library, downloads, playlists, and settings are preserved.
-
----
-
-## Integrity
-
-Every Android APK in this release is signed with the official Noctra release keystore and its SHA-256 digest is recorded in `SHA256SUMS.txt` and in the updater's `release.json` manifest. The in-app updater independently re-verifies both the checksum and the signing certificate continuity before offering an update.
+- Installs cleanly over v1.0.8 (same signing identity, higher version code).
+- First launch after upgrade: playback settings apply from persisted state;
+  if you had changed fade/crossfade/volume before, they now stick.

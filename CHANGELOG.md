@@ -1,5 +1,40 @@
 # Changelog
 
+## v1.0.9 (2026-09-12)
+
+### Playlist Imports: No More 100-Song Cap
+
+- **Spotify playlists import completely**: the embed page silently truncated its track list at ~100 songs, so everything past track 100 was never imported. Imports now page through the full catalog via Spotify's private web API (100-item pages, up to 2,000 tracks), with the embed page kept as fallback.
+- **YouTube playlists import completely**: the initial page payload only embeds the first ~100 videos. Imports now follow InnerTube continuation tokens through the whole playlist (up to ~3,000 additional tracks).
+- **Duplicate-safe merging**: tracks found by both the paged API and the embed page are deduplicated on title+artist, so no song appears twice.
+
+### Windows Settings Persistence Fixed
+
+- **Playback settings now survive restarts**: Fade transitions, crossfade seconds, autoplay delay, shuffle, loop mode, and volume were pure in-memory state — Android often kept the process alive and hid the bug, but on Windows closing the app reset every setting to defaults. All of them now persist via a dedicated settings store loaded at startup.
+- **Settings screen and audio service agree**: the UI's fade default (`true`) previously contradicted the audio service's default (`false`); both now seed from the same persisted source of truth.
+
+### Audio Output Stability
+
+- **Silent track starts fixed**: every track transition prepares the player at volume zero, and the fade-in routine previously skipped volume restoration entirely when fade transitions were disabled — leaving each new track silent until the volume slider was touched. The fade-in path now guarantees volume lands on the target whether fades are on or off.
+- **Volume choice persists**: your preferred volume is restored on every app launch and applied before playback resumes.
+
+### Diagnostics & Log System
+
+- **Runtime errors captured automatically**: the app now hooks the Flutter framework error channel and the platform dispatcher, so widget build errors, unhandled async exceptions, and isolate failures all land in a 2,000-entry diagnostic log — no debugger required.
+- **Export logs from Settings**: Settings → Diagnostics & Logs shows live entry/error/warning counts, a scrollable log viewer, a clear button, and Export .txt via the native save dialog (documents-folder fallback on unsupported platforms).
+
+### Download Full Library
+
+- **One-tap offline library**: Settings → Downloads gains an Offline Library card showing how many of your library songs are saved on disk, with a Download Full Library action that fetches every remaining track sequentially, shows live progress (current track, completed/failed counts), and supports Stop.
+
+### Speaker Mesh Foundation ( groundwork)
+
+- **New mesh subsystem landed**: NTP-style clock sync estimator, anchor planner for schedule/busy-wait/seek-late/re-anchor decisions, Bluetooth latency profiles with per-device trim, mesh packet protocol with epoch/sequence replay protection, drift monitor with echo-exit policy, and a WebSocket transport with HMAC challenge auth — verified end-to-end by loopback integration tests over real sockets. Jam/P2P is untouched. (User-facing mesh UI and device hardening come in the next release.)
+
+### Quality
+
+- Analyzer: 0 issues. Test suite: 968 tests passing (including 33 new mesh tests and the live-network suite). All architecture boundary rules hold (≤300 LOC per file, no platform leaks, layer direction).
+
 ## v1.0.8 (2026-09-09)
 
 ### Search Accuracy: Missing Songs & Artists Fixed
