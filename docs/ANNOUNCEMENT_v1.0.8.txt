@@ -1,0 +1,40 @@
+Noctra v1.0.8 is now live!
+
+What is new in this update:
+
+1. Search Accuracy: Missing Songs and Artists Found
+- Accented artist names now match plain queries and vice versa: searching Halo Beyonce finds Beyonce's tracks, and Bjork finds Björk, including decomposed Unicode spellings.
+- One-letter typos no longer hide songs: midnight ciy still finds Midnight City. Fuzzy matching stays disabled for very short tokens so it never invents false matches.
+- Apostrophe variants now agree, so Don't and Dont are treated as the same word.
+- Pasted Spotify links that resolve but do not match a provider row now fall back to a title search instead of returning nothing.
+- Artist profile ordering tolerates accent and spelling variants of the queried artist name.
+- YouTube Music and iTunes search timeouts raised from 2.5 to 3.5 seconds so weak networks stop silently dropping whole provider result buckets.
+
+2. Playback Wrong-Track Guard Fixed
+- The stream resolution matching guard used to split accented words in two (Beyoncé became beyon ce), which could reject the correct stream during playback. Diacritic folding now happens before punctuation stripping, while genuinely different artists are still rejected.
+
+3. AI Libraries and Recommendations
+- AI generated folders and mixes now open instantly from locally curated tracks with no network wait.
+- Remix reorders the already resolved pool deterministically instead of re-running network resolution.
+- Curation results are memoized so Home and Library rebuilds stop re-running the full nine-vibe scoring pipeline on every frame.
+
+4. UI Fixes
+- The synthwave spectrum visualizer now recolors with the active theme: Noir Black and Noir White accents, and the glass-blue accent on Liquid Glass.
+- The mini player now appears inside library pages and artist pages.
+- Fixed the playback position getting stuck at 1:10 with the play and pause button desynced from actual audio.
+
+5. Website Overhaul
+- Real mobile hamburger navigation with a slide-down panel; nav links were previously just hidden on phones.
+- The 3D backdrop pauses while the tab is hidden, honors reduced motion preferences, and lowers GPU cost on phones.
+- The changelog dialog is now a proper accessible dialog with keyboard focus management.
+- Added robots.txt, sitemap, web manifest, social preview images, and FAQ structured data for search engines.
+
+All of this was verified with a live network test suite hitting the real providers for every previously missing reported song and artist, plus on-device testing with zero crashes.
+
+Download the latest release for your device:
+https://github.com/nomad-guy/Noctra/releases/latest
+
+Visit our website:
+https://noctra-music.vercel.app/
+
+Let us know your feedback and enjoy the music!
