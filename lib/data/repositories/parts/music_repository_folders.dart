@@ -8,6 +8,10 @@ mixin MusicRepositoryFoldersMixin on ChangeNotifier {
   List<Song> get _downloads;
   Future<void>? get _initFuture;
 
+  /// Taste-signal hook owned by the main class (see MusicRepository).
+  void Function(Song)? get onSongAddedToFolder;
+
+
   void createFolder(String name) {
     final clean = name.trim();
     if (clean.isEmpty || _customFolders.containsKey(clean)) return;
@@ -34,6 +38,9 @@ mixin MusicRepositoryFoldersMixin on ChangeNotifier {
     if (_initFuture == null) {
       NoctraLocalDatabase().saveCustomFolders(_customFolders);
     }
+    // Playlist-add is a strong positive taste signal — routed through the
+    // callback the composition layer attaches (no services/ai import here).
+    onSongAddedToFolder?.call(song);
     notifyListeners();
   }
 

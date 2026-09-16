@@ -94,6 +94,8 @@ class JamQueueTab extends ConsumerWidget {
                                 width: 42,
                                 height: 42,
                                 fit: BoxFit.cover,
+                                cacheWidth: 126,
+                                cacheHeight: 126,
                                 errorBuilder: (c, e, st) => Container(
                                   width: 42,
                                   height: 42,

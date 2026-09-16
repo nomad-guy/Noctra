@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/noir_theme.dart';
 import '../../../data/models/song_model.dart';
 import '../../../providers/app_providers.dart';
+import '../../../services/ai/implicit_signal_tracker.dart';
 import '../../../services/ytdlp/music_service.dart';
 import '../ai_radio_sheet.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -34,7 +35,12 @@ class SearchTrackTile extends ConsumerWidget {
         radius: 14,
         isHighlighted: isCurrent,
         padding: const EdgeInsets.all(10),
-        onTap: () => ref.read(audioPlayerServiceProvider).playSong(song),
+        onTap: () {
+          // Search-select is a strong positive intent signal for the
+          // recommender (user found THIS track on purpose).
+          ImplicitSignalTracker().trackSearchSelect(song);
+          ref.read(audioPlayerServiceProvider).playSong(song);
+        },
         child: Row(
           children: [
             ClipRRect(

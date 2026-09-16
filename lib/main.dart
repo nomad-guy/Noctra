@@ -7,6 +7,7 @@ import 'core/theme/noir_theme.dart';
 import 'services/platform/dynamic_icon_service.dart';
 import 'core/utils/noctra_logger.dart';
 import 'core/utils/playback_settings_store.dart';
+import 'services/ai/implicit_signal_tracker.dart';
 import 'core/utils/permission_helper.dart';
 import 'data/repositories/music_repository.dart';
 import 'data/sources/noctra_local_database.dart';
@@ -93,7 +94,18 @@ void main() async {
     NoctraLogger.w('Neural model restore error', e);
   }
   try {
-    await MusicRepository().init();
+    final repo = MusicRepository();
+    await repo.init();
+    // Route strong positive taste signals (favorite / playlist-add) from the
+    // repository to the AI signal tracker. Attached here — the composition
+    // layer — because lib/data must not import lib/services/ai directly.
+    repo.onFavoriteToggled =
+        (song) => ImplicitSignalTracker().trackFavorite(song);
+    repo.onSongAddedToFolder =
+        (song) => ImplicitSignalTracker().trackPlaylistAdd(song);
+    // Deliberate offline-save is also a strong positive signal.
+    repo.onSongDownloadedCallback =
+        (song) => ImplicitSignalTracker().trackDownload(song);
   } catch (e) {
     NoctraLogger.e('Repository init error', e);
   }

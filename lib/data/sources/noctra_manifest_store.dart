@@ -170,8 +170,20 @@ class NoctraManifestStore {
       featureVector: song.featureVector,
     );
 
+    // Incremental weight update: rebuilding ALL weights on every play
+    // (500 manifests × 3 maps per track change) is wasted work. The play
+    // delta goes to the exact artist/genre/language of THIS song; full
+    // rebuilds remain for load/cleanup paths.
     manifests[song.id] = updated;
-    _rebuildWeights();
+    final playsDelta = updated.playCount - (existing?.playCount ?? 0);
+    if (playsDelta != 0) {
+      artistWeights[updated.artist] =
+          (artistWeights[updated.artist] ?? 0) + playsDelta;
+      genreWeights[updated.genre] =
+          (genreWeights[updated.genre] ?? 0) + playsDelta;
+      languageWeights[updated.language] =
+          (languageWeights[updated.language] ?? 0) + playsDelta;
+    }
   }
 
   Future<void> persist({SharedPreferences? prefs}) async {

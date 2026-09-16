@@ -1,75 +1,73 @@
-# Noctra v1.0.9
+# Noctra v1.1.0
 
-**Release date:** 2026-09-12
-**Previous release:** v1.0.8
+**Release date:** 2026-09-16
+**Previous release:** v1.0.9
 
 ## Highlights
 
-The four bugs you reported are fixed: playlists longer than 100 songs now
-import completely, Windows settings no longer reset when you close the app,
-tracks no longer start silently after switching, and the app finally tells
-you what's wrong inside it — plus a one-tap Download Full Library.
+The recommender finally learns from everything you do — favoriting,
+downloading, playlist adds, search picks and repeat-one loops all train the
+AI now (previously every one of those signals was silently dropped). Plus a
+deep-audit pass over playback volume handling fixed the last of the
+"sound cuts / stuck at low volume" bugs, and several performance
+optimizations landed across the app.
 
-## Fixes
+## AI Recommendations
 
-### Playlist imports: no more 100-song cap
-- Spotify imports now page through the **entire** playlist (up to 2,000
-  tracks) via Spotify's private web API instead of trusting the embed page
-  that silently truncates at ~100 songs.
-- YouTube imports follow InnerTube continuation tokens through the whole
-  playlist (the initial page payload only embeds the first ~100 videos).
-- Duplicate-safe: tracks found by both paths are merged on title+artist.
+- **All taste signals wired**: the signal tracker had handlers for favorite,
+  download, playlist-add, search-select and replay — but nothing called
+  them. Now: ❤️ (mini player, player bar, assistant, context menu),
+  completing a download, adding to a folder/playlist, tapping a search
+  result, and Repeat One loops all train the model.
+- **Session momentum stabilized**: the model's session-context feature
+  sorted 32 taste axes by magnitude before compressing to 8 — destroying
+  which axes moved, so the same listening shift fed the network different
+  noise on every call. It now uses 8 fixed thematic buckets (tone, energy,
+  mood, vocals, texture, cultural, percussion, modern).
+- **Signals stay real-time offline**: audio-feature lookups no longer gate
+  taste updates (they had up to 6s of network timeouts per event; now 900ms
+  with neutral fallback).
 
-### Windows settings persistence
-- Fade transitions, crossfade seconds, autoplay delay, shuffle, loop mode,
-  and volume now **persist across restarts**. They were previously in-memory
-  only — Android's process recycling masked it, but on Windows every app
-  close reset them to defaults.
-- The settings screen and the audio service now agree on defaults (the fade
-  toggle previously defaulted differently in each).
+## Playback & Volume
 
-### Audio output stability
-- **Silent track starts fixed.** Every transition prepares the player at
-  volume zero, and the fade-in path used to skip restoring volume when the
-  fade setting was off — so tracks played silently until you touched the
-  volume slider. Volume restoration is now guaranteed on every track start,
-  fades on or off.
-- Your preferred volume is restored on every launch.
+- Volume slider no longer cancels in-flight fades (it used to kill sleep
+  fades mid-ramp and race track-change fade-ins).
+- Sleep timer fades from the canonical volume, not whatever the player's
+  live level happened to be — the old no-op fade that "restored" silence.
+- Phone-call ducking can no longer strand a track at 20% volume across a
+  track change or an `unknown`-type interruption end.
+- Previous at queue start wraps around like Next.
+- Restore only reuses the persisted position when it belongs to the restored
+  song — no more resuming mid-track in the wrong song after queue edits.
+- Download failures now reject CDN error pages (expired tokens previously
+  wrote unplayable files to disk), with a red retry icon in the library.
 
-### Diagnostics & log system (new)
-- Runtime errors — widget build failures, unhandled async exceptions — are
-  captured automatically into a 2,000-entry log.
-- **Settings → Diagnostics & Logs**: live counts, log viewer, clear, and
-  **Export .txt** through the native save dialog. Attach it to bug reports.
+## Performance
 
-### Download Full Library (new)
-- **Settings → Downloads → Offline Library**: shows "X of Y songs saved
-  offline" and downloads every remaining track sequentially with live
-  progress and a Stop button.
+- AI Studio feed: shared play-queue built once instead of O(n²) per rebuild.
+- Manifest artist/genre/language weights update incrementally per play
+  instead of a full 500-entry × 3-map rebuild on every track change.
+- Image decode downsampling applied to the last tiles missing it (Jam queue,
+  recently-played sheet, AI Studio rows) — lower bitmap memory on lists.
 
 ## Engineering
 
-- **Speaker Mesh groundwork**: clock-sync estimator (NTP-style, min-RTT
-  filtering), anchor planner, Bluetooth latency profiles with per-device
-  trim, mesh packet protocol with replay protection, drift monitor with
-  echo-exit policy, and a WebSocket transport with HMAC challenge auth —
-  proven by loopback integration tests over real sockets. Jam/P2P untouched.
-  User-facing mesh UI lands in the next release.
-- Analyzer: 0 issues · **968 tests passing** (33 new) · architecture rules
-  enforced (≤300 LOC per file, platform boundaries hold).
+- Analyzer: 0 issues · **972 tests passing** · architecture rules enforced
+  (≤300 LOC per file; taste signals route through composition-layer
+  callbacks so no data → services/ai import cycle exists).
 
 ## Downloads
 
 | Platform | File | Notes |
 |---|---|---|
-| Android (most phones) | `Noctra-1.0.9-arm64-v8a.apk` | Android 8.0+ |
-| Android (older 32-bit) | `Noctra-1.0.9-armeabi-v7a.apk` | legacy ARM |
-| Android (emulators/x86) | `Noctra-1.0.9-x86_64.apk` | x86_64 |
-| Android (any device) | `Noctra-1.0.9-Universal.apk` | compatibility fallback |
-| Android (Play-style) | `Noctra-1.0.9.aab` | sideload via bundletool |
-| Windows | `Noctra-1.0.9-Setup-x64.exe` | installer, per-user |
-| Linux | `noctra_1.0.9_amd64.deb` | Debian/Ubuntu |
-| iOS | `Noctra-1.0.9.ipa` | sideload via AltStore/Sign tools |
+| Android (most phones) | `Noctra-1.1.0-arm64-v8a.apk` | Android 8.0+ |
+| Android (older 32-bit) | `Noctra-1.1.0-armeabi-v7a.apk` | legacy ARM |
+| Android (emulators/x86) | `Noctra-1.1.0-x86_64.apk` | x86_64 |
+| Android (any device) | `Noctra-1.1.0-Universal.apk` | compatibility fallback |
+| Android (Play-style) | `Noctra-1.1.0.aab` | sideload via bundletool |
+| Windows | `Noctra-1.1.0-Setup-x64.exe` | installer, per-user |
+| Linux | `noctra_1.1.0_amd64.deb` | Debian/Ubuntu |
+| iOS | `Noctra-1.1.0.ipa` | sideload via AltStore/Sign tools |
 
 SHA-256 checksums for every artifact ship in `SHA256SUMS.txt`. Verify before
 installing: `sha256sum -c SHA256SUMS.txt` (or `certutil -hashfile <file>
@@ -77,6 +75,6 @@ SHA256` on Windows).
 
 ## Upgrade notes
 
-- Installs cleanly over v1.0.8 (same signing identity, higher version code).
-- First launch after upgrade: playback settings apply from persisted state;
-  if you had changed fade/crossfade/volume before, they now stick.
+- Installs cleanly over v1.0.9 (same signing identity, higher version code).
+- No data migration: library, downloads, settings and the trained model all
+  carry over untouched.

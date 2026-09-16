@@ -153,6 +153,9 @@ mixin PlayerAutoplayMixin on AudioPlayerServiceBase {
     }
 
     if (_loopMode == LoopMode.one && _currentSong != null) {
+      // The user let the track finish AND wants it again — a genuine replay
+      // signal the recommender previously never received.
+      ImplicitSignalTracker().trackReplay(_currentSong!);
       await _player.seek(Duration.zero);
       _playNonBlocking(_player, 'LoopMode.one replay');
     } else if (_loopMode == LoopMode.off &&

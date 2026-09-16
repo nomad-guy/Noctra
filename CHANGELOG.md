@@ -1,5 +1,33 @@
 # Changelog
 
+## v1.1.0 (2026-09-16)
+
+### AI Recommendations: Actually Learning Now
+
+- **The strongest taste signals were silently dropped**: the signal tracker had handlers for favorite, download, playlist-add, search-select and replay, but nothing in the app ever called them — hearts, downloads, playlist adds, replay-loop sessions and search picks never taught the recommender anything. All five signals are now wired end-to-end: favoriting (mini player, player bar, assistant, context menu), completing a download, adding a song to a folder/playlist, tapping a search result, and looping a track in Repeat One all train the model.
+- **Repeat One is now a taste signal**: letting a track finish with repeat-one enabled records a genuine replay signal (previously treated as generic playback).
+- **Session momentum no longer scatters random noise into the model**: the session-delta feature sorted 32 axes by magnitude before compressing to 8, destroying which axes actually moved — the same listening shift produced different context inputs on every call. It now projects deltas into 8 fixed thematic buckets (tone, energy, mood, vocals, texture, cultural, percussion, modern), giving the MLP a stable, meaning-preserving signature.
+- **Signals never wait on the network**: audio-feature lookups (2 HTTP requests, up to 6s of timeouts on offline/slow networks) previously gated every taste update and telemetry write; they now get a 900 ms budget and fall back to neutral features, so taste tracking stays real-time everywhere.
+
+### Playback & Volume Deep-Audit Fixes
+
+- **Volume slider no longer cancels in-flight fades**: touching the volume slider mid-sleep-fade killed the fade (music kept playing past the timer); mid-track-change it raced the fade-in. The slider now updates the ramp target instead of cancelling the ramp.
+- **Sleep timer fades from the right volume**: the fade previously read the player's live volume — near zero if a fade-in was still running — making the sleep fade a no-op that restored silence. It now fades from/to the canonical volume target.
+- **Phone-call ducking can no longer strand quiet audio**: if a call ducked the volume and the track changed during the call (or the duck ended as an 'unknown' interruption — common on some Android OEMs), the new track could stay stuck at 20% volume. Duck state is now tracked across track changes and interruption ends.
+- **Previous button works everywhere**: at the start of the queue it wrapped around to the last track (matching Next's behavior) instead of doing nothing.
+- **Resume no longer lands mid-track in the wrong song**: the persisted playback position is only reused when it belongs to the restored song — after queue edits, restore previously applied a stale position to whatever sat at the saved index.
+- **Download failures are honest**: the downloader now rejects non-2xx CDN responses (expired tokens returned error pages that were written to disk as unplayable "songs"), emits an unambiguous failure marker, and library rows show a red retry icon instead of a stuck spinner.
+
+### Performance
+
+- **AI Studio feed rebuilds cheaper**: the play-queue was rebuilt inside every result row's map body (O(n²) list construction per rebuild); it is now built once.
+- **Manifest weights update incrementally**: every song play previously triggered a full rebuild of artist/genre/language weight maps (500 manifests × 3 maps per track change); play deltas now update the exact entries in place.
+- **Image decode downsampling everywhere**: the last artwork tiles without cacheWidth/cacheHeight (Jam queue, recently-played sheet, AI Studio rows) now decode at display size, cutting bitmap memory on list screens.
+
+### Quality
+
+- Analyzer: 0 issues. Test suite: 972 tests passing, including new momentum-signature determinism tests. Architecture boundary rules hold (≤300 LOC per file, no data → services/ai cycles — taste signals route through composition-layer callbacks).
+
 ## v1.0.9 (2026-09-12)
 
 ### Playlist Imports: No More 100-Song Cap

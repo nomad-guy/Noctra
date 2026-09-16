@@ -78,11 +78,16 @@ class ImplicitSignalTracker {
       // Update session tracker first (in-memory, fast)
       SessionContextTracker().recordSong(song, eventType);
 
-      // Fetch audio features for rich metadata
-      AudioFeatures audioFeats;
+      // Audio features are a NICE-TO-HAVE for the MLP, never a gate: the
+      // taste-vector update, SQLite persistence and knowledge-graph
+      // reinforcement below must not wait on a network round-trip (2
+      // requests × up to 3s timeout each on offline/slow networks). Fetch
+      // with a short budget; fall through with defaults if it doesn't land.
+      AudioFeatures audioFeats = AudioFeatures.defaults;
       try {
         audioFeats = await DeezerAudioFeaturesService.fetchFeatures(
-            song.title, song.artist);
+                song.title, song.artist)
+            .timeout(const Duration(milliseconds: 900));
       } catch (_) {
         audioFeats = AudioFeatures.defaults;
       }

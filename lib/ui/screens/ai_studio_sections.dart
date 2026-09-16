@@ -83,13 +83,10 @@ class AiStudioSections extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          ...results.map((item) => _ResultRow(
-                isDark: isDark,
-                song: item['song'] as Song,
-                explanation: item['explanation'] as String? ?? '',
-                queue: results.map((entry) => entry['song'] as Song).toList(),
-                onPlay: onPlay,
-              )),
+          // Perf: build the shared play-queue ONCE — previously the same
+          // results.map(...) ran inside every row's map body (O(n²) list
+          // construction on every rebuild of the AI Studio feed).
+          ..._buildRows(),
           _ArchetypeCard(
             isDark: isDark,
             archetype: archetype,
@@ -98,6 +95,19 @@ class AiStudioSections extends StatelessWidget {
           const SizedBox(height: 160),
         ],
       );
+
+  List<Widget> _buildRows() {
+    final queue = results.map((entry) => entry['song'] as Song).toList();
+    return results
+        .map((item) => _ResultRow(
+              isDark: isDark,
+              song: item['song'] as Song,
+              explanation: item['explanation'] as String? ?? '',
+              queue: queue,
+              onPlay: onPlay,
+            ))
+        .toList();
+  }
 }
 
 class _ResultRow extends StatelessWidget {
@@ -127,6 +137,8 @@ class _ResultRow extends StatelessWidget {
                   width: 44,
                   height: 44,
                   fit: BoxFit.cover,
+                  cacheWidth: 132,
+                  cacheHeight: 132,
                   errorBuilder: (_, __, ___) => Container(
                       width: 44,
                       height: 44,

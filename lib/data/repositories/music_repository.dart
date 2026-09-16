@@ -87,6 +87,16 @@ class MusicRepository extends ChangeNotifier
   @override
   void Function(Song)? onSongDownloadedCallback;
 
+  /// Taste-signal hooks, attached by the composition layer (main.dart) to
+  /// route strong positive signals (favorite / playlist-add) to the AI
+  /// signal tracker. Kept as callbacks because lib/data must not import
+  /// lib/services/ai (architecture boundary: that import is circular —
+  /// the tracker calls back into this repository).
+  @override
+  void Function(Song)? onFavoriteToggled;
+  @override
+  void Function(Song)? onSongAddedToFolder;
+
   MusicRepository._internal();
 
   @visibleForTesting

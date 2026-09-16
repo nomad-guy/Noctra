@@ -133,10 +133,28 @@ class SessionContextTracker {
 
     final recentAvg = avg(recent);
     final prevAvg = avg(prev);
-    // Return 8 most-changed axes as momentum signal
+    // Compress the 32-axis session delta into a stable 8-dim momentum
+    // signature WITHOUT reordering: sorting by magnitude destroys which
+    // axes moved, so the same listening shift produced different context
+    // inputs on every call. Instead, bucket axes into 8 thematic groups of
+    // 4 (tone / energy / mood / vocals / texture / cultural / percussion /
+    // modern) and average each bucket's delta — a fixed, meaning-preserving
+    // projection.
     final deltas = List.generate(dim, (i) => recentAvg[i] - prevAvg[i]);
-    deltas.sort((a, b) => b.abs().compareTo(a.abs()));
-    return deltas.take(8).map((d) => (d + 1.0) / 2.0).toList(); // normalize to [0,1]
+    final buckets = <List<int>>[
+      [0, 1, 6, 9], // tone/ambient/electronic/synth
+      [2, 3, 14, 24], // energy/chill/tempo/percussion
+      [4, 12, 22, 27], // melancholy/uplift/jazz/latin
+      [5, 7, 15, 29], // acoustic/vocal/instrumental/harmony
+      [8, 11, 18, 30], // density/focus/lofi/minimal
+      [13, 16, 17, 25], // bass/sufi/classical/folk
+      [10, 19, 21, 23], // night/bollywood/rock/psychedelic
+      [20, 26, 28, 31], // hiphop/retro/cinematic/industrial
+    ];
+    return buckets.map((b) {
+      final mean = b.map((i) => deltas[i]).reduce((a, c) => a + c) / b.length;
+      return ((mean + 1.0) / 2.0).clamp(0.0, 1.0);
+    }).toList();
   }
 
   // Top-N artist affinities as a fixed-length feature vector (8 dims)

@@ -10,6 +10,9 @@ mixin MusicRepositoryFavoritesMixin on ChangeNotifier {
   List<Song> get _downloads;
   Future<void>? get _initFuture;
 
+  /// Taste-signal hook owned by the main class (see MusicRepository).
+  void Function(Song)? get onFavoriteToggled;
+
   bool isFavorite(String songId) => _favoriteIds.contains(songId);
 
   void toggleFavorite(Song song) {
@@ -32,6 +35,10 @@ mixin MusicRepositoryFavoritesMixin on ChangeNotifier {
         ),
       );
       _favoriteIds.add(song.id);
+      // Strongest positive taste signal — fired via onFavoriteToggled so the
+      // composition layer routes it to the signal tracker without a
+      // data → services/ai dependency (architecture rule).
+      onFavoriteToggled?.call(song);
     }
     if (_initFuture == null) {
       NoctraLocalDatabase().saveFavorites(_favorites);
