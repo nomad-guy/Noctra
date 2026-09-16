@@ -30,7 +30,8 @@ mixin PlayerLifecycleMixin on AudioPlayerServiceBase {
         if (event.begin) {
           switch (event.type) {
             case AudioInterruptionType.duck:
-              if (_player.playing) {
+              if (_player.playing && !_isDucked) {
+                _isDucked = true;
                 _player.setVolume(0.2);
               }
               break;
@@ -43,6 +44,7 @@ mixin PlayerLifecycleMixin on AudioPlayerServiceBase {
         } else {
           switch (event.type) {
             case AudioInterruptionType.duck:
+              _isDucked = false;
               _player.setVolume(_targetVolume);
               break;
             case AudioInterruptionType.pause:
@@ -53,6 +55,12 @@ mixin PlayerLifecycleMixin on AudioPlayerServiceBase {
               break;
             case AudioInterruptionType.unknown:
               _resumeOnInterruptionEnd = false;
+              // A duck that ended as 'unknown' may never have sent its
+              // explicit duck-end; make sure the volume is not stranded low.
+              if (_isDucked) {
+                _isDucked = false;
+                _player.setVolume(_targetVolume);
+              }
               break;
           }
         }

@@ -156,6 +156,11 @@ abstract class AudioPlayerServiceBase {
   int _transitionId = 0;
   bool _transitionInProgress = false;
   int _volumeEpoch = 0;
+
+  /// True while an audio-focus DUCK is active (volume forced to 0.2).
+  /// Track changes during a duck must not strand the new player at duck
+  /// volume — [_fadeIn]/playback start clears it by restoring _targetVolume.
+  bool _isDucked = false;
   static const int _minAutoplayBuffer = 3;
 
   /// Canonical target volume — never hardcode 1.0.

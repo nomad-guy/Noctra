@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../../../providers/app_providers.dart';
 import '../../../services/library/library_bulk_download_service.dart';
@@ -44,6 +45,21 @@ class _LibraryDownloadSectionState
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
+        // Auto-close the dialog once the run finishes (completed, failed-out
+        // or stopped). Previously the dialog lingered until manually popped
+        // even when the service had finished all tracks.
+        var autoClosed = false;
+        void closeIfFinished() {
+          if (autoClosed || _bulk.isRunning) return;
+          autoClosed = true;
+          // Popping during build is illegal — defer to after the frame.
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            if (dialogContext.mounted) {
+              Navigator.of(dialogContext).pop();
+            }
+          });
+        }
+
         return PopScope(
           canPop: false,
           child: AlertDialog(
@@ -63,6 +79,7 @@ class _LibraryDownloadSectionState
             content: AnimatedBuilder(
               animation: _bulk,
               builder: (context, _) {
+                closeIfFinished();
                 final pct =
                     _bulk.total == 0 ? 0.0 : _bulk.completed / _bulk.total;
                 return Column(

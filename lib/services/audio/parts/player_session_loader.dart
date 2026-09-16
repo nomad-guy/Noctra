@@ -104,6 +104,7 @@ mixin PlayerSessionLoaderMixin on AudioPlayerServiceBase {
           await _fadeIn();
         } else {
           await _player.setVolume(_targetVolume);
+          _isDucked = false;
           _playNonBlocking(_player, 'Pre-buffered play');
         }
         await applyStudioMasterMode(_studioMasterMode);
@@ -191,6 +192,7 @@ mixin PlayerSessionLoaderMixin on AudioPlayerServiceBase {
           await _fadeIn();
         } else {
           await _player.setVolume(_targetVolume);
+          _isDucked = false;
           _playNonBlocking(_player, 'playSong');
         }
         await applyStudioMasterMode(_studioMasterMode);

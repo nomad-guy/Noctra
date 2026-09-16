@@ -41,9 +41,19 @@ mixin PlayerSessionRestoreMixin on AudioPlayerServiceBase {
       });
 
       if (_currentSong == null) return;
-      _lastSavedSongId = _currentSong!.id;
-      _lastSavedPosition =
-          Duration(milliseconds: (saved['positionMs'] as int?) ?? 0);
+      // Only seed the saved position when it actually belongs to the song
+      // being restored. The persisted song and the queue entry at the saved
+      // index can diverge (queue edited before a crash, dedup rewrites), and
+      // seeding a foreign position makes playback resume mid-track in the
+      // wrong song.
+      final savedPosMs = (saved['positionMs'] as int?) ?? 0;
+      if (saved['song'] is Song && (saved['song'] as Song).id == _currentSong!.id) {
+        _lastSavedSongId = _currentSong!.id;
+        _lastSavedPosition = Duration(milliseconds: savedPosMs);
+      } else {
+        _lastSavedSongId = null;
+        _lastSavedPosition = null;
+      }
 
       _isShuffleEnabled = isShuffle;
       if (loopModeStr == 'one') {

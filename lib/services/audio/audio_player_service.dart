@@ -27,6 +27,7 @@ part 'parts/player_stream_resolver.dart';
 part 'parts/player_crossfade_ramp.dart';
 part 'parts/player_crossfade_engine.dart';
 part 'parts/player_effects_and_settings.dart';
+part 'parts/player_native_effects.dart';
 part 'parts/player_session_loader.dart';
 part 'parts/player_autoplay_manager.dart';
 part 'parts/player_playback_controller.dart';
@@ -41,8 +42,8 @@ part 'parts/player_session_restore.dart';
 ///   • [PlayerQueueMixin]           — Queue manipulation, reorder, and shuffle
 ///   • [PlayerStreamResolverMixin]  — URL resolution, audio source, and preloading
 ///   • [PlayerCrossfadeRampMixin]   — Logarithmic volume ramp algorithm
-///   • [PlayerCrossfadeMixin]       — Crossfade engine, auto-crossfade, and player swap
-///   • [PlayerEffectsMixin]         — Equalizer, Studio Master, sleep timer, settings
+///   • [PlayerCrossfadeMixin]       — Crossfade engine, auto-crossfade, and player swap  ///   • [PlayerEffectsMixin]         — Playback settings, sleep timer
+  ///   • [PlayerNativeEffectsMixin]   — Equalizer, Studio Master, DSP sessions
 ///   • [PlayerSessionLoaderMixin]   — Session init, pre-buffered player handoff, URL stream loading
 ///   • [PlayerAutoplayMixin]        — Radio discovery, autoplay buffer, song completion
 ///   • [PlayerPlaybackMixin]        — Public play/pause/skip APIs and skip sequencing
@@ -53,6 +54,7 @@ class AudioPlayerService extends AudioPlayerServiceBase
     with
         PlayerQueueMixin,
         PlayerEffectsMixin,
+        PlayerNativeEffectsMixin,
         PlayerStreamResolverMixin,
         PlayerCrossfadeRampMixin,
         PlayerCrossfadeMixin,

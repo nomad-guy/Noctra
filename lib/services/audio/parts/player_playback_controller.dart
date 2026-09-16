@@ -45,11 +45,13 @@ mixin PlayerPlaybackMixin on AudioPlayerServiceBase {
           _transitionEpoch++;
           return;
         }
-        if (_currentIndex > 0 && _queue.isNotEmpty) {
-          _currentIndex--;
-          await _playSongInternal(_queue[_currentIndex],
-              queueIndex: _currentIndex);
-        }
+        if (_queue.isEmpty) return;
+        // Wrap around at the queue start (mirrors skipNext's wrap-around):
+        // previously Previous at index 0 was silently dead.
+        _currentIndex =
+            (_currentIndex - 1 + _queue.length) % _queue.length;
+        await _playSongInternal(_queue[_currentIndex],
+            queueIndex: _currentIndex);
       });
 
   Future<void> seek(Duration pos) => _serialize(() async {
@@ -73,7 +75,11 @@ mixin PlayerPlaybackMixin on AudioPlayerServiceBase {
   Future<void> setVolume(double vol) {
     final newVol = (vol.isNaN || vol.isInfinite) ? 1.0 : vol.clamp(0.0, 1.0);
     _targetVolume = newVol;
-    _volumeEpoch++;
+    // Deliberately does NOT bump _volumeEpoch: that epoch belongs to the
+    // in-flight volume ramps (fade-in, sleep fade-out, interruption duck).
+    // A user slider move mid-ramp must update the TARGET the ramp converges
+    // to, not cancel the ramp itself (bumping it here killed sleep fades and
+    // re-opened the duck volume when the user touched the slider).
     PlaybackSettingsStore.instance.save(volume: newVol);
     return _player.setVolume(newVol);
   }

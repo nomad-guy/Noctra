@@ -19,6 +19,10 @@ mixin PlayerCrossfadeRampMixin on AudioPlayerServiceBase {
       }
       return;
     }
+    // A duck (phone call) that began right at a track boundary can leave the
+    // new player's ramp fighting a stale duck state; clearing the flag here
+    // means the ramp below always converges on the real target volume.
+    _isDucked = false;
     final dur = duration ?? const Duration(milliseconds: 400);
     const steps = 20;
     final stepDelay = Duration(
