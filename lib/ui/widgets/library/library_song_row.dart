@@ -96,6 +96,32 @@ class LibrarySongRow extends ConsumerWidget {
               stream: MusicService.downloadProgressStream,
               builder: (context, snap) {
                 final p = snap.data?[s.id];
+                // -1.0 = explicit failure marker from the downloader: show a
+                // retry affordance instead of a spinner stuck at "done".
+                if (p != null && p < 0) {
+                  return IconButton(
+                    icon: Icon(Icons.error_outline_rounded,
+                        size: 19, color: Colors.redAccent.shade200),
+                    tooltip: 'Download failed — tap to retry',
+                    onPressed: () async {
+                      ref
+                          .read(downloadingSongsProvider.notifier)
+                          .update((set) => {...set, s.id});
+                      try {
+                        final dl = await MusicService.downloadTrack(s);
+                        if (dl != null) {
+                          ref
+                              .read(musicRepositoryProvider)
+                              .addDownloadedSong(dl);
+                        }
+                      } finally {
+                        ref
+                            .read(downloadingSongsProvider.notifier)
+                            .update((set) => {...set}..remove(s.id));
+                      }
+                    },
+                  );
+                }
                 if (p != null && p < 1.0) {
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 6),

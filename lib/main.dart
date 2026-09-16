@@ -13,6 +13,7 @@ import 'data/sources/noctra_local_database.dart';
 import 'data/repositories/neural_recommender_engine.dart';
 import 'providers/app_providers.dart';
 import 'services/audio/audio_player_service.dart';
+import 'services/audio/stream_quality_service.dart';
 import 'services/audio/noctra_audio_handler.dart';
 import 'services/assistant/infrastructure/assistant_intent_channel.dart';
 import 'services/updater/app_update_service.dart';
@@ -78,6 +79,13 @@ void main() async {
     await PlaybackSettingsStore.instance.load();
   } catch (e) {
     NoctraLogger.w('Playback settings load error', e);
+  }
+  // Quality/codec/policy settings read the same persisted store; hydrate
+  // before the UI constructs so the stream-quality sheet shows real values.
+  try {
+    await StreamQualityService().hydrate();
+  } catch (e) {
+    NoctraLogger.w('Stream quality hydrate error', e);
   }
   try {
     await NeuralRecommenderEngine.restoreFromDatabase();

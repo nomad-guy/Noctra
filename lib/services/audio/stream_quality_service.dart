@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
 import '../../core/utils/noctra_logger.dart';
+import '../../core/utils/playback_settings_store.dart';
 
 /// Audio stream quality and codec configuration.
 enum StreamQuality {
@@ -69,6 +70,28 @@ class StreamQualityService {
   bool _gaplessPlayback = true;
   bool get gaplessPlayback => _gaplessPlayback;
 
+  bool _hydrated = false;
+
+  /// Restores persisted quality/codec/policy/processing settings. Called
+  /// from main() before any UI can read the service — on Windows the process
+  /// fully exits between launches so this must happen at startup.
+  Future<void> hydrate() async {
+    if (_hydrated) return;
+    _hydrated = true;
+    final s = PlaybackSettingsStore.instance;
+    _streamQuality = StreamQuality.values.firstWhere(
+        (q) => q.name == s.streamQuality,
+        orElse: () => StreamQuality.lossless);
+    _preferredCodec = AudioCodec.values.firstWhere(
+        (c) => c.name == s.preferredCodec,
+        orElse: () => AudioCodec.mp3);
+    _streamingPolicy = StreamingPolicy.values.firstWhere(
+        (p) => p.name == s.streamingPolicy,
+        orElse: () => StreamingPolicy.smartNetwork);
+    _normalizeVolume = s.normalizeVolume;
+    _gaplessPlayback = s.gaplessPlayback;
+  }
+
   final _settingsController =
       StreamController<StreamQualitySettings>.broadcast();
   Stream<StreamQualitySettings> get settingsStream =>
@@ -84,12 +107,18 @@ class StreamQualityService {
       _streamQuality = StreamQuality.hiRes;
       _preferredCodec = AudioCodec.flac;
     }
+    PlaybackSettingsStore.instance.save(
+      streamingPolicy: policy.name,
+      streamQuality: _streamQuality.name,
+      preferredCodec: _preferredCodec.name,
+    );
     _emitSettings();
   }
 
   /// Set the streaming quality preference.
   Future<void> setStreamQuality(StreamQuality quality) async {
     _streamQuality = quality;
+    PlaybackSettingsStore.instance.save(streamQuality: quality.name);
     _emitSettings();
     try {
       await _channel.invokeMethod('setStreamQuality', {
@@ -104,6 +133,7 @@ class StreamQualityService {
   /// Set preferred codec for playback.
   Future<void> setPreferredCodec(AudioCodec codec) async {
     _preferredCodec = codec;
+    PlaybackSettingsStore.instance.save(preferredCodec: codec.name);
     _emitSettings();
     try {
       await _channel.invokeMethod('setPreferredCodec', {
@@ -117,12 +147,14 @@ class StreamQualityService {
   /// Toggle volume normalization (replay gain).
   void setNormalizeVolume(bool normalize) {
     _normalizeVolume = normalize;
+    PlaybackSettingsStore.instance.save(normalizeVolume: normalize);
     _emitSettings();
   }
 
   /// Toggle gapless playback.
   void setGaplessPlayback(bool gapless) {
     _gaplessPlayback = gapless;
+    PlaybackSettingsStore.instance.save(gaplessPlayback: gapless);
     _emitSettings();
   }
 

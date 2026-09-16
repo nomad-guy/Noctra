@@ -87,6 +87,7 @@ class AudioPlayerService extends AudioPlayerServiceBase
       _ => LoopMode.off,
     };
     _targetVolume = s.volume;
+    _isAutoplayEnabled = s.autoplayEnabled;
     _player.setVolume(s.volume);
   }
 

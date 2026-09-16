@@ -59,9 +59,10 @@ extension MusicServiceDownloader on MusicService {
       final tempFile = File('${musicDir.path}/.$fileName.$nonce.part');
       final resolvedUrl = await resolveStreamUrl(song);
       if (resolvedUrl == null || resolvedUrl.isEmpty) {
-        if (!MusicService.downloadProgressController.isClosed) {
-          MusicService.downloadProgressController.add({song.id: 1.0});
-        }
+        NoctraLogger.e(
+            'downloadTrack: no stream URL resolved for "${song.title}" '
+            '(all resolver tiers failed)');
+        _emitDownloadFailure(song.id);
         return null;
       }
       final parsedUri = Uri.tryParse(resolvedUrl);
@@ -69,9 +70,7 @@ extension MusicServiceDownloader on MusicService {
           (parsedUri.scheme != 'https' && parsedUri.scheme != 'file')) {
         NoctraLogger.w(
             'downloadTrack: Insecure or invalid URI scheme for ${song.title}');
-        if (!MusicService.downloadProgressController.isClosed) {
-          MusicService.downloadProgressController.add({song.id: 1.0});
-        }
+        _emitDownloadFailure(song.id);
         return null;
       }
       final req = http.Request('GET', parsedUri)
@@ -79,6 +78,20 @@ extension MusicServiceDownloader on MusicService {
       final client = http.Client();
       try {
         final resp = await client.send(req);
+        // A non-2xx/206 response (expired CDN token, 403/410, provider error
+        // page) must fail the download — writing the error page body to disk
+        // as a "song" is exactly the corrupt-file bug this guards against.
+        if (!(resp.statusCode == 200 ||
+            resp.statusCode == 206 ||
+            (resp.statusCode >= 300 && resp.statusCode < 400))) {
+          NoctraLogger.e(
+              'downloadTrack: CDN returned HTTP ${resp.statusCode} for '
+              '"${song.title}" — token expired or URL invalid');
+          _emitDownloadFailure(song.id);
+          // Drain and close so the connection is not left half-open.
+          await resp.stream.drain<void>().catchError((_) {});
+          return null;
+        }
         final total = resp.contentLength ?? 0;
         int received = 0;
         final sink = tempFile.openWrite();
@@ -153,12 +166,19 @@ extension MusicServiceDownloader on MusicService {
       } finally {
         client.close();
       }
-    } catch (e) {
-      NoctraLogger.e('Track download failed for "${song.title}"', e);
-      if (!MusicService.downloadProgressController.isClosed) {
-        MusicService.downloadProgressController.add({song.id: 1.0});
-      }
+    } catch (e, st) {
+      NoctraLogger.e('Track download failed for "${song.title}"', e, st);
+      _emitDownloadFailure(song.id);
       return null;
+    }
+  }
+
+  /// Explicit failure marker on the progress stream: -1.0 is unambiguous
+  /// (progress is otherwise 0..1), so the UI can distinguish "failed" from
+  /// the 1.0 "done" a success emits.
+  static void _emitDownloadFailure(String songId) {
+    if (!MusicService.downloadProgressController.isClosed) {
+      MusicService.downloadProgressController.add({songId: -1.0});
     }
   }
 

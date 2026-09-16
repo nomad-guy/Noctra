@@ -18,6 +18,13 @@ class PlaybackSettingsStore {
   static const _kShuffle = 'noctra_setting_shuffle_enabled';
   static const _kLoopMode = 'noctra_setting_loop_mode';
   static const _kVolume = 'noctra_setting_volume';
+  static const _kAutoplayEnabled = 'noctra_setting_autoplay_enabled';
+  static const _kStreamQuality = 'noctra_setting_stream_quality';
+  static const _kPreferredCodec = 'noctra_setting_preferred_codec';
+  static const _kStreamingPolicy = 'noctra_setting_streaming_policy';
+  static const _kNormalizeVolume = 'noctra_setting_normalize_volume';
+  static const _kGapless = 'noctra_setting_gapless';
+  static const _kLyricsPref = 'noctra_setting_lyrics_preference';
 
   bool fadeEnabled = true;
   int crossfadeSeconds = 3;
@@ -25,6 +32,13 @@ class PlaybackSettingsStore {
   bool shuffleEnabled = false;
   String loopMode = 'off';
   double volume = 1.0;
+  bool autoplayEnabled = true;
+  String streamQuality = 'lossless';
+  String preferredCodec = 'mp3';
+  String streamingPolicy = 'smartNetwork';
+  bool normalizeVolume = true;
+  bool gaplessPlayback = true;
+  String lyricsPreference = 'English / Global (Standard)';
 
   Future<void> load() async {
     try {
@@ -35,6 +49,14 @@ class PlaybackSettingsStore {
       shuffleEnabled = prefs.getBool(_kShuffle) ?? false;
       loopMode = prefs.getString(_kLoopMode) ?? 'off';
       volume = (prefs.getDouble(_kVolume) ?? 1.0).clamp(0.0, 1.0);
+      autoplayEnabled = prefs.getBool(_kAutoplayEnabled) ?? true;
+      streamQuality = prefs.getString(_kStreamQuality) ?? 'lossless';
+      preferredCodec = prefs.getString(_kPreferredCodec) ?? 'mp3';
+      streamingPolicy = prefs.getString(_kStreamingPolicy) ?? 'smartNetwork';
+      normalizeVolume = prefs.getBool(_kNormalizeVolume) ?? true;
+      gaplessPlayback = prefs.getBool(_kGapless) ?? true;
+      lyricsPreference =
+          prefs.getString(_kLyricsPref) ?? 'English / Global (Standard)';
     } catch (_) {
       // Defaults already set; persistence failure must never crash startup.
     }
@@ -49,6 +71,13 @@ class PlaybackSettingsStore {
     bool? shuffleEnabled,
     String? loopMode,
     double? volume,
+    bool? autoplayEnabled,
+    String? streamQuality,
+    String? preferredCodec,
+    String? streamingPolicy,
+    bool? normalizeVolume,
+    bool? gaplessPlayback,
+    String? lyricsPreference,
   }) {
     if (fadeEnabled != null) this.fadeEnabled = fadeEnabled;
     if (crossfadeSeconds != null) this.crossfadeSeconds = crossfadeSeconds;
@@ -58,18 +87,32 @@ class PlaybackSettingsStore {
     if (shuffleEnabled != null) this.shuffleEnabled = shuffleEnabled;
     if (loopMode != null) this.loopMode = loopMode;
     if (volume != null) this.volume = volume.clamp(0.0, 1.0);
+    if (autoplayEnabled != null) this.autoplayEnabled = autoplayEnabled;
+    if (streamQuality != null) this.streamQuality = streamQuality;
+    if (preferredCodec != null) this.preferredCodec = preferredCodec;
+    if (streamingPolicy != null) this.streamingPolicy = streamingPolicy;
+    if (normalizeVolume != null) this.normalizeVolume = normalizeVolume;
+    if (gaplessPlayback != null) this.gaplessPlayback = gaplessPlayback;
+    if (lyricsPreference != null) this.lyricsPreference = lyricsPreference;
     unawaitedPersist();
   }
 
   Future<void> unawaitedPersist() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_kFade, fadeEnabled);
-      await prefs.setInt(_kCrossfade, crossfadeSeconds);
-      await prefs.setInt(_kAutoplayDelay, autoplayDelaySeconds);
-      await prefs.setBool(_kShuffle, shuffleEnabled);
-      await prefs.setString(_kLoopMode, loopMode);
-      await prefs.setDouble(_kVolume, volume);
+    await prefs.setBool(_kFade, fadeEnabled);
+    await prefs.setInt(_kCrossfade, crossfadeSeconds);
+    await prefs.setInt(_kAutoplayDelay, autoplayDelaySeconds);
+    await prefs.setBool(_kShuffle, shuffleEnabled);
+    await prefs.setString(_kLoopMode, loopMode);
+    await prefs.setDouble(_kVolume, volume);
+    await prefs.setBool(_kAutoplayEnabled, autoplayEnabled);
+    await prefs.setString(_kStreamQuality, streamQuality);
+    await prefs.setString(_kPreferredCodec, preferredCodec);
+    await prefs.setString(_kStreamingPolicy, streamingPolicy);
+    await prefs.setBool(_kNormalizeVolume, normalizeVolume);
+    await prefs.setBool(_kGapless, gaplessPlayback);
+    await prefs.setString(_kLyricsPref, lyricsPreference);
     } catch (_) {}
   }
 }

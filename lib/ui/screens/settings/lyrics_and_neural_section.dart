@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/utils/playback_settings_store.dart';
 import '../../../data/repositories/neural_recommender_engine.dart';
 import '../../../data/repositories/taste_vector_engine.dart';
 import '../../../providers/app_providers.dart';
@@ -130,7 +131,10 @@ class LyricsAndNeuralSection extends ConsumerWidget {
       String value, String current, WidgetRef ref, bool isDark) {
     final isSelected = value == current;
     return InkWell(
-      onTap: () => ref.read(lyricsPreferenceProvider.notifier).state = value,
+      onTap: () {
+        ref.read(lyricsPreferenceProvider.notifier).state = value;
+        PlaybackSettingsStore.instance.save(lyricsPreference: value);
+      },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(

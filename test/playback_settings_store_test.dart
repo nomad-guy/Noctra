@@ -17,6 +17,14 @@ void main() {
     PlaybackSettingsStore.instance.shuffleEnabled = false;
     PlaybackSettingsStore.instance.loopMode = 'off';
     PlaybackSettingsStore.instance.volume = 1.0;
+    PlaybackSettingsStore.instance.autoplayEnabled = true;
+    PlaybackSettingsStore.instance.streamQuality = 'lossless';
+    PlaybackSettingsStore.instance.preferredCodec = 'mp3';
+    PlaybackSettingsStore.instance.streamingPolicy = 'smartNetwork';
+    PlaybackSettingsStore.instance.normalizeVolume = true;
+    PlaybackSettingsStore.instance.gaplessPlayback = true;
+    PlaybackSettingsStore.instance.lyricsPreference =
+        'English / Global (Standard)';
   });
 
   test('save() persists values and load() restores them', () async {
@@ -67,5 +75,39 @@ void main() {
     expect(store.fadeEnabled, isTrue);
     expect(store.crossfadeSeconds, 3);
     expect(store.volume, 1.0);
+  });
+
+  test('quality/codec/policy/lyrics settings persist across restart', () async {
+    SharedPreferences.setMockInitialValues({});
+    final store = PlaybackSettingsStore.instance;
+    store.save(
+      autoplayEnabled: false,
+      streamQuality: 'hiRes',
+      preferredCodec: 'flac',
+      streamingPolicy: 'audiophileExtreme',
+      normalizeVolume: false,
+      gaplessPlayback: false,
+      lyricsPreference: 'Hindi (Devanagari)',
+    );
+    await store.unawaitedPersist();
+
+    // Simulate a fresh process.
+    store
+      ..autoplayEnabled = true
+      ..streamQuality = 'lossless'
+      ..preferredCodec = 'mp3'
+      ..streamingPolicy = 'smartNetwork'
+      ..normalizeVolume = true
+      ..gaplessPlayback = true
+      ..lyricsPreference = 'English / Global (Standard)';
+    await store.load();
+
+    expect(store.autoplayEnabled, isFalse);
+    expect(store.streamQuality, 'hiRes');
+    expect(store.preferredCodec, 'flac');
+    expect(store.streamingPolicy, 'audiophileExtreme');
+    expect(store.normalizeVolume, isFalse);
+    expect(store.gaplessPlayback, isFalse);
+    expect(store.lyricsPreference, 'Hindi (Devanagari)');
   });
 }

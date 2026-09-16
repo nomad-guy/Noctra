@@ -87,6 +87,7 @@ mixin PlayerEffectsMixin on AudioPlayerServiceBase {
 
   void toggleAutoplay() {
     _isAutoplayEnabled = !_isAutoplayEnabled;
+    PlaybackSettingsStore.instance.save(autoplayEnabled: _isAutoplayEnabled);
     _emitSettings();
   }
 
