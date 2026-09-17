@@ -1,16 +1,10 @@
-import { useState, useEffect } from 'react';
-import type { ThemeType } from './types';
+import { useEffect } from 'react';
 import { ReleaseProvider } from './context/ReleaseContext';
 import { ThreeBackdrop } from './components/ThreeBackdrop/ThreeBackdrop';
-import { Navbar } from './components/Navbar/Navbar';
-import { Hero } from './components/Hero/Hero';
-import { QuickDownloads } from './components/QuickDownloads/QuickDownloads';
-import { LyricsPlayer } from './components/LyricsPlayer/LyricsPlayer';
-import { AudioTelemetry } from './components/AudioTelemetry/AudioTelemetry';
-import { AudiophileDSP } from './components/AudiophileDSP/AudiophileDSP';
-import { PlaylistTransfer } from './components/PlaylistTransfer/PlaylistTransfer';
+import Navbar from './components/Navbar/Navbar';
+import Hero from './components/Hero/Hero';
+import { Features } from './components/Features/Features';
 import { AppShowcase } from './components/AppShowcase/AppShowcase';
-import { PrivacyAudit } from './components/PrivacyAudit/PrivacyAudit';
 import { AllDownloads } from './components/AllDownloads/AllDownloads';
 import { InstallGuide } from './components/InstallGuide/InstallGuide';
 import { FAQ } from './components/FAQ/FAQ';
@@ -20,59 +14,40 @@ import { FloatingPlayer } from './components/FloatingPlayer/FloatingPlayer';
 import './styles/base.css';
 
 export default function App() {
-  const [theme, setTheme] = useState<ThemeType>(() => {
-    const saved = localStorage.getItem('noctra-theme') as ThemeType;
-    if (saved === 'liquid-glass' || saved === 'noir-black' || saved === 'noir-white') {
-      return saved;
-    }
-    return 'noir-black';
-  });
-
+  // Theme is owned by the Navbar switcher (writes data-theme + localStorage).
+  // This effect only guarantees a theme exists on first paint.
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    document.body.setAttribute('data-theme', theme);
-    localStorage.setItem('noctra-theme', theme);
-  }, [theme]);
-
-  const cycleTheme = () => {
-    setTheme((prev) => {
-      if (prev === 'noir-black') return 'liquid-glass';
-      if (prev === 'liquid-glass') return 'noir-white';
-      return 'noir-black';
-    });
-  };
+    if (!document.documentElement.dataset.theme) {
+      document.documentElement.dataset.theme = 'noir-black';
+    }
+  }, []);
 
   return (
     <ReleaseProvider>
       <div className="noctra-root">
         {/* 3D Interactive Three.js Backdrop */}
-        <ThreeBackdrop theme={theme} />
+        <ThreeBackdrop />
 
-        {/* Minimal Floating Navigation Bar */}
-        <Navbar theme={theme} onCycleTheme={cycleTheme} />
+        {/* Navigation */}
+        <Navbar />
 
         {/* Main Page Content */}
         <main style={{ position: 'relative', zIndex: 1 }}>
           <Hero />
-          <QuickDownloads />
-          <LyricsPlayer />
-          <AudiophileDSP />
-          <AudioTelemetry />
-          <PlaylistTransfer />
+          <Features />
           <AppShowcase />
-          <PrivacyAudit />
           <AllDownloads />
           <InstallGuide />
           <FAQ />
         </main>
 
         {/* Footer */}
-        <Footer theme={theme} />
+        <Footer />
 
         {/* Dynamic Changelog Modal */}
         <ChangelogModal />
 
-        {/* Persistent Floating Noir Mini-Player Dock (Matching Flutter App 1:1) */}
+        {/* Persistent Floating Mini-Player Dock (matches the Flutter app) */}
         <FloatingPlayer />
       </div>
     </ReleaseProvider>

@@ -1,15 +1,28 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { ThemeType } from '../../types';
 import styles from './ThreeBackdrop.module.css';
 
-interface Props {
-  theme: ThemeType;
+function readTheme(): ThemeType {
+  const t = document.documentElement.dataset.theme;
+  if (t === 'noir-white' || t === 'liquid-glass' || t === 'noir-black') return t;
+  return 'noir-black';
 }
 
-export function ThreeBackdrop({ theme }: Props) {
+export function ThreeBackdrop() {
   const mountRef = useRef<HTMLDivElement>(null);
+  const [theme, setTheme] = useState<ThemeType>(readTheme);
   const themeRef = useRef(theme);
+
+  // Follow the Navbar's theme switcher by observing the root attribute.
+  useEffect(() => {
+    const observer = new MutationObserver(() => setTheme(readTheme()));
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    return () => observer.disconnect();
+  }, []);
   // Lets the theme-change effect re-render a single static frame when the
   // animation loop is disabled (reduced motion).
   const staticRenderRef = useRef<(() => void) | null>(null);
@@ -20,6 +33,7 @@ export function ThreeBackdrop({ theme }: Props) {
     themeRef.current = theme;
     staticRenderRef.current?.();
   }, [theme]);
+
 
   useEffect(() => {
     const container = mountRef.current;

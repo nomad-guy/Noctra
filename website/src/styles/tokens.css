@@ -1,112 +1,141 @@
-/* Design tokens identical to Flutter app's NoirColors & NoctraThemeTokens */
+/* ============================================================
+   NOCTRA — Design Tokens (v2 "modern refresh")
+   Mirrors the Flutter app: Noir Black / Noir White / Liquid Glass
+   ============================================================ */
 
 :root {
-  /* Common spacing, font, radii */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  /* Typography */
+  --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Outfit', 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 
-  --radius-xs: 6px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 22px;
+  /* Radii */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
   --radius-pill: 9999px;
 
-  --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-normal: 250ms cubic-bezier(0.16, 1, 0.3, 1);
-  --transition-smooth: 400ms cubic-bezier(0.16, 1, 0.3, 1);
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: 150ms var(--ease-out);
+  --transition-normal: 280ms var(--ease-out);
+  --transition-smooth: 450ms var(--ease-out);
+
+  /* Layout */
+  --max-width: 1180px;
+  --nav-height: 64px;
 }
 
-/* 1. Liquid Glass Theme (Default) */
-[data-theme='liquid-glass'] {
-  --canvas: #162E4A;
-  --canvas-gradient: linear-gradient(135deg, #0E2444 0%, #162E4A 50%, #161838 100%);
-  --surface: rgba(37, 62, 96, 0.82);
-  --surface-hover: rgba(48, 80, 122, 0.88);
-  --surface-variant: rgba(53, 96, 128, 0.75);
-  --surface-elevated: rgba(74, 122, 170, 0.87);
-  --border: rgba(208, 228, 255, 0.35);
-  --border-subtle: rgba(192, 216, 240, 0.20);
-  --border-focus: rgba(126, 200, 255, 0.8);
-  
-  --text-primary: #F0F6FF;
-  --text-secondary: #B0C8E8;
-  --text-tertiary: #6E8EB8;
-
-  --accent: #7EC8FF;
-  --accent-secondary: #B8A8FF;
-  --accent-tertiary: #68E8C0;
-  --accent-glow: rgba(126, 200, 255, 0.35);
-
-  --card-sheen: linear-gradient(90deg, transparent, rgba(240, 246, 255, 0.25), transparent);
-  --glass-blur: blur(20px);
-  --shadow-card: 0 10px 30px -8px rgba(10, 22, 40, 0.6), 0 0 0 1px var(--border-subtle);
-  --shadow-active: 0 14px 40px -6px rgba(126, 200, 255, 0.25);
-  
-  --btn-primary-bg: #7EC8FF;
-  --btn-primary-color: #061426;
-  --btn-primary-hover: #9ad7ff;
-}
-
-/* 2. Noir Black Theme */
+/* ------------------------------------------------------------
+   1. NOIR BLACK (default)
+   ------------------------------------------------------------ */
 [data-theme='noir-black'] {
-  --canvas: #070709;
-  --canvas-gradient: linear-gradient(180deg, #070709 0%, #0B0B0E 100%);
-  --surface: #0E0E12;
-  --surface-hover: #14141A;
-  --surface-variant: #16161C;
-  --surface-elevated: #1C1C20;
-  --border: rgba(255, 255, 255, 0.16);
+  --canvas: #060608;
+  --canvas-gradient: radial-gradient(1200px 600px at 70% -10%,
+      rgba(126, 200, 255, 0.07), transparent 60%),
+    radial-gradient(900px 500px at 10% 110%, rgba(184, 168, 255, 0.05), transparent 60%),
+    linear-gradient(180deg, #060608 0%, #0a0a0d 100%);
+  --surface: rgba(18, 18, 22, 0.72);
+  --surface-hover: rgba(26, 26, 32, 0.85);
+  --surface-variant: rgba(255, 255, 255, 0.045);
+  --surface-elevated: #14141a;
+  --border: rgba(255, 255, 255, 0.14);
   --border-subtle: rgba(255, 255, 255, 0.07);
-  --border-focus: rgba(255, 255, 255, 0.6);
+  --border-focus: rgba(255, 255, 255, 0.55);
 
-  --text-primary: #FFFFFF;
-  --text-secondary: #929298;
-  --text-tertiary: #58585E;
+  --text-primary: #f5f5f7;
+  --text-secondary: #9a9aa2;
+  --text-tertiary: #5c5c64;
 
-  --accent: #FFFFFF;
-  --accent-secondary: #8E8E93;
-  --accent-tertiary: #FFFFFF;
-  --accent-glow: rgba(255, 255, 255, 0.22);
+  --accent: #7ec8ff;
+  --accent-strong: #ffffff;
+  --accent-glow: rgba(126, 200, 255, 0.28);
+  --accent-soft: rgba(126, 200, 255, 0.12);
 
-  --card-sheen: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
-  --glass-blur: blur(14px);
-  --shadow-card: 0 10px 30px -8px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--border-subtle);
-  --shadow-active: 0 14px 40px -6px rgba(255, 255, 255, 0.12);
+  --card-sheen: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  --glass-blur: blur(18px) saturate(1.3);
+  --shadow-card: 0 16px 40px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--border-subtle);
+  --shadow-active: 0 18px 48px -8px rgba(126, 200, 255, 0.22);
 
-  --btn-primary-bg: #FFFFFF;
-  --btn-primary-color: #070709;
-  --btn-primary-hover: #E4E4E6;
+  --btn-primary-bg: #ffffff;
+  --btn-primary-color: #060608;
+  --btn-primary-hover: #e8e8ec;
+  --btn-ghost-border: rgba(255, 255, 255, 0.2);
 }
 
-/* 3. Noir White Theme */
+/* ------------------------------------------------------------
+   2. NOIR WHITE
+   ------------------------------------------------------------ */
 [data-theme='noir-white'] {
-  --canvas: #F4F4F6;
-  --canvas-gradient: linear-gradient(180deg, #F8F8FA 0%, #F4F4F6 100%);
-  --surface: #FFFFFF;
-  --surface-hover: #F8F8FA;
-  --surface-variant: #EBEBF0;
-  --surface-elevated: #FFFFFF;
-  --border: rgba(0, 0, 0, 0.14);
+  --canvas: #f5f5f7;
+  --canvas-gradient: radial-gradient(1200px 600px at 70% -10%,
+      rgba(126, 200, 255, 0.14), transparent 60%),
+    radial-gradient(900px 500px at 10% 110%, rgba(184, 168, 255, 0.1), transparent 60%),
+    linear-gradient(180deg, #fafafc 0%, #f2f2f5 100%);
+  --surface: rgba(255, 255, 255, 0.8);
+  --surface-hover: rgba(255, 255, 255, 0.95);
+  --surface-variant: rgba(0, 0, 0, 0.04);
+  --surface-elevated: #ffffff;
+  --border: rgba(0, 0, 0, 0.12);
   --border-subtle: rgba(0, 0, 0, 0.06);
-  --border-focus: rgba(0, 0, 0, 0.6);
+  --border-focus: rgba(0, 0, 0, 0.55);
 
-  --text-primary: #060608;
-  --text-secondary: #5C5C64;
-  --text-tertiary: #A2A2AA;
+  --text-primary: #0a0a0c;
+  --text-secondary: #585862;
+  --text-tertiary: #9a9aa4;
 
-  --accent: #000000;
-  --accent-secondary: #636366;
-  --accent-tertiary: #000000;
-  --accent-glow: rgba(0, 0, 0, 0.12);
+  --accent: #0a84ff;
+  --accent-strong: #0a0a0c;
+  --accent-glow: rgba(10, 132, 255, 0.2);
+  --accent-soft: rgba(10, 132, 255, 0.1);
 
-  --card-sheen: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.08), transparent);
-  --glass-blur: blur(12px);
-  --shadow-card: 0 10px 30px -8px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--border-subtle);
-  --shadow-active: 0 14px 40px -6px rgba(0, 0, 0, 0.12);
+  --card-sheen: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.06), transparent);
+  --glass-blur: blur(18px) saturate(1.2);
+  --shadow-card: 0 16px 40px -16px rgba(20, 20, 40, 0.14), 0 0 0 1px var(--border-subtle);
+  --shadow-active: 0 18px 48px -8px rgba(10, 132, 255, 0.18);
 
-  --btn-primary-bg: #060608;
-  --btn-primary-color: #FFFFFF;
-  --btn-primary-hover: #222226;
+  --btn-primary-bg: #0a0a0c;
+  --btn-primary-color: #ffffff;
+  --btn-primary-hover: #26262c;
+  --btn-ghost-border: rgba(0, 0, 0, 0.16);
+}
+
+/* ------------------------------------------------------------
+   3. LIQUID GLASS
+   ------------------------------------------------------------ */
+[data-theme='liquid-glass'] {
+  --canvas: #101c30;
+  --canvas-gradient: radial-gradient(1100px 620px at 75% -10%,
+      rgba(104, 200, 255, 0.2), transparent 55%),
+    radial-gradient(900px 560px at 8% 108%, rgba(128, 112, 255, 0.16), transparent 55%),
+    linear-gradient(150deg, #0d1e3a 0%, #13223c 50%, #171536 100%);
+  --surface: rgba(30, 52, 82, 0.55);
+  --surface-hover: rgba(42, 70, 106, 0.7);
+  --surface-variant: rgba(126, 200, 255, 0.08);
+  --surface-elevated: rgba(48, 80, 122, 0.75);
+  --border: rgba(190, 220, 250, 0.28);
+  --border-subtle: rgba(190, 220, 250, 0.14);
+  --border-focus: rgba(126, 200, 255, 0.75);
+
+  --text-primary: #eef5ff;
+  --text-secondary: #a8c4e4;
+  --text-tertiary: #62809f;
+
+  --accent: #7ec8ff;
+  --accent-strong: #a8dcff;
+  --accent-glow: rgba(126, 200, 255, 0.35);
+  --accent-soft: rgba(126, 200, 255, 0.14);
+
+  --card-sheen: linear-gradient(90deg, transparent, rgba(238, 245, 255, 0.28), transparent);
+  --glass-blur: blur(22px) saturate(1.4);
+  --shadow-card: 0 16px 44px -12px rgba(6, 16, 32, 0.6), 0 0 0 1px var(--border-subtle);
+  --shadow-active: 0 18px 52px -8px rgba(126, 200, 255, 0.3);
+
+  --btn-primary-bg: #7ec8ff;
+  --btn-primary-color: #061426;
+  --btn-primary-hover: #a3d8ff;
+  --btn-ghost-border: rgba(190, 220, 250, 0.3);
 }

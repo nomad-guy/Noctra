@@ -1,59 +1,133 @@
-import type { ThemeType } from '../../types';
 import { useRelease } from '../../context/ReleaseContext';
 import styles from './Footer.module.css';
 
-interface Props {
-  theme: ThemeType;
-}
+const RESOURCE_LINKS = [
+  { href: '#features', label: 'Features' },
+  { href: '#showcase', label: 'Showcase' },
+  { href: '#downloads', label: 'Downloads' },
+  { href: '#install', label: 'Install Guide' },
+  { href: '#faq', label: 'FAQ' },
+];
 
-export function Footer({ theme }: Props) {
+const PROJECT_LINKS = [
+  {
+    href: 'https://github.com/nomad-guy/Noctra',
+    label: 'GitHub Repository',
+    external: true,
+  },
+  {
+    href: 'https://github.com/nomad-guy/Noctra/releases',
+    label: 'All Releases',
+    external: true,
+  },
+  {
+    href: 'https://github.com/nomad-guy/Noctra/blob/main/CHANGELOG.md',
+    label: 'Changelog',
+    external: true,
+  },
+  {
+    href: 'https://github.com/nomad-guy/Noctra/blob/main/CONTRIBUTING.md',
+    label: 'Contributing',
+    external: true,
+  },
+  {
+    href: 'https://github.com/nomad-guy/Noctra/blob/main/SECURITY.md',
+    label: 'Security Policy',
+    external: true,
+  },
+];
+
+const COMMUNITY_LINKS = [
+  { href: 'https://t.me/Noctra_app', label: 'Telegram Channel', external: true },
+  {
+    href: 'https://github.com/nomad-guy/Noctra/issues',
+    label: 'Issue Tracker',
+    external: true,
+  },
+  {
+    href: 'https://github.com/nomad-guy/Noctra/blob/main/LICENSE',
+    label: 'GPL-3.0 License',
+    external: true,
+  },
+];
+
+export function Footer() {
   const { release, openChangelog } = useRelease();
-  const getBrandLogo = () => {
-    switch (theme) {
-      case 'noir-black':
-        return './images/logo_noctra_noir_black.png';
-      case 'noir-white':
-        return './images/logo_noctra_noir_white.png';
-      case 'liquid-glass':
-      default:
-        return './images/logo_noctra_liquid_glass.png';
-    }
-  };
 
   return (
     <footer className={styles.footer}>
       <div className={styles.container}>
-        <div className={styles.topRow}>
-          <div className={styles.brand}>
-            <img src={getBrandLogo()} alt="Noctra" className={styles.brandLogo} />
-            <div>
-              <span className={styles.brandName}>NOCTRA</span>
-              <p className={styles.motto}>Autonomous, Privacy-Sovereign Music Intelligence.</p>
+        <div className={styles.topGrid}>
+          <div className={styles.brandCol}>
+            <a className={styles.brand} href="#top" aria-label="Noctra home">
+              <span className={styles.brandMark}>N</span>
+              <span className={styles.brandName}>Noctra</span>
+            </a>
+            <p className={styles.motto}>
+              Free, open-source music for every device. Stream, download, and
+              listen offline — with zero ads, zero tracking, and zero accounts.
+            </p>
+            <div className={styles.releaseChip}>
+              <span className={styles.releaseDot} aria-hidden="true" />
+              <span>{release.tag}</span>
+              <button
+                type="button"
+                className={styles.releaseLink}
+                onClick={openChangelog}
+              >
+                view changelog →
+              </button>
             </div>
           </div>
 
-          <div className={styles.links}>
-            <a href="https://t.me/Noctra_app" target="_blank" rel="noopener noreferrer" className={styles.link}>
-              Telegram Channel (@Noctra_app)
-            </a>
-            <a href="https://github.com/nomad-guy/Noctra" target="_blank" rel="noopener noreferrer" className={styles.link}>
-              GitHub Repository
-            </a>
-            <a href={release.releaseUrl} target="_blank" rel="noopener noreferrer" className={styles.link}>
-              Release {release.tag}
-            </a>
-            <button type="button" onClick={openChangelog} className={styles.link} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', font: 'inherit' }}>
-              Changelog & Notes
-            </button>
-            <a href="https://github.com/nomad-guy/Noctra/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className={styles.link}>
-              GPL-3.0 License
-            </a>
-          </div>
+          <nav className={styles.linkCol} aria-label="Site">
+            <h3 className={styles.colTitle}>Explore</h3>
+            {RESOURCE_LINKS.map((l) => (
+              <a key={l.label} className={styles.link} href={l.href}>
+                {l.label}
+              </a>
+            ))}
+          </nav>
+
+          <nav className={styles.linkCol} aria-label="Project">
+            <h3 className={styles.colTitle}>Project</h3>
+            {PROJECT_LINKS.map((l) => (
+              <a
+                key={l.label}
+                className={styles.link}
+                href={l.href}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {l.label}
+              </a>
+            ))}
+          </nav>
+
+          <nav className={styles.linkCol} aria-label="Community">
+            <h3 className={styles.colTitle}>Community</h3>
+            {COMMUNITY_LINKS.map((l) => (
+              <a
+                key={l.label}
+                className={styles.link}
+                href={l.href}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {l.label}
+              </a>
+            ))}
+          </nav>
         </div>
 
         <div className={styles.bottomRow}>
           <p>
-            &copy; 2026 Noctra. Built with precision for pure acoustic freedom. Distributed strictly for personal, educational, and research purposes under the GPL-3.0 license.
+            &copy; 2026 Noctra · Built by the community, for the community.
+            Distributed under the GPL-3.0 license.
+          </p>
+          <p className={styles.disclaimer}>
+            Noctra is not affiliated with, endorsed by, or connected to any
+            streaming provider. All trademarks belong to their respective owners.
           </p>
         </div>
       </div>
