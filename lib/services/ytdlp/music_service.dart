@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../cache/search_disk_cache.dart';
+import '../../core/networking/network_quality.dart';
 import '../../core/utils/noctra_logger.dart';
 import '../../data/models/download_location.dart';
 import '../platform/download_location_resolver.dart';
@@ -44,6 +46,9 @@ class MusicService {
 
   static void clearSearchCache() {
     _searchCache.clear();
+    // Drop the persistent layer too — explicit refresh means the user wants
+    // fresh data, not last session's results.
+    unawaited(SearchDiskCache.instance.clear());
   }
 
   static Future<List<Song>> search(String query, {String source = 'all'}) =>
@@ -72,6 +77,16 @@ class MusicService {
       return _searchInFlight[cacheKey]!;
     }
 
+    // Offline: skip the doomed network pass entirely and serve the last
+    // known results for this query (if any) — search works in airplane
+    // mode for anything previously searched.
+    if (NetworkQualityService.instance.isOffline) {
+      final stale = await SearchDiskCache.instance.get(cacheKey,
+          allowStale: true);
+      if (stale != null) return stale;
+      return const [];
+    }
+
     final future =
         MusicServiceSearch._searchTracksUncached(clean, source: source);
     _searchInFlight[cacheKey] = future;
@@ -83,11 +98,25 @@ class MusicService {
         }
         _searchCache[cacheKey] =
             _SearchCacheEntry(results, now + _searchCacheTtlMs);
+        // Persist for future sessions (offline / slow-network fallback).
+        unawaited(SearchDiskCache.instance.put(cacheKey, results));
       }
       return results;
     } finally {
       _searchInFlight.remove(cacheKey);
     }
+  }
+
+  /// Network returned nothing for this query: fall back to the persistent
+  /// stale cache before giving the user an empty screen. Called by
+  /// [_searchTracksUncached] callers via [searchTracksWithFallback].
+  static Future<List<Song>> searchTracksWithFallback(String query,
+      {String source = 'all'}) async {
+    final results = await searchTracks(query, source: source);
+    if (results.isNotEmpty) return results;
+    final cacheKey = '$source:${query.trim().toLowerCase()}';
+    return await SearchDiskCache.instance.get(cacheKey, allowStale: true) ??
+        const [];
   }
 
   static List<double> _deriveFeatureVector(String title,

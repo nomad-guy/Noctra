@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/crypto/des_cipher.dart';
+import '../../../core/networking/network_quality.dart';
 
 /// Pure-Dart cross-platform JioSaavn resolution engine.
 /// Runs natively on Android, Windows, Linux, macOS, iOS, and Web with zero native bridging.
@@ -74,11 +75,19 @@ class JioSaavnPureEngine {
             'https://www.jiosaavn.com/api.php?__call=search.getResults'
             '&q=${Uri.encodeComponent(q)}&_format=json&_marker=0&api_version=4&ctx=android&n=$limit',
           );
-          final res = await httpClient.get(uri, headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          }).timeout(const Duration(seconds: 5));
+          // Adaptive timeout: 5s baseline scales up to 15s on poor networks
+          // (2G/congested) where DNS+TLS alone can exceed 3s.
+          final res = await Retry.run(
+            () => httpClient.get(uri, headers: {
+              'User-Agent':
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            }).timeout(NetworkQualityService.adaptiveTimeout(
+                const Duration(seconds: 5))),
+            maxAttempts: 2,
+            debugLabel: 'saavn-search',
+          );
 
-          if (res.statusCode != 200) continue;
+          if (res == null || res.statusCode != 200) continue;
           final dynamic data = jsonDecode(res.body);
           if (data is! Map) continue;
           final items = data['results'] as List<dynamic>?;

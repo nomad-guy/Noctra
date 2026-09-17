@@ -5,6 +5,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/noir_theme.dart';
 import 'services/platform/dynamic_icon_service.dart';
+import 'core/networking/network_quality.dart';
 import 'core/utils/noctra_logger.dart';
 import 'core/utils/playback_settings_store.dart';
 import 'services/ai/implicit_signal_tracker.dart';
@@ -80,6 +81,14 @@ void main() async {
     await PlaybackSettingsStore.instance.load();
   } catch (e) {
     NoctraLogger.w('Playback settings load error', e);
+  }
+  // Network quality first: connectivity type + RTT probe feed both the
+  // adaptive request timeouts and the Smart streaming policy. The first
+  // probe runs in the background — never blocks startup.
+  try {
+    await NetworkQualityService.instance.start();
+  } catch (e) {
+    NoctraLogger.w('Network quality init error', e);
   }
   // Quality/codec/policy settings read the same persisted store; hydrate
   // before the UI constructs so the stream-quality sheet shows real values.

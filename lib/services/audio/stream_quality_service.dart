@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
+import '../../core/networking/network_quality.dart';
 import '../../core/utils/noctra_logger.dart';
 import '../../core/utils/playback_settings_store.dart';
 
@@ -71,6 +72,19 @@ class StreamQualityService {
   bool get gaplessPlayback => _gaplessPlayback;
 
   bool _hydrated = false;
+  StreamSubscription<NetworkQuality>? _networkSub;
+
+  /// Effective policy for the CURRENT network: Smart policy becomes
+  /// data-saver on mobile data / poor networks and audiophile on good
+  /// Wi-Fi. Other policies pass through unchanged.
+  StreamingPolicy get effectivePolicy {
+    if (_streamingPolicy != StreamingPolicy.smartNetwork) return _streamingPolicy;
+    final net = NetworkQualityService.instance;
+    if (net.isOffline) return _streamingPolicy;
+    return (net.onMobileData || net.quality == NetworkQuality.poor)
+        ? StreamingPolicy.dataSaver
+        : StreamingPolicy.audiophileExtreme;
+  }
 
   /// Restores persisted quality/codec/policy/processing settings. Called
   /// from main() before any UI can read the service — on Windows the process
@@ -90,6 +104,11 @@ class StreamQualityService {
         orElse: () => StreamingPolicy.smartNetwork);
     _normalizeVolume = s.normalizeVolume;
     _gaplessPlayback = s.gaplessPlayback;
+
+    // Smart policy reacts to network changes live (Wi-Fi ↔ mobile data).
+    _networkSub ??= NetworkQualityService.instance.qualityStream.listen((_) {
+      _emitSettings();
+    });
   }
 
   final _settingsController =
@@ -163,6 +182,14 @@ class StreamQualityService {
   String selectBestQuality(List<Map<String, dynamic>> adaptiveFormats) {
     if (adaptiveFormats.isEmpty) return '';
 
+    // Smart policy: the CURRENT network decides the target bitrate, not the
+    // user's stored quality — big data savings on mobile, full quality on
+    // Wi-Fi, zero configuration.
+    final effective = effectivePolicy == StreamingPolicy.dataSaver
+        ? StreamQuality.medium
+        : _streamQuality;
+    final targetKbps = effective.bitrate;
+
     // Filter audio streams only
     final audioStreams = adaptiveFormats
         .where((f) => (f['mimeType'] as String?)?.contains('audio') == true)
@@ -181,7 +208,7 @@ class StreamQualityService {
 
       final aBps = ((a['bitrate'] as num?) ?? 0).toDouble();
       final bBps = ((b['bitrate'] as num?) ?? 0).toDouble();
-      final targetBps = _streamQuality.bitrate * 1000.0; // kbps → bps
+      final targetBps = targetKbps * 1000.0; // kbps → bps
 
       final aDiff = (aBps - targetBps).abs();
       final bDiff = (bBps - targetBps).abs();
@@ -192,8 +219,8 @@ class StreamQualityService {
       }
 
       // If bitrates are comparably close, prioritize transparent 48kHz Opus
-      if (_streamQuality == StreamQuality.lossless ||
-          _streamQuality == StreamQuality.hiRes) {
+      if (effective == StreamQuality.lossless ||
+          effective == StreamQuality.hiRes) {
         if (aIsOpus != bIsOpus) return aIsOpus ? -1 : 1;
       }
 
@@ -204,7 +231,8 @@ class StreamQualityService {
     final url = selected['url'] as String? ?? '';
     final actualBitrate = (selected['bitrate'] as num?) ?? 0;
     NoctraLogger.d(
-        'Selected stream: ${actualBitrate}kbps (target: ${_streamQuality.bitrate}kbps)');
+        'Selected stream: ${actualBitrate}kbps (target: ${targetKbps}kbps, '
+        'policy: ${effectivePolicy.name})');
 
     return url;
   }

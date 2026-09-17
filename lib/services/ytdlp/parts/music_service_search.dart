@@ -125,7 +125,8 @@ extension MusicServiceSearch on MusicService {
           final sRes = await http.post(sUri, body: sBody, headers: {
             'Content-Type': 'application/json',
             'User-Agent': 'Mozilla/5.0'
-          }).timeout(const Duration(milliseconds: 3500));
+          }).timeout(NetworkQualityService.adaptiveTimeout(
+              const Duration(milliseconds: 3500)));
           if (sRes.statusCode == 200) {
             final sData = jsonDecode(sRes.body);
             _parseYtMusicSearchResults(sData, (s) => collect(ytSongs, s));
@@ -141,7 +142,8 @@ extension MusicServiceSearch on MusicService {
           final res = await http
               .get(Uri.parse(
                   'https://itunes.apple.com/search?term=${Uri.encodeComponent(itunesQuery)}&entity=song&limit=25'))
-              .timeout(const Duration(milliseconds: 3500));
+              .timeout(NetworkQualityService.adaptiveTimeout(
+                  const Duration(milliseconds: 3500)));
           if (res.statusCode == 200) {
             final results = jsonDecode(res.body)['results'] as List?;
             if (results != null) {
@@ -169,7 +171,29 @@ extension MusicServiceSearch on MusicService {
       }());
     }
 
-    await Future.wait(futures);
+    // Early-exit race: on slow networks, waiting for every provider's full
+    // timeout makes search feel broken even when one provider already
+    // returned strong results. As soon as one bucket reaches the
+    // "good enough" threshold, give the remaining providers a short grace
+    // window to finish, then proceed with whatever landed.
+    const goodEnough = 8; // one provider returning 8+ results is plenty
+    final allSettled = Future.wait(futures);
+    final firstGood = Stream.fromFutures(futures.map((f) => f.then((_) =>
+            (saavn.length >= goodEnough ||
+                ytSongs.length >= goodEnough ||
+                itunesSongs.length >= goodEnough)
+        ? true
+        : false)))
+        .firstWhere((ok) => ok, orElse: () => false);
+
+    await Future.any([
+      allSettled,
+      // Grace period after the first strong provider: stragglers may still
+      // add cross-provider diversity, but the user won't wait for their
+      // full timeouts.
+      firstGood.then((_) => Future<void>.delayed(
+          NetworkQualityService.adaptiveTimeout(const Duration(seconds: 2)))),
+    ]);
     final ranked = SearchResultRanker.mergeAndRank(
         [saavn, ytSongs, itunesSongs], clean);
     NoctraLogger.d('Search "$clean" (src=$src) ranked ${ranked.length} '

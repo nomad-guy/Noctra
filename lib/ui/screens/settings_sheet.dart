@@ -6,6 +6,7 @@ import '../../providers/app_providers.dart';
 import '../widgets/developer_panel_sheet.dart';
 import '../../shared/widgets/glass_card.dart';
 import 'settings/app_language_section.dart';
+import 'settings/home_layout_section.dart';
 import 'settings/music_preferences_section.dart';
 import 'settings/download_storage_section.dart';
 import 'settings/lyrics_and_neural_section.dart';
@@ -176,6 +177,8 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                 MusicPreferencesSection(isDark: isDark),
                 const SizedBox(height: 18),
               ],
+              HomeLayoutSection(isDark: isDark),
+              const SizedBox(height: 18),
               if (showStorage) ...[
                 DownloadStorageSection(isDark: isDark),
                 const SizedBox(height: 18),

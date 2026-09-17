@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -25,6 +26,7 @@ class PlaybackSettingsStore {
   static const _kNormalizeVolume = 'noctra_setting_normalize_volume';
   static const _kGapless = 'noctra_setting_gapless';
   static const _kLyricsPref = 'noctra_setting_lyrics_preference';
+  static const _kHomeSections = 'noctra_setting_home_sections';
 
   bool fadeEnabled = true;
   int crossfadeSeconds = 3;
@@ -39,6 +41,22 @@ class PlaybackSettingsStore {
   bool normalizeVolume = true;
   bool gaplessPlayback = true;
   String lyricsPreference = 'English / Global (Standard)';
+
+  /// Home-screen section visibility (declutter). Keys are section ids used
+  /// by HomeScreen; anything missing from the stored map defaults to shown,
+  /// except [kDefaultHidden] sections which are hidden by default.
+  static const kDefaultHidden = <String>{'vibeChips'};
+  Map<String, bool> homeSections = {};
+
+  bool isHomeSectionVisible(String id) {
+    final v = homeSections[id];
+    return v ?? !kDefaultHidden.contains(id);
+  }
+
+  void setHomeSectionVisible(String id, bool visible) {
+    homeSections[id] = visible;
+    save(homeSections: homeSections);
+  }
 
   Future<void> load() async {
     try {
@@ -57,6 +75,16 @@ class PlaybackSettingsStore {
       gaplessPlayback = prefs.getBool(_kGapless) ?? true;
       lyricsPreference =
           prefs.getString(_kLyricsPref) ?? 'English / Global (Standard)';
+      final rawSections = prefs.getString(_kHomeSections);
+      if (rawSections != null && rawSections.isNotEmpty) {
+        try {
+          final decoded = const JsonDecoder().convert(rawSections);
+          if (decoded is Map) {
+            homeSections = decoded
+                .map((k, v) => MapEntry(k.toString(), v == true));
+          }
+        } catch (_) {}
+      }
     } catch (_) {
       // Defaults already set; persistence failure must never crash startup.
     }
@@ -78,6 +106,7 @@ class PlaybackSettingsStore {
     bool? normalizeVolume,
     bool? gaplessPlayback,
     String? lyricsPreference,
+    Map<String, bool>? homeSections,
   }) {
     if (fadeEnabled != null) this.fadeEnabled = fadeEnabled;
     if (crossfadeSeconds != null) this.crossfadeSeconds = crossfadeSeconds;
@@ -94,6 +123,7 @@ class PlaybackSettingsStore {
     if (normalizeVolume != null) this.normalizeVolume = normalizeVolume;
     if (gaplessPlayback != null) this.gaplessPlayback = gaplessPlayback;
     if (lyricsPreference != null) this.lyricsPreference = lyricsPreference;
+    if (homeSections != null) this.homeSections = homeSections;
     unawaitedPersist();
   }
 
@@ -113,6 +143,10 @@ class PlaybackSettingsStore {
     await prefs.setBool(_kNormalizeVolume, normalizeVolume);
     await prefs.setBool(_kGapless, gaplessPlayback);
     await prefs.setString(_kLyricsPref, lyricsPreference);
+    if (homeSections.isNotEmpty) {
+      await prefs.setString(
+          _kHomeSections, const JsonEncoder().convert(homeSections));
+    }
     } catch (_) {}
   }
 }
