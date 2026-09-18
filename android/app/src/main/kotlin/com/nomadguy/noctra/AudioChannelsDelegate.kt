@@ -141,6 +141,8 @@ object AudioChannelsDelegate {
         is NoctraAudioRouter.RouteResult.Ok -> mapOf("ok" to true, "status" to "ok")
         is NoctraAudioRouter.RouteResult.DeviceNotFound ->
             mapOf("ok" to false, "status" to "device_not_found")
+        is NoctraAudioRouter.RouteResult.NeedsSystemPanel ->
+            mapOf("ok" to false, "status" to "needs_system_panel", "needsSystemPanel" to true)
         is NoctraAudioRouter.RouteResult.Failed ->
             mapOf("ok" to false, "status" to "failed", "reason" to r.reason)
         null -> mapOf("ok" to false, "status" to "no_router")
@@ -156,11 +158,10 @@ object AudioChannelsDelegate {
         is SpeakerPlusBluetoothResult.DeviceNotFound ->
             mapOf("ok" to false, "status" to "device_not_found")
         is SpeakerPlusBluetoothResult.SpeakerOnly ->
-            // API 31+ has no public multi-sink API. The speaker is on;
-            // the user must use the system media output panel for
-            // their Bluetooth device. The Dart side can offer that
-            // affordance directly from this response.
-            mapOf("ok" to true, "status" to "speaker_only", "needsSystemPanel" to true)
+            // Android 12+ does not provide simultaneous multi-sink media output via public API.
+            // Return ok: false so the UI/Dart does not report false success, and indicate
+            // needsSystemPanel: true so the user is guided to the system media switcher.
+            mapOf("ok" to false, "status" to "speaker_only", "needsSystemPanel" to true)
         is SpeakerPlusBluetoothResult.SingleDeviceRouted ->
             mapOf("ok" to true, "status" to "single_device_routed")
         is SpeakerPlusBluetoothResult.Failed ->

@@ -208,7 +208,7 @@ class JioSaavnPureEngine {
       'thumbnail': highResImg,
       'stream_url': streamUrl ?? '',
       'duration': durationSec,
-      'source': 'JioSaavn 320kbps CD Lossless',
+      'source': 'JioSaavn 320kbps High Quality',
     };
   }
 

@@ -197,33 +197,41 @@ class StreamQualityService {
 
     if (audioStreams.isEmpty) return '';
 
-    // Sort by codec transparency and bitrate preference.
-    // Opus 48kHz is prioritized for lossless/hiRes modes as it aligns with Android's
-    // 48kHz native mixer and preserves 20kHz frequency bandwidth.
+    // Sort streams according to quality and codec preferences.
     audioStreams.sort((a, b) {
       final aMime = ((a['mimeType'] as String?) ?? '').toLowerCase();
       final bMime = ((b['mimeType'] as String?) ?? '').toLowerCase();
-      final aIsOpus = aMime.contains('opus') || aMime.contains('webm');
-      final bIsOpus = bMime.contains('opus') || bMime.contains('webm');
-
       final aBps = ((a['bitrate'] as num?) ?? 0).toDouble();
       final bBps = ((b['bitrate'] as num?) ?? 0).toDouble();
-      final targetBps = targetKbps * 1000.0; // kbps → bps
 
+      final pref = _preferredCodec.name.toLowerCase();
+      final aPref = aMime.contains(pref) || (pref == 'opus' && aMime.contains('webm'));
+      final bPref = bMime.contains(pref) || (pref == 'opus' && bMime.contains('webm'));
+
+      // Hi-Res mode: prefer FLAC, then preferred codec, then highest bitrate (descending)
+      if (effective == StreamQuality.hiRes) {
+        final aFlac = aMime.contains('flac');
+        final bFlac = bMime.contains('flac');
+        if (aFlac != bFlac) return aFlac ? -1 : 1;
+        if (aPref != bPref) return aPref ? -1 : 1;
+        final aOpus = aMime.contains('opus') || aMime.contains('webm');
+        final bOpus = bMime.contains('opus') || bMime.contains('webm');
+        if (aOpus != bOpus) return aOpus ? -1 : 1;
+        return bBps.compareTo(aBps); // Highest bitrate first
+      }
+
+      // Target bitrate mode: find closest bitrate to target
+      final targetBps = targetKbps * 1000.0;
       final aDiff = (aBps - targetBps).abs();
       final bDiff = (bBps - targetBps).abs();
 
-      // If bitrate distance difference is significant (> 16kbps), pick the closest bitrate
-      if ((aDiff - bDiff).abs() > 16000) {
-        return aDiff.compareTo(bDiff);
+      if ((aDiff - bDiff).abs() > 16000) return aDiff.compareTo(bDiff);
+      if (aPref != bPref) return aPref ? -1 : 1;
+      if (effective == StreamQuality.lossless) {
+        final aOpus = aMime.contains('opus') || aMime.contains('webm');
+        final bOpus = bMime.contains('opus') || bMime.contains('webm');
+        if (aOpus != bOpus) return aOpus ? -1 : 1;
       }
-
-      // If bitrates are comparably close, prioritize transparent 48kHz Opus
-      if (effective == StreamQuality.lossless ||
-          effective == StreamQuality.hiRes) {
-        if (aIsOpus != bIsOpus) return aIsOpus ? -1 : 1;
-      }
-
       return aDiff.compareTo(bDiff);
     });
 

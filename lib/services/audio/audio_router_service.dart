@@ -31,6 +31,35 @@ class AudioDeviceEndpoint {
   }
 }
 
+class AudioRouterResult {
+  final bool ok;
+  final String status;
+  final bool needsSystemPanel;
+  final String? reason;
+
+  const AudioRouterResult({
+    required this.ok,
+    this.status = '',
+    this.needsSystemPanel = false,
+    this.reason,
+  });
+
+  factory AudioRouterResult.fromDynamic(dynamic res) {
+    if (res is bool) {
+      return AudioRouterResult(ok: res, status: res ? 'ok' : 'failed');
+    }
+    if (res is Map) {
+      return AudioRouterResult(
+        ok: res['ok'] == true,
+        status: (res['status'] ?? '').toString(),
+        needsSystemPanel: res['needsSystemPanel'] == true,
+        reason: res['reason']?.toString(),
+      );
+    }
+    return const AudioRouterResult(ok: false, status: 'unknown');
+  }
+}
+
 class AudioRouterService {
   static final AudioRouterService _instance = AudioRouterService._internal();
   factory AudioRouterService() => _instance;
@@ -87,25 +116,21 @@ class AudioRouterService {
     ];
   }
 
-  Future<bool> setOutputDevice(int deviceId) async {
+  Future<AudioRouterResult> setOutputDevice(int deviceId) async {
     try {
       final dynamic res = await _methodChannel.invokeMethod('setOutputDevice', {'deviceId': deviceId});
-      if (res is bool) return res;
-      if (res is Map) return res['ok'] == true;
-      return false;
-    } catch (_) {
-      return false;
+      return AudioRouterResult.fromDynamic(res);
+    } catch (e) {
+      return AudioRouterResult(ok: false, reason: e.toString());
     }
   }
 
-  Future<bool> setMultiOutputMode(bool enabled, List<int> deviceIds) async {
+  Future<AudioRouterResult> setMultiOutputMode(bool enabled, List<int> deviceIds) async {
     try {
       final dynamic res = await _methodChannel.invokeMethod('setMultiOutput', {'enabled': enabled, 'deviceIds': deviceIds});
-      if (res is bool) return res;
-      if (res is Map) return res['ok'] == true;
-      return false;
-    } catch (_) {
-      return false;
+      return AudioRouterResult.fromDynamic(res);
+    } catch (e) {
+      return AudioRouterResult(ok: false, reason: e.toString());
     }
   }
 

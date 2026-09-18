@@ -79,6 +79,7 @@ jobs:
     env:
       APP_VERSION: ${{ needs.version.outputs.app_version }}
       BUILD_NUMBER: ${{ needs.version.outputs.build_number }}
+      NOCTRA_ENFORCE_SIGNING: "true"
     steps:
       - uses: actions/checkout@v4
 
@@ -108,7 +109,8 @@ jobs:
           EOF
             echo "Release keystore decoded and android/key.properties configured."
           else
-            echo "::warning ::ANDROID_KEYSTORE_BASE64 secret not found; falling back to debug signing."
+            echo "::error ::ANDROID_KEYSTORE_BASE64 secret not found; production release build cannot be signed with debug key."
+            exit 1
           fi
 
       - name: Build Universal APK

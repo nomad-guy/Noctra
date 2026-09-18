@@ -169,5 +169,31 @@ void main() {
         throwsArgumentError,
       );
     });
+
+    test('stereo channels are processed independently with zero cross-talk', () async {
+      final out = File('${tmp.path}/stereo_isolated.wav');
+      const n = 22050;
+      final pcm = Int16List(n * 2);
+      for (int i = 0; i < n; i++) {
+        pcm[i * 2] = (0.5 * 32767 * math.sin(2 * math.pi * 3000 * i / 44100)).toInt();
+        pcm[i * 2 + 1] = 0;
+      }
+      await UpscaleDspEngine.process(
+        pcm: pcm,
+        sampleRate: 44100,
+        channels: 2,
+        outputFile: out,
+        strength: 0.8,
+      );
+      final bytes = out.readAsBytesSync();
+      int rightMax = 0;
+      for (int i = 0; i < n; i++) {
+        final off = 44 + i * 6 + 3;
+        int v = bytes[off] | (bytes[off + 1] << 8) | (bytes[off + 2] << 16);
+        if (v & 0x800000 != 0) v -= 0x1000000;
+        if (v.abs() > rightMax) rightMax = v.abs();
+      }
+      expect(rightMax, equals(0));
+    });
   });
 }

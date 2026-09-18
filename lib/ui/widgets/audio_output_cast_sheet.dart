@@ -144,7 +144,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                   Switch.adaptive(
                     value: _isMultiCastEnabled,
                     activeTrackColor: t.primaryText,
-                    onChanged: (val) {
+                    onChanged: (val) async {
                       HapticFeedback.mediumImpact();
                       setState(() {
                         _isMultiCastEnabled = val;
@@ -154,7 +154,8 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                           _selectedMultiIds.clear();
                         }
                       });
-                      router.setMultiOutputMode(val, _selectedMultiIds.toList());
+                      final res = await router.setMultiOutputMode(val, _selectedMultiIds.toList());
+                      if (!res.ok && res.needsSystemPanel) router.openSystemMediaSwitcher();
                     },
                   ),
                 ],
@@ -210,9 +211,11 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                               _selectedMultiIds.add(dev.id);
                             }
                           });
-                          await router.setMultiOutputMode(true, _selectedMultiIds.toList());
+                          final res = await router.setMultiOutputMode(true, _selectedMultiIds.toList());
+                          if (!res.ok && res.needsSystemPanel) router.openSystemMediaSwitcher();
                         } else {
-                          await router.setOutputDevice(dev.id);
+                          final res = await router.setOutputDevice(dev.id);
+                          if (!res.ok && res.needsSystemPanel) router.openSystemMediaSwitcher();
                         }
                         if (context.mounted) {
                           ref.invalidate(connectedAudioDevicesProvider);

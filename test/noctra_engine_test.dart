@@ -236,6 +236,22 @@ void main() {
       expect(gurmukhi.isNotEmpty, isTrue);
       expect(gurmukhi, isNot(contains('مشک')));
     });
+
+    test('Transliterates short Chinese lyric line to Pinyin without false Latin fallback', () {
+      const line = '我爱你';
+      expect(UniversalLyricsTransliterationEngine.detectScript(line), LyricScript.chinese);
+      final pinyin = UniversalLyricsTransliterationEngine.transliterateText(line, 'pinyin');
+      expect(pinyin.toLowerCase(), contains('wo'));
+      expect(pinyin.toLowerCase(), contains('ni'));
+    });
+
+    test('Preserves inline word-by-word synced timestamps during transliteration', () {
+      const line = '<00:01.20>mera <00:02.40>dil';
+      final dev = UniversalLyricsTransliterationEngine.transliterateText(line, 'devanagari');
+      expect(dev, contains('<00:01.20>'));
+      expect(dev, contains('<00:02.40>'));
+      expect(dev, contains('दिल'));
+    });
   });
 
   group('MusicRepository Folder Operations', () {

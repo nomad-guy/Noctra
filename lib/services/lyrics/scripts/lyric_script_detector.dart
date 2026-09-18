@@ -92,7 +92,7 @@ class LyricScriptDetector {
 
     if (japaneseCount > 0) return LyricScript.japanese;
     if (koreanCount > 0) return LyricScript.korean;
-    if (chineseCount > 10 && japaneseCount == 0) return LyricScript.chinese;
+    if (chineseCount > 0 && japaneseCount == 0) return LyricScript.chinese;
     if (devanagariCount > 0) return LyricScript.devanagari;
     if (gurmukhiCount > 0) return LyricScript.gurmukhi;
     if (tamilCount > 0) return LyricScript.tamil;

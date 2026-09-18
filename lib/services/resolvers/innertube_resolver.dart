@@ -1,10 +1,8 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../../data/models/song_model.dart';
 import '../metadata/song_artwork_resolver.dart';
-import 'innertube/innertube_player_api.dart';
 import 'stream_resolver_base.dart';
 import 'track_matching_guard.dart';
 import 'native_resolver_client.dart';
@@ -159,22 +157,8 @@ class InnerTubeMusicResolver implements StreamResolver {
     SongArtworkResolver.setCachedArtwork(
         song, 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg');
 
-    if (!kIsWeb) {
-      // Native fast path (fixed client set in Kotlin). Cannot be cancelled
-      // from Dart once invoked; bound the wait by the remaining budget and
-      // discard any late reply (Kotlin engine has its own timeouts).
-      try {
-        final cap = boundedTimeout(timeBudget, const Duration(seconds: 3));
-        final nativeUrl =
-            await NativeResolverClient.extractInnerTube(videoId).timeout(cap);
-        if (nativeUrl != null && nativeUrl.isNotEmpty) return nativeUrl;
-      } catch (_) {}
-    }
-    // Direct-URL cascade; cap each of its per-request timeouts by what is
-    // left of the shared budget so it cannot run far past the deadline.
-    return resolveInnerTubeStreamUrl(
-      videoId,
-      perRequestTimeout: boundedTimeout(timeBudget, const Duration(seconds: 5)),
-    );
+    final perReqBudget =
+        boundedTimeout(timeBudget, const Duration(seconds: 5));
+    return NativeResolverClient.extractInnerTube(videoId, timeout: perReqBudget);
   }
 }

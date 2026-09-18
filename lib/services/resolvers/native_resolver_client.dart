@@ -77,18 +77,21 @@ class NativeResolverClient {
     return null;
   }
 
-  /// Extracts an InnerTube stream URL for [videoId] using pure Dart with native fallback.
-  static Future<String?> extractInnerTube(String videoId) async {
-    final pure = await resolveInnerTubeStreamUrl(videoId);
-    if (pure != null && pure.isNotEmpty) return pure;
-
-    if (kIsWeb || !NoctraCapabilities.supportsNativeResolver) return null;
-    try {
-      return await _channel
-          .invokeMethod<String>('extractInnerTube', {'videoId': videoId});
-    } catch (_) {
-      return null;
+  /// Extracts an InnerTube stream URL for [videoId].
+  /// On Android (where native resolver is supported), invokes native fast path first;
+  /// falls back to pure Dart once without duplicating network requests.
+  static Future<String?> extractInnerTube(String videoId, {Duration? timeout}) async {
+    if (!kIsWeb && NoctraCapabilities.supportsNativeResolver) {
+      try {
+        final res = await _channel
+            .invokeMethod<String>('extractInnerTube', {'videoId': videoId});
+        if (res != null && res.isNotEmpty) return res;
+      } catch (_) {}
     }
+    return resolveInnerTubeStreamUrl(
+      videoId,
+      perRequestTimeout: timeout ?? const Duration(seconds: 5),
+    );
   }
 
   /// Fetches radio tracks for [videoId] using pure Dart with native fallback.

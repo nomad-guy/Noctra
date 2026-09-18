@@ -80,7 +80,7 @@ def _parse_song_item(item):
         'streamUrl': stream_url,
         'stream_url': stream_url,
         'source': 'jiosaavn_320k',
-        'quality': '320kbps CD Lossless',
+        'quality': '320kbps High Quality',
         'duration': int(item.get('duration') or 0),
         'year': item.get('year', ''),
         'genre': item.get('language', 'Universal').capitalize(),

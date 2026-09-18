@@ -27,7 +27,7 @@ class _IsolateRequest {
   final double strength;
   final int sampleRate;
   final int channels;
-  final Int16List pcm;
+  final Float64List pcm;
 
   const _IsolateRequest({
     required this.inputPath,
@@ -191,10 +191,10 @@ Future<UpscaleResult> _isolateEntryPoint(_IsolateRequest req) async {
   );
 }
 
-/// Reads interleaved PCM from a 16/24-bit WAV into Int16List.
-Future<Int16List> _readWavPcm(File f) async {
+/// Reads interleaved PCM from a 16/24-bit WAV into Float64List (-1.0 .. 1.0).
+Future<Float64List> _readWavPcm(File f) async {
   final bytes = await f.readAsBytes();
-  if (bytes.length < 44) return Int16List(0);
+  if (bytes.length < 44) return Float64List(0);
   final bd = ByteData.sublistView(bytes);
   final bitsPerSample = bd.getUint16(34, Endian.little);
 
@@ -218,22 +218,22 @@ Future<Int16List> _readWavPcm(File f) async {
   }
 
   if (bitsPerSample == 24) {
-    // 24-bit → 16-bit (take top bits, keep 2-byte alignment per sample).
+    // 24-bit PCM: preserve full 24-bit dynamic range normalized to -1.0 .. 1.0.
     final n = data.length ~/ 3;
-    final out = Int16List(n);
+    final out = Float64List(n);
     for (int i = 0; i < n; i++) {
       int v = data[i * 3] | (data[i * 3 + 1] << 8) | (data[i * 3 + 2] << 16);
-      if (v & 0x800000 != 0) v |= 0xFF000000; // sign extend
-      out[i] = (v >> 8).toSigned(16).clamp(-32768, 32767).toInt();
+      if ((v & 0x800000) != 0) v |= 0xFF000000; // sign extend 24-bit signed int
+      out[i] = v / 8388608.0;
     }
     return out;
   }
-  // Default 16-bit path.
+  // Default 16-bit path normalized to -1.0 .. 1.0.
   final n = data.length ~/ 2;
-  final out = Int16List(n);
+  final out = Float64List(n);
   final dbd = ByteData.sublistView(data);
   for (int i = 0; i < n; i++) {
-    out[i] = dbd.getInt16(i * 2, Endian.little);
+    out[i] = dbd.getInt16(i * 2, Endian.little) / 32768.0;
   }
   return out;
 }

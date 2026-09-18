@@ -46,6 +46,30 @@ void main() async {
     ),
   );
 
+  try {
+    await NoctraLocalDatabase().init();
+  } catch (e) {
+    NoctraLogger.e('Database init error', e);
+  }
+
+  // Hydrate persisted playback settings (fade/crossfade/volume/...) BEFORE
+  // the audio service singleton can be constructed — on Windows the process
+  // fully exits between launches, so nothing survives except what we load.
+  try {
+    await PlaybackSettingsStore.instance.load();
+    AudioPlayerService.instance.reapplyPersistedSettings();
+  } catch (e) {
+    NoctraLogger.w('Playback settings load error', e);
+  }
+
+  // Quality/codec/policy settings read the same persisted store; hydrate
+  // before the UI or audio service constructs.
+  try {
+    await StreamQualityService().hydrate();
+  } catch (e) {
+    NoctraLogger.w('Stream quality hydrate error', e);
+  }
+
   if (!kIsWeb) {
     try {
       // Noctra's crossfade engine keeps a second (pre-buffer) AudioPlayer
@@ -65,38 +89,19 @@ void main() async {
           androidStopForegroundOnPause: true,
         ),
       );
-      AssistantIntentChannel(router: noctraAudioHandler!.router).initialize();    } catch (e, st) {
+      AssistantIntentChannel(router: noctraAudioHandler!.router).initialize();
+    } catch (e, st) {
       NoctraLogger.e('AudioService.init failed', e, st);
     }
   }
 
-  try {
-    await NoctraLocalDatabase().init();
-  } catch (e) {
-    NoctraLogger.e('Database init error', e);
-  }
-  // Hydrate persisted playback settings (fade/crossfade/volume/...) BEFORE
-  // the audio service singleton can be constructed — on Windows the process
-  // fully exits between launches, so nothing survives except what we load.
-  try {
-    await PlaybackSettingsStore.instance.load();
-  } catch (e) {
-    NoctraLogger.w('Playback settings load error', e);
-  }
-  // Network quality first: connectivity type + RTT probe feed both the
+  // Network quality: connectivity type + RTT probe feed both the
   // adaptive request timeouts and the Smart streaming policy. The first
   // probe runs in the background — never blocks startup.
   try {
     await NetworkQualityService.instance.start();
   } catch (e) {
     NoctraLogger.w('Network quality init error', e);
-  }
-  // Quality/codec/policy settings read the same persisted store; hydrate
-  // before the UI constructs so the stream-quality sheet shows real values.
-  try {
-    await StreamQualityService().hydrate();
-  } catch (e) {
-    NoctraLogger.w('Stream quality hydrate error', e);
   }
   try {
     await NeuralRecommenderEngine.restoreFromDatabase();

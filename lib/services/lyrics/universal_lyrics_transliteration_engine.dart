@@ -68,6 +68,17 @@ class UniversalLyricsTransliterationEngine {
 
   static String transliterateText(String input, String targetScript) {
     if (input.trim().isEmpty) return input;
+
+    // Preserve inline word-by-word synced timestamps e.g. <00:12.30>
+    if (input.contains(RegExp(r'<\d{2}:\d{2}'))) {
+      return input.splitMapJoin(
+        RegExp(r'<\d{2}:\d{2}(?:\.\d{1,3})?>'),
+        onMatch: (m) => m.group(0)!,
+        onNonMatch: (seg) =>
+            seg.isEmpty ? '' : transliterateText(seg, targetScript),
+      );
+    }
+
     final clean = input.trim();
     final sourceScript = detectScript(clean);
 

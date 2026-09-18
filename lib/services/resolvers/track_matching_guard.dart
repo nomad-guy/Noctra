@@ -211,14 +211,7 @@ class TrackMatchingGuard {
   }
 
   static String _normalizeForComparison(String input) {
-    // Fold precomposed diacritics too (Beyoncé → beyonce). The old
-    // combining-marks-only pass let the ASCII punctuation filter below
-    // split accented words in two (beyon ce), rejecting the correct track.
-    var s = SearchTextNormalizer.foldDiacritics(input);
-    // Replace punctuation with whitespace
-    s = s.replaceAll(RegExp(r'[^\w\s]'), ' ');
-    // Collapse multiple whitespaces
-    return s.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return SearchTextNormalizer.norm(input);
   }
 
   static String _stripAllTags(String input) {

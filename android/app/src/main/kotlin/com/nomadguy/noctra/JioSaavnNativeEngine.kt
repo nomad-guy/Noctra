@@ -197,7 +197,7 @@ object JioSaavnNativeEngine {
             "thumbnail" to highResImg,
             "stream_url" to (streamUrl ?: ""),
             "duration" to durationSec,
-            "source" to "JioSaavn 320kbps CD Lossless"
+            "source" to "JioSaavn 320kbps High Quality"
         )
     }
 

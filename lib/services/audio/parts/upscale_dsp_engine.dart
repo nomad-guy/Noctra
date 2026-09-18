@@ -22,7 +22,7 @@ class UpscaleDspEngine {
 
   /// Strength of enhancement, 0.0 (subtle) – 1.0 (aggressive).
   static Future<UpscaleResult> process({
-    required Int16List pcm,
+    required List<num> pcm,
     required int sampleRate,
     required int channels,
     required File outputFile,
@@ -34,11 +34,12 @@ class UpscaleDspEngine {
     if (strength < 0 || strength > 1) {
       throw ArgumentError('strength must be within 0..1');
     }
-    final enhanced = _enhance(pcm, channels, strength);
-    await _writeWav24(outputFile, enhanced, sampleRate, channels);
+    final effectiveSr = sampleRate > 0 ? sampleRate : 44100;
+    final enhanced = _enhance(pcm, channels, effectiveSr, strength);
+    await _writeWav24(outputFile, enhanced, effectiveSr, channels);
     return UpscaleResult(
       path: outputFile.path,
-      sampleRate: sampleRate,
+      sampleRate: effectiveSr,
       channels: channels,
       bitDepth: 24,
       inputSamples: pcm.length,
@@ -46,42 +47,29 @@ class UpscaleDspEngine {
     );
   }
 
-  /// Harmonic exciter + band extension + limiter chain.
-  static Float64List _enhance(Int16List pcm, int channels, double s) {
+  /// Harmonic exciter + band extension + limiter chain with isolated per-channel state.
+  static Float64List _enhance(List<num> pcm, int channels, int sr, double s) {
     final len = pcm.length;
     final out = Float64List(len);
-    final drive = 1.0 + 2.0 * s; // saturation drive 1..3
-    // Exciter band: 2.5–8 kHz (where lossy codecs do most damage).
-    final excHp = _Biquad.highPass(2500.0, 44100.0);
-    final excLp = _Biquad.lowPass(8000.0, 44100.0);
-    // Air shelf: recover above 9 kHz.
-    final air = _Biquad.highShelf(9000.0, 44100.0, gainDb: 4.0 + 4.0 * s);
+    final drive = 1.0 + 2.0 * s;
     final harmonicMix = 0.18 + 0.30 * s;
     final airMix = 0.35 + 0.45 * s;
+    final isInt16 = pcm is Int16List;
 
-    // Track high-band energy for a gentle dynamic air lift.
-    double fastEnv = 0, slowEnv = 0;
-    final envCoefFast = math.exp(-1.0 / (0.003 * 44100));
-    final envCoefSlow = math.exp(-1.0 / (0.400 * 44100));
-
-    for (int i = 0; i < len; i++) {
-      final x = pcm[i] / 32768.0;
-
-      // 1) Exciter: band-passed signal → soft saturation → adds harmonics.
-      final band = excLp.process(excHp.process(x));
-      final sat = _softSat(band * drive) / _softSat(drive);
-      var y = x + sat * harmonicMix;
-
-      // 2) Dynamic air shelf: lift high band proportionally to program energy.
-      final a = band.abs();
-      fastEnv = envCoefFast * fastEnv + (1 - envCoefFast) * a;
-      slowEnv = envCoefSlow * slowEnv + (1 - envCoefSlow) * a;
-      final lift = (fastEnv - slowEnv).clamp(0.0, 1.0);
-      final shaped = air.process(y);
-      y = y + (shaped - y) * (airMix * (0.5 + 0.5 * lift));
-
-      // 3) Soft limiter to keep peaks clean.
-      out[i] = _limit(y);
+    final dsp0 = _ChannelDsp(sr, s);
+    if (channels == 2) {
+      final dsp1 = _ChannelDsp(sr, s);
+      for (int i = 0; i < len; i += 2) {
+        final l = isInt16 ? pcm[i] / 32768.0 : (pcm[i] as double);
+        final r = isInt16 ? pcm[i + 1] / 32768.0 : (pcm[i + 1] as double);
+        out[i] = dsp0.process(l, drive, harmonicMix, airMix);
+        out[i + 1] = dsp1.process(r, drive, harmonicMix, airMix);
+      }
+    } else {
+      for (int i = 0; i < len; i++) {
+        final x = isInt16 ? pcm[i] / 32768.0 : (pcm[i] as double);
+        out[i] = dsp0.process(x, drive, harmonicMix, airMix);
+      }
     }
     return out;
   }
@@ -98,7 +86,6 @@ class UpscaleDspEngine {
     final sign = x.isNegative ? -1.0 : 1.0;
     final a = x.abs();
     final t = (a - 0.7) / (1.0 - 0.7);
-    // tanh approximation: e^{2t} form (dart:math has no tanh).
     final e = math.exp(2 * t);
     final th = (e - 1) / (e + 1);
     return sign * (0.7 + (1.0 - 0.7) * th);
@@ -240,5 +227,40 @@ class _Biquad {
     _y2 = _y1;
     _y1 = y;
     return y;
+  }
+}
+
+/// Independent DSP state pipeline for a single audio channel (prevents stereo crosstalk).
+class _ChannelDsp {
+  final _Biquad excHp;
+  final _Biquad excLp;
+  final _Biquad air;
+  final double envCoefFast;
+  final double envCoefSlow;
+  double fastEnv = 0.0;
+  double slowEnv = 0.0;
+
+  _ChannelDsp(int sr, double s)
+      : excHp = _Biquad.highPass(math.min(2500.0, sr * 0.45), sr.toDouble()),
+        excLp = _Biquad.lowPass(math.min(8000.0, sr * 0.45), sr.toDouble()),
+        air = _Biquad.highShelf(
+            math.min(9000.0, sr * 0.45), sr.toDouble(), gainDb: 4.0 + 4.0 * s),
+        envCoefFast = math.exp(-1.0 / (0.003 * sr)),
+        envCoefSlow = math.exp(-1.0 / (0.400 * sr));
+
+  double process(double x, double drive, double harmonicMix, double airMix) {
+    final band = excLp.process(excHp.process(x));
+    final sat = UpscaleDspEngine._softSat(band * drive) /
+        UpscaleDspEngine._softSat(drive);
+    var y = x + sat * harmonicMix;
+
+    final a = band.abs();
+    fastEnv = envCoefFast * fastEnv + (1 - envCoefFast) * a;
+    slowEnv = envCoefSlow * slowEnv + (1 - envCoefSlow) * a;
+    final lift = (fastEnv - slowEnv).clamp(0.0, 1.0);
+    final shaped = air.process(y);
+    y = y + (shaped - y) * (airMix * (0.5 + 0.5 * lift));
+
+    return UpscaleDspEngine._limit(y);
   }
 }

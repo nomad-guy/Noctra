@@ -93,6 +93,9 @@ class AudioPlayerService extends AudioPlayerServiceBase
     _player.setVolume(s.volume);
   }
 
+  /// Re-applies persisted playback settings from disk.
+  void reapplyPersistedSettings() => _applyPersistedSettings();
+
   /// Pure helper: current-first playback order for shuffle. The current
   /// entry is identified by queue *position* (never by Song object
   /// identity or ID), so duplicate entries survive intact.
