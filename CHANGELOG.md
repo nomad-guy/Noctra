@@ -1,5 +1,49 @@
 # Changelog
 
+## v1.1.2 (2026-09-18)
+
+### Audio Upscaler & Playback Integration
+
+- **Automatic Lossless Upscaled Playback**: Cached 24-bit upscaled WAVs are now
+  automatically resolved and prioritized for bit-perfect lossless playback over
+  lossy network streams without requiring manual file picker steps.
+- **24-BIT UPSCALED Hi-Res Badge**: Player controls now display a gold
+  `24-BIT UPSCALED` badge when an upscaled stream is active; tapping opens the
+  upscaler sheet directly.
+- **Immediate Upscale Playback**: Completion view in the upscale sheet now
+  features a 1-tap "Play Upscaled Track" primary action.
+- **Stereo Isolation & True 24-Bit Dynamic Range**: Isolated channel DSP
+  preventing stereo crosstalk, dynamic Nyquist bounds, and 24-bit headroom
+  preservation.
+
+### Universal Lyrics & Transliteration
+
+- **Persistent Transliteration Script**: User-selected scripts (Romanized,
+  Devanagari, Pinyin) are preserved across track transitions during continuous
+  listening sessions.
+- **Expanded Chinese & Japanese Support**: Enhanced Hanzi script detection and
+  transliteration vocabulary, preserving word-level synced timestamps `<mm:ss.xx>`.
+
+### Visual Contrast & Design Refinement
+
+- **Fixed Faded / Washed-Out Colors**: Elevated `blackTextSecondary` (0xFFA8A8B2),
+  `blackTextTertiary` (0xFF7C7C86), `whiteTextTertiary` (0xFF6E6E78), and
+  `glassTextTertiary` (0xFF8EB5DF) across all Noir and Glass themes.
+- **Material U & Global Tokens**: Restored crisp contrast in Material U tertiary
+  text and eliminated low-contrast hardcoded whites across carousel, charts, and
+  search results.
+
+### Engine Audit & Stability
+
+- **Hydrated Startup Settings**: Fixed async race condition ensuring persisted
+  playback settings are fully loaded prior to audio service registration.
+- **Multi-Output Structured State**: Upgraded native Kotlin audio router with
+  per-route active flags and normal audio routing mode.
+- **InnerTube & Stream Guard**: Capped concurrent requests and fixed diacritic/accent
+  folding in Unicode track matching.
+- **CI Release Signing**: Enforced automated release keystore signing in GitHub
+  Actions cross-platform workflow.
+
 ## v1.1.1 (2026-09-18)
 
 ### Audio Upscaler (New)

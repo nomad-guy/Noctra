@@ -94,8 +94,12 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
             ? LyricsView.findActiveIndex(lines, pos)
             : -1;
 
+        final effectiveScript = (_selectedScript != 'original')
+            ? _selectedScript
+            : preferredScript;
+
         setState(() {
-          _selectedScript = preferredScript;
+          _selectedScript = effectiveScript;
           _cachedLines = lines;
           _isSynced = isSynced;
           _plainText = data.plainText;
@@ -124,7 +128,6 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
       _lastScrolledIndex = -1;
       _userIsScrolling = false;
       _resumeAutoScrollTimer?.cancel();
-      _selectedScript = 'original';
       _lineKeys.clear();
       _cachedLines = [];
       _isSynced = false;

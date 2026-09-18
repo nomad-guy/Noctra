@@ -62,7 +62,9 @@ class SpotifyChartsSection extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white54 : Colors.black45,
+                  color: isDark
+                      ? NoirColors.blackTextSecondary
+                      : NoirColors.whiteTextSecondary,
                 ),
               ),
             ],
@@ -192,7 +194,7 @@ class SpotifyChartsSection extends ConsumerWidget {
                                               : const Color(0xFFE5E5E5),
                                           child: Icon(Icons.music_note_outlined,
                                               color: isDark
-                                                  ? Colors.white54
+                                                  ? Colors.white70
                                                   : Colors.black54),
                                         ),
                                       ),

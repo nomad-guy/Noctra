@@ -92,7 +92,7 @@ class SearchResultsList extends ConsumerWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     fontSize: 12,
-                    color: isDark ? Colors.white38 : Colors.black45),
+                    color: t.tertiaryText),
               ),
             ],
           ),

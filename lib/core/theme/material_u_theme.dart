@@ -44,7 +44,7 @@ ThemeData buildMaterialUTheme() {
     elevatedSurface: scheme.surfaceContainerHigh,
     primaryText: scheme.onSurface,
     secondaryText: scheme.onSurfaceVariant,
-    tertiaryText: scheme.onSurfaceVariant.withValues(alpha: 0.7),
+    tertiaryText: scheme.onSurfaceVariant.withValues(alpha: 0.88),
     border: scheme.outline.withValues(alpha: 0.5),
     subtleBorder: scheme.outlineVariant.withValues(alpha: 0.3),
     accent: scheme.primary,

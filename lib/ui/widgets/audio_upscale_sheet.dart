@@ -1,20 +1,15 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
 import '../../data/models/song_model.dart';
+import '../../providers/app_providers.dart';
 import '../../services/audio/audio_upscale_service.dart';
 import '../../services/audio/local_audio_resolver.dart';
 
-/// Bottom sheet for on-device audio upscaling: DSP enhancement
-/// (harmonic reconstruction + band extension + soft limiting) in a
-/// background isolate, exported as a true lossless 24-bit WAV.
-/// Streamed tracks are downloaded first; this is stated in the UI.
-class AudioUpscaleSheet extends StatefulWidget {
+class AudioUpscaleSheet extends ConsumerStatefulWidget {
   final Song song;
-
   const AudioUpscaleSheet({super.key, required this.song});
 
   static void show(BuildContext context, Song song) {
@@ -27,10 +22,10 @@ class AudioUpscaleSheet extends StatefulWidget {
   }
 
   @override
-  State<AudioUpscaleSheet> createState() => _AudioUpscaleSheetState();
+  ConsumerState<AudioUpscaleSheet> createState() => _AudioUpscaleSheetState();
 }
 
-class _AudioUpscaleSheetState extends State<AudioUpscaleSheet> {
+class _AudioUpscaleSheetState extends ConsumerState<AudioUpscaleSheet> {
   final _service = AudioUpscaleService();
   double _strength = 0.6;
   bool _running = false;
@@ -271,8 +266,12 @@ class _AudioUpscaleSheetState extends State<AudioUpscaleSheet> {
                   onPressed: _running
                       ? null
                       : (hasResult
-                          ? () => _snack(
-                              'Saved in your music folder — open it with any player.')
+                          ? () {
+                              ref
+                                  .read(audioPlayerServiceProvider)
+                                  .playSong(widget.song);
+                              Navigator.of(context).pop();
+                            }
                           : (canStart
                               ? () => _run(_lastPath!)
                               : _downloadThenUpscale)),
@@ -280,7 +279,7 @@ class _AudioUpscaleSheetState extends State<AudioUpscaleSheet> {
                     _running
                         ? 'Upscaling…'
                         : hasResult
-                            ? 'Done'
+                            ? 'Play Upscaled Track'
                             : canStart
                                 ? 'Start upscaling'
                                 : 'Download & upscale',

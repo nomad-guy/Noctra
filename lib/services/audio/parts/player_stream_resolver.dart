@@ -21,6 +21,18 @@ mixin PlayerStreamResolverMixin on AudioPlayerServiceBase {
 
   @override
   Future<String> _resolveUrl(Song song) async {
+    if (!kIsWeb) {
+      try {
+        final upscalePath =
+            await AudioUpscaleService().getCachedUpscalePath(song.id);
+        if (upscalePath != null) {
+          final uf = File(upscalePath);
+          if (uf.existsSync() && uf.lengthSync() > 1024) {
+            return 'UpscaledLossless:$upscalePath';
+          }
+        }
+      } catch (_) {}
+    }
     if (song.localFilePath != null &&
         song.localFilePath!.isNotEmpty &&
         !kIsWeb) {

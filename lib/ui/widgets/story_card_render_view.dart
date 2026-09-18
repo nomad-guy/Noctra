@@ -105,7 +105,7 @@ class StoryCardRenderView extends StatelessWidget {
                   height: 150,
                   color: Colors.white12,
                   child: const Icon(Icons.music_note_rounded,
-                      size: 48, color: Colors.white54),
+                      size: 48, color: Colors.white70),
                 ),
               ),
             ),
@@ -163,7 +163,7 @@ class StoryCardRenderView extends StatelessWidget {
                   width: 3,
                   height: h,
                   decoration: BoxDecoration(
-                    color: Colors.white38,
+                    color: Colors.white60,
                     borderRadius: BorderRadius.circular(1.5),
                   ),
                 );

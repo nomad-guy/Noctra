@@ -8,6 +8,7 @@ import '../../../data/repositories/music_repository.dart';
 import '../../../providers/app_providers.dart';
 import '../../../services/ytdlp/music_service.dart';
 import '../../../services/resolvers/stream_resolver.dart';
+import '../../widgets/audio_upscale_sheet.dart';
 import '../../widgets/song_context_menu.dart';
 import '../../widgets/stream_quality_sheet.dart';
 import '../artist_screen.dart';
@@ -155,10 +156,15 @@ class _PlayerTrackInfoBarState extends ConsumerState<PlayerTrackInfoBar> {
     AudioStreamInfo? info,
     NoctraThemeTokens tokens,
   ) {
+    final lastRes = ref.watch(audioPlayerServiceProvider).lastResolution;
+    final isUpscaled = lastRes?.songId == widget.song.id &&
+        lastRes?.resolverUsed == 'UpscaledLossless';
     final isLocal = widget.song.localFilePath != null &&
         widget.song.localFilePath!.isNotEmpty;
-    final label = info?.shortLabel ?? (isLocal ? 'LOCAL' : '320K');
-    final isHiRes = info?.tier == AudioQualityTier.hiResLossless;
+    final label = isUpscaled
+        ? '24-BIT UPSCALED'
+        : (info?.shortLabel ?? (isLocal ? 'LOCAL' : '320K'));
+    final isHiRes = isUpscaled || info?.tier == AudioQualityTier.hiResLossless;
     final isLossless = info?.tier == AudioQualityTier.lossless;
     final isAtmos = info?.tier == AudioQualityTier.dolbyAtmos;
 
@@ -172,12 +178,16 @@ class _PlayerTrackInfoBarState extends ConsumerState<PlayerTrackInfoBar> {
 
     return InkWell(
       onTap: () {
-        showModalBottomSheet(
-          context: context,
-          backgroundColor: Colors.transparent,
-          isScrollControlled: true,
-          builder: (_) => const StreamQualitySheet(),
-        );
+        if (isUpscaled) {
+          AudioUpscaleSheet.show(context, widget.song);
+        } else {
+          showModalBottomSheet(
+            context: context,
+            backgroundColor: Colors.transparent,
+            isScrollControlled: true,
+            builder: (_) => const StreamQualitySheet(),
+          );
+        }
       },
       borderRadius: BorderRadius.circular(5),
       child: Container(

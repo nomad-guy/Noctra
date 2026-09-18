@@ -1,15 +1,25 @@
-# Noctra v1.1.1
+# Noctra v1.1.2
 
 **Release date:** 2026-09-18
-**Previous release:** v1.1.0
+**Previous release:** v1.1.1
 
 ## Highlights
 
-Two new headline features: an **on-device Audio Upscaler** that enhances any
-track to a true lossless 24-bit WAV, and **Material U** — a fourth theme that
-derives its palette from your OS dynamic colors. This release also makes
-Noctra dramatically better on slow networks (adaptive timeouts, retry with
-backoff, offline search) and adds RAM/battery guardrails.
+Noctra v1.1.2 refines audio fidelity, lyrics transliteration, and visual contrast across the entire app. Lossless upscaled tracks now automatically resolve for instant bit-perfect playback with dedicated `24-BIT UPSCALED` gold badges. The lyrics view now persists user-selected transliteration scripts across track transitions. Faded tertiary and secondary text colors have been boosted across all themes, and 8 critical engine stability fixes from the static architecture audit are incorporated.
+
+## Audio Upscaler & Lossless Auto-Play (v1.1.2)
+
+- **Automatic Lossless Auto-Play**: Once a track is upscaled, Noctra automatically resolves and plays the bit-perfect 24-bit PCM WAV locally without manual file selection.
+- **24-BIT UPSCALED Badge**: Live resolution telemetry displays a prominent gold badge in the player info bar; tapping opens the upscale details sheet.
+- **Immediate Playback Action**: The upscale sheet now includes a 1-tap "Play Upscaled Track" button upon completion.
+- **Stereo Isolation**: Enhanced DSP channel separation prevents stereo crosstalk during harmonic reconstruction.
+
+## Universal Lyrics & Visual Contrast (v1.1.2)
+
+- **Persistent Transliteration Script**: Switching between Romanized, Devanagari, or Hanzi scripts persists throughout the listening session across track changes.
+- **Visual Contrast Fix**: Significantly boosted secondary and tertiary text contrast across Noir Black, Noir White, Liquid Glass, and Material U themes.
+
+# Noctra v1.1.1
 
 ## Audio Upscaler (New)
 

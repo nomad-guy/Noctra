@@ -42,8 +42,8 @@ class NoirColors {
   static const Color blackBorder = Color(0x28FFFFFF);
   static const Color blackBorderSubtle = Color(0x12FFFFFF);
   static const Color blackTextPrimary = Color(0xFFFFFFFF);
-  static const Color blackTextSecondary = Color(0xFF929298);
-  static const Color blackTextTertiary = Color(0xFF58585E);
+  static const Color blackTextSecondary = Color(0xFFA8A8B2);
+  static const Color blackTextTertiary = Color(0xFF7C7C86);
   static const Color blackAccent = Color(0xFFFFFFFF);
 
   // Pure Monochromatic Noir White Palette
@@ -55,7 +55,7 @@ class NoirColors {
   static const Color whiteBorderSubtle = Color(0x0F000000);
   static const Color whiteTextPrimary = Color(0xFF060608);
   static const Color whiteTextSecondary = Color(0xFF5C5C64);
-  static const Color whiteTextTertiary = Color(0xFFA2A2AA);
+  static const Color whiteTextTertiary = Color(0xFF6E6E78);
   static const Color whiteAccent = Color(0xFF000000);
 
   // Liquid Glass — deep sapphire canvas, glass surfaces, aurora cyan actions,
@@ -66,7 +66,7 @@ class NoirColors {
   static const Color glassElevatedSurface = Color(0xDF4A7AAA);
   static const Color glassTextPrimary = Color(0xFFF0F6FF);
   static const Color glassTextSecondary = Color(0xFFB0C8E8);
-  static const Color glassTextTertiary = Color(0xFF6E8EB8);
+  static const Color glassTextTertiary = Color(0xFF8EB5DF);
   static const Color glassAccent = Color(0xFF7EC8FF);
   static const Color glassSecondaryAccent = Color(0xFFB8A8FF);
   static const Color glassTertiaryAccent = Color(0xFF68E8C0);

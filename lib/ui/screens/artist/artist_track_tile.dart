@@ -102,7 +102,7 @@ class ArtistTrackTile extends ConsumerWidget {
                       : Icon(
                           Icons.download_rounded,
                           size: 18,
-                          color: isDark ? Colors.white54 : Colors.black45,
+                          color: t.secondaryText,
                         ),
               onPressed: isDownloaded || isDownloading
                   ? null

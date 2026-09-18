@@ -202,7 +202,7 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
                                 icon: Icon(Icons.remove_circle_outline_rounded,
                                     size: 20,
                                     color: isDark
-                                        ? Colors.white54
+                                        ? Colors.white70
                                         : Colors.black54),
                                 onPressed: () {
                                   player.removeFromQueue(i);

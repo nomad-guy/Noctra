@@ -58,7 +58,7 @@ class _DynamicVibeStreamSectionState extends ConsumerState<DynamicVibeStreamSect
               )),
               Text('Live Catalog', style: TextStyle(
                 fontSize: 11, fontWeight: FontWeight.w600,
-                color: widget.isDark ? Colors.white54 : Colors.black45,
+                color: widget.isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary,
               )),
             ],
           ),
@@ -199,7 +199,7 @@ class _DynamicVibeStreamSectionState extends ConsumerState<DynamicVibeStreamSect
         padding: const EdgeInsets.all(24),
         child: Center(child: Text(
           'No tracks available -- tap to retry',
-          style: TextStyle(fontSize: 12, color: widget.isDark ? Colors.white54 : Colors.black45),
+          style: TextStyle(fontSize: 12, color: widget.isDark ? Colors.white70 : Colors.black54),
         )),
       ),
     );
@@ -212,9 +212,9 @@ class _DynamicVibeStreamSectionState extends ConsumerState<DynamicVibeStreamSect
         padding: const EdgeInsets.all(24),
         child: Center(child: Column(
           children: [
-            Icon(Icons.refresh_rounded, size: 28, color: widget.isDark ? Colors.white54 : Colors.black45),
+            Icon(Icons.refresh_rounded, size: 28, color: widget.isDark ? Colors.white70 : Colors.black54),
             const SizedBox(height: 6),
-            Text('Tap to retry', style: TextStyle(fontSize: 12, color: widget.isDark ? Colors.white54 : Colors.black45)),
+            Text('Tap to retry', style: TextStyle(fontSize: 12, color: widget.isDark ? Colors.white70 : Colors.black54)),
           ],
         )),
       ),

@@ -184,7 +184,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
             const SizedBox(height: 16),
             Text(
               context.tr(L10nKeys.selectActiveOutput),
-              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: isDark ? Colors.white54 : Colors.black45),
+              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary),
             ),
             const SizedBox(height: 8),
             ListView.builder(

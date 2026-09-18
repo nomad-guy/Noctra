@@ -206,7 +206,7 @@ class _TrendingCarouselSectionState extends ConsumerState<TrendingCarouselSectio
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Center(child: Text(
-        'No trending tracks available', style: TextStyle(color: widget.isDark ? Colors.white54 : Colors.black45),
+        'No trending tracks available', style: TextStyle(color: widget.isDark ? Colors.white70 : Colors.black54),
       )),
     );
   }
@@ -218,9 +218,9 @@ class _TrendingCarouselSectionState extends ConsumerState<TrendingCarouselSectio
         padding: const EdgeInsets.all(24),
         child: Center(child: Column(
           children: [
-            Icon(Icons.refresh_rounded, size: 28, color: widget.isDark ? Colors.white54 : Colors.black45),
+            Icon(Icons.refresh_rounded, size: 28, color: widget.isDark ? Colors.white70 : Colors.black54),
             const SizedBox(height: 6),
-            Text('Tap to retry', style: TextStyle(fontSize: 12, color: widget.isDark ? Colors.white54 : Colors.black45)),
+            Text('Tap to retry', style: TextStyle(fontSize: 12, color: widget.isDark ? Colors.white70 : Colors.black54)),
           ],
         )),
       ),

@@ -105,7 +105,7 @@ class JamQueueTab extends ConsumerWidget {
                                       : const Color(0xFFE5E5E5),
                                   child: Icon(Icons.music_note_rounded,
                                       color: isDark
-                                          ? Colors.white54
+                                          ? Colors.white70
                                           : Colors.black54),
                                 ),
                               ),
@@ -145,7 +145,7 @@ class JamQueueTab extends ConsumerWidget {
                                 icon: Icon(Icons.remove_circle_outline_rounded,
                                     size: 18,
                                     color: isDark
-                                        ? Colors.white54
+                                        ? Colors.white70
                                         : Colors.black54),
                                 onPressed: () {
                                   syncService

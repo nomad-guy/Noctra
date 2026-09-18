@@ -134,7 +134,7 @@ class JamHostControlsTab extends ConsumerWidget {
                     'Keep this secret private. Anyone who has it can join your room.',
                     style: TextStyle(
                         fontSize: 10.5,
-                        color: isDark ? Colors.white38 : Colors.black45),
+                        color: isDark ? NoirColors.blackTextTertiary : NoirColors.whiteTextTertiary),
                   ),
                 ],
               ),

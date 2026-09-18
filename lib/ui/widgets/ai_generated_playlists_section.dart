@@ -39,7 +39,7 @@ class AIGeneratedPlaylistsSection extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white54 : Colors.black45,
+                  color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary,
                 ),
               ),
             ],
