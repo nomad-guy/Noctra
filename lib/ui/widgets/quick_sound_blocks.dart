@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/app_providers.dart';
 import '../../shared/widgets/glass_card.dart';
+import '../../core/theme/noir_theme.dart';
 
 
 class QuickSoundBlocks extends ConsumerWidget {
@@ -11,6 +12,7 @@ class QuickSoundBlocks extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final repo = ref.watch(musicRepositoryProvider);
     final currentSong = ref.watch(currentSongStreamProvider).value;
     final isPlaying = ref.watch(isPlayingStreamProvider).value ?? false;
@@ -67,7 +69,7 @@ class QuickSoundBlocks extends ConsumerWidget {
                         errorBuilder: (context, error, stackTrace) => Container(
                           width: 54,
                           color: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFE5E5EA),
-                          child: Icon(Icons.music_note_rounded, size: 22, color: isDark ? Colors.white54 : Colors.black54),
+                          child: Icon(Icons.music_note_rounded, size: 22, color: t.secondaryText),
                         ),
                       ),
                     ),
@@ -86,7 +88,7 @@ class QuickSoundBlocks extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: isDark ? Colors.white : Colors.black,
+                                color: t.primaryText,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -96,7 +98,7 @@ class QuickSoundBlocks extends ConsumerWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 10,
-                                color: isDark ? Colors.white54 : Colors.black54,
+                                color: t.secondaryText,
                               ),
                             ),
                           ],
@@ -114,7 +116,7 @@ class QuickSoundBlocks extends ConsumerWidget {
                       child: Icon(
                         isCurrent && isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                         size: 16,
-                        color: isDark ? Colors.white : Colors.black,
+                        color: t.primaryText,
                       ),
                     ),
                   ],

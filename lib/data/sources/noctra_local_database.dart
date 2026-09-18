@@ -54,6 +54,9 @@ class NoctraLocalDatabase {
     final lower = raw.trim().toLowerCase();
     if (lower == 'noirwhite' || lower == 'light') return 'noirWhite';
     if (lower == 'liquidglass' || lower == 'liquid_glass') return 'liquidGlass';
+    if (lower == 'materialu' || lower == 'material_u' || lower == 'material_you') {
+      return 'materialU';
+    }
     return 'noirBlack';
   }
 

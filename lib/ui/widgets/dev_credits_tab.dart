@@ -22,6 +22,7 @@ class DevCreditsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Column(
@@ -49,7 +50,7 @@ class DevCreditsTab extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
-                              color: isDark ? Colors.white : Colors.black,
+                              color: t.primaryText,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -80,7 +81,7 @@ class DevCreditsTab extends StatelessWidget {
                     fontSize: 10.5,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.2,
-                    color: isDark ? Colors.white60 : Colors.black54,
+                    color: t.secondaryText,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -96,18 +97,22 @@ class DevCreditsTab extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 _devSpecClickableRow(
+                    context,
                     'Repository',
                     'github.com/nomad-guy/Noctra',
                     () => _openUrl('https://github.com/nomad-guy/Noctra'),
                     isDark),
-                _devSpecRow('License', 'GNU GPL v3.0 (FOSS)', isDark),
+                _devSpecRow(context, 'License', 'GNU GPL v3.0 (FOSS)', isDark),
                 _devSpecRow(
+                    context,
                     'Audio Engine', 'Adaptive high-fidelity playback', isDark),
                 _devSpecRow(
+                    context,
                     'Recommender', 'On-Device MLP + MMR (Pure Dart)', isDark),
                 _devSpecRow(
+                    context,
                     'Telemetry', 'Local SQLite WAL (Zero Cloud)', isDark),
-                _devSpecRow('Version',
+                _devSpecRow(context, 'Version',
                     '${AppUpdateService.currentVersion} (Build 7)', isDark),
               ],
             ),
@@ -128,7 +133,7 @@ class DevCreditsTab extends StatelessWidget {
                     fontSize: 10.5,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.2,
-                    color: isDark ? Colors.white60 : Colors.black54,
+                    color: t.secondaryText,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -151,7 +156,8 @@ class DevCreditsTab extends StatelessWidget {
     );
   }
 
-  Widget _devSpecRow(String label, String value, bool isDark) {
+  Widget _devSpecRow(BuildContext context, String label, String value, bool isDark) {
+    final t = context.noctraTokens;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
@@ -164,7 +170,7 @@ class DevCreditsTab extends StatelessWidget {
               style: TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white54 : Colors.black54),
+                  color: t.secondaryText),
             ),
           ),
           Expanded(
@@ -173,7 +179,7 @@ class DevCreditsTab extends StatelessWidget {
               style: TextStyle(
                   fontSize: 11.5,
                   fontFamily: 'monospace',
-                  color: isDark ? Colors.white : Colors.black),
+                  color: t.primaryText),
             ),
           ),
         ],
@@ -182,7 +188,8 @@ class DevCreditsTab extends StatelessWidget {
   }
 
   Widget _devSpecClickableRow(
-      String label, String value, VoidCallback onTap, bool isDark) {
+      BuildContext context, String label, String value, VoidCallback onTap, bool isDark) {
+    final t = context.noctraTokens;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
@@ -195,7 +202,7 @@ class DevCreditsTab extends StatelessWidget {
               style: TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white54 : Colors.black54),
+                  color: t.secondaryText),
             ),
           ),
           Expanded(
@@ -207,7 +214,7 @@ class DevCreditsTab extends StatelessWidget {
                   fontSize: 11.5,
                   fontFamily: 'monospace',
                   decoration: TextDecoration.underline,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: t.primaryText,
                 ),
               ),
             ),

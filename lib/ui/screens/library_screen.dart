@@ -34,6 +34,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     ref.watch(appLanguageProvider);
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
@@ -57,7 +58,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                 children: [
                   if (MediaQuery.sizeOf(context).width < 720)
                     IconButton(
-                      icon: Icon(Icons.menu_rounded, color: isDark ? Colors.white : Colors.black, size: 24),
+                      icon: Icon(Icons.menu_rounded, color: t.primaryText, size: 24),
                       tooltip: context.tr(L10nKeys.openSidebar),
                       onPressed: () => ref.read(rootScaffoldKeyProvider).currentState?.openDrawer(),
                     ),
@@ -79,14 +80,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                       isOffline ? Icons.cloud_off_rounded : Icons.cloud_queue_rounded,
                       color: isOffline
                           ? (isDark ? const Color(0xFF00E5FF) : const Color(0xFF007A87))
-                          : (isDark ? Colors.white60 : Colors.black54),
+                          : (t.secondaryText),
                       size: 22,
                     ),
                     onPressed: () => toggleOfflineMode(ref),
                   ),
                   IconButton(
                     tooltip: context.tr(L10nKeys.importMigrateLibrary),
-                    icon: Icon(Icons.file_download_outlined, color: isDark ? Colors.white60 : Colors.black54, size: 22),
+                    icon: Icon(Icons.file_download_outlined, color: t.secondaryText, size: 22),
                     onPressed: () {
                       showModalBottomSheet(
                         context: context,
@@ -102,8 +103,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                     icon: Icon(
                       Icons.podcasts_rounded,
                       color: syncService.isHost || syncService.isClient
-                          ? (isDark ? Colors.white : Colors.black)
-                          : (isDark ? Colors.white60 : Colors.black54),
+                          ? (t.primaryText)
+                          : (t.secondaryText),
                       size: 22,
                     ),
                     onPressed: () {
@@ -133,11 +134,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                   controller: _tabController,
                   indicatorSize: TabBarIndicatorSize.tab,
                   indicator: BoxDecoration(
-                    color: isDark ? Colors.white : Colors.black,
+                    color: t.primaryText,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  labelColor: isDark ? Colors.black : Colors.white,
-                  unselectedLabelColor: isDark ? Colors.white60 : Colors.black54,
+                  labelColor: t.primaryText,
+                  unselectedLabelColor: t.secondaryText,
                   labelStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
                   tabs: [
                     Tab(text: context.tr(L10nKeys.aiMixes)),

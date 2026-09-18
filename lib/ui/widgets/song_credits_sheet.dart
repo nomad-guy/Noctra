@@ -21,6 +21,7 @@ class SongCreditsSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
     final audioPlayer = ref.watch(audioPlayerServiceProvider);
@@ -52,7 +53,7 @@ class SongCreditsSheet extends ConsumerWidget {
                     width: 38,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.white24 : Colors.black26,
+                      color: t.tertiaryText,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -70,7 +71,7 @@ class SongCreditsSheet extends ConsumerWidget {
                             color: isDark ? Colors.white12 : Colors.black12,
                           ),
                           child: Icon(Icons.info_outline_rounded,
-                              size: 20, color: isDark ? Colors.white : Colors.black),
+                              size: 20, color: t.primaryText),
                         ),
                         const SizedBox(width: 10),
                         Column(
@@ -81,7 +82,7 @@ class SongCreditsSheet extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
-                                color: isDark ? Colors.white : Colors.black,
+                                color: t.primaryText,
                               ),
                             ),
                             Text(
@@ -90,7 +91,7 @@ class SongCreditsSheet extends ConsumerWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: isDark ? Colors.white54 : Colors.black54,
+                                color: t.secondaryText,
                               ),
                             ),
                           ],
@@ -99,7 +100,7 @@ class SongCreditsSheet extends ConsumerWidget {
                     ),
                     IconButton(
                       icon: Icon(Icons.close_rounded,
-                          color: isDark ? Colors.white70 : Colors.black54),
+                          color: t.secondaryText),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
@@ -119,6 +120,7 @@ class SongCreditsSheet extends ConsumerWidget {
                               _CreditEntry('Contributing Artists', primaryArtists.skip(1).join(', ')),
                           ],
                           isDark: isDark,
+                          t: t,
                         ),
                         const SizedBox(height: 10),
                         _creditCard(
@@ -128,6 +130,7 @@ class SongCreditsSheet extends ConsumerWidget {
                             _CreditEntry('Lyrics & Composition', '${song.artist} & Collaborators'),
                           ],
                           isDark: isDark,
+                          t: t,
                         ),
                         const SizedBox(height: 10),
                         _creditCard(
@@ -138,6 +141,7 @@ class SongCreditsSheet extends ConsumerWidget {
                             _CreditEntry('Track Duration', '${song.duration.inMinutes}:${(song.duration.inSeconds % 60).toString().padLeft(2, '0')}'),
                           ],
                           isDark: isDark,
+                          t: t,
                         ),
                         const SizedBox(height: 10),
                         _creditCard(
@@ -148,6 +152,7 @@ class SongCreditsSheet extends ConsumerWidget {
                             const _CreditEntry('Hardware Output', '2.0 Stereo (44.1 kHz PCM)'),
                           ],
                           isDark: isDark,
+                          t: t,
                         ),
                         const SizedBox(height: 12),
                       ],
@@ -166,6 +171,7 @@ class SongCreditsSheet extends ConsumerWidget {
     required String title,
     required List<_CreditEntry> entries,
     required bool isDark,
+    required NoctraThemeTokens t,
   }) {
     return GlassCard(
       radius: 14,
@@ -179,7 +185,7 @@ class SongCreditsSheet extends ConsumerWidget {
               fontSize: 10.5,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.2,
-              color: isDark ? Colors.white38 : Colors.black38,
+              color: t.tertiaryText,
             ),
           ),
           const SizedBox(height: 8),
@@ -194,7 +200,7 @@ class SongCreditsSheet extends ConsumerWidget {
                         e.role,
                         style: TextStyle(
                           fontSize: 12,
-                          color: isDark ? Colors.white60 : Colors.black54,
+                          color: t.secondaryText,
                         ),
                       ),
                     ),
@@ -204,7 +210,7 @@ class SongCreditsSheet extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white : Colors.black,
+                          color: t.primaryText,
                         ),
                       ),
                     ),

@@ -41,6 +41,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final devicesStream = ref.watch(connectedAudioDevicesProvider);
     final initialDevices = ref.watch(initialAudioDevicesProvider);
     final effectiveDevices = devicesStream.asData?.value ?? initialDevices.asData?.value ?? _kFallbackEndpoint;
@@ -67,7 +68,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white24 : Colors.black26,
+                  color: t.tertiaryText,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -85,7 +86,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1.5,
-                        color: isDark ? Colors.white60 : Colors.black54,
+                        color: t.secondaryText,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -94,7 +95,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white : Colors.black,
+                        color: t.primaryText,
                       ),
                     ),
                   ],
@@ -110,7 +111,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white70 : Colors.black87,
+                      color: t.secondaryText,
                     ),
                   ),
                 ),
@@ -122,7 +123,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
               padding: const EdgeInsets.all(14),
               child: Row(
                 children: [
-                  Icon(Icons.hub_rounded, size: 20, color: isDark ? Colors.white : Colors.black),
+                  Icon(Icons.hub_rounded, size: 20, color: t.primaryText),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -130,7 +131,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                       children: [
                         Text(
                           context.tr(L10nKeys.multiCastDual),
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black),
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: t.primaryText),
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -142,7 +143,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                   ),
                   Switch.adaptive(
                     value: _isMultiCastEnabled,
-                    activeTrackColor: isDark ? Colors.white : Colors.black,
+                    activeTrackColor: t.primaryText,
                     onChanged: (val) {
                       HapticFeedback.mediumImpact();
                       setState(() {
@@ -165,13 +166,13 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  side: BorderSide(color: isDark ? Colors.white24 : Colors.black26),
+                  side: BorderSide(color: t.tertiaryText),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                icon: Icon(Icons.tune_rounded, size: 16, color: isDark ? Colors.white70 : Colors.black87),
+                icon: Icon(Icons.tune_rounded, size: 16, color: t.secondaryText),
                 label: Text(
                   context.tr(L10nKeys.openSystemPanel),
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t.primaryText),
                 ),
                 onPressed: () {
                   HapticFeedback.lightImpact();
@@ -220,7 +221,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                       },
                       child: Row(
                         children: [
-                          Icon(_getDeviceIcon(dev.type), size: 22, color: isDark ? Colors.white : Colors.black),
+                          Icon(_getDeviceIcon(dev.type), size: 22, color: t.primaryText),
                           const SizedBox(width: 14),
                           Expanded(
                             child: Column(
@@ -228,7 +229,7 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                               children: [
                                 Text(
                                   dev.name,
-                                  style: TextStyle(fontSize: 13, fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500, color: isDark ? Colors.white : Colors.black),
+                                  style: TextStyle(fontSize: 13, fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500, color: t.primaryText),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
@@ -241,17 +242,17 @@ class _AudioOutputCastSheetState extends ConsumerState<AudioOutputCastSheet> {
                           if (isSelected)
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(color: isDark ? Colors.white : Colors.black, borderRadius: BorderRadius.circular(10)),
+                              decoration: BoxDecoration(color: t.primaryText, borderRadius: BorderRadius.circular(10)),
                               child: Text(
                                 context.tr(L10nKeys.active),
-                                style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, color: isDark ? Colors.black : Colors.white),
+                                style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, color: t.primaryText),
                               ),
                             )
                           else
                             Icon(
                               _isMultiCastEnabled ? Icons.check_box_outline_blank : Icons.radio_button_off,
                               size: 18,
-                              color: isDark ? Colors.white38 : Colors.black38,
+                              color: t.tertiaryText,
                             ),
                         ],
                       ),

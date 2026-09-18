@@ -3,6 +3,8 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  audio_decoder
+  dynamic_color
   sqlite3_flutter_libs
   url_launcher_linux
 )

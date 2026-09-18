@@ -5,6 +5,7 @@ import '../../core/utils/localization/localization_keys.dart';
 import '../../core/utils/localization/localization_scope.dart';
 import '../../services/p2p/p2p_sync_service.dart';
 import '../../shared/widgets/glass_card.dart';
+import '../../core/theme/noir_theme.dart';
 
 
 class JamHostControlsTab extends ConsumerWidget {
@@ -19,6 +20,7 @@ class JamHostControlsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final isHost = syncService.isHost;
 
     return SingleChildScrollView(
@@ -40,7 +42,7 @@ class JamHostControlsTab extends ConsumerWidget {
                       fontSize: 10.5,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.2,
-                      color: isDark ? Colors.white60 : Colors.black54),
+                      color: t.secondaryText),
                 ),
                 const SizedBox(height: 6),
                 Row(
@@ -52,11 +54,11 @@ class JamHostControlsTab extends ConsumerWidget {
                           fontSize: 24,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 3,
-                          color: isDark ? Colors.white : Colors.black),
+                          color: t.primaryText),
                     ),
                     IconButton(
                       icon: Icon(Icons.copy_rounded,
-                          color: isDark ? Colors.white : Colors.black),
+                          color: t.primaryText),
                       onPressed: () {
                         Clipboard.setData(
                             ClipboardData(text: syncService.roomCode));
@@ -76,7 +78,7 @@ class JamHostControlsTab extends ConsumerWidget {
                   style: TextStyle(
                       fontSize: 12,
                       fontFamily: 'monospace',
-                      color: isDark ? Colors.white70 : Colors.black87),
+                      color: t.secondaryText),
                 ),
               ],
             ),
@@ -98,7 +100,7 @@ class JamHostControlsTab extends ConsumerWidget {
                         fontSize: 10.5,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1.0,
-                        color: isDark ? Colors.white60 : Colors.black54),
+                        color: t.secondaryText),
                   ),
                   const SizedBox(height: 6),
                   Row(
@@ -110,12 +112,12 @@ class JamHostControlsTab extends ConsumerWidget {
                               fontSize: 12.5,
                               fontFamily: 'monospace',
                               height: 1.5,
-                              color: isDark ? Colors.white : Colors.black),
+                              color: t.primaryText),
                         ),
                       ),
                       IconButton(
                         icon: Icon(Icons.copy_rounded,
-                            color: isDark ? Colors.white : Colors.black),
+                            color: t.primaryText),
                         onPressed: () {
                           Clipboard.setData(
                               ClipboardData(text: syncService.roomSecret));
@@ -153,16 +155,16 @@ class JamHostControlsTab extends ConsumerWidget {
                   style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : Colors.black),
+                      color: t.primaryText),
                 ),
                 subtitle: Text(
                   context.tr(L10nKeys.hostControlsDesc),
                   style: TextStyle(
                       fontSize: 11,
-                      color: isDark ? Colors.white54 : Colors.black54),
+                      color: t.secondaryText),
                 ),
                 value: syncService.hostControlsOnly,
-                activeThumbColor: isDark ? Colors.white : Colors.black,
+                activeThumbColor: t.primaryText,
                 onChanged: (_) {
                   syncService.toggleHostControlsOnly();
                 },
@@ -177,7 +179,7 @@ class JamHostControlsTab extends ConsumerWidget {
             child: OutlinedButton(
               style: OutlinedButton.styleFrom(
                 side:
-                    BorderSide(color: isDark ? Colors.white24 : Colors.black26),
+                    BorderSide(color: t.tertiaryText),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
@@ -189,7 +191,7 @@ class JamHostControlsTab extends ConsumerWidget {
               child: Text(
                 isHost ? context.tr(L10nKeys.endJamSession) : context.tr(L10nKeys.leaveJamRoom),
                 style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black,
+                  color: t.primaryText,
                   fontWeight: FontWeight.w700,
                   fontSize: 13.5,
                 ),

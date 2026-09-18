@@ -10,6 +10,7 @@ class VibeChipSelector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final selectedVibe = ref.watch(selectedVibeKeyProvider);
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
@@ -39,8 +40,8 @@ class VibeChipSelector extends ConsumerWidget {
                   vibe.iconData,
                   size: 16,
                   color: isSelected
-                      ? (isDark ? Colors.black : Colors.white)
-                      : (isDark ? Colors.white70 : Colors.black87),
+                      ? (t.primaryText)
+                      : (t.secondaryText),
                 ),
                 label: Text(vibe.label),
                 selected: isSelected,
@@ -49,10 +50,10 @@ class VibeChipSelector extends ConsumerWidget {
                   ref.read(selectedVibeKeyProvider.notifier).state = vibe.keyName;
                 },
                 backgroundColor: isDark ? const Color(0xFF141414) : const Color(0xFFE5E5E5),
-                selectedColor: isDark ? Colors.white : Colors.black,
+                selectedColor: t.primaryText,
                 labelStyle: TextStyle(
                   color: isSelected
-                      ? (isDark ? Colors.black : Colors.white)
+                      ? (t.primaryText)
                       : (isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary),
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   fontSize: 13,
@@ -61,8 +62,8 @@ class VibeChipSelector extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(24),
                   side: BorderSide(
                     color: isSelected
-                        ? (isDark ? Colors.white : Colors.black)
-                        : (isDark ? Colors.white24 : Colors.black26),
+                        ? (t.primaryText)
+                        : (t.tertiaryText),
                   ),
                 ),
                 showCheckmark: false,

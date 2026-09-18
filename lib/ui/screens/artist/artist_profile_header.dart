@@ -6,6 +6,7 @@ import '../../../services/metadata/artist_metadata_service.dart';
 import '../../../services/metadata/artist_wikipedia_service.dart';
 import '../../widgets/ai_radio_sheet.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class ArtistProfileHeader extends ConsumerStatefulWidget {
   final String artistName;
@@ -38,6 +39,7 @@ class _ArtistProfileHeaderState extends ConsumerState<ArtistProfileHeader> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final audioPlayer = ref.watch(audioPlayerServiceProvider);
     final isDark = widget.isDark;
     final tracks = widget.tracks;
@@ -79,7 +81,7 @@ class _ArtistProfileHeaderState extends ConsumerState<ArtistProfileHeader> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w800,
-                color: isDark ? Colors.white : Colors.black,
+                color: t.primaryText,
               ),
             ),
             const SizedBox(height: 4),
@@ -89,7 +91,7 @@ class _ArtistProfileHeaderState extends ConsumerState<ArtistProfileHeader> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
-                color: isDark ? Colors.white54 : Colors.black54,
+                color: t.secondaryText,
               ),
             ),
             if (widget.artistMetadata?.bio != null &&
@@ -113,7 +115,7 @@ class _ArtistProfileHeaderState extends ConsumerState<ArtistProfileHeader> {
                         style: TextStyle(
                           fontSize: 11.5,
                           height: 1.45,
-                          color: isDark ? Colors.white70 : Colors.black87,
+                          color: t.secondaryText,
                         ),
                       ),
                       if (widget.artistMetadata!.bio!.length > 160) ...[
@@ -123,7 +125,7 @@ class _ArtistProfileHeaderState extends ConsumerState<ArtistProfileHeader> {
                           style: TextStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white54 : Colors.black54,
+                            color: t.secondaryText,
                           ),
                         ),
                       ],
@@ -138,8 +140,8 @@ class _ArtistProfileHeaderState extends ConsumerState<ArtistProfileHeader> {
               children: [
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isDark ? Colors.white : Colors.black,
-                    foregroundColor: isDark ? Colors.black : Colors.white,
+                    backgroundColor: t.primaryText,
+                    foregroundColor: t.primaryText,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -157,9 +159,9 @@ class _ArtistProfileHeaderState extends ConsumerState<ArtistProfileHeader> {
                 const SizedBox(width: 10),
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: isDark ? Colors.white : Colors.black,
+                    foregroundColor: t.primaryText,
                     side: BorderSide(
-                      color: isDark ? Colors.white24 : Colors.black26,
+                      color: t.tertiaryText,
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),

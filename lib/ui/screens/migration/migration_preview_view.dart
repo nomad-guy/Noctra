@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../data/models/migration_models.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class MigrationPreviewView extends StatelessWidget {
   final MigrationReport report;
@@ -20,6 +21,7 @@ class MigrationPreviewView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final r = report;
     final uncertainMatches = matchedTracks.where((m) => m.isUncertain).toList();
 
@@ -37,24 +39,24 @@ class MigrationPreviewView extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: t.primaryText,
                 ),
               ),
               const SizedBox(height: 12),
-              _statRow('Total tracks', '${r.totalTracks}', isDark),
-              _statRow('Exact matches', '${r.exactMatches}', isDark,
+              _statRow(t, 'Total tracks', '${r.totalTracks}'),
+              _statRow(t, 'Exact matches', '${r.exactMatches}',
                   color: Colors.greenAccent),
-              _statRow('High matches', '${r.highMatches}', isDark,
+              _statRow(t, 'High matches', '${r.highMatches}',
                   color: Colors.cyanAccent),
-              _statRow('Possible matches', '${r.mediumMatches}', isDark,
+              _statRow(t, 'Possible matches', '${r.mediumMatches}',
                   color: Colors.amber),
-              _statRow('Weak matches', '${r.lowMatches}', isDark,
+              _statRow(t, 'Weak matches', '${r.lowMatches}',
                   color: Colors.orangeAccent),
-              _statRow('Not found', '${r.unmatched}', isDark,
+              _statRow(t, 'Not found', '${r.unmatched}',
                   color: Colors.redAccent),
               const Divider(height: 20),
-              _statRow('Playlists imported', '${r.playlistsImported}', isDark),
-              _statRow('Fully matched', '${r.playlistsFullyMatched}', isDark,
+              _statRow(t, 'Playlists imported', '${r.playlistsImported}'),
+              _statRow(t, 'Fully matched', '${r.playlistsFullyMatched}',
                   color: Colors.greenAccent),
               const SizedBox(height: 8),
               Text(
@@ -62,7 +64,7 @@ class MigrationPreviewView extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white70 : Colors.black87,
+                  color: t.secondaryText,
                 ),
               ),
             ],
@@ -75,7 +77,7 @@ class MigrationPreviewView extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: isDark ? Colors.white70 : Colors.black87,
+              color: t.secondaryText,
             ),
           ),
           const SizedBox(height: 8),
@@ -96,7 +98,7 @@ class MigrationPreviewView extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.white : Colors.black,
+                                color: t.primaryText,
                               ),
                             ),
                             Text(
@@ -105,7 +107,7 @@ class MigrationPreviewView extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 11,
-                                color: isDark ? Colors.white54 : Colors.black54,
+                                color: t.secondaryText,
                               ),
                             ),
                           ],
@@ -130,7 +132,7 @@ class MigrationPreviewView extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 11,
                                   color:
-                                      isDark ? Colors.white38 : Colors.black38,
+                                      t.tertiaryText,
                                 ),
                               ),
                             ],
@@ -146,16 +148,16 @@ class MigrationPreviewView extends StatelessWidget {
           children: [
             Expanded(
               child: _actionButton(
+                t,
                 'Cancel',
-                isDark,
                 onTap: onCancel,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _actionButton(
+                t,
                 'Import Library',
-                isDark,
                 primary: true,
                 onTap: onCommit,
               ),
@@ -167,7 +169,7 @@ class MigrationPreviewView extends StatelessWidget {
     );
   }
 
-  static Widget _statRow(String label, String value, bool isDark,
+  static Widget _statRow(NoctraThemeTokens t, String label, String value,
       {Color? color}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
@@ -178,7 +180,7 @@ class MigrationPreviewView extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 13,
-              color: isDark ? Colors.white70 : Colors.black87,
+              color: t.secondaryText,
             ),
           ),
           Text(
@@ -186,7 +188,7 @@ class MigrationPreviewView extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: color ?? (isDark ? Colors.white : Colors.black),
+              color: color ?? (t.primaryText),
             ),
           ),
         ],
@@ -194,7 +196,7 @@ class MigrationPreviewView extends StatelessWidget {
     );
   }
 
-  static Widget _actionButton(String label, bool isDark,
+  static Widget _actionButton(NoctraThemeTokens t, String label,
       {bool primary = false, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
@@ -202,13 +204,13 @@ class MigrationPreviewView extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: primary
-              ? (isDark ? Colors.white : Colors.black)
+              ? (t.primaryText)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: primary
                 ? Colors.transparent
-                : (isDark ? Colors.white24 : Colors.black12),
+                : t.subtleBorder,
           ),
         ),
         child: Center(
@@ -218,8 +220,8 @@ class MigrationPreviewView extends StatelessWidget {
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: primary
-                  ? (isDark ? Colors.black : Colors.white)
-                  : (isDark ? Colors.white70 : Colors.black87),
+                  ? (t.primaryText)
+                  : (t.secondaryText),
             ),
           ),
         ),

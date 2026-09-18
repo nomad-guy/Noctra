@@ -17,6 +17,7 @@ class AIArchetypeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     return GlassCard(
       radius: 20,
       isHighlighted: true,
@@ -31,12 +32,12 @@ class AIArchetypeCard extends StatelessWidget {
                 height: 38,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: t.primaryText,
                 ),
                 child: Icon(
                   Icons.psychology_rounded,
                   size: 22,
-                  color: isDark ? Colors.black : Colors.white,
+                  color: t.primaryText,
                 ),
               ),
               const SizedBox(width: 12),
@@ -50,7 +51,7 @@ class AIArchetypeCard extends StatelessWidget {
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1.2,
-                        color: isDark ? Colors.white60 : Colors.black54,
+                        color: t.secondaryText,
                       ),
                     ),
                     Text(
@@ -58,7 +59,7 @@ class AIArchetypeCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
-                        color: isDark ? Colors.white : Colors.black,
+                        color: t.primaryText,
                       ),
                     ),
                   ],
@@ -88,7 +89,7 @@ class AIArchetypeCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: t.primaryText,
                   ),
                 ),
               );

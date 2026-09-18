@@ -3,6 +3,7 @@ import '../../../core/utils/localization/localization_keys.dart';
 import '../../../core/utils/localization/localization_scope.dart';
 import '../../../data/models/catalog_topic.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class SearchCatalogGrid extends StatelessWidget {
   final bool isDark;
@@ -20,6 +21,7 @@ class SearchCatalogGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final liveTopics = catalogTopics ?? const <CatalogTopic>[];
     final globalGenres = liveTopics.asMap().entries.map((entry) {
       final topic = entry.value;
@@ -58,7 +60,7 @@ class SearchCatalogGrid extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white70 : Colors.black87,
+                    color: t.secondaryText,
                   ),
                 ),
               ),
@@ -75,7 +77,7 @@ class SearchCatalogGrid extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white60 : Colors.black54,
+                    color: t.secondaryText,
                   ),
                 ),
               ),
@@ -113,7 +115,7 @@ class SearchCatalogGrid extends StatelessWidget {
                       children: [
                         Icon(g['icon'] as IconData,
                             size: 20,
-                            color: isDark ? Colors.white : Colors.black),
+                            color: t.primaryText),
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 5, vertical: 1.5),
@@ -126,7 +128,7 @@ class SearchCatalogGrid extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 8.5,
                               fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.white54 : Colors.black54,
+                              color: t.secondaryText,
                             ),
                           ),
                         ),
@@ -139,7 +141,7 @@ class SearchCatalogGrid extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white : Colors.black,
+                        color: t.primaryText,
                       ),
                     ),
                   ],

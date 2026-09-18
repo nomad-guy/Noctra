@@ -11,6 +11,7 @@ class SleepTimerSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
     final audioPlayer = ref.watch(audioPlayerServiceProvider);
@@ -56,7 +57,7 @@ class SleepTimerSheet extends ConsumerWidget {
                         shape: BoxShape.circle,
                         color: isDark ? Colors.white12 : Colors.black12,
                       ),
-                      child: Icon(Icons.bedtime_rounded, size: 20, color: isDark ? Colors.white : Colors.black),
+                      child: Icon(Icons.bedtime_rounded, size: 20, color: t.primaryText),
                     ),
                     const SizedBox(width: 10),
                     Column(
@@ -67,7 +68,7 @@ class SleepTimerSheet extends ConsumerWidget {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
-                            color: isDark ? Colors.white : Colors.black,
+                            color: t.primaryText,
                           ),
                         ),
                         Text(
@@ -81,7 +82,7 @@ class SleepTimerSheet extends ConsumerWidget {
                             fontFamily: remaining != null ? 'monospace' : null,
                             color: (isEndOfTrack || remaining != null)
                                 ? Colors.cyanAccent
-                                : (isDark ? Colors.white54 : Colors.black54),
+                                : (t.secondaryText),
                           ),
                         ),
                       ],
@@ -89,7 +90,7 @@ class SleepTimerSheet extends ConsumerWidget {
                   ],
                 ),
                 IconButton(
-                  icon: Icon(Icons.close_rounded, color: isDark ? Colors.white70 : Colors.black54),
+                  icon: Icon(Icons.close_rounded, color: t.secondaryText),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -120,7 +121,7 @@ class SleepTimerSheet extends ConsumerWidget {
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: isSel
-                                ? (isDark ? Colors.white : Colors.black)
+                                ? (t.primaryText)
                                 : (isDark ? Colors.white10 : Colors.black12),
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -130,8 +131,8 @@ class SleepTimerSheet extends ConsumerWidget {
                               fontSize: 11.5,
                               fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
                               color: isSel
-                                  ? (isDark ? Colors.black : Colors.white)
-                                  : (isDark ? Colors.white70 : Colors.black87),
+                                  ? (t.primaryText)
+                                  : (t.secondaryText),
                             ),
                           ),
                         ),
@@ -154,7 +155,7 @@ class SleepTimerSheet extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 16),
                 decoration: BoxDecoration(
                   color: isEndOfTrack
-                      ? (isDark ? Colors.white : Colors.black)
+                      ? (t.primaryText)
                       : (isDark ? Colors.white10 : Colors.black12),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
@@ -170,8 +171,8 @@ class SleepTimerSheet extends ConsumerWidget {
                       Icons.skip_next_rounded,
                       size: 18,
                       color: isEndOfTrack
-                          ? (isDark ? Colors.black : Colors.white)
-                          : (isDark ? Colors.white70 : Colors.black87),
+                          ? (t.primaryText)
+                          : (t.secondaryText),
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -180,8 +181,8 @@ class SleepTimerSheet extends ConsumerWidget {
                         fontSize: 13,
                         fontWeight: isEndOfTrack ? FontWeight.w700 : FontWeight.w600,
                         color: isEndOfTrack
-                            ? (isDark ? Colors.black : Colors.white)
-                            : (isDark ? Colors.white70 : Colors.black87),
+                            ? (t.primaryText)
+                            : (t.secondaryText),
                       ),
                     ),
                   ],

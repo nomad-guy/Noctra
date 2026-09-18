@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../core/theme/noir_theme.dart';
 
 /// A minimal sparkline chart for visualizing neural network training loss.
 class NeuralMiniChart extends StatelessWidget {
@@ -10,11 +11,12 @@ class NeuralMiniChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     if (lossHistory.isEmpty) {
       return Center(
         child: Text(
           'Collecting training data...',
-          style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.black38),
+          style: TextStyle(fontSize: 10, color: t.tertiaryText),
         ),
       );
     }

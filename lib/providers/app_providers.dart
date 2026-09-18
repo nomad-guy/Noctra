@@ -67,6 +67,9 @@ final themeModeProvider = StateProvider<NoirThemeMode>((ref) {
   if (saved == 'liquidGlass' || saved == 'liquid_glass') {
     return NoirThemeMode.liquidGlass;
   }
+  if (saved == 'materialU') {
+    return NoirThemeMode.materialU;
+  }
   // Migrate removed noirAmoled to noirBlack
   return NoirThemeMode.noirBlack;
 });

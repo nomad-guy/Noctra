@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/song_model.dart';
 import '../../../providers/app_providers.dart';
+import '../../../core/theme/noir_theme.dart';
 
 /// One song row in an AI folder/mix detail list: artwork, title, artist, and
 /// an add-to-queue action. Tapping the row plays from that index.
@@ -19,7 +20,8 @@ class AiCollectionSongRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final textSecondary = isDark ? Colors.white54 : Colors.black54;
+    final t = context.noctraTokens;
+    final textSecondary = t.secondaryText;
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: ClipRRect(
@@ -46,7 +48,7 @@ class AiCollectionSongRow extends ConsumerWidget {
           style: TextStyle(
               fontSize: 13.5,
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : Colors.black)),
+              color: t.primaryText)),
       subtitle: Text(song.artist,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,

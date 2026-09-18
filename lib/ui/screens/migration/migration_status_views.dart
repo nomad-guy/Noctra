@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class MigrationLoadingView extends StatelessWidget {
   final bool isDark;
@@ -12,20 +13,21 @@ class MigrationLoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           CircularProgressIndicator(
             strokeWidth: 2,
-            color: isDark ? Colors.white : Colors.black,
+            color: t.primaryText,
           ),
           const SizedBox(height: 16),
           Text(
             status,
             style: TextStyle(
               fontSize: 13,
-              color: isDark ? Colors.white54 : Colors.black54,
+              color: t.secondaryText,
             ),
           ),
         ],
@@ -48,6 +50,7 @@ class MigrationCompleteView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -63,7 +66,7 @@ class MigrationCompleteView extends StatelessWidget {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: isDark ? Colors.white : Colors.black,
+              color: t.primaryText,
             ),
           ),
           const SizedBox(height: 8),
@@ -71,7 +74,7 @@ class MigrationCompleteView extends StatelessWidget {
             '$matchedCount tracks added to your library',
             style: TextStyle(
               fontSize: 13,
-              color: isDark ? Colors.white54 : Colors.black54,
+              color: t.secondaryText,
             ),
           ),
           const SizedBox(height: 24),
@@ -80,7 +83,7 @@ class MigrationCompleteView extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
               decoration: BoxDecoration(
-                color: isDark ? Colors.white : Colors.black,
+                color: t.primaryText,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -88,7 +91,7 @@ class MigrationCompleteView extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.black : Colors.white,
+                  color: t.primaryText,
                 ),
               ),
             ),

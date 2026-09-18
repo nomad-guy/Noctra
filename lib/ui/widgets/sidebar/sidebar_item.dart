@@ -19,6 +19,7 @@ class SidebarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2.5),
       child: InkWell(
@@ -28,7 +29,7 @@ class SidebarItem extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9.5),
           decoration: BoxDecoration(
             color: isSelected
-                ? (isDark ? Colors.white : Colors.black)
+                ? (t.primaryText)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
@@ -38,8 +39,8 @@ class SidebarItem extends StatelessWidget {
                 icon,
                 size: 19,
                 color: isSelected
-                    ? (isDark ? Colors.black : Colors.white)
-                    : (isDark ? Colors.white70 : Colors.black87),
+                    ? (t.primaryText)
+                    : (t.secondaryText),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -51,7 +52,7 @@ class SidebarItem extends StatelessWidget {
                     fontSize: 13,
                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                     color: isSelected
-                        ? (isDark ? Colors.black : Colors.white)
+                        ? (t.primaryText)
                         : (isDark
                             ? NoirColors.blackTextPrimary
                             : NoirColors.whiteTextPrimary),

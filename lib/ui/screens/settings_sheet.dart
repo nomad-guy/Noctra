@@ -34,6 +34,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     ref.watch(appLanguageProvider);
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
@@ -100,12 +101,12 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: t.primaryText,
                     ),
                   ),
                   IconButton(
                     icon: Icon(Icons.close_rounded,
-                        color: isDark ? Colors.white70 : Colors.black54),
+                        color: t.secondaryText),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -127,7 +128,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                     Icon(
                       Icons.search_rounded,
                       size: 18,
-                      color: isDark ? Colors.white60 : Colors.black54,
+                      color: t.secondaryText,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -136,13 +137,13 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                         onChanged: (val) => setState(() => _query = val),
                         style: TextStyle(
                           fontSize: 13,
-                          color: isDark ? Colors.white : Colors.black,
+                          color: t.primaryText,
                         ),
                         decoration: InputDecoration(
                           hintText: 'Search settings (e.g. Data Saver, FLAC, Audio)...',
                           hintStyle: TextStyle(
                             fontSize: 12,
-                            color: isDark ? Colors.white38 : Colors.black38,
+                            color: t.tertiaryText,
                           ),
                           border: InputBorder.none,
                           isDense: true,
@@ -158,7 +159,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                         child: Icon(
                           Icons.close_rounded,
                           size: 16,
-                          color: isDark ? Colors.white54 : Colors.black54,
+                          color: t.secondaryText,
                         ),
                       ),
                   ],
@@ -201,7 +202,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                       'No settings matching "$_query"',
                       style: TextStyle(
                         fontSize: 13,
-                        color: isDark ? Colors.white54 : Colors.black54,
+                        color: t.secondaryText,
                       ),
                     ),
                   ),
@@ -234,20 +235,20 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
                           children: [
                             Icon(Icons.terminal_rounded,
                                 size: 18,
-                                color: isDark ? Colors.white70 : Colors.black87),
+                                color: t.secondaryText),
                             const SizedBox(width: 10),
                             Text(
                               'Developer Console & Telemetry',
                               style: TextStyle(
                                 fontSize: 13.5,
                                 fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.white : Colors.black,
+                                color: t.primaryText,
                               ),
                             ),
                           ],
                         ),
                         Icon(Icons.chevron_right_rounded,
-                            color: isDark ? Colors.white38 : Colors.black38),
+                            color: t.tertiaryText),
                       ],
                     ),
                   ),

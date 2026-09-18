@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils/localization/localization_keys.dart';
 import '../../core/utils/localization/localization_scope.dart';
 import '../../services/p2p/p2p_sync_service.dart';
+import '../../core/theme/noir_theme.dart';
 
 class JamChatTab extends ConsumerStatefulWidget {
   final bool isDark;
@@ -29,6 +30,7 @@ class _JamChatTabState extends ConsumerState<JamChatTab> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final messages = widget.syncService.chatMessages;
 
     return Column(
@@ -42,12 +44,12 @@ class _JamChatTabState extends ConsumerState<JamChatTab> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.chat_bubble_outline_rounded, size: 36, color: widget.isDark ? Colors.white24 : Colors.black26),
+                        Icon(Icons.chat_bubble_outline_rounded, size: 36, color: t.tertiaryText),
                         const SizedBox(height: 12),
                         Text(
                           context.tr(L10nKeys.noMessagesSession),
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 12.5, color: widget.isDark ? Colors.white38 : Colors.black38),
+                          style: TextStyle(fontSize: 12.5, color: t.tertiaryText),
                         ),
                       ],
                     ),
@@ -70,7 +72,7 @@ class _JamChatTabState extends ConsumerState<JamChatTab> {
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                             decoration: BoxDecoration(
                               color: isSelf
-                                  ? (widget.isDark ? Colors.white : Colors.black)
+                                  ? (t.primaryText)
                                   : (widget.isDark ? const Color(0xFF181818) : const Color(0xFFEBEBEB)),
                               borderRadius: BorderRadius.circular(14),
                             ),
@@ -83,8 +85,8 @@ class _JamChatTabState extends ConsumerState<JamChatTab> {
                                     fontSize: 10,
                                     fontWeight: FontWeight.w700,
                                     color: isSelf
-                                        ? (widget.isDark ? Colors.black54 : Colors.white70)
-                                        : (widget.isDark ? Colors.white54 : Colors.black54),
+                                        ? (t.secondaryText)
+                                        : (t.secondaryText),
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -94,8 +96,8 @@ class _JamChatTabState extends ConsumerState<JamChatTab> {
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
                                     color: isSelf
-                                        ? (widget.isDark ? Colors.black : Colors.white)
-                                        : (widget.isDark ? Colors.white : Colors.black),
+                                        ? (t.primaryText)
+                                        : (t.primaryText),
                                   ),
                                 ),
                               ],
@@ -123,11 +125,11 @@ class _JamChatTabState extends ConsumerState<JamChatTab> {
                     controller: _msgCtrl,
                     decoration: InputDecoration(
                       hintText: context.tr(L10nKeys.typeMessage),
-                      hintStyle: TextStyle(fontSize: 12.5, color: widget.isDark ? Colors.white38 : Colors.black38),
+                      hintStyle: TextStyle(fontSize: 12.5, color: t.tertiaryText),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                     ),
-                    style: TextStyle(fontSize: 13, color: widget.isDark ? Colors.white : Colors.black),
+                    style: TextStyle(fontSize: 13, color: t.primaryText),
                     onSubmitted: (val) {
                       _sendMessage();
                     },
@@ -137,8 +139,8 @@ class _JamChatTabState extends ConsumerState<JamChatTab> {
               const SizedBox(width: 8),
               IconButton(
                 style: IconButton.styleFrom(
-                  backgroundColor: widget.isDark ? Colors.white : Colors.black,
-                  foregroundColor: widget.isDark ? Colors.black : Colors.white,
+                  backgroundColor: t.primaryText,
+                  foregroundColor: t.primaryText,
                 ),
                 icon: const Icon(Icons.send_rounded, size: 18),
                 onPressed: _sendMessage,

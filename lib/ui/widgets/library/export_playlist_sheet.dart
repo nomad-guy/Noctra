@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../data/models/song_model.dart';
 import '../../../services/migration/noctra_transfer_service.dart';
+import '../../../core/theme/noir_theme.dart';
 
 /// Bottom sheet dialog for exporting a playlist or collection to JSON/CSV.
 class ExportPlaylistSheet extends StatelessWidget {
@@ -37,8 +38,9 @@ class ExportPlaylistSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textPrimary = isDark ? Colors.white : Colors.black;
-    final textSecondary = isDark ? Colors.white54 : Colors.black54;
+    final t = context.noctraTokens;
+    final textPrimary = t.primaryText;
+    final textSecondary = t.secondaryText;
 
     return Align(
       alignment: Alignment.bottomCenter,
@@ -173,6 +175,7 @@ class ExportPlaylistSheet extends StatelessWidget {
     required VoidCallback onSave,
     required VoidCallback onCopy,
   }) {
+    final t = context.noctraTokens;
     final cardColor =
         isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03);
     final borderColor =
@@ -190,7 +193,7 @@ class ExportPlaylistSheet extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 20, color: isDark ? Colors.white : Colors.black),
+              Icon(icon, size: 20, color: t.primaryText),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -198,7 +201,7 @@ class ExportPlaylistSheet extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: t.primaryText,
                   ),
                 ),
               ),
@@ -209,7 +212,7 @@ class ExportPlaylistSheet extends StatelessWidget {
             subtitle,
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? Colors.white54 : Colors.black54,
+              color: t.secondaryText,
             ),
           ),
           const SizedBox(height: 12),
@@ -221,7 +224,7 @@ class ExportPlaylistSheet extends StatelessWidget {
                   icon: const Icon(Icons.download_rounded, size: 16),
                   label: const Text('Save File', style: TextStyle(fontSize: 12)),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: isDark ? Colors.white : Colors.black,
+                    foregroundColor: t.primaryText,
                     side: BorderSide(color: borderColor),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -236,7 +239,7 @@ class ExportPlaylistSheet extends StatelessWidget {
                   icon: const Icon(Icons.copy_rounded, size: 16),
                   label: const Text('Copy Text', style: TextStyle(fontSize: 12)),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: isDark ? Colors.white : Colors.black,
+                    foregroundColor: t.primaryText,
                     side: BorderSide(color: borderColor),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),

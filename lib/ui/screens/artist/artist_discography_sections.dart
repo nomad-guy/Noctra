@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/song_model.dart';
 import '../../../providers/app_providers.dart';
 import '../../../services/ytdlp/music_service.dart';
+import '../../../core/theme/noir_theme.dart';
 export 'artist_similar_section.dart';
 
 class ArtistAlbumsSection extends ConsumerStatefulWidget {
@@ -24,6 +25,7 @@ class _ArtistAlbumsSectionState extends ConsumerState<ArtistAlbumsSection> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     if (widget.discography.albums.isEmpty) return const SizedBox.shrink();
     final audioPlayer = ref.watch(audioPlayerServiceProvider);
     final isDark = widget.isDark;
@@ -70,14 +72,14 @@ class _ArtistAlbumsSectionState extends ConsumerState<ArtistAlbumsSection> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: t.primaryText,
                 ),
               ),
               Text(
                 '${allAlbums.length} releases',
                 style: TextStyle(
                   fontSize: 11,
-                  color: isDark ? Colors.white38 : Colors.black38,
+                  color: t.tertiaryText,
                 ),
               ),
             ],
@@ -99,7 +101,7 @@ class _ArtistAlbumsSectionState extends ConsumerState<ArtistAlbumsSection> {
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
                       color: isSel
-                          ? (isDark ? Colors.white : Colors.black)
+                          ? (t.primaryText)
                           : (isDark ? Colors.white10 : Colors.black12),
                       borderRadius: BorderRadius.circular(20),
                     ),
@@ -109,8 +111,8 @@ class _ArtistAlbumsSectionState extends ConsumerState<ArtistAlbumsSection> {
                         fontSize: 11.5,
                         fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
                         color: isSel
-                            ? (isDark ? Colors.black : Colors.white)
-                            : (isDark ? Colors.white70 : Colors.black87),
+                            ? (t.primaryText)
+                            : (t.secondaryText),
                       ),
                     ),
                   ),
@@ -126,7 +128,7 @@ class _ArtistAlbumsSectionState extends ConsumerState<ArtistAlbumsSection> {
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   child: Text(
                     'No featured appearances found',
-                    style: TextStyle(fontSize: 12, color: isDark ? Colors.white38 : Colors.black38),
+                    style: TextStyle(fontSize: 12, color: t.tertiaryText),
                   ),
                 )
               : SizedBox(
@@ -165,7 +167,7 @@ class _ArtistAlbumsSectionState extends ConsumerState<ArtistAlbumsSection> {
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
-                                  color: isDark ? Colors.white : Colors.black,
+                                  color: t.primaryText,
                                 ),
                               ),
                               Text(
@@ -174,7 +176,7 @@ class _ArtistAlbumsSectionState extends ConsumerState<ArtistAlbumsSection> {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 10,
-                                  color: isDark ? Colors.white38 : Colors.black38,
+                                  color: t.tertiaryText,
                                 ),
                               ),
                             ],
@@ -228,14 +230,14 @@ class _ArtistAlbumsSectionState extends ConsumerState<ArtistAlbumsSection> {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : Colors.black,
+                            color: t.primaryText,
                           ),
                         ),
                         Text(
                           alb['year']?.toString() ?? 'Release',
                           style: TextStyle(
                             fontSize: 10,
-                            color: isDark ? Colors.white38 : Colors.black38,
+                            color: t.tertiaryText,
                           ),
                         ),
                       ],

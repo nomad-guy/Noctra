@@ -31,6 +31,7 @@ dependencies:
   just_audio_windows: ^0.2.3
   connectivity_plus: ^7.3.1
   audio_decoder: ^0.8.1
+  dynamic_color: 1.7.0
 
 dev_dependencies:
   flutter_test:

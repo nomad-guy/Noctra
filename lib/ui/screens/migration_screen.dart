@@ -28,6 +28,7 @@ class _MigrationScreenState extends ConsumerState<MigrationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
     final tokens = context.noctraTokens;
@@ -56,7 +57,7 @@ class _MigrationScreenState extends ConsumerState<MigrationScreen> {
                 height: 4.5,
                 margin: const EdgeInsets.only(top: 12),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white24 : Colors.black26,
+                  color: t.tertiaryText,
                   borderRadius: BorderRadius.circular(3),
                 ),
               ),
@@ -77,13 +78,13 @@ class _MigrationScreenState extends ConsumerState<MigrationScreen> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: t.primaryText,
                     ),
                   ),
                   IconButton(
                     icon: Icon(
                       Icons.close_rounded,
-                      color: isDark ? Colors.white70 : Colors.black54,
+                      color: t.secondaryText,
                     ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),

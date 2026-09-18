@@ -19,6 +19,7 @@ class NoirSidebar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     ref.watch(appLanguageProvider);
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
@@ -67,7 +68,7 @@ class NoirSidebar extends ConsumerWidget {
                       icon: Icon(
                         Icons.chevron_left_rounded,
                         size: 26,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                        color: t.secondaryText,
                       ),
                       tooltip: 'Close Sidebar',
                       onPressed: onClose,
@@ -232,7 +233,7 @@ class NoirSidebar extends ConsumerWidget {
                 'On-Device Knowledge Graph • ${repo.downloads.length + repo.favorites.length + repo.recentlyPlayed.length} tracks',
                 style: TextStyle(
                   fontSize: 10,
-                  color: isDark ? Colors.white38 : Colors.black38,
+                  color: t.tertiaryText,
                 ),
               ),
             ),

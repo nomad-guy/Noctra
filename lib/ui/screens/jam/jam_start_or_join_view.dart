@@ -3,6 +3,7 @@ import '../../../core/utils/localization/localization_keys.dart';
 import '../../../core/utils/localization/localization_scope.dart';
 import '../../../services/p2p/p2p_sync_service.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class JamStartOrJoinView extends StatelessWidget {
   final bool isDark;
@@ -22,6 +23,7 @@ class JamStartOrJoinView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Column(
@@ -39,7 +41,7 @@ class JamStartOrJoinView extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: t.primaryText,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -47,7 +49,7 @@ class JamStartOrJoinView extends StatelessWidget {
                   context.tr(L10nKeys.hostJamDesc),
                   style: TextStyle(
                     fontSize: 12,
-                    color: isDark ? Colors.white60 : Colors.black54,
+                    color: t.secondaryText,
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -55,8 +57,8 @@ class JamStartOrJoinView extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark ? Colors.white : Colors.black,
-                      foregroundColor: isDark ? Colors.black : Colors.white,
+                      backgroundColor: t.primaryText,
+                      foregroundColor: t.primaryText,
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -97,7 +99,7 @@ class JamStartOrJoinView extends StatelessWidget {
                       Icon(
                         Icons.wifi_tethering_rounded,
                         size: 16,
-                        color: isDark ? Colors.white : Colors.black,
+                        color: t.primaryText,
                       ),
                       const SizedBox(width: 8),
                       Text(
@@ -105,7 +107,7 @@ class JamStartOrJoinView extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white : Colors.black,
+                          color: t.primaryText,
                         ),
                       ),
                     ],
@@ -133,7 +135,7 @@ class JamStartOrJoinView extends StatelessWidget {
                                   style: TextStyle(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 12.5,
-                                    color: isDark ? Colors.white : Colors.black,
+                                    color: t.primaryText,
                                   ),
                                 ),
                                 Text(
@@ -177,7 +179,7 @@ class JamStartOrJoinView extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: t.primaryText,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -185,7 +187,7 @@ class JamStartOrJoinView extends StatelessWidget {
                   context.tr(L10nKeys.joinJamDesc),
                   style: TextStyle(
                     fontSize: 12,
-                    color: isDark ? Colors.white60 : Colors.black54,
+                    color: t.secondaryText,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -195,7 +197,7 @@ class JamStartOrJoinView extends StatelessWidget {
                       hintText: '192.168.43.1 or 127.0.0.1'),
                   style: TextStyle(
                     fontFamily: 'monospace',
-                    color: isDark ? Colors.white : Colors.black,
+                    color: t.primaryText,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -211,7 +213,7 @@ class JamStartOrJoinView extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: 'monospace',
                     fontSize: 13,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: t.primaryText,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -253,7 +255,7 @@ class JamStartOrJoinView extends StatelessWidget {
                     child: Text(
                       context.tr(L10nKeys.connectSync),
                       style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black,
+                        color: t.primaryText,
                         fontWeight: FontWeight.w700,
                       ),
                     ),

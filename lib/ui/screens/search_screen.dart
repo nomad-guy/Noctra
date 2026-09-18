@@ -77,6 +77,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     ref.watch(appLanguageProvider);
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
@@ -100,7 +101,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   if (MediaQuery.sizeOf(context).width < 720)
                     IconButton(
                       icon: Icon(Icons.menu_rounded,
-                          color: isDark ? Colors.white : Colors.black, size: 24),
+                          color: t.primaryText, size: 24),
                       tooltip: context.tr(L10nKeys.openSidebar),
                       onPressed: () => ref
                           .read(rootScaffoldKeyProvider)
@@ -126,8 +127,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     icon: Icon(
                       Icons.podcasts_rounded,
                       color: syncService.isHost || syncService.isClient
-                          ? (isDark ? Colors.white : Colors.black)
-                          : (isDark ? Colors.white60 : Colors.black54),
+                          ? (t.primaryText)
+                          : (t.secondaryText),
                       size: 22,
                     ),
                     onPressed: () {
@@ -142,7 +143,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   IconButton(
                     tooltip: context.tr(L10nKeys.developerSuite),
                     icon: Icon(Icons.terminal_rounded,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                        color: t.secondaryText,
                         size: 22),
                     onPressed: () {
                       showModalBottomSheet(
@@ -175,21 +176,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   onChanged: _onSearchChanged,
                   onSubmitted: _performSearch,
                   style: TextStyle(
-                      color: isDark ? Colors.white : Colors.black,
+                      color: t.primaryText,
                       fontSize: 14),
                   decoration: InputDecoration(
                     hintText: context.tr(L10nKeys.searchHint),
                     hintStyle: TextStyle(
                         fontSize: 13,
-                        color: isDark ? Colors.white38 : Colors.black38),
+                        color: t.tertiaryText),
                     prefixIcon: Icon(Icons.search_rounded,
-                        color: isDark ? Colors.white60 : Colors.black54),
+                        color: t.secondaryText),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
                             icon: Icon(Icons.clear_rounded,
                                 size: 18,
                                 color:
-                                    isDark ? Colors.white60 : Colors.black54),
+                                    t.secondaryText),
                             onPressed: () {
                               HapticFeedback.lightImpact();
                               _searchSequence++;
@@ -249,6 +250,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Widget _sourceChip(String label, String sourceKey, bool isDark) {
+    final t = context.noctraTokens;
     final isSelected = _selectedSource == sourceKey;
     return GestureDetector(
       onTap: () {
@@ -262,7 +264,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
           color: isSelected
-              ? (isDark ? Colors.white : Colors.black)
+              ? (t.primaryText)
               : (isDark ? const Color(0xFF141414) : const Color(0xFFEBEBEB)),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
@@ -277,8 +279,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             fontSize: 11.5,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             color: isSelected
-                ? (isDark ? Colors.black : Colors.white)
-                : (isDark ? Colors.white70 : Colors.black87),
+                ? (t.primaryText)
+                : (t.secondaryText),
           ),
         ),
       ),

@@ -25,6 +25,7 @@ class LibrarySongRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final currentSong = ref.watch(currentSongStreamProvider).value;
     final isPlaying = ref.watch(isPlayingStreamProvider).value ?? false;
     final s = song;
@@ -57,7 +58,7 @@ class LibrarySongRow extends ConsumerWidget {
                       ? const Color(0xFF1E1E1E)
                       : const Color(0xFFE0E0E0),
                   child: Icon(Icons.music_note_rounded,
-                      color: isDark ? Colors.white54 : Colors.black54),
+                      color: t.secondaryText),
                 ),
               ),
             ),
@@ -74,7 +75,7 @@ class LibrarySongRow extends ConsumerWidget {
                       fontSize: 13.5,
                       fontWeight:
                           isCurrent ? FontWeight.w700 : FontWeight.w600,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: t.primaryText,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -131,7 +132,7 @@ class LibrarySongRow extends ConsumerWidget {
                       child: CircularProgressIndicator(
                         value: p,
                         strokeWidth: 2,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                        color: t.secondaryText,
                       ),
                     ),
                   );
@@ -182,7 +183,7 @@ class LibrarySongRow extends ConsumerWidget {
                 return IconButton(
                   icon: Icon(Icons.download_rounded,
                       size: 19,
-                      color: isDark ? Colors.white60 : Colors.black54),
+                      color: t.secondaryText),
                   tooltip: 'Download Offline',
                   onPressed: () async {
                     ref
@@ -215,7 +216,7 @@ class LibrarySongRow extends ConsumerWidget {
             ),
             IconButton(
               icon: Icon(Icons.playlist_add_rounded,
-                  size: 20, color: isDark ? Colors.white70 : Colors.black87),
+                  size: 20, color: t.secondaryText),
               tooltip: 'Add to Folder',
               onPressed: () => showModalBottomSheet(
                 context: context,
@@ -232,7 +233,7 @@ class LibrarySongRow extends ConsumerWidget {
                 margin: const EdgeInsets.only(left: 4),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: t.primaryText,
                 ),
               ),
           ],

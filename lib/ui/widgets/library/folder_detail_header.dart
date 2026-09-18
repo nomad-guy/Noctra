@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/noir_theme.dart';
 
 enum FolderSortOption {
   defaultOrder,
@@ -36,6 +37,7 @@ class FolderDetailHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -45,7 +47,7 @@ class FolderDetailHeader extends StatelessWidget {
             children: [
               IconButton(
                 icon: Icon(Icons.arrow_back_rounded,
-                    color: isDark ? Colors.white : Colors.black),
+                    color: t.primaryText),
                 onPressed: onBack,
               ),
               Expanded(
@@ -54,14 +56,14 @@ class FolderDetailHeader extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: t.primaryText,
                   ),
                 ),
               ),
               IconButton(
                 icon: Icon(
                   showSearch ? Icons.search_off_rounded : Icons.search_rounded,
-                  color: isDark ? Colors.white70 : Colors.black87,
+                  color: t.secondaryText,
                   size: 20,
                 ),
                 tooltip: 'Search tracks in playlist',
@@ -70,7 +72,7 @@ class FolderDetailHeader extends StatelessWidget {
               PopupMenuButton<FolderSortOption>(
                 icon: Icon(
                   Icons.sort_rounded,
-                  color: isDark ? Colors.white70 : Colors.black87,
+                  color: t.secondaryText,
                   size: 20,
                 ),
                 tooltip: 'Sort playlist',
@@ -116,18 +118,18 @@ class FolderDetailHeader extends StatelessWidget {
                 autofocus: true,
                 style: TextStyle(
                   fontSize: 13,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: t.primaryText,
                 ),
                 decoration: InputDecoration(
                   hintText: 'Filter in "$folderName"...',
                   hintStyle: TextStyle(
                     fontSize: 13,
-                    color: isDark ? Colors.white38 : Colors.black38,
+                    color: t.tertiaryText,
                   ),
                   prefixIcon: Icon(
                     Icons.search,
                     size: 18,
-                    color: isDark ? Colors.white38 : Colors.black38,
+                    color: t.tertiaryText,
                   ),
                   suffixIcon: searchQuery.isNotEmpty
                       ? IconButton(

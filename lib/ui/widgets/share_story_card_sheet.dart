@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/song_model.dart';
 import '../../services/platform/story_card_exporter.dart';
 import 'story_card_render_view.dart';
+import '../../core/theme/noir_theme.dart';
 
 class ShareStoryCardSheet extends ConsumerStatefulWidget {
   final Song song;
@@ -56,6 +57,7 @@ class _ShareStoryCardSheetState extends ConsumerState<ShareStoryCardSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final activeTheme = kStoryThemes[_selectedThemeIndex];
 
@@ -82,7 +84,7 @@ class _ShareStoryCardSheetState extends ConsumerState<ShareStoryCardSheet> {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 14),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : Colors.black26,
+                    color: t.tertiaryText,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -98,12 +100,12 @@ class _ShareStoryCardSheetState extends ConsumerState<ShareStoryCardSheet> {
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 1.2,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: t.primaryText,
                     ),
                   ),
                   IconButton(
                     icon: Icon(Icons.close_rounded,
-                        color: isDark ? Colors.white60 : Colors.black54),
+                        color: t.secondaryText),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -144,7 +146,7 @@ class _ShareStoryCardSheetState extends ConsumerState<ShareStoryCardSheet> {
                             isSelected ? FontWeight.w700 : FontWeight.w500,
                         color: isSelected
                             ? Colors.white
-                            : (isDark ? Colors.white60 : Colors.black54),
+                            : (t.secondaryText),
                       ),
                     ),
                   );

@@ -40,6 +40,7 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
     final repo = ref.watch(musicRepositoryProvider);
@@ -67,7 +68,7 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
               child: Container(
                 width: 44,
                 height: 4.5,
-                decoration: BoxDecoration(color: isDark ? Colors.white24 : Colors.black26, borderRadius: BorderRadius.circular(3)),
+                decoration: BoxDecoration(color: t.tertiaryText, borderRadius: BorderRadius.circular(3)),
               ),
             ),
             const SizedBox(height: 14),
@@ -92,14 +93,14 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(widget.song.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black)),
+                      Text(widget.song.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: t.primaryText)),
                       const SizedBox(height: 2),
-                      Text(NoctraLocalization.tr('save_custom_folder'), style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white54 : Colors.black54)),
+                      Text(NoctraLocalization.tr('save_custom_folder'), style: TextStyle(fontSize: 11.5, color: t.secondaryText)),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close_rounded, color: isDark ? Colors.white70 : Colors.black87),
+                  icon: Icon(Icons.close_rounded, color: t.secondaryText),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -119,9 +120,9 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   child: Row(
                     children: [
-                      Icon(Icons.add_circle_outline_rounded, size: 20, color: isDark ? Colors.white70 : Colors.black87),
+                      Icon(Icons.add_circle_outline_rounded, size: 20, color: t.secondaryText),
                       const SizedBox(width: 10),
-                      Text(NoctraLocalization.tr('new_folder_ellipsis'), style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
+                      Text(NoctraLocalization.tr('new_folder_ellipsis'), style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: t.primaryText)),
                     ],
                   ),
                 ),
@@ -134,13 +135,13 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
                       controller: _folderNameCtrl,
                       autofocus: true,
                       decoration: InputDecoration(hintText: NoctraLocalization.tr('folder_name_hint')),
-                      style: TextStyle(fontSize: 13, color: isDark ? Colors.white : Colors.black),
+                      style: TextStyle(fontSize: 13, color: t.primaryText),
                       onSubmitted: (_) => _submitNewFolder(),
                     ),
                   ),
                   const SizedBox(width: 8),
                   IconButton(
-                    style: IconButton.styleFrom(backgroundColor: isDark ? Colors.white : Colors.black, foregroundColor: isDark ? Colors.black : Colors.white),
+                    style: IconButton.styleFrom(backgroundColor: t.primaryText, foregroundColor: t.primaryText),
                     icon: const Icon(Icons.check_rounded, size: 18),
                     onPressed: _submitNewFolder,
                   ),
@@ -152,7 +153,7 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
             // Folder List
             Flexible(
               child: folders.isEmpty
-                  ? Center(child: Text(NoctraLocalization.tr('no_custom_folders'), style: TextStyle(fontSize: 12.5, color: isDark ? Colors.white38 : Colors.black38)))
+                  ? Center(child: Text(NoctraLocalization.tr('no_custom_folders'), style: TextStyle(fontSize: 12.5, color: t.tertiaryText)))
                   : Builder(
                       builder: (context) {
                         final folderNames = folders.keys.toList();
@@ -181,14 +182,14 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
                                 },
                                 child: Row(
                                   children: [
-                                    Icon(Icons.folder_rounded, size: 22, color: isDark ? Colors.white : Colors.black),
+                                    Icon(Icons.folder_rounded, size: 22, color: t.primaryText),
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text(folderName, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
-                                          Text(NoctraLocalization.tr('tracks_count', args: {'count': songsInFolder.length}), style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black54)),
+                                          Text(folderName, style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: t.primaryText)),
+                                          Text(NoctraLocalization.tr('tracks_count', args: {'count': songsInFolder.length}), style: TextStyle(fontSize: 11, color: t.secondaryText)),
                                         ],
                                       ),
                                     ),
@@ -197,10 +198,10 @@ class _AddToFolderSheetState extends ConsumerState<AddToFolderSheet> {
                                       height: 24,
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
-                                        color: containsSong ? (isDark ? Colors.white : Colors.black) : Colors.transparent,
-                                        border: Border.all(color: containsSong ? Colors.transparent : (isDark ? Colors.white30 : Colors.black26), width: 1.5),
+                                        color: containsSong ? (t.primaryText) : Colors.transparent,
+                                        border: Border.all(color: containsSong ? Colors.transparent : (t.tertiaryText), width: 1.5),
                                       ),
-                                      child: containsSong ? Icon(Icons.check_rounded, size: 16, color: isDark ? Colors.black : Colors.white) : null,
+                                      child: containsSong ? Icon(Icons.check_rounded, size: 16, color: t.primaryText) : null,
                                     ),
                                   ],
                                 ),

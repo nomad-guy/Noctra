@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/utils/playback_settings_store.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../home_screen.dart';
+import '../../../core/theme/noir_theme.dart';
 
 /// Settings section: Home Layout — toggle each home-screen section.
 /// Hidden sections are never built, cutting both visual clutter and the
@@ -19,8 +20,8 @@ class HomeLayoutSection extends StatefulWidget {
 class _HomeLayoutSectionState extends State<HomeLayoutSection> {
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final store = PlaybackSettingsStore.instance;
-    final isDark = widget.isDark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -31,7 +32,7 @@ class _HomeLayoutSectionState extends State<HomeLayoutSection> {
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
-            color: isDark ? Colors.white60 : Colors.black54,
+            color: t.secondaryText,
           ),
         ),
         const SizedBox(height: 8),
@@ -64,8 +65,8 @@ class _HomeLayoutSectionState extends State<HomeLayoutSection> {
                           : Icons.visibility_off_rounded,
                       size: 18,
                       color: store.isHomeSectionVisible(entry.key)
-                          ? (isDark ? Colors.white : Colors.black)
-                          : (isDark ? Colors.white38 : Colors.black38),
+                          ? (t.primaryText)
+                          : (t.tertiaryText),
                     ),
                     title: Text(
                       entry.value,
@@ -73,8 +74,8 @@ class _HomeLayoutSectionState extends State<HomeLayoutSection> {
                         fontSize: 13.5,
                         fontWeight: FontWeight.w600,
                         color: store.isHomeSectionVisible(entry.key)
-                            ? (isDark ? Colors.white : Colors.black)
-                            : (isDark ? Colors.white38 : Colors.black38),
+                            ? (t.primaryText)
+                            : (t.tertiaryText),
                       ),
                     ),
                     trailing: Switch(
@@ -84,7 +85,7 @@ class _HomeLayoutSectionState extends State<HomeLayoutSection> {
                           store.setHomeSectionVisible(entry.key, v);
                         });
                       },
-                      activeThumbColor: isDark ? Colors.white : Colors.black,
+                      activeThumbColor: t.primaryText,
                     ),
                   ),
                 ),

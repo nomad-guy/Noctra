@@ -40,6 +40,7 @@ class _TrendingCarouselSectionState extends ConsumerState<TrendingCarouselSectio
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final trendingAsync = ref.watch(dynamicTrendingFeedProvider);
     final repo = ref.watch(musicRepositoryProvider);
     final userLangs = repo.onboardedLanguages;
@@ -71,7 +72,7 @@ class _TrendingCarouselSectionState extends ConsumerState<TrendingCarouselSectio
                 child: Text(badgeLabel, style: TextStyle(
                   fontSize: 10, fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
-                  color: widget.isDark ? Colors.white70 : Colors.black87,
+                  color: t.secondaryText,
                 )),
               ),
             ],
@@ -100,7 +101,7 @@ class _TrendingCarouselSectionState extends ConsumerState<TrendingCarouselSectio
                   itemExtent: 160.0,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: tracks.length,
-                  itemBuilder: (context, i) => _buildCard(tracks, i),
+                  itemBuilder: (context, i) => _buildCard(context, tracks, i),
                 ),
               ),
             );
@@ -108,7 +109,7 @@ class _TrendingCarouselSectionState extends ConsumerState<TrendingCarouselSectio
           loading: () => SizedBox(
             height: 210,
             child: Center(child: CircularProgressIndicator(
-              strokeWidth: 2, color: widget.isDark ? Colors.white : Colors.black,
+              strokeWidth: 2, color: t.primaryText,
             )),
           ),
           error: (e, _) => _errorState(),
@@ -117,7 +118,8 @@ class _TrendingCarouselSectionState extends ConsumerState<TrendingCarouselSectio
     );
   }
 
-  Widget _buildCard(List<Song> tracks, int i) {
+  Widget _buildCard(BuildContext context, List<Song> tracks, int i) {
+    final t = context.noctraTokens;
     final song = tracks[i];
     final isThisPlaying = widget.currentSong?.id == song.id && widget.isPlaying;
 
@@ -150,7 +152,7 @@ class _TrendingCarouselSectionState extends ConsumerState<TrendingCarouselSectio
                         errorBuilder: (context, error, stackTrace) => Container(
                           width: 148, height: 126,
                           color: widget.isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE5E5E5),
-                          child: Icon(Icons.music_note_outlined, color: widget.isDark ? Colors.white54 : Colors.black54),
+                          child: Icon(Icons.music_note_outlined, color: t.secondaryText),
                         ),
                       ),
                     ),
@@ -166,7 +168,7 @@ class _TrendingCarouselSectionState extends ConsumerState<TrendingCarouselSectio
                         alignment: Alignment.center,
                         child: Text('${i + 1}', style: TextStyle(
                           fontSize: 11, fontWeight: FontWeight.w800,
-                          color: widget.isDark ? Colors.white : Colors.black,
+                          color: t.primaryText,
                         )),
                       ),
                     ),

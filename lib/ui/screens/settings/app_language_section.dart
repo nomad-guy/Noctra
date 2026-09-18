@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/noctra_localization.dart';
 import '../../../providers/app_providers.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class AppLanguageSection extends ConsumerWidget {
   final bool isDark;
@@ -11,6 +12,7 @@ class AppLanguageSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     ref.watch(appLanguageProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -21,7 +23,7 @@ class AppLanguageSection extends ConsumerWidget {
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
-            color: isDark ? Colors.white60 : Colors.black54,
+            color: t.secondaryText,
           ),
         ),
         const SizedBox(height: 8),
@@ -36,7 +38,7 @@ class AppLanguageSection extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: t.primaryText,
                 ),
               ),
               DropdownButton<String>(
@@ -45,7 +47,7 @@ class AppLanguageSection extends ConsumerWidget {
                 underline: const SizedBox.shrink(),
                 style: TextStyle(
                   fontSize: 13,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: t.primaryText,
                 ),
                 items: const [
                   DropdownMenuItem(value: 'en', child: Text('English')),

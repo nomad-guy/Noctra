@@ -17,6 +17,7 @@ class AIPromptCuratorSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -29,7 +30,7 @@ class AIPromptCuratorSection extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.auto_awesome, size: 18, color: isDark ? Colors.white : Colors.black),
+                  Icon(Icons.auto_awesome, size: 18, color: t.primaryText),
                   const SizedBox(width: 8),
                   Text(
                     'Describe your desired sonic vibe',
@@ -71,8 +72,8 @@ class AIPromptCuratorSection extends StatelessWidget {
                   icon: const Icon(Icons.bolt_rounded, size: 18),
                   label: const Text('Curate Mix with Agent', style: TextStyle(fontWeight: FontWeight.w600)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isDark ? Colors.white : Colors.black,
-                    foregroundColor: isDark ? Colors.black : Colors.white,
+                    backgroundColor: t.primaryText,
+                    foregroundColor: t.primaryText,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     elevation: 0,
@@ -107,23 +108,23 @@ class AIPromptCuratorSection extends StatelessWidget {
           physics: const BouncingScrollPhysics(),
           child: Row(
             children: [
-              _actionChip('Darker Vibe', Icons.nights_stay_outlined, () {
+              _actionChip(context, 'Darker Vibe', Icons.nights_stay_outlined, () {
                 controller.text = 'darker moody heavy bass';
                 onSubmit('darker moody heavy bass');
               }),
-              _actionChip('High Energy', Icons.electric_bolt_outlined, () {
+              _actionChip(context, 'High Energy', Icons.electric_bolt_outlined, () {
                 controller.text = 'fast energetic hype tempo';
                 onSubmit('fast energetic hype tempo');
               }),
-              _actionChip('Calmer Ambient', Icons.spa_outlined, () {
+              _actionChip(context, 'Calmer Ambient', Icons.spa_outlined, () {
                 controller.text = 'calm peaceful ambient relaxation';
                 onSubmit('calm peaceful ambient relaxation');
               }),
-              _actionChip('Acoustic Strings', Icons.audiotrack_outlined, () {
+              _actionChip(context, 'Acoustic Strings', Icons.audiotrack_outlined, () {
                 controller.text = 'acoustic guitar warm analog';
                 onSubmit('acoustic guitar warm analog');
               }),
-              _actionChip('Surprise Discovery', Icons.shuffle_rounded, () {
+              _actionChip(context, 'Surprise Discovery', Icons.shuffle_rounded, () {
                 controller.text = 'cinematic electronic discovery';
                 onSubmit('cinematic electronic discovery');
               }),
@@ -134,7 +135,8 @@ class AIPromptCuratorSection extends StatelessWidget {
     );
   }
 
-  Widget _actionChip(String label, IconData icon, VoidCallback onTap) {
+  Widget _actionChip(BuildContext context, String label, IconData icon, VoidCallback onTap) {
+    final t = context.noctraTokens;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: GestureDetector(
@@ -151,7 +153,7 @@ class AIPromptCuratorSection extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 14, color: isDark ? Colors.white70 : Colors.black87),
+              Icon(icon, size: 14, color: t.secondaryText),
               const SizedBox(width: 6),
               Text(
                 label,

@@ -9,6 +9,7 @@ import '../noir_mini_player_dock.dart';
 import 'ai_collection_action_bar.dart';
 import 'ai_collection_song_row.dart';
 import 'export_playlist_sheet.dart';
+import '../../../core/theme/noir_theme.dart';
 
 /// Loader seam for tests: returns the tracks to show for a vibe. The default
 /// resolves through [AiMixTrackSource] (local-first curation + bounded feed).
@@ -161,9 +162,10 @@ class _AiCollectionDetailViewState
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final isDark = widget.isDark;
-    final textPrimary = isDark ? Colors.white : Colors.black;
-    final textSecondary = isDark ? Colors.white54 : Colors.black54;
+    final textPrimary = t.primaryText;
+    final textSecondary = t.secondaryText;
 
     return Scaffold(
       backgroundColor:

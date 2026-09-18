@@ -3,7 +3,9 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  audio_decoder
   connectivity_plus
+  dynamic_color
   just_audio_windows
   permission_handler_windows
   sqlite3_flutter_libs

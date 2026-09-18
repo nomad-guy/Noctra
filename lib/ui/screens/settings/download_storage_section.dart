@@ -13,6 +13,7 @@ class DownloadStorageSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final tokens = context.noctraTokens;
     final downloadLoc = ref.watch(downloadLocationProvider);
 
@@ -25,7 +26,7 @@ class DownloadStorageSection extends ConsumerWidget {
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
-            color: isDark ? Colors.white60 : Colors.black54,
+            color: t.secondaryText,
           ),
         ),
         const SizedBox(height: 8),
@@ -39,7 +40,7 @@ class DownloadStorageSection extends ConsumerWidget {
                 'Choose where downloaded songs are stored.',
                 style: TextStyle(
                   fontSize: 11.5,
-                  color: isDark ? Colors.white54 : Colors.black54,
+                  color: t.secondaryText,
                 ),
               ),
               const SizedBox(height: 8),
@@ -83,7 +84,7 @@ class DownloadStorageSection extends ConsumerWidget {
                 underline: const SizedBox.shrink(),
                 style: TextStyle(
                   fontSize: 13,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: t.primaryText,
                 ),
                 items: DownloadLocation.all
                     .map((loc) => DropdownMenuItem<String>(
@@ -110,7 +111,7 @@ class DownloadStorageSection extends ConsumerWidget {
                     : DownloadLocation.byKey(downloadLoc).description,
                 style: TextStyle(
                   fontSize: 11,
-                  color: isDark ? Colors.white38 : Colors.black38,
+                  color: t.tertiaryText,
                   height: 1.4,
                 ),
               ),

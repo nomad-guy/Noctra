@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../data/models/song_model.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class FolderDetailTrackTile extends StatelessWidget {
   final Song song;
@@ -18,6 +19,7 @@ class FolderDetailTrackTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     return ListTile(
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(8),
@@ -40,7 +42,7 @@ class FolderDetailTrackTile extends StatelessWidget {
         maxLines: 1,
         style: TextStyle(
           fontWeight: FontWeight.w600,
-          color: isDark ? Colors.white : Colors.black,
+          color: t.primaryText,
         ),
       ),
       subtitle: Text(
@@ -48,14 +50,14 @@ class FolderDetailTrackTile extends StatelessWidget {
         maxLines: 1,
         style: TextStyle(
           fontSize: 11,
-          color: isDark ? Colors.white54 : Colors.black54,
+          color: t.secondaryText,
         ),
       ),
       trailing: IconButton(
         icon: Icon(
           Icons.remove_circle_outline_rounded,
           size: 18,
-          color: isDark ? Colors.white54 : Colors.black54,
+          color: t.secondaryText,
         ),
         onPressed: onRemove,
       ),

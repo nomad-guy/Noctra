@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/noir_theme.dart';
 
 /// Static, non-synced lyrics rendered as centered plain text.
 /// Extracted from LyricsView so the view file stays under 300 LOC.
@@ -14,6 +15,7 @@ class LyricsPlainTextBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
@@ -24,7 +26,7 @@ class LyricsPlainTextBody extends StatelessWidget {
           fontSize: 14.5,
           fontWeight: FontWeight.w500,
           height: 1.8,
-          color: isDark ? Colors.white70 : Colors.black87,
+          color: t.secondaryText,
         ),
       ),
     );
@@ -39,17 +41,18 @@ class LyricsLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircularProgressIndicator(
-              strokeWidth: 2, color: isDark ? Colors.white70 : Colors.black87),
+              strokeWidth: 2, color: t.secondaryText),
           const SizedBox(height: 14),
           Text('Syncing Studio Lyrics...',
               style: TextStyle(
                   fontSize: 12,
-                  color: isDark ? Colors.white54 : Colors.black54)),
+                  color: t.secondaryText)),
         ],
       ),
     );

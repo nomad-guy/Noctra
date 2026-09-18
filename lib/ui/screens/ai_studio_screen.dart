@@ -108,13 +108,15 @@ class _AIStudioScreenState extends ConsumerState<AIStudioScreen> {
     );
   }
 
-  Widget _header(bool isDark) => Padding(
+  Widget _header(bool isDark) {
+    final t = context.noctraTokens;
+    return Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         child: Row(children: [
           if (MediaQuery.sizeOf(context).width < 720)
             IconButton(
               icon: Icon(Icons.menu_rounded,
-                  color: isDark ? Colors.white : Colors.black),
+                  color: t.primaryText),
               onPressed: () =>
                   ref.read(rootScaffoldKeyProvider).currentState?.openDrawer(),
             ),
@@ -128,20 +130,23 @@ class _AIStudioScreenState extends ConsumerState<AIStudioScreen> {
                           : NoirColors.whiteTextPrimary))),
           IconButton(
             icon: Icon(Icons.terminal_rounded,
-                color: isDark ? Colors.white54 : Colors.black54),
+                color: t.secondaryText),
             onPressed: _openDeveloperPanel,
           ),
         ]),
       );
+  }
 
-  Widget _promptField(bool isDark) => Padding(
+  Widget _promptField(bool isDark) {
+    final t = context.noctraTokens;
+    return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: TextField(
           controller: _promptController,
           focusNode: _focusNode,
           onSubmitted: _submitPrompt,
           textInputAction: TextInputAction.search,
-          style: TextStyle(color: isDark ? Colors.white : Colors.black),
+          style: TextStyle(color: t.primaryText),
           decoration: InputDecoration(
             hintText: 'What are you in the mood for?',
             suffixIcon: _isLoading
@@ -157,6 +162,7 @@ class _AIStudioScreenState extends ConsumerState<AIStudioScreen> {
           ),
         ),
       );
+  }
 
   void _openDeveloperPanel() => showModalBottomSheet(
         context: context,

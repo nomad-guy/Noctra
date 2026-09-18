@@ -20,6 +20,7 @@ class ListeningInsightsSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
     final repo = MusicRepository.instance;
@@ -65,7 +66,7 @@ class ListeningInsightsSheet extends ConsumerWidget {
                     width: 38,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.white24 : Colors.black26,
+                      color: t.tertiaryText,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -83,7 +84,7 @@ class ListeningInsightsSheet extends ConsumerWidget {
                             color: isDark ? Colors.white12 : Colors.black12,
                           ),
                           child: Icon(Icons.analytics_outlined,
-                              size: 20, color: isDark ? Colors.white : Colors.black),
+                              size: 20, color: t.primaryText),
                         ),
                         const SizedBox(width: 10),
                         Column(
@@ -94,14 +95,14 @@ class ListeningInsightsSheet extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
-                                color: isDark ? Colors.white : Colors.black,
+                                color: t.primaryText,
                               ),
                             ),
                             Text(
                               'Your real-time musical footprint',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: isDark ? Colors.white54 : Colors.black54,
+                                color: t.secondaryText,
                               ),
                             ),
                           ],
@@ -110,7 +111,7 @@ class ListeningInsightsSheet extends ConsumerWidget {
                     ),
                     IconButton(
                       icon: Icon(Icons.close_rounded,
-                          color: isDark ? Colors.white70 : Colors.black54),
+                          color: t.secondaryText),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
@@ -118,11 +119,11 @@ class ListeningInsightsSheet extends ConsumerWidget {
                 const SizedBox(height: 18),
                 Row(
                   children: [
-                    insightsMetricCard('Time Listened', formattedTime, isDark),
+                    insightsMetricCard(context, 'Time Listened', formattedTime, isDark),
                     const SizedBox(width: 8),
-                    insightsMetricCard('Tracks Played', totalPlays.toString(), isDark),
+                    insightsMetricCard(context, 'Tracks Played', totalPlays.toString(), isDark),
                     const SizedBox(width: 8),
-                    insightsMetricCard('Top Artist', topArtists.isNotEmpty ? topArtists.first.key : 'None', isDark),
+                    insightsMetricCard(context, 'Top Artist', topArtists.isNotEmpty ? topArtists.first.key : 'None', isDark),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -132,10 +133,10 @@ class ListeningInsightsSheet extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        insightsSectionTitle('TOP ARTISTS', isDark),
+                        insightsSectionTitle(context, 'TOP ARTISTS', isDark),
                         const SizedBox(height: 8),
                         if (topArtists.isEmpty)
-                          insightsEmptyState('Listen to music to generate your artist rankings', isDark)
+                          insightsEmptyState(context, 'Listen to music to generate your artist rankings', isDark)
                         else
                           GlassCard(
                             radius: 14,
@@ -154,7 +155,7 @@ class ListeningInsightsSheet extends ConsumerWidget {
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w700,
-                                            color: isDark ? Colors.white38 : Colors.black38,
+                                            color: t.tertiaryText,
                                           ),
                                         ),
                                       ),
@@ -166,7 +167,7 @@ class ListeningInsightsSheet extends ConsumerWidget {
                                           style: TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w600,
-                                            color: isDark ? Colors.white : Colors.black,
+                                            color: t.primaryText,
                                           ),
                                         ),
                                       ),
@@ -174,7 +175,7 @@ class ListeningInsightsSheet extends ConsumerWidget {
                                         '${a.value} plays',
                                         style: TextStyle(
                                           fontSize: 11.5,
-                                          color: isDark ? Colors.white54 : Colors.black54,
+                                          color: t.secondaryText,
                                         ),
                                       ),
                                     ],
@@ -184,10 +185,10 @@ class ListeningInsightsSheet extends ConsumerWidget {
                             ),
                           ),
                         const SizedBox(height: 16),
-                        insightsSectionTitle('TOP GENRES', isDark),
+                        insightsSectionTitle(context, 'TOP GENRES', isDark),
                         const SizedBox(height: 8),
                         if (topGenres.isEmpty)
-                          insightsEmptyState('Explore more genres to discover your patterns', isDark)
+                          insightsEmptyState(context, 'Explore more genres to discover your patterns', isDark)
                         else
                           Wrap(
                             spacing: 8,
@@ -208,7 +209,7 @@ class ListeningInsightsSheet extends ConsumerWidget {
                                       style: TextStyle(
                                         fontSize: 12.5,
                                         fontWeight: FontWeight.w700,
-                                        color: isDark ? Colors.white : Colors.black,
+                                        color: t.primaryText,
                                       ),
                                     ),
                                     const SizedBox(width: 6),
@@ -223,7 +224,7 @@ class ListeningInsightsSheet extends ConsumerWidget {
                                         style: TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.w800,
-                                          color: isDark ? Colors.white70 : Colors.black54,
+                                          color: t.secondaryText,
                                         ),
                                       ),
                                     ),

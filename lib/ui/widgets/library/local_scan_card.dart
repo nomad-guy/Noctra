@@ -6,6 +6,7 @@ import '../../../core/platform/noctra_capabilities.dart';
 import '../../../data/repositories/music_repository.dart';
 import '../../../features/library/infrastructure/local_media_scanner.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class LocalScanCard extends StatefulWidget {
   final bool isDark;
@@ -84,6 +85,7 @@ class _LocalScanCardState extends State<LocalScanCard> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     return GlassCard(
       radius: 16,
       isHighlighted: false,
@@ -127,14 +129,14 @@ class _LocalScanCardState extends State<LocalScanCard> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: widget.isDark ? Colors.white : Colors.black,
+                    color: t.primaryText,
                   ),
                 ),
                 Text(
                   'Import FLAC, WAV, MP3, M4A directly',
                   style: TextStyle(
                     fontSize: 11,
-                    color: widget.isDark ? Colors.white54 : Colors.black54,
+                    color: t.secondaryText,
                   ),
                 ),
               ],
@@ -143,7 +145,7 @@ class _LocalScanCardState extends State<LocalScanCard> {
           Icon(
             Icons.arrow_forward_ios_rounded,
             size: 14,
-            color: widget.isDark ? Colors.white38 : Colors.black38,
+            color: t.tertiaryText,
           ),
         ],
       ),

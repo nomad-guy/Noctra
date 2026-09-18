@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/noir_theme.dart';
 
 /// Action row shown above an open AI folder/mix: Play All and, for generated
 /// vibes, Remix. Owned by [AiCollectionDetailView]; kept in its own file so
@@ -101,8 +102,9 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final active = isDark ? Colors.white : Colors.black;
-    final inactive = isDark ? Colors.white30 : Colors.black26;
+    final t = context.noctraTokens;
+    final active = t.primaryText;
+    final inactive = t.tertiaryText;
     return Material(
       color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.06),
       borderRadius: BorderRadius.circular(20),

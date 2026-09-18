@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/app_providers.dart';
+import '../../../core/theme/noir_theme.dart';
 
 /// Interactive modal sheet allowing users to tune their music languages & genres.
 class MusicPreferencesSheet extends StatefulWidget {
@@ -84,6 +85,7 @@ class _MusicPreferencesSheetState extends State<MusicPreferencesSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final isDark = widget.isDark;
 
     return Align(
@@ -117,12 +119,12 @@ class _MusicPreferencesSheetState extends State<MusicPreferencesSheet> {
                 'Tune Music Taste',
                 style: TextStyle(
                   fontSize: 18, fontWeight: FontWeight.w800,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: t.primaryText,
                 ),
               ),
               IconButton(
                 icon: Icon(Icons.close_rounded,
-                    color: isDark ? Colors.white70 : Colors.black54),
+                    color: t.secondaryText),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],
@@ -138,7 +140,7 @@ class _MusicPreferencesSheetState extends State<MusicPreferencesSheet> {
                     'PREFERRED LANGUAGES',
                     style: TextStyle(
                       fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0,
-                      color: isDark ? Colors.white60 : Colors.black54,
+                      color: t.secondaryText,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -151,10 +153,10 @@ class _MusicPreferencesSheetState extends State<MusicPreferencesSheet> {
                         selected: sel,
                         onSelected: (_) => _toggleItem(_selectedLangs, l),
                         backgroundColor: isDark ? const Color(0xFF202022) : const Color(0xFFEEEEEE),
-                        selectedColor: isDark ? Colors.white : Colors.black,
+                        selectedColor: t.primaryText,
                         labelStyle: TextStyle(
                           fontSize: 12,
-                          color: sel ? (isDark ? Colors.black : Colors.white) : (isDark ? Colors.white70 : Colors.black87),
+                          color: sel ? (t.primaryText) : (t.secondaryText),
                         ),
                       );
                     }).toList(),
@@ -164,7 +166,7 @@ class _MusicPreferencesSheetState extends State<MusicPreferencesSheet> {
                     'FAVORITE GENRES',
                     style: TextStyle(
                       fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0,
-                      color: isDark ? Colors.white60 : Colors.black54,
+                      color: t.secondaryText,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -177,10 +179,10 @@ class _MusicPreferencesSheetState extends State<MusicPreferencesSheet> {
                         selected: sel,
                         onSelected: (_) => _toggleItem(_selectedGenres, g),
                         backgroundColor: isDark ? const Color(0xFF202022) : const Color(0xFFEEEEEE),
-                        selectedColor: isDark ? Colors.white : Colors.black,
+                        selectedColor: t.primaryText,
                         labelStyle: TextStyle(
                           fontSize: 12,
-                          color: sel ? (isDark ? Colors.black : Colors.white) : (isDark ? Colors.white70 : Colors.black87),
+                          color: sel ? (t.primaryText) : (t.secondaryText),
                         ),
                       );
                     }).toList(),
@@ -194,8 +196,8 @@ class _MusicPreferencesSheetState extends State<MusicPreferencesSheet> {
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: isDark ? Colors.white : Colors.black,
-                foregroundColor: isDark ? Colors.black : Colors.white,
+                backgroundColor: t.primaryText,
+                foregroundColor: t.primaryText,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),

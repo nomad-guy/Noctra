@@ -14,6 +14,7 @@ import 'export_playlist_sheet.dart';
 import 'folder_detail_header.dart';
 import 'folder_detail_track_tile.dart';
 import 'folder_recommendations_footer.dart';
+import '../../../core/theme/noir_theme.dart';
 
 /// Full-screen track list shown when a folder (or Favorites) is opened from
 /// [LibraryFoldersTab]. Pushed over the tabbed shell, owns its own back
@@ -152,6 +153,7 @@ class _FolderDetailViewState extends ConsumerState<FolderDetailView> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final repo = ref.watch(musicRepositoryProvider);
     final currentSongs = widget.folderName == 'Favorites'
         ? repo.favorites
@@ -215,7 +217,7 @@ class _FolderDetailViewState extends ConsumerState<FolderDetailView> {
                             style: TextStyle(
                               fontSize: 12.5,
                               color:
-                                  isDark ? Colors.white38 : Colors.black38,
+                                  t.tertiaryText,
                             ),
                           ),
                         )

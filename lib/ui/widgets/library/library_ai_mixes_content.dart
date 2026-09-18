@@ -3,6 +3,7 @@ import '../../../core/utils/localization/localization_keys.dart';
 import '../../../core/utils/localization/localization_scope.dart';
 import '../../../data/models/ai_folder_model.dart';
 import '../../../data/models/ai_playlist_model.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class LibraryAiMixesContent extends StatelessWidget {
   final bool isDark;
@@ -25,71 +26,71 @@ class LibraryAiMixesContent extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => ListView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 160),
-        children: [
-          Text('${context.tr(L10nKeys.yourSound)}: $archetype',
-              style: TextStyle(
-                  fontSize: 13,
-                  color: isDark ? Colors.white54 : Colors.black54)),
-          const SizedBox(height: 18),
-          if (mixes.isNotEmpty) ...[
-            _heading(context.tr(L10nKeys.aiMixes)),
-            SizedBox(
-              height: 160,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: mixes.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (_, index) => _MixCard(
-                    isDark: isDark,
-                    mix: mixes[index],
-                    onTap: () => onOpenMix(mixes[index])),
-              ),
+  Widget build(BuildContext context) {
+    final t = context.noctraTokens;
+    return ListView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 160),
+      children: [
+        Text('${context.tr(L10nKeys.yourSound)}: $archetype',
+            style: TextStyle(fontSize: 13, color: t.secondaryText)),
+        const SizedBox(height: 18),
+        if (mixes.isNotEmpty) ...[
+          _aiMixesHeading(context.tr(L10nKeys.aiMixes), t),
+          SizedBox(
+            height: 160,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: mixes.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (_, index) => _MixCard(
+                  isDark: isDark,
+                  mix: mixes[index],
+                  onTap: () => onOpenMix(mixes[index])),
             ),
-            const SizedBox(height: 24),
-          ],
-          if (folders.isNotEmpty) ...[
-            _heading(context.tr(L10nKeys.folders)),
-            ...folders.map((folder) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _FolderRow(
-                      isDark: isDark,
-                      folder: folder,
-                      onTap: () => onOpenFolder(folder)),
-                )),
-            const SizedBox(height: 14),
-          ],
-          if (topArtists.isNotEmpty) ...[
-            _heading(context.tr(L10nKeys.exploreArtists)),
-            Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: topArtists
-                    .map((artist) => Chip(label: Text(artist)))
-                    .toList()),
-          ],
-          if (mixes.isEmpty && folders.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 60),
-              child: Center(
-                  child: Text(
-                      context.tr(L10nKeys.keepListeningAi),
-                      textAlign: TextAlign.center)),
-            ),
+          ),
+          const SizedBox(height: 24),
         ],
-      );
-
-  Widget _heading(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Text(text,
-            style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: isDark ? Colors.white : Colors.black)),
-      );
+        if (folders.isNotEmpty) ...[
+          _aiMixesHeading(context.tr(L10nKeys.folders), t),
+          ...folders.map((folder) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _FolderRow(
+                    isDark: isDark,
+                    folder: folder,
+                    onTap: () => onOpenFolder(folder)),
+              )),
+          const SizedBox(height: 14),
+        ],
+        if (topArtists.isNotEmpty) ...[
+          _aiMixesHeading(context.tr(L10nKeys.exploreArtists), t),
+          Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: topArtists
+                  .map((artist) => Chip(label: Text(artist)))
+                  .toList()),
+        ],
+        if (mixes.isEmpty && folders.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 60),
+            child: Center(
+                child: Text(context.tr(L10nKeys.keepListeningAi),
+                    textAlign: TextAlign.center)),
+          ),
+      ],
+    );
+  }
 }
+
+Widget _aiMixesHeading(String text, NoctraThemeTokens t) => Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(text,
+          style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: t.primaryText)),
+    );
 
 class _MixCard extends StatelessWidget {
   final bool isDark;

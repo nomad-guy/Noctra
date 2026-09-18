@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../shared/widgets/glass_card.dart';
 import 'url_import_sheet.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class MigrationChooseView extends StatelessWidget {
   final bool isDark;
@@ -47,6 +48,7 @@ class MigrationChooseView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       children: [
@@ -54,7 +56,7 @@ class MigrationChooseView extends StatelessWidget {
           'Bring your playlists and listening history from other music services without connecting your accounts.',
           style: TextStyle(
             fontSize: 13,
-            color: isDark ? Colors.white54 : Colors.black54,
+            color: t.secondaryText,
             height: 1.4,
           ),
         ),
@@ -94,7 +96,7 @@ class MigrationChooseView extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white : Colors.black,
+                          color: t.primaryText,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -102,7 +104,7 @@ class MigrationChooseView extends StatelessWidget {
                         'Spotify, YouTube, or tracklist',
                         style: TextStyle(
                           fontSize: 11,
-                          color: isDark ? Colors.white54 : Colors.black54,
+                          color: t.secondaryText,
                         ),
                       ),
                     ],
@@ -110,7 +112,7 @@ class MigrationChooseView extends StatelessWidget {
                 ),
                 Icon(
                   Icons.chevron_right_rounded,
-                  color: isDark ? Colors.white38 : Colors.black38,
+                  color: t.tertiaryText,
                 ),
               ],
             ),
@@ -148,13 +150,13 @@ class MigrationChooseView extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white : Colors.black,
+                          color: t.primaryText,
                         ),
                       ),
                     ),
                     Icon(
                       Icons.chevron_right_rounded,
-                      color: isDark ? Colors.white38 : Colors.black38,
+                      color: t.tertiaryText,
                     ),
                   ],
                 ),

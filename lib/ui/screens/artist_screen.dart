@@ -56,6 +56,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
     final currentSong = ref.watch(currentSongStreamProvider).value;
@@ -86,7 +87,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
                           tooltip: context.tr(L10nKeys.back),
                           icon: Icon(
                             Icons.arrow_back_ios_new_rounded,
-                            color: isDark ? Colors.white : Colors.black,
+                            color: t.primaryText,
                             size: 20,
                           ),
                           onPressed: () => Navigator.of(context).pop(),
@@ -101,7 +102,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 1.5,
-                              color: isDark ? Colors.white60 : Colors.black54,
+                              color: t.secondaryText,
                             ),
                           ),
                         ),
@@ -138,7 +139,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
-                        color: isDark ? Colors.white : Colors.black,
+                        color: t.primaryText,
                       ),
                     ),
                   ),
@@ -160,7 +161,7 @@ class _ArtistScreenState extends ConsumerState<ArtistScreen> {
                         child: Text(
                           context.tr(L10nKeys.noTracksArtist),
                           style: TextStyle(
-                            color: isDark ? Colors.white38 : Colors.black38,
+                            color: t.tertiaryText,
                           ),
                         ),
                       ),

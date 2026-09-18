@@ -9,6 +9,7 @@ import 'search/search_artist_card.dart';
 import 'search/search_catalog_grid.dart';
 import 'search/search_track_tile.dart';
 import 'swipeable_song_tile.dart';
+import '../../core/theme/noir_theme.dart';
 
 class SearchResultsList extends ConsumerWidget {
   final bool isDark;
@@ -30,6 +31,7 @@ class SearchResultsList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final currentSong = ref.watch(currentSongStreamProvider).value;
 
     if (isSearching) {
@@ -38,7 +40,7 @@ class SearchResultsList extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             CircularProgressIndicator(
-              color: isDark ? Colors.white : Colors.black,
+              color: t.primaryText,
               strokeWidth: 2.5,
             ),
             const SizedBox(height: 14),
@@ -46,7 +48,7 @@ class SearchResultsList extends ConsumerWidget {
               context.tr(L10nKeys.buildingCatalog),
               style: TextStyle(
                 fontSize: 12,
-                color: isDark ? Colors.white60 : Colors.black54,
+                color: t.secondaryText,
               ),
             ),
           ],
@@ -74,7 +76,7 @@ class SearchResultsList extends ConsumerWidget {
             children: [
               Icon(Icons.search_off_rounded,
                   size: 40,
-                  color: isDark ? Colors.white30 : Colors.black26),
+                  color: t.tertiaryText),
               const SizedBox(height: 12),
               Text(
                 context.tr(L10nKeys.noResultsFor, {'query': activeQuery}),
@@ -82,7 +84,7 @@ class SearchResultsList extends ConsumerWidget {
                 style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white70 : Colors.black87),
+                    color: t.secondaryText),
               ),
               const SizedBox(height: 6),
               Text(

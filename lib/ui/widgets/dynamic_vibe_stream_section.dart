@@ -39,6 +39,7 @@ class _DynamicVibeStreamSectionState extends ConsumerState<DynamicVibeStreamSect
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final vibeTracksAsync = ref.watch(dynamicVibeTracksProvider);
     final downloading = ref.watch(downloadingSongsProvider);
 
@@ -72,13 +73,13 @@ class _DynamicVibeStreamSectionState extends ConsumerState<DynamicVibeStreamSect
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: tracks.length,
-              itemBuilder: (context, i) => _buildRow(tracks, i, downloading),
+              itemBuilder: (context, i) => _buildRow(context, tracks, i, downloading),
             );
           },
           loading: () => Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: CircularProgressIndicator(strokeWidth: 2, color: widget.isDark ? Colors.white : Colors.black),
+              child: CircularProgressIndicator(strokeWidth: 2, color: t.primaryText),
             ),
           ),
           error: (e, _) => _errorState(),
@@ -87,7 +88,8 @@ class _DynamicVibeStreamSectionState extends ConsumerState<DynamicVibeStreamSect
     );
   }
 
-  Widget _buildRow(List<Song> tracks, int i, Set<String> downloading) {
+  Widget _buildRow(BuildContext context, List<Song> tracks, int i, Set<String> downloading) {
+    final t = context.noctraTokens;
     final song = tracks[i];
     final isDownloaded = song.isDownloaded || downloading.contains(song.id);
     final isThisPlaying = widget.currentSong?.id == song.id && widget.isPlaying;
@@ -114,7 +116,7 @@ class _DynamicVibeStreamSectionState extends ConsumerState<DynamicVibeStreamSect
                     errorBuilder: (context, error, stackTrace) => Container(
                       width: 48, height: 48,
                       color: widget.isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE5E5E5),
-                      child: Icon(Icons.music_note_outlined, size: 20, color: widget.isDark ? Colors.white54 : Colors.black54),
+                      child: Icon(Icons.music_note_outlined, size: 20, color: t.secondaryText),
                     ),
                   ),
                 ),
@@ -154,7 +156,7 @@ class _DynamicVibeStreamSectionState extends ConsumerState<DynamicVibeStreamSect
                 song.duration.inSeconds > 0
                     ? '${song.duration.inMinutes}:${(song.duration.inSeconds % 60).toString().padLeft(2, '0')}'
                     : song.genre ?? '',
-                style: TextStyle(fontSize: 11, color: widget.isDark ? Colors.white38 : Colors.black38),
+                style: TextStyle(fontSize: 11, color: t.tertiaryText),
               ),
             ),
             // Action buttons -- compact
@@ -179,11 +181,12 @@ class _DynamicVibeStreamSectionState extends ConsumerState<DynamicVibeStreamSect
   }
 
   Widget _actionIcon(IconData icon, VoidCallback? onTap) {
+    final t = context.noctraTokens;
     return SizedBox(
       width: 32, height: 32,
       child: IconButton(
         padding: EdgeInsets.zero, iconSize: 18,
-        icon: Icon(icon, color: widget.isDark ? Colors.white54 : Colors.black54),
+        icon: Icon(icon, color: t.secondaryText),
         onPressed: onTap,
       ),
     );

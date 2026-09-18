@@ -4,6 +4,7 @@ import '../../../data/models/song_model.dart';
 import '../../../providers/app_providers.dart';
 import '../../../services/ytdlp/music_service.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class ArtistTrackTile extends ConsumerWidget {
   final Song song;
@@ -21,6 +22,7 @@ class ArtistTrackTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final audioPlayer = ref.watch(audioPlayerServiceProvider);
     final repo = ref.watch(musicRepositoryProvider);
     final isDownloaded =
@@ -66,7 +68,7 @@ class ArtistTrackTile extends ConsumerWidget {
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: isCurrent
-                          ? (isDark ? Colors.white : Colors.black)
+                          ? (t.primaryText)
                           : (isDark
                               ? Colors.white.withValues(alpha: 0.9)
                               : Colors.black87),
@@ -78,7 +80,7 @@ class ArtistTrackTile extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
-                      color: isDark ? Colors.white38 : Colors.black38,
+                      color: t.tertiaryText,
                     ),
                   ),
                 ],
@@ -94,7 +96,7 @@ class ArtistTrackTile extends ConsumerWidget {
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: isDark ? Colors.white : Colors.black,
+                            color: t.primaryText,
                           ),
                         )
                       : Icon(

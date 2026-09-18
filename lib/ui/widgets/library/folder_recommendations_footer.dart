@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/song_model.dart';
 import '../../../providers/app_providers.dart';
 import '../../../services/ytdlp/music_service.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class FolderRecommendationsFooter extends ConsumerStatefulWidget {
   final String folderName;
@@ -104,6 +105,7 @@ class _FolderRecommendationsFooterState
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final isDark = widget.isDark;
 
     return Container(
@@ -130,7 +132,7 @@ class _FolderRecommendationsFooterState
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: t.primaryText,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -138,7 +140,7 @@ class _FolderRecommendationsFooterState
                     'Based on songs in this collection',
                     style: TextStyle(
                       fontSize: 11,
-                      color: isDark ? Colors.white54 : Colors.black54,
+                      color: t.secondaryText,
                     ),
                   ),
                 ],
@@ -146,7 +148,7 @@ class _FolderRecommendationsFooterState
               IconButton(
                 icon: Icon(Icons.refresh_rounded,
                     size: 18,
-                    color: isDark ? Colors.white60 : Colors.black54),
+                    color: t.secondaryText),
                 tooltip: 'Refresh recommendations',
                 onPressed: _isLoading ? null : _loadRecommendations,
               ),
@@ -172,7 +174,7 @@ class _FolderRecommendationsFooterState
                   'No more recommendations right now',
                   style: TextStyle(
                     fontSize: 12,
-                    color: isDark ? Colors.white38 : Colors.black38,
+                    color: t.tertiaryText,
                   ),
                 ),
               ),
@@ -202,7 +204,7 @@ class _FolderRecommendationsFooterState
                           color: isDark ? Colors.white12 : Colors.black12,
                           child: Icon(Icons.music_note_rounded,
                               size: 18,
-                              color: isDark ? Colors.white38 : Colors.black38),
+                              color: t.tertiaryText),
                         ),
                       ),
                     ),
@@ -218,7 +220,7 @@ class _FolderRecommendationsFooterState
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.white : Colors.black,
+                              color: t.primaryText,
                             ),
                           ),
                           Text(
@@ -227,7 +229,7 @@ class _FolderRecommendationsFooterState
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 11,
-                              color: isDark ? Colors.white54 : Colors.black54,
+                              color: t.secondaryText,
                             ),
                           ),
                         ],
@@ -237,7 +239,7 @@ class _FolderRecommendationsFooterState
                       icon: Icon(
                         Icons.add_circle_outline_rounded,
                         size: 22,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                        color: t.secondaryText,
                       ),
                       onPressed: () => _addSong(song),
                     ),

@@ -20,7 +20,8 @@ class SidebarThemeCard extends ConsumerWidget {
           final next = switch (themeMode) {
             NoirThemeMode.noirBlack => NoirThemeMode.noirWhite,
             NoirThemeMode.noirWhite => NoirThemeMode.liquidGlass,
-            NoirThemeMode.liquidGlass => NoirThemeMode.noirBlack,
+            NoirThemeMode.liquidGlass => NoirThemeMode.materialU,
+            NoirThemeMode.materialU => NoirThemeMode.noirBlack,
           };
           ref.read(themeModeProvider.notifier).state = next;
         },
@@ -56,6 +57,7 @@ class SidebarThemeCard extends ConsumerWidget {
                         NoirThemeMode.noirBlack => 'Noir Black',
                         NoirThemeMode.noirWhite => 'Noir White',
                         NoirThemeMode.liquidGlass => 'Liquid Glass',
+                        NoirThemeMode.materialU => 'Material U',
                       },
                       style: TextStyle(
                         fontSize: 13,

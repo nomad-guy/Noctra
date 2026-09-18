@@ -19,6 +19,7 @@ class HomeGreetingSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 2),
@@ -51,7 +52,7 @@ class HomeGreetingSection extends StatelessWidget {
                 children: [
                   LiveAudioWave(
                       isPlaying: isPlaying,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: t.primaryText,
                       height: 11,
                       barCount: 3),
                   const SizedBox(width: 5),
@@ -61,7 +62,7 @@ class HomeGreetingSection extends StatelessWidget {
                       fontSize: 9,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: t.primaryText,
                     ),
                   ),
                 ],

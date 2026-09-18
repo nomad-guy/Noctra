@@ -19,6 +19,7 @@ class JamQueueTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final queue = syncService.collaborativeQueue;
 
     return Column(
@@ -35,14 +36,14 @@ class JamQueueTab extends ConsumerWidget {
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.2,
-                  color: isDark ? Colors.white60 : Colors.black54,
+                  color: t.secondaryText,
                 ),
               ),
               Text(
                 context.tr(L10nKeys.liveSyncedPeers),
                 style: TextStyle(
                     fontSize: 11,
-                    color: isDark ? Colors.white38 : Colors.black38),
+                    color: t.tertiaryText),
               ),
             ],
           ),
@@ -59,7 +60,7 @@ class JamQueueTab extends ConsumerWidget {
                       children: [
                         Icon(Icons.queue_music_rounded,
                             size: 36,
-                            color: isDark ? Colors.white24 : Colors.black26),
+                            color: t.tertiaryText),
                         const SizedBox(height: 12),
                         Text(
                           syncService.hostControlsOnly && !syncService.isHost
@@ -68,7 +69,7 @@ class JamQueueTab extends ConsumerWidget {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                               fontSize: 12.5,
-                              color: isDark ? Colors.white38 : Colors.black38),
+                              color: t.tertiaryText),
                         ),
                       ],
                     ),

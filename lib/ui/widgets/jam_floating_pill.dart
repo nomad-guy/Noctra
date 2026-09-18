@@ -10,6 +10,7 @@ class JamFloatingPill extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final syncService = ref.watch(p2pSyncServiceProvider);
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
@@ -33,7 +34,7 @@ class JamFloatingPill extends ConsumerWidget {
             color: isDark ? const Color(0xE6181818) : const Color(0xE6E8E8E8),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isDark ? Colors.white24 : Colors.black26,
+              color: t.tertiaryText,
               width: 1,
             ),
             boxShadow: [
@@ -52,7 +53,7 @@ class JamFloatingPill extends ConsumerWidget {
                 height: 7,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: t.primaryText,
                 ),
               ),
               const SizedBox(width: 8),
@@ -62,13 +63,13 @@ class JamFloatingPill extends ConsumerWidget {
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: t.primaryText,
                 ),
               ),
               const SizedBox(width: 8),
               LiveAudioWave(
                 isPlaying: true,
-                color: isDark ? Colors.white : Colors.black,
+                color: t.primaryText,
                 height: 10,
                 barCount: 3,
               ),

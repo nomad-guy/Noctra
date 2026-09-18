@@ -11,6 +11,7 @@ class AudioDnaSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final taste = ref.watch(tasteVectorStateProvider);
     final accent = context.noctraTokens.accent;
@@ -63,7 +64,7 @@ class AudioDnaSheet extends ConsumerWidget {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : Colors.black26,
+                    color: t.tertiaryText,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -82,7 +83,7 @@ class AudioDnaSheet extends ConsumerWidget {
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1.5,
-                          color: isDark ? Colors.white : Colors.black,
+                          color: t.primaryText,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -90,14 +91,14 @@ class AudioDnaSheet extends ConsumerWidget {
                         'Live 32-Axis Acoustic Taste Profile',
                         style: TextStyle(
                           fontSize: 12,
-                          color: isDark ? Colors.white60 : Colors.black54,
+                          color: t.secondaryText,
                         ),
                       ),
                     ],
                   ),
                   IconButton(
                     icon: Icon(Icons.close_rounded,
-                        color: isDark ? Colors.white60 : Colors.black54),
+                        color: t.secondaryText),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -141,7 +142,7 @@ class AudioDnaSheet extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 12,
                         height: 1.35,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                        color: t.secondaryText,
                       ),
                     ),
                   ],
@@ -158,7 +159,7 @@ class AudioDnaSheet extends ConsumerWidget {
                     axes: radarAxes,
                     accentColor: accent,
                     gridColor: isDark ? Colors.white12 : Colors.black12,
-                    textColor: isDark ? Colors.white60 : Colors.black54,
+                    textColor: t.secondaryText,
                   ),
                 ),
               ),
@@ -183,7 +184,7 @@ class AudioDnaSheet extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                        color: t.secondaryText,
                       ),
                     ),
                   );
@@ -202,9 +203,9 @@ class AudioDnaSheet extends ConsumerWidget {
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: isDark ? Colors.white : Colors.black,
+                    foregroundColor: t.primaryText,
                     side: BorderSide(
-                        color: isDark ? Colors.white24 : Colors.black26),
+                        color: t.tertiaryText),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),

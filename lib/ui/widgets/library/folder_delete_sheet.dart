@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../core/utils/noctra_localization.dart';
+import '../../../core/theme/noir_theme.dart';
 
 /// Shows the delete-folder confirmation bottom sheet used by
 /// LibraryFoldersTab. Extracted so the folders tab stays small.
@@ -10,6 +11,7 @@ void showFolderDeleteSheet(
   required String folderName,
   required VoidCallback onDelete,
 }) {
+  final t = context.noctraTokens;
   showModalBottomSheet(
     context: context,
     useRootNavigator: true,
@@ -34,21 +36,21 @@ void showFolderDeleteSheet(
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : Colors.black26,
+                    color: t.tertiaryText,
                     borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 16),
             Text(NoctraLocalization.tr('delete_folder'),
                 style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : Colors.black)),
+                    color: t.primaryText)),
             const SizedBox(height: 8),
             Text(
               '${NoctraLocalization.tr('delete')} "$folderName"? ${NoctraLocalization.tr('delete_folder_confirm')}',
               textAlign: TextAlign.center,
               style: TextStyle(
                   fontSize: 12.5,
-                  color: isDark ? Colors.white60 : Colors.black54),
+                  color: t.secondaryText),
             ),
             const SizedBox(height: 20),
             Row(

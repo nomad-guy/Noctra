@@ -26,6 +26,7 @@ class _AIRadioSheetState extends ConsumerState<AIRadioSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
     final repo = ref.watch(musicRepositoryProvider);
@@ -51,7 +52,7 @@ class _AIRadioSheetState extends ConsumerState<AIRadioSheet> {
             width: 42,
             height: 4,
             decoration: BoxDecoration(
-              color: isDark ? Colors.white24 : Colors.black26,
+              color: t.tertiaryText,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -65,12 +66,12 @@ class _AIRadioSheetState extends ConsumerState<AIRadioSheet> {
                 height: 42,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: t.primaryText,
                 ),
                 child: Icon(
                   Icons.radar_rounded,
                   size: 22,
-                  color: isDark ? Colors.black : Colors.white,
+                  color: t.primaryText,
                 ),
               ),
               const SizedBox(width: 12),
@@ -83,7 +84,7 @@ class _AIRadioSheetState extends ConsumerState<AIRadioSheet> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white : Colors.black,
+                        color: t.primaryText,
                       ),
                     ),
                     Text(
@@ -92,14 +93,14 @@ class _AIRadioSheetState extends ConsumerState<AIRadioSheet> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
-                        color: isDark ? Colors.white60 : Colors.black54,
+                        color: t.secondaryText,
                       ),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.close_rounded, color: isDark ? Colors.white70 : Colors.black87),
+                icon: Icon(Icons.close_rounded, color: t.secondaryText),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],
@@ -124,13 +125,13 @@ class _AIRadioSheetState extends ConsumerState<AIRadioSheet> {
                           height: 26,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: isDark ? Colors.white70 : Colors.black87,
+                            color: t.secondaryText,
                           ),
                         ),
                         const SizedBox(height: 14),
                         Text(
                           'Computing 16-axis acoustic nearest neighbors...',
-                          style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.black54),
+                          style: TextStyle(fontSize: 12, color: t.secondaryText),
                         ),
                       ],
                     ),
@@ -140,7 +141,7 @@ class _AIRadioSheetState extends ConsumerState<AIRadioSheet> {
                 final tracks = snapshot.data ?? [];
                 if (tracks.isEmpty) {
                   return Center(
-                    child: Text('No candidate tracks found', style: TextStyle(color: isDark ? Colors.white60 : Colors.black54)),
+                    child: Text('No candidate tracks found', style: TextStyle(color: t.secondaryText)),
                   );
                 }
 
@@ -177,7 +178,7 @@ class _AIRadioSheetState extends ConsumerState<AIRadioSheet> {
                                   width: 44,
                                   height: 44,
                                   color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE5E5E5),
-                                  child: Icon(Icons.music_note_outlined, color: isDark ? Colors.white54 : Colors.black54),
+                                  child: Icon(Icons.music_note_outlined, color: t.secondaryText),
                                 ),
                               ),
                             ),
@@ -192,7 +193,7 @@ class _AIRadioSheetState extends ConsumerState<AIRadioSheet> {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                                           decoration: BoxDecoration(
-                                            color: isDark ? Colors.white : Colors.black,
+                                            color: t.primaryText,
                                             borderRadius: BorderRadius.circular(4),
                                           ),
                                           child: Text(
@@ -200,7 +201,7 @@ class _AIRadioSheetState extends ConsumerState<AIRadioSheet> {
                                             style: TextStyle(
                                               fontSize: 8.5,
                                               fontWeight: FontWeight.w800,
-                                              color: isDark ? Colors.black : Colors.white,
+                                              color: t.primaryText,
                                             ),
                                           ),
                                         ),
@@ -223,7 +224,7 @@ class _AIRadioSheetState extends ConsumerState<AIRadioSheet> {
                                   const SizedBox(height: 2),
                                   Text(
                                     song.artist,
-                                    style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white60 : Colors.black54),
+                                    style: TextStyle(fontSize: 11.5, color: t.secondaryText),
                                   ),
                                 ],
                               ),
@@ -239,7 +240,7 @@ class _AIRadioSheetState extends ConsumerState<AIRadioSheet> {
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
-                                  color: isDark ? Colors.white : Colors.black,
+                                  color: t.primaryText,
                                 ),
                               ),
                             ),

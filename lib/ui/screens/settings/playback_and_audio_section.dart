@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../providers/app_providers.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../widgets/stream_quality_sheet.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class PlaybackAndAudioSection extends ConsumerWidget {
   final bool isDark;
@@ -11,6 +12,7 @@ class PlaybackAndAudioSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final audioPlayer = ref.watch(audioPlayerServiceProvider);
     final sleepTimerAsync = ref.watch(sleepTimerStreamProvider);
     final sleepRemaining =
@@ -27,7 +29,7 @@ class PlaybackAndAudioSection extends ConsumerWidget {
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
-            color: isDark ? Colors.white60 : Colors.black54,
+            color: t.secondaryText,
           ),
         ),
         const SizedBox(height: 8),
@@ -45,7 +47,7 @@ class PlaybackAndAudioSection extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: t.primaryText,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -57,7 +59,7 @@ class PlaybackAndAudioSection extends ConsumerWidget {
                       fontSize: 11.5,
                       color: sleepRemaining != null
                           ? Colors.amber
-                          : (isDark ? Colors.white54 : Colors.black54),
+                          : (t.secondaryText),
                     ),
                   ),
                 ],
@@ -76,7 +78,7 @@ class PlaybackAndAudioSection extends ConsumerWidget {
                 underline: const SizedBox.shrink(),
                 style: TextStyle(
                   fontSize: 13,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: t.primaryText,
                 ),
                 items: const [
                   DropdownMenuItem(value: 0, child: Text('Off')),
@@ -106,7 +108,7 @@ class PlaybackAndAudioSection extends ConsumerWidget {
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
-            color: isDark ? Colors.white60 : Colors.black54,
+            color: t.secondaryText,
           ),
         ),
         const SizedBox(height: 8),
@@ -123,7 +125,7 @@ class PlaybackAndAudioSection extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: t.primaryText,
                     ),
                   ),
                   Switch(
@@ -147,7 +149,7 @@ class PlaybackAndAudioSection extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: t.primaryText,
                     ),
                   ),
                   Text(
@@ -155,7 +157,7 @@ class PlaybackAndAudioSection extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: t.primaryText,
                     ),
                   ),
                 ],
@@ -170,7 +172,7 @@ class PlaybackAndAudioSection extends ConsumerWidget {
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
-            color: isDark ? Colors.white60 : Colors.black54,
+            color: t.secondaryText,
           ),
         ),
         const SizedBox(height: 8),
@@ -194,20 +196,20 @@ class PlaybackAndAudioSection extends ConsumerWidget {
                   children: [
                     Icon(Icons.equalizer_rounded,
                         size: 18,
-                        color: isDark ? Colors.white70 : Colors.black87),
+                        color: t.secondaryText),
                     const SizedBox(width: 10),
                     Text(
                       'Audio Quality & Codec Settings',
                       style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : Colors.black,
+                        color: t.primaryText,
                       ),
                     ),
                   ],
                 ),
                 Icon(Icons.chevron_right_rounded,
-                    color: isDark ? Colors.white38 : Colors.black38),
+                    color: t.tertiaryText),
               ],
             ),
           ),

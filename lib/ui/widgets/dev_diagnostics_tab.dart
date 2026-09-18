@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/models/song_model.dart';
 import '../../shared/widgets/glass_card.dart';
+import '../../core/theme/noir_theme.dart';
 
 
 class DevDiagnosticsTab extends StatelessWidget {
@@ -26,6 +27,7 @@ class DevDiagnosticsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Column(
@@ -44,14 +46,14 @@ class DevDiagnosticsTab extends StatelessWidget {
                     fontSize: 10.5,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.2,
-                    color: isDark ? Colors.white60 : Colors.black54,
+                    color: t.secondaryText,
                   ),
                 ),
                 const SizedBox(height: 8),
-                _telemetryRow('Active Track', currentSong?.title ?? 'Idle', isDark),
-                _telemetryRow('Source Engine', currentSong?.genre ?? 'Local Library', isDark),
-                _telemetryRow('Resolver Engine', telemetry?.resolverUsed ?? '320 kbps (Master)', isDark),
-                _telemetryRow('ML Inference', '< 2.0 ms (On-Device)', isDark),
+                _telemetryRow(context, 'Active Track', currentSong?.title ?? 'Idle', isDark),
+                _telemetryRow(context, 'Source Engine', currentSong?.genre ?? 'Local Library', isDark),
+                _telemetryRow(context, 'Resolver Engine', telemetry?.resolverUsed ?? '320 kbps (Master)', isDark),
+                _telemetryRow(context, 'ML Inference', '< 2.0 ms (On-Device)', isDark),
               ],
             ),
           ),
@@ -71,7 +73,7 @@ class DevDiagnosticsTab extends StatelessWidget {
                     fontSize: 10.5,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.2,
-                    color: isDark ? Colors.white60 : Colors.black54,
+                    color: t.secondaryText,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -85,7 +87,7 @@ class DevDiagnosticsTab extends StatelessWidget {
                           width: 130,
                           child: Text(
                             _axisLabels[i],
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: isDark ? Colors.white70 : Colors.black87),
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: t.secondaryText),
                           ),
                         ),
                         Expanded(
@@ -95,7 +97,7 @@ class DevDiagnosticsTab extends StatelessWidget {
                               value: val.clamp(0.0, 1.0),
                               minHeight: 5,
                               backgroundColor: isDark ? Colors.white12 : Colors.black12,
-                              valueColor: AlwaysStoppedAnimation<Color>(isDark ? Colors.white : Colors.black),
+                              valueColor: AlwaysStoppedAnimation<Color>(t.primaryText),
                             ),
                           ),
                         ),
@@ -105,7 +107,7 @@ class DevDiagnosticsTab extends StatelessWidget {
                           child: Text(
                             '${(val * 100).toInt()}%',
                             textAlign: TextAlign.end,
-                            style: TextStyle(fontSize: 10.5, fontFamily: 'monospace', fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black),
+                            style: TextStyle(fontSize: 10.5, fontFamily: 'monospace', fontWeight: FontWeight.w700, color: t.primaryText),
                           ),
                         ),
                       ],
@@ -121,14 +123,15 @@ class DevDiagnosticsTab extends StatelessWidget {
     );
   }
 
-  Widget _telemetryRow(String label, String value, bool isDark) {
+  Widget _telemetryRow(BuildContext context, String label, String value, bool isDark) {
+    final t = context.noctraTokens;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2.5),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: 11.5, color: isDark ? Colors.white54 : Colors.black54)),
-          Text(value, style: TextStyle(fontSize: 11.5, fontFamily: 'monospace', fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
+          Text(label, style: TextStyle(fontSize: 11.5, color: t.secondaryText)),
+          Text(value, style: TextStyle(fontSize: 11.5, fontFamily: 'monospace', fontWeight: FontWeight.w600, color: t.primaryText)),
         ],
       ),
     );

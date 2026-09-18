@@ -68,6 +68,7 @@ class _HomeScreenAppBarState extends ConsumerState<HomeScreenAppBar>
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final isDark = widget.isDark;
     final themeMode = widget.themeMode;
     final tokens = context.noctraTokens;
@@ -134,7 +135,7 @@ class _HomeScreenAppBarState extends ConsumerState<HomeScreenAppBar>
                         constraints:
                             const BoxConstraints(minWidth: 30, minHeight: 30),
                         icon: Icon(Icons.menu_rounded,
-                            color: isDark ? Colors.white : Colors.black,
+                            color: t.primaryText,
                             size: 22),
                         tooltip: context.tr(L10nKeys.openSidebar),
                         onPressed: () {

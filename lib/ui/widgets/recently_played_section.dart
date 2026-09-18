@@ -8,6 +8,7 @@ import '../../shared/widgets/glass_card.dart';
 
 import 'live_audio_wave.dart';
 import 'recently_played_sheet.dart';
+import '../../core/theme/noir_theme.dart';
 
 class RecentlyPlayedSection extends ConsumerWidget {
   final bool isDark;
@@ -23,6 +24,7 @@ class RecentlyPlayedSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final repo = ref.watch(musicRepositoryProvider);
     final recentlyPlayed = repo.recentlyPlayed;
 
@@ -53,11 +55,11 @@ class RecentlyPlayedSection extends ConsumerWidget {
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1.2,
-                        color: isDark ? Colors.white60 : Colors.black54,
+                        color: t.secondaryText,
                       ),
                     ),
                     const SizedBox(width: 4),
-                    Icon(Icons.open_in_new_rounded, size: 12, color: isDark ? Colors.white38 : Colors.black38),
+                    Icon(Icons.open_in_new_rounded, size: 12, color: t.tertiaryText),
                   ],
                 ),
               ),
@@ -78,7 +80,7 @@ class RecentlyPlayedSection extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                        color: t.secondaryText,
                       ),
                     ),
                   ),
@@ -92,7 +94,7 @@ class RecentlyPlayedSection extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white38 : Colors.black38,
+                        color: t.tertiaryText,
                       ),
                     ),
                   ),
@@ -146,7 +148,7 @@ class RecentlyPlayedSection extends ConsumerWidget {
                                 width: 44,
                                 height: 44,
                                 color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE5E5E5),
-                                child: Icon(Icons.music_note_outlined, color: isDark ? Colors.white54 : Colors.black54, size: 20),
+                                child: Icon(Icons.music_note_outlined, color: t.secondaryText, size: 20),
                               ),
                             ),
                           ),
@@ -164,7 +166,7 @@ class RecentlyPlayedSection extends ConsumerWidget {
                                   style: TextStyle(
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w700,
-                                    color: isDark ? Colors.white : Colors.black,
+                                    color: t.primaryText,
                                   ),
                                 ),
                               ),
@@ -176,7 +178,7 @@ class RecentlyPlayedSection extends ConsumerWidget {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 10.5,
-                                    color: isDark ? Colors.white54 : Colors.black54,
+                                    color: t.secondaryText,
                                   ),
                                 ),
                               ),
@@ -185,7 +187,7 @@ class RecentlyPlayedSection extends ConsumerWidget {
                           const SizedBox(width: 6),
                           if (isThisPlaying) ...[
                             const SizedBox(width: 4),
-                            LiveAudioWave(isPlaying: isThisPlaying, color: isDark ? Colors.white : Colors.black, barCount: 3, height: 12),
+                            LiveAudioWave(isPlaying: isThisPlaying, color: t.primaryText, barCount: 3, height: 12),
                           ] else ...[
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
@@ -198,14 +200,14 @@ class RecentlyPlayedSection extends ConsumerWidget {
                                 style: TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w700,
-                                  color: isDark ? Colors.white70 : Colors.black87,
+                                  color: t.secondaryText,
                                 ),
                               ),
                             ),
                           ],
                           const SizedBox(width: 4),
                           IconButton(
-                            icon: Icon(Icons.close, size: 14, color: isDark ? Colors.white38 : Colors.black38),
+                            icon: Icon(Icons.close, size: 14, color: t.tertiaryText),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
                             splashRadius: 14,

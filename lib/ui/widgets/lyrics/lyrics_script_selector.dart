@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../services/lyrics/universal_lyrics_transliteration_engine.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class LyricsScriptSelector extends StatelessWidget {
   final List<ScriptOption> options;
@@ -17,6 +18,7 @@ class LyricsScriptSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     if (options.length <= 1) return const SizedBox.shrink();
 
     return Positioned(
@@ -42,7 +44,7 @@ class LyricsScriptSelector extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
                   decoration: BoxDecoration(
                     color: sel
-                        ? (isDark ? Colors.white : Colors.black)
+                        ? (t.primaryText)
                         : (isDark
                             ? const Color(0x33FFFFFF)
                             : const Color(0x1F000000)),
@@ -54,8 +56,8 @@ class LyricsScriptSelector extends StatelessWidget {
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: sel
-                          ? (isDark ? Colors.black : Colors.white)
-                          : (isDark ? Colors.white70 : Colors.black87),
+                          ? (t.primaryText)
+                          : (t.secondaryText),
                     ),
                   ),
                 ),
@@ -80,6 +82,7 @@ class LyricsSyncFloatingButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     return Positioned(
       bottom: 16,
       left: 0,
@@ -108,7 +111,7 @@ class LyricsSyncFloatingButton extends StatelessWidget {
                 Icon(
                   Icons.vertical_align_center_rounded,
                   size: 14,
-                  color: isDark ? Colors.black : Colors.white,
+                  color: t.primaryText,
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -116,7 +119,7 @@ class LyricsSyncFloatingButton extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.black : Colors.white,
+                    color: t.primaryText,
                   ),
                 ),
               ],

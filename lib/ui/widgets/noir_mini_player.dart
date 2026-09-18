@@ -69,6 +69,7 @@ class _NoirMiniPlayerViewState extends ConsumerState<NoirMiniPlayerView> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final isPlaying = ref.watch(isPlayingStreamProvider).value ?? false;
     final repo = ref.watch(musicRepositoryProvider);
     final isDark = widget.isDark;
@@ -110,8 +111,8 @@ class _NoirMiniPlayerViewState extends ConsumerState<NoirMiniPlayerView> {
                           color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE0E0E0),
                           child: song.artworkUrl != null
                               ? Image.network(song.artworkUrl!, fit: BoxFit.cover, cacheWidth: 150, cacheHeight: 150,
-                                  errorBuilder: (c, e, st) => Icon(Icons.music_note_outlined, color: isDark ? Colors.white54 : Colors.black54))
-                              : Icon(Icons.music_note_outlined, color: isDark ? Colors.white54 : Colors.black54),
+                                  errorBuilder: (c, e, st) => Icon(Icons.music_note_outlined, color: t.secondaryText))
+                              : Icon(Icons.music_note_outlined, color: t.secondaryText),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -121,7 +122,7 @@ class _NoirMiniPlayerViewState extends ConsumerState<NoirMiniPlayerView> {
                             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary)),
                           const SizedBox(height: 2),
                           Row(children: [
-                            LiveAudioWave(isPlaying: isPlaying, color: isDark ? Colors.white70 : Colors.black87, height: 8, barCount: 3),
+                            LiveAudioWave(isPlaying: isPlaying, color: t.secondaryText, height: 8, barCount: 3),
                             const SizedBox(width: 4),
                             Expanded(child: Text(song.artist, maxLines: 1, overflow: TextOverflow.ellipsis,
                               style: TextStyle(fontSize: 11, color: isDark ? NoirColors.blackTextSecondary : NoirColors.whiteTextSecondary))),
@@ -129,7 +130,7 @@ class _NoirMiniPlayerViewState extends ConsumerState<NoirMiniPlayerView> {
                         ]),
                       ),
                       IconButton(
-                        icon: Icon(Icons.equalizer_rounded, size: 20, color: isDark ? Colors.white60 : Colors.black54),
+                        icon: Icon(Icons.equalizer_rounded, size: 20, color: t.secondaryText),
                         tooltip: context.tr(L10nKeys.equalizer),
                         onPressed: () {
                           HapticFeedback.selectionClick();
@@ -139,7 +140,7 @@ class _NoirMiniPlayerViewState extends ConsumerState<NoirMiniPlayerView> {
                       IconButton(
                         icon: Icon(repo.isFavorite(song.id) ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                           size: 20,
-                          color: repo.isFavorite(song.id) ? Colors.redAccent : (isDark ? Colors.white60 : Colors.black54)),
+                          color: repo.isFavorite(song.id) ? Colors.redAccent : (t.secondaryText)),
                         onPressed: () {
                           HapticFeedback.mediumImpact();
                           ref.read(musicRepositoryProvider).toggleFavorite(song);
@@ -147,7 +148,7 @@ class _NoirMiniPlayerViewState extends ConsumerState<NoirMiniPlayerView> {
                       ),
                       IconButton(
                         icon: Icon(isPlaying ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
-                          size: 32, color: isDark ? Colors.white : Colors.black),
+                          size: 32, color: t.primaryText),
                         onPressed: () {
                           HapticFeedback.lightImpact();
                           ref.read(audioPlayerServiceProvider).togglePlayPause();
@@ -235,6 +236,7 @@ class _MiniSeekAreaState extends ConsumerState<_MiniSeekArea> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final isDark = widget.isDark;
     final accentColor = widget.accentColor;
     final position = ref.watch(positionStreamProvider).value ?? Duration.zero;
@@ -267,9 +269,9 @@ class _MiniSeekAreaState extends ConsumerState<_MiniSeekArea> {
               trackHeight: _seekMode ? 3.0 : 2.0,
               thumbShape: RoundSliderThumbShape(enabledThumbRadius: _seekMode ? 6.0 : 4.0),
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 8.0),
-              activeTrackColor: _seekMode ? accentColor : (isDark ? Colors.white : Colors.black),
+              activeTrackColor: _seekMode ? accentColor : (t.primaryText),
               inactiveTrackColor: _seekMode ? accentColor.withValues(alpha: 0.25) : (isDark ? Colors.white24 : Colors.black12),
-              thumbColor: _seekMode ? accentColor : (isDark ? Colors.white : Colors.black),
+              thumbColor: _seekMode ? accentColor : (t.primaryText),
             ),
             child: Slider(
               value: displayPosition.inMilliseconds.toDouble().clamp(0.0, duration.inMilliseconds.toDouble()),
@@ -286,9 +288,9 @@ class _MiniSeekAreaState extends ConsumerState<_MiniSeekArea> {
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Text(_formatDuration(displayPosition),
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _seekMode ? accentColor : (isDark ? Colors.white54 : Colors.black54))),
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: _seekMode ? accentColor : (t.secondaryText))),
               if (_seekMode) Text('SEEKING', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1.2, color: accentColor))
-              else Text('-${_formatDuration(remaining)}', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: isDark ? Colors.white54 : Colors.black54)),
+              else Text('-${_formatDuration(remaining)}', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: t.secondaryText)),
             ]),
           ),
         ]),

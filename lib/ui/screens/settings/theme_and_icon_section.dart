@@ -15,6 +15,7 @@ class ThemeAndIconSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     ref.watch(appLanguageProvider);
     final themeMode = ref.watch(themeModeProvider);
 
@@ -27,7 +28,7 @@ class ThemeAndIconSection extends ConsumerWidget {
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
-            color: isDark ? Colors.white60 : Colors.black54,
+            color: t.secondaryText,
           ),
         ),
         const SizedBox(height: 8),
@@ -50,6 +51,11 @@ class ThemeAndIconSection extends ConsumerWidget {
                 child: _themeChip(context, ref, 'Liquid Glass',
                     NoirThemeMode.liquidGlass, themeMode),
               ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _themeChip(context, ref, 'Material U',
+                    NoirThemeMode.materialU, themeMode),
+              ),
             ],
           ),
         ),
@@ -60,7 +66,7 @@ class ThemeAndIconSection extends ConsumerWidget {
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
-            color: isDark ? Colors.white60 : Colors.black54,
+            color: t.secondaryText,
           ),
         ),
         const SizedBox(height: 8),
@@ -98,7 +104,7 @@ class ThemeAndIconSection extends ConsumerWidget {
             'Theme and icon are independent. You can mix any theme with any icon.',
             style: TextStyle(
               fontSize: 11,
-              color: isDark ? Colors.white38 : Colors.black38,
+              color: t.tertiaryText,
               height: 1.4,
             ),
           ),
@@ -181,7 +187,6 @@ class ThemeAndIconSection extends ConsumerWidget {
     }
 
     final tokens = context.noctraTokens;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final shouldApply = await showDialog<bool>(
       context: context,
@@ -214,7 +219,7 @@ class ThemeAndIconSection extends ConsumerWidget {
               'No',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white60 : Colors.black54,
+                color: tokens.secondaryText,
               ),
             ),
           ),

@@ -93,6 +93,7 @@ class CustomBottomNavBar extends ConsumerWidget {
     bool isSelected,
     bool isDark,
   ) {
+    final t = context.noctraTokens;
     return InkWell(
       onTap: () {
         if (!isSelected) {
@@ -110,8 +111,8 @@ class CustomBottomNavBar extends ConsumerWidget {
               isSelected ? activeIcon : inactiveIcon,
               size: 24,
               color: isSelected
-                  ? (isDark ? Colors.white : Colors.black)
-                  : (isDark ? Colors.white38 : Colors.black38),
+                  ? (t.primaryText)
+                  : (t.tertiaryText),
             ),
             const SizedBox(height: 3),
             Text(
@@ -120,8 +121,8 @@ class CustomBottomNavBar extends ConsumerWidget {
                 fontSize: 10,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected
-                    ? (isDark ? Colors.white : Colors.black)
-                    : (isDark ? Colors.white38 : Colors.black38),
+                    ? (t.primaryText)
+                    : (t.tertiaryText),
               ),
             ),
           ],

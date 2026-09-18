@@ -4,6 +4,7 @@ import '../../../providers/app_providers.dart';
 import '../../../shared/widgets/glass_card.dart';
 import 'music_preferences_sheet.dart';
 import '../../widgets/audio_dna_sheet.dart';
+import '../../../core/theme/noir_theme.dart';
 
 /// Settings section displaying active music preferences with an editor action.
 class MusicPreferencesSection extends ConsumerWidget {
@@ -13,6 +14,7 @@ class MusicPreferencesSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final repo = ref.watch(musicRepositoryProvider);
     final langs = repo.onboardedLanguages;
     final genres = repo.onboardedGenres;
@@ -30,7 +32,7 @@ class MusicPreferencesSection extends ConsumerWidget {
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
-            color: isDark ? Colors.white60 : Colors.black54,
+            color: t.secondaryText,
           ),
         ),
         const SizedBox(height: 8),
@@ -49,7 +51,7 @@ class MusicPreferencesSection extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : Colors.black,
+                        color: t.primaryText,
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -59,7 +61,7 @@ class MusicPreferencesSection extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 11.5,
-                        color: isDark ? Colors.white54 : Colors.black54,
+                        color: t.secondaryText,
                       ),
                     ),
                   ],
@@ -68,7 +70,7 @@ class MusicPreferencesSection extends ConsumerWidget {
               IconButton(
                 icon: Icon(Icons.tune_rounded,
                     size: 20,
-                    color: isDark ? Colors.white70 : Colors.black87),
+                    color: t.secondaryText),
                 tooltip: 'Edit Preferences',
                 onPressed: () =>
                     MusicPreferencesSheet.show(context, ref, isDark),
@@ -93,7 +95,7 @@ class MusicPreferencesSection extends ConsumerWidget {
               children: [
                 Icon(Icons.fingerprint_rounded,
                     size: 22,
-                    color: isDark ? Colors.white70 : Colors.black87),
+                    color: t.secondaryText),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -104,7 +106,7 @@ class MusicPreferencesSection extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white : Colors.black,
+                          color: t.primaryText,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -112,7 +114,7 @@ class MusicPreferencesSection extends ConsumerWidget {
                         'Live 32-axis geometric acoustic visualizer',
                         style: TextStyle(
                           fontSize: 11.5,
-                          color: isDark ? Colors.white54 : Colors.black54,
+                          color: t.secondaryText,
                         ),
                       ),
                     ],
@@ -120,7 +122,7 @@ class MusicPreferencesSection extends ConsumerWidget {
                 ),
                 Icon(Icons.chevron_right_rounded,
                     size: 20,
-                    color: isDark ? Colors.white38 : Colors.black38),
+                    color: t.tertiaryText),
               ],
             ),
           ),

@@ -32,6 +32,20 @@ class NoctraLogger {
   static const int _maxLogs = 2000;
   static bool _installed = false;
 
+  /// Console printing is suppressed when running under `flutter test`:
+  /// entries still land in the ring buffer (assertable), but expected
+  /// negative-path warnings no longer flood the test output.
+  static bool get _consoleEnabled =>
+      !kDebugMode || !_isRunningUnderTest;
+
+  static bool get _isRunningUnderTest {
+    try {
+      return bool.fromEnvironment('FLUTTER_TEST');
+    } catch (_) {
+      return false;
+    }
+  }
+
   static List<LogEntry> get recentLogs =>
       List.unmodifiable(List<LogEntry>.from(_recentLogs));
 
@@ -96,30 +110,32 @@ class NoctraLogger {
 
   static void d(String message, [dynamic error]) {
     _record('DEBUG', message, error);
-    if (kDebugMode) {
+    if (_consoleEnabled && kDebugMode) {
       debugPrint('[NOCTRA DEBUG] $message ${error != null ? '=> $error' : ''}');
     }
   }
 
   static void i(String message) {
     _record('INFO', message);
-    if (kDebugMode) {
+    if (_consoleEnabled && kDebugMode) {
       debugPrint('[NOCTRA INFO] $message');
     }
   }
 
   static void w(String message, [dynamic error, StackTrace? stackTrace]) {
     _record('WARN', message, error, stackTrace);
-    if (kDebugMode) {
+    if (_consoleEnabled && kDebugMode) {
       debugPrint('[NOCTRA WARN] $message ${error != null ? '=> $error' : ''}');
     }
   }
 
   static void e(String message, [dynamic error, StackTrace? stackTrace]) {
     _record('ERROR', message, error, stackTrace);
-    debugPrint('[NOCTRA ERROR] $message ${error != null ? '=> $error' : ''}');
-    if (stackTrace != null && kDebugMode) {
-      debugPrint('[NOCTRA STACK] $stackTrace');
+    if (_consoleEnabled) {
+      debugPrint('[NOCTRA ERROR] $message ${error != null ? '=> $error' : ''}');
+      if (stackTrace != null && kDebugMode) {
+        debugPrint('[NOCTRA STACK] $stackTrace');
+      }
     }
   }
 }

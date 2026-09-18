@@ -23,6 +23,7 @@ class SearchTrackTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final downloading = ref.watch(downloadingSongsProvider);
     final repo = ref.watch(musicRepositoryProvider);
     final isDownloaded =
@@ -59,7 +60,7 @@ class SearchTrackTile extends ConsumerWidget {
                       isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE5E5E5),
                   child: Icon(
                     Icons.music_note_rounded,
-                    color: isDark ? Colors.white54 : Colors.black54,
+                    color: t.secondaryText,
                   ),
                 ),
               ),
@@ -76,7 +77,7 @@ class SearchTrackTile extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: t.primaryText,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -110,7 +111,7 @@ class SearchTrackTile extends ConsumerWidget {
                             style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w700,
-                              color: isDark ? Colors.white70 : Colors.black87,
+                              color: t.secondaryText,
                             ),
                           ),
                         ),
@@ -124,7 +125,7 @@ class SearchTrackTile extends ConsumerWidget {
               icon: Icon(
                 Icons.more_vert_rounded,
                 size: 21,
-                color: isDark ? Colors.white70 : Colors.black87,
+                color: t.secondaryText,
               ),
               tooltip: 'More Options',
               onPressed: () => SongContextMenu.show(context, song),
@@ -133,7 +134,7 @@ class SearchTrackTile extends ConsumerWidget {
               icon: Icon(
                 Icons.radar_rounded,
                 size: 20,
-                color: isDark ? Colors.white70 : Colors.black87,
+                color: t.secondaryText,
               ),
               tooltip: 'AI Similarity Radio',
               onPressed: () => showModalBottomSheet(
@@ -150,7 +151,7 @@ class SearchTrackTile extends ConsumerWidget {
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: isDark ? Colors.white : Colors.black,
+                        color: t.primaryText,
                       ),
                     )
                   : Icon(
@@ -159,8 +160,8 @@ class SearchTrackTile extends ConsumerWidget {
                           : Icons.download_rounded,
                       size: 21,
                       color: isDownloaded
-                          ? (isDark ? Colors.white : Colors.black)
-                          : (isDark ? Colors.white60 : Colors.black54),
+                          ? (t.primaryText)
+                          : (t.secondaryText),
                     ),
               onPressed: (isDownloaded || isDownloadingThis)
                   ? null

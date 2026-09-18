@@ -14,6 +14,7 @@ class AIGeneratedPlaylistsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final repo = ref.watch(musicRepositoryProvider);
     final playlists = repo.getAIGeneratedPlaylists();
 
@@ -92,7 +93,7 @@ class AIGeneratedPlaylistsSection extends ConsumerWidget {
                                       width: 136,
                                       height: 110,
                                       color: isDark ? const Color(0xFF222222) : const Color(0xFFE5E5E5),
-                                      child: Icon(Icons.album_rounded, color: isDark ? Colors.white54 : Colors.black54),
+                                      child: Icon(Icons.album_rounded, color: t.secondaryText),
                                     ),
                                   ),
                                 ),
@@ -104,7 +105,7 @@ class AIGeneratedPlaylistsSection extends ConsumerWidget {
                                     shape: BoxShape.circle,
                                     color: isDark ? Colors.black.withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.9),
                                   ),
-                                  child: Icon(Icons.play_arrow_rounded, size: 16, color: isDark ? Colors.white : Colors.black),
+                                  child: Icon(Icons.play_arrow_rounded, size: 16, color: t.primaryText),
                                 ),
                               ],
                             ),

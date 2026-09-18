@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import '../../../providers/app_providers.dart';
 import '../../../services/library/library_bulk_download_service.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../core/theme/noir_theme.dart';
 
 /// Settings > Local Storage: "Download full library" control with live
 /// progress. Downloads every library track that isn't already on disk.
@@ -41,6 +42,7 @@ class _LibraryDownloadSectionState
   }
 
   void _showProgressDialog() {
+    final t = context.noctraTokens;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -73,12 +75,13 @@ class _LibraryDownloadSectionState
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
-                color: widget.isDark ? Colors.white : Colors.black,
+                color: t.primaryText,
               ),
             ),
             content: AnimatedBuilder(
               animation: _bulk,
               builder: (context, _) {
+                final t = context.noctraTokens;
                 closeIfFinished();
                 final pct =
                     _bulk.total == 0 ? 0.0 : _bulk.completed / _bulk.total;
@@ -95,7 +98,7 @@ class _LibraryDownloadSectionState
                             ? Colors.white12
                             : Colors.black12,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          widget.isDark ? Colors.white : Colors.black,
+                          t.primaryText,
                         ),
                       ),
                     ),
@@ -105,7 +108,7 @@ class _LibraryDownloadSectionState
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: widget.isDark ? Colors.white : Colors.black,
+                        color: t.primaryText,
                       ),
                     ),
                     if (_bulk.currentTitle != null) ...[
@@ -117,7 +120,7 @@ class _LibraryDownloadSectionState
                         style: TextStyle(
                           fontSize: 11.5,
                           color:
-                              widget.isDark ? Colors.white60 : Colors.black54,
+                              t.secondaryText,
                         ),
                       ),
                     ],
@@ -144,7 +147,7 @@ class _LibraryDownloadSectionState
                 child: Text(
                   'Stop',
                   style: TextStyle(
-                    color: widget.isDark ? Colors.white : Colors.black,
+                    color: t.primaryText,
                   ),
                 ),
               ),
@@ -157,7 +160,7 @@ class _LibraryDownloadSectionState
 
   @override
   Widget build(BuildContext context) {
-    final isDark = widget.isDark;
+    final t = context.noctraTokens;
     final repo = ref.watch(musicRepositoryProvider);
     final total = repo.localLibrary.length;
     final downloaded =
@@ -174,7 +177,7 @@ class _LibraryDownloadSectionState
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
-            color: isDark ? Colors.white60 : Colors.black54,
+            color: t.secondaryText,
           ),
         ),
         const SizedBox(height: 8),
@@ -188,7 +191,7 @@ class _LibraryDownloadSectionState
                 children: [
                   Icon(Icons.download_for_offline_rounded,
                       size: 18,
-                      color: isDark ? Colors.white70 : Colors.black87),
+                      color: t.secondaryText),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -199,7 +202,7 @@ class _LibraryDownloadSectionState
                           style: TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.white : Colors.black,
+                            color: t.primaryText,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -210,7 +213,7 @@ class _LibraryDownloadSectionState
                                   '${remaining > 0 ? ' • $remaining remaining' : ''}',
                           style: TextStyle(
                             fontSize: 11.5,
-                            color: isDark ? Colors.white54 : Colors.black54,
+                            color: t.secondaryText,
                           ),
                         ),
                       ],
@@ -225,7 +228,7 @@ class _LibraryDownloadSectionState
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 11),
                     side: BorderSide(
-                        color: (isDark ? Colors.white : Colors.black)
+                        color: (t.primaryText)
                             .withValues(alpha: .25)),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -236,7 +239,7 @@ class _LibraryDownloadSectionState
                         ? Icons.check_circle_outline_rounded
                         : Icons.download_rounded,
                     size: 16,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: t.primaryText,
                   ),
                   label: Text(
                     allDownloaded
@@ -245,7 +248,7 @@ class _LibraryDownloadSectionState
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: t.primaryText,
                     ),
                   ),
                   onPressed:

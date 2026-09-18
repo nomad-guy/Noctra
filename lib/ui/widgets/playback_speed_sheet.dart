@@ -9,6 +9,7 @@ class PlaybackSpeedSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final currentSpeed = ref.watch(playbackSpeedStateProvider);
     final accent = context.noctraTokens.accent;
@@ -38,7 +39,7 @@ class PlaybackSpeedSheet extends ConsumerWidget {
                     width: 44,
                     height: 4.5,
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.white24 : Colors.black26,
+                      color: t.tertiaryText,
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),
@@ -58,7 +59,7 @@ class PlaybackSpeedSheet extends ConsumerWidget {
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 1.2,
-                            color: isDark ? Colors.white : Colors.black,
+                            color: t.primaryText,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -66,14 +67,14 @@ class PlaybackSpeedSheet extends ConsumerWidget {
                           'Acoustic Tempo & Resampling',
                           style: TextStyle(
                             fontSize: 12,
-                            color: isDark ? Colors.white60 : Colors.black54,
+                            color: t.secondaryText,
                           ),
                         ),
                       ],
                     ),
                     IconButton(
                       icon: Icon(Icons.close_rounded,
-                          color: isDark ? Colors.white : Colors.black),
+                          color: t.primaryText),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
@@ -99,7 +100,7 @@ class PlaybackSpeedSheet extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white70 : Colors.black87,
+                          color: t.secondaryText,
                         ),
                       ),
                     ],
@@ -136,7 +137,7 @@ class PlaybackSpeedSheet extends ConsumerWidget {
                                 : FontWeight.w500,
                             color: isSelected
                                 ? accent
-                                : (isDark ? Colors.white70 : Colors.black87),
+                                : (t.secondaryText),
                           ),
                           side: BorderSide(
                             color: isSelected
@@ -159,7 +160,7 @@ class PlaybackSpeedSheet extends ConsumerWidget {
                     Text('0.5x',
                         style: TextStyle(
                             fontSize: 11,
-                            color: isDark ? Colors.white54 : Colors.black54)),
+                            color: t.secondaryText)),
                     Expanded(
                       child: Slider(
                         value: currentSpeed.clamp(0.5, 2.0),
@@ -176,7 +177,7 @@ class PlaybackSpeedSheet extends ConsumerWidget {
                     Text('2.0x',
                         style: TextStyle(
                             fontSize: 11,
-                            color: isDark ? Colors.white54 : Colors.black54)),
+                            color: t.secondaryText)),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -188,7 +189,7 @@ class PlaybackSpeedSheet extends ConsumerWidget {
                       icon: const Icon(Icons.restart_alt_rounded, size: 16),
                       label: const Text('Reset to Normal (1.0x)'),
                       style: TextButton.styleFrom(
-                        foregroundColor: isDark ? Colors.white70 : Colors.black87,
+                        foregroundColor: t.secondaryText,
                       ),
                       onPressed: () => setAppPlaybackSpeed(ref, 1.0),
                     ),

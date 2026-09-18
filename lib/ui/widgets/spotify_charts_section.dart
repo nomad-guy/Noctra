@@ -34,6 +34,7 @@ class SpotifyChartsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final selectedChart = ref.watch(selectedSpotifyChartKeyProvider);
     final chartTracksAsync = ref.watch(dynamicSpotifyChartsProvider);
 
@@ -97,10 +98,10 @@ class SpotifyChartsSection extends ConsumerWidget {
                     backgroundColor: isDark
                         ? const Color(0xFF141414)
                         : const Color(0xFFEBEBEB),
-                    selectedColor: isDark ? Colors.white : Colors.black,
+                    selectedColor: t.primaryText,
                     labelStyle: TextStyle(
                       color: isSelected
-                          ? (isDark ? Colors.black : Colors.white)
+                          ? (t.primaryText)
                           : (isDark
                               ? NoirColors.blackTextPrimary
                               : NoirColors.whiteTextPrimary),
@@ -282,7 +283,7 @@ class SpotifyChartsSection extends ConsumerWidget {
             child: Center(
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: isDark ? Colors.white : Colors.black,
+                color: t.primaryText,
               ),
             ),
           ),

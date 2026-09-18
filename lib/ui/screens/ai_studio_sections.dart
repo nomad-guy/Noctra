@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/models/song_model.dart';
 import '../../shared/widgets/glass_card.dart';
+import '../../core/theme/noir_theme.dart';
 
 typedef AiPlaySong = void Function(Song song, List<Song> queue);
 
@@ -42,6 +43,7 @@ class AiStudioSections extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: chips.map((chip) {
+                final t = context.noctraTokens;
                 final active = activeChip == chip.$2;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
@@ -53,7 +55,7 @@ class AiStudioSections extends StatelessWidget {
                           horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
                         color: active
-                            ? (isDark ? Colors.white : Colors.black)
+                            ? (t.primaryText)
                             : (isDark
                                 ? Colors.white10
                                 : Colors.black.withValues(alpha: 0.06)),
@@ -63,15 +65,15 @@ class AiStudioSections extends StatelessWidget {
                         Icon(chip.$3,
                             size: 13,
                             color: active
-                                ? (isDark ? Colors.black : Colors.white)
-                                : (isDark ? Colors.white70 : Colors.black87)),
+                                ? (t.primaryText)
+                                : (t.secondaryText)),
                         const SizedBox(width: 5),
                         Text(chip.$1,
                             style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 color: active
-                                    ? (isDark ? Colors.black : Colors.white)
+                                    ? (t.primaryText)
                                     : (isDark
                                         ? Colors.white70
                                         : Colors.black87))),
@@ -124,7 +126,9 @@ class _ResultRow extends StatelessWidget {
       required this.onPlay});
 
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) {
+    final t = context.noctraTokens;
+    return Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
         child: GlassCard(
           radius: 14,
@@ -158,20 +162,21 @@ class _ResultRow extends StatelessWidget {
                       style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white : Colors.black)),
+                          color: t.primaryText)),
                   const SizedBox(height: 2),
                   Text(explanation.isNotEmpty ? explanation : song.artist,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           fontSize: 12,
-                          color: isDark ? Colors.white54 : Colors.black54)),
+                          color: t.secondaryText)),
                 ])),
             Icon(Icons.play_arrow_rounded,
-                size: 22, color: isDark ? Colors.white38 : Colors.black38),
+                size: 22, color: t.tertiaryText),
           ]),
         ),
       );
+  }
 }
 
 class _ArchetypeCard extends StatefulWidget {
@@ -189,7 +194,9 @@ class _ArchetypeCard extends StatefulWidget {
 class _ArchetypeCardState extends State<_ArchetypeCard> {
   bool expanded = false;
   @override
-  Widget build(BuildContext context) => Padding(
+  Widget build(BuildContext context) {
+    final t = context.noctraTokens;
+    return Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         child: GestureDetector(
           onTap: () => setState(() => expanded = !expanded),
@@ -205,7 +212,7 @@ class _ArchetypeCardState extends State<_ArchetypeCard> {
               Row(children: [
                 Icon(Icons.person_rounded,
                     size: 14,
-                    color: widget.isDark ? Colors.white54 : Colors.black54),
+                    color: t.secondaryText),
                 const SizedBox(width: 8),
                 Expanded(
                     child: Text('Your sound: ${widget.archetype}',
@@ -234,4 +241,5 @@ class _ArchetypeCardState extends State<_ArchetypeCard> {
           ),
         ),
       );
+  }
 }

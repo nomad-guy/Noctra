@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:audio_service/audio_service.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/noir_theme.dart';
 import 'services/platform/dynamic_icon_service.dart';
@@ -121,6 +122,11 @@ void main() async {
 
   await DynamicIconService.init();
 
+  // RAM/battery guardrails: cap the global image cache and clamp the
+  // device pixel ratio used for image decoding so artwork-heavy screens
+  // cannot balloon native memory on low-RAM devices.
+  _applyImageCacheBudget();
+
   runApp(const ProviderScope(child: NoctraApp()));
 
   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -142,6 +148,22 @@ void main() async {
       NoctraLogger.w('Update check failed — $e');
     }
   });
+}
+
+/// Caps Flutter's global image cache and the decoding device-pixel-ratio.
+///
+/// Defaults are generous (1000 images / 100 MiB); Noctra shows a few dozen
+/// artworks per screen, so a tighter budget avoids native-heap growth on
+/// long sessions without any visible difference. The DPR clamp stops
+/// 3x+ devices from decoding 4x the pixels of a 1x display.
+void _applyImageCacheBudget() {
+  try {
+    final cache = PaintingBinding.instance.imageCache;
+    cache.maximumSize = 400; // images
+    cache.maximumSizeBytes = 48 << 20; // 48 MiB
+  } catch (e) {
+    NoctraLogger.w('Image cache budget error', e);
+  }
 }
 
 class NoctraApp extends ConsumerStatefulWidget {
@@ -195,43 +217,51 @@ class _NoctraAppState extends ConsumerState<NoctraApp> {
     });
 
     final activeThemeData = NoirTheme.getTheme(themeMode);
-    return MaterialApp(
-      title: 'Noctra',
-      locale: Locale(currentLanguage),
-      debugShowCheckedModeBanner: false,
-      theme: activeThemeData,
-      darkTheme: activeThemeData,
-      themeMode: themeMode.isDark ? ThemeMode.dark : ThemeMode.light,
-      navigatorObservers: [appRouteObserver],
-      builder: (context, child) {
-        final textDir = NoctraLocalization.textDirection(currentLanguage);
-        return NoctraLocalizationScope(
-          languageCode: currentLanguage,
-          child: Directionality(
-            textDirection: textDir,
-            child: DesktopKeyboardShortcuts(
-              child: NoctraThemeBackdrop(child: child ?? const SizedBox.shrink()),
-            ),
+    return DynamicColorBuilder(
+      builder: (lightDynamic, darkDynamic) {
+        // Capture the OS dynamic palette once so Material U can read it
+        // from anywhere without rebuilding the whole tree.
+        MaterialUSchemeHolder.light = lightDynamic;
+        MaterialUSchemeHolder.dark = darkDynamic;
+        return MaterialApp(
+          title: 'Noctra',
+          locale: Locale(currentLanguage),
+          debugShowCheckedModeBanner: false,
+          theme: activeThemeData,
+          darkTheme: activeThemeData,
+          themeMode: themeMode.isDark ? ThemeMode.dark : ThemeMode.light,
+          navigatorObservers: [appRouteObserver],
+          builder: (context, child) {
+            final textDir = NoctraLocalization.textDirection(currentLanguage);
+            return NoctraLocalizationScope(
+              languageCode: currentLanguage,
+              child: Directionality(
+                textDirection: textDir,
+                child: DesktopKeyboardShortcuts(
+                  child: NoctraThemeBackdrop(child: child ?? const SizedBox.shrink()),
+                ),
+              ),
+            );
+          },
+          home: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 600),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            child: isInitialized
+                ? (hasCompletedOnboarding
+                    ? const MainNavigationShell()
+                    : const OnboardingScreen())
+                : SplashScreen(
+                    onInitialized: () async {
+                      try {
+                        await PermissionHelper.requestStoragePermissions();
+                      } catch (_) {}
+                      ref.read(appInitializedProvider.notifier).state = true;
+                    },
+                  ),
           ),
         );
       },
-      home: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 600),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        child: isInitialized
-            ? (hasCompletedOnboarding
-                ? const MainNavigationShell()
-                : const OnboardingScreen())
-            : SplashScreen(
-                onInitialized: () async {
-                  try {
-                    await PermissionHelper.requestStoragePermissions();
-                  } catch (_) {}
-                  ref.read(appInitializedProvider.notifier).state = true;
-                },
-              ),
-      ),
     );
   }
 }

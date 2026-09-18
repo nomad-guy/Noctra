@@ -52,6 +52,7 @@ class TopArtistsCarousel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final trendingSongs = ref.watch(dynamicTrendingFeedProvider).value ?? [];
     final chartSongs = ref.watch(dynamicSpotifyChartsProvider).value ?? [];
     // Local, offline-safe artist sources: the user's own library and
@@ -89,7 +90,7 @@ class TopArtistsCarousel extends ConsumerWidget {
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.6,
-                  color: isDark ? Colors.white60 : Colors.black54,
+                  color: t.secondaryText,
                 ),
               ),
               Text(
@@ -97,7 +98,7 @@ class TopArtistsCarousel extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.white38 : Colors.black38,
+                  color: t.tertiaryText,
                 ),
               ),
             ],
@@ -234,12 +235,13 @@ class _ArtistCardItemState extends State<_ArtistCardItem> {
   }
 
   Widget _fallbackAvatar() {
+    final t = context.noctraTokens;
     return Container(
       color: widget.isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE5E5E5),
       child: Icon(
         Icons.person_rounded,
         size: 36,
-        color: widget.isDark ? Colors.white54 : Colors.black54,
+        color: t.secondaryText,
       ),
     );
   }

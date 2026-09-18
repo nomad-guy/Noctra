@@ -6,6 +6,7 @@ import '../../../data/repositories/taste_vector_engine.dart';
 import '../../../providers/app_providers.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../widgets/neural_mini_chart.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class LyricsAndNeuralSection extends ConsumerWidget {
   final bool isDark;
@@ -14,6 +15,7 @@ class LyricsAndNeuralSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final lyricsPref = ref.watch(lyricsPreferenceProvider);
 
     return Column(
@@ -25,7 +27,7 @@ class LyricsAndNeuralSection extends ConsumerWidget {
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
-            color: isDark ? Colors.white60 : Colors.black54,
+            color: t.secondaryText,
           ),
         ),
         const SizedBox(height: 8),
@@ -35,13 +37,13 @@ class LyricsAndNeuralSection extends ConsumerWidget {
           child: Column(
             children: [
               _lyricsRadio(
-                  'English / Global (Standard)', lyricsPref, ref, isDark),
+                  'English / Global (Standard)', lyricsPref, context, ref, isDark),
               const Divider(height: 4),
               _lyricsRadio(
-                  'Romanized Hindi/Punjabi (LRC)', lyricsPref, ref, isDark),
+                  'Romanized Hindi/Punjabi (LRC)', lyricsPref, context, ref, isDark),
               const Divider(height: 4),
               _lyricsRadio(
-                  'Devanagari Transliteration', lyricsPref, ref, isDark),
+                  'Devanagari Transliteration', lyricsPref, context, ref, isDark),
             ],
           ),
         ),
@@ -52,7 +54,7 @@ class LyricsAndNeuralSection extends ConsumerWidget {
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
-            color: isDark ? Colors.white60 : Colors.black54,
+            color: t.secondaryText,
           ),
         ),
         const SizedBox(height: 8),
@@ -62,15 +64,17 @@ class LyricsAndNeuralSection extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _nnStat('Training Steps',
+              _nnStat(context, 'Training Steps',
                   '${NeuralRecommenderEngine.totalTrainSteps}', isDark),
               const SizedBox(height: 6),
               _nnStat(
+                  context,
                   'Running Accuracy',
                   '${(NeuralRecommenderEngine.accuracy * 100).toStringAsFixed(1)}%',
                   isDark),
               const SizedBox(height: 6),
               _nnStat(
+                  context,
                   'Average Loss',
                   NeuralRecommenderEngine.averageLoss.toStringAsFixed(4),
                   isDark),
@@ -88,7 +92,7 @@ class LyricsAndNeuralSection extends ConsumerWidget {
                 'More training steps = better recommendations.',
                 style: TextStyle(
                   fontSize: 11,
-                  color: isDark ? Colors.white38 : Colors.black38,
+                  color: t.tertiaryText,
                   height: 1.4,
                 ),
               ),
@@ -107,14 +111,14 @@ class LyricsAndNeuralSection extends ConsumerWidget {
                   children: [
                     Icon(Icons.psychology_rounded,
                         size: 14,
-                        color: isDark ? Colors.white60 : Colors.black54),
+                        color: t.secondaryText),
                     const SizedBox(width: 6),
                     Text(
                       'Your Profile: ${TasteVectorEngine.calculateArchetype(ref.read(musicRepositoryProvider).userTasteVector)}',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                        color: t.secondaryText,
                       ),
                     ),
                   ],
@@ -128,7 +132,8 @@ class LyricsAndNeuralSection extends ConsumerWidget {
   }
 
   Widget _lyricsRadio(
-      String value, String current, WidgetRef ref, bool isDark) {
+      String value, String current, BuildContext context, WidgetRef ref, bool isDark) {
+    final t = context.noctraTokens;
     final isSelected = value == current;
     return InkWell(
       onTap: () {
@@ -145,15 +150,15 @@ class LyricsAndNeuralSection extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: isDark ? Colors.white : Colors.black,
+                color: t.primaryText,
               ),
             ),
             Icon(
               isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
               size: 18,
               color: isSelected
-                  ? (isDark ? Colors.white : Colors.black)
-                  : (isDark ? Colors.white38 : Colors.black38),
+                  ? (t.primaryText)
+                  : (t.tertiaryText),
             ),
           ],
         ),
@@ -161,7 +166,8 @@ class LyricsAndNeuralSection extends ConsumerWidget {
     );
   }
 
-  Widget _nnStat(String label, String value, bool isDark) {
+  Widget _nnStat(BuildContext context, String label, String value, bool isDark) {
+    final t = context.noctraTokens;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -169,7 +175,7 @@ class LyricsAndNeuralSection extends ConsumerWidget {
           label,
           style: TextStyle(
             fontSize: 12.5,
-            color: isDark ? Colors.white60 : Colors.black54,
+            color: t.secondaryText,
           ),
         ),
         Text(
@@ -177,7 +183,7 @@ class LyricsAndNeuralSection extends ConsumerWidget {
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w700,
-            color: isDark ? Colors.white : Colors.black,
+            color: t.primaryText,
           ),
         ),
       ],

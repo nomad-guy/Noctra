@@ -48,6 +48,7 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode != NoirThemeMode.noirWhite;
     final player = ref.watch(audioPlayerServiceProvider);
@@ -93,7 +94,7 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
                         style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
-                            color: isDark ? Colors.white : Colors.black)),
+                            color: t.primaryText)),
                     Row(
                       children: [
                         if (queue.length > 1)
@@ -111,7 +112,7 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
                           ),
                         IconButton(
                           icon: Icon(Icons.close_rounded,
-                              color: isDark ? Colors.white70 : Colors.black54),
+                              color: t.secondaryText),
                           onPressed: () => Navigator.of(context).pop(),
                         ),
                       ],
@@ -132,7 +133,7 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 1.2,
-                              color: isDark ? Colors.white38 : Colors.black38)),
+                              color: t.tertiaryText)),
                     ],
                   ),
                 ),
@@ -151,12 +152,12 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 1.2,
-                              color: isDark ? Colors.white38 : Colors.black38)),
+                              color: t.tertiaryText)),
                       const Spacer(),
                       Text(NoctraLocalization.tr('songs_count', args: {'count': queue.length - 1}),
                           style: TextStyle(
                               fontSize: 10,
-                              color: isDark ? Colors.white38 : Colors.black38)),
+                              color: t.tertiaryText)),
                     ],
                   ),
                 ),
@@ -171,7 +172,7 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
                             style: TextStyle(
                                 fontSize: 13,
                                 color:
-                                    isDark ? Colors.white38 : Colors.black38)),
+                                    t.tertiaryText)),
                       )
                     : ReorderableListView.builder(
                         padding: const EdgeInsets.symmetric(
@@ -230,6 +231,7 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
     VoidCallback? onTap,
     Widget? trailing,
   }) {
+    final t = context.noctraTokens;
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       leading: ClipRRect(
@@ -249,7 +251,7 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
                   color: isDark ? Colors.white12 : Colors.black12,
                   child: Icon(Icons.music_note_rounded,
                       size: 22,
-                      color: isDark ? Colors.white38 : Colors.black38)),
+                      color: t.tertiaryText)),
             ),
             if (isPlaying)
               Positioned.fill(
@@ -271,12 +273,12 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
               fontWeight: isPlaying ? FontWeight.w700 : FontWeight.w600,
               color: isPlaying
                   ? (isDark ? Colors.cyanAccent : Colors.blue)
-                  : (isDark ? Colors.white : Colors.black))),
+                  : (t.primaryText))),
       subtitle: Text(song.artist,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-              fontSize: 11.5, color: isDark ? Colors.white54 : Colors.black54)),
+              fontSize: 11.5, color: t.secondaryText)),
       trailing: trailing ?? const SizedBox.shrink(),
       onTap: onTap,
     );

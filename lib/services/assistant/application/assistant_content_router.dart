@@ -172,11 +172,13 @@ class AssistantContentRouter {
       targetMode = NoirThemeMode.noirWhite;
     } else if (clean.contains('glass') || clean == 'liquid_glass') {
       targetMode = NoirThemeMode.liquidGlass;
+    } else if (clean.contains('material') || clean.contains('you')) {
+      targetMode = NoirThemeMode.materialU;
     } else if (clean.contains('black') || clean == 'noir_black' || clean.contains('dark')) {
       targetMode = NoirThemeMode.noirBlack;
     } else {
       return const AssistantInvalidCommand(
-          'Unsupported theme. Supported: Noir Black, Noir White, Liquid Glass');
+          'Unsupported theme. Supported: Noir Black, Noir White, Liquid Glass, Material U');
     }
 
     themeCallback?.call(targetMode);

@@ -12,6 +12,7 @@ class RecentlyPlayedSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
     final repo = ref.watch(musicRepositoryProvider);
@@ -37,7 +38,7 @@ class RecentlyPlayedSheet extends ConsumerWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: isDark ? Colors.white24 : Colors.black26,
+                color: t.tertiaryText,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -57,7 +58,7 @@ class RecentlyPlayedSheet extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
-                        color: isDark ? Colors.white : Colors.black,
+                        color: t.primaryText,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -65,17 +66,17 @@ class RecentlyPlayedSheet extends ConsumerWidget {
                       NoctraLocalization.tr('tracks_count', args: {'count': recentlyPlayed.length}),
                       style: TextStyle(
                         fontSize: 11,
-                        color: isDark ? Colors.white54 : Colors.black54,
+                        color: t.secondaryText,
                       ),
                     ),
                   ],
                 ),
                 if (recentlyPlayed.isNotEmpty)
                   TextButton.icon(
-                    icon: Icon(Icons.delete_outline_rounded, size: 16, color: isDark ? Colors.white70 : Colors.black87),
+                    icon: Icon(Icons.delete_outline_rounded, size: 16, color: t.secondaryText),
                     label: Text(
                       NoctraLocalization.tr('clear_all'),
-                      style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : Colors.black87),
+                      style: TextStyle(fontSize: 12, color: t.secondaryText),
                     ),
                     onPressed: () {
                       Navigator.pop(context);
@@ -94,13 +95,13 @@ class RecentlyPlayedSheet extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      icon: Icon(Icons.play_arrow_rounded, size: 18, color: isDark ? Colors.black : Colors.white),
+                      icon: Icon(Icons.play_arrow_rounded, size: 18, color: t.primaryText),
                       label: Text(
                         NoctraLocalization.tr('play_all'),
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: isDark ? Colors.black : Colors.white),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: t.primaryText),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isDark ? Colors.white : Colors.black,
+                        backgroundColor: t.primaryText,
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
@@ -113,13 +114,13 @@ class RecentlyPlayedSheet extends ConsumerWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: OutlinedButton.icon(
-                      icon: Icon(Icons.shuffle_rounded, size: 16, color: isDark ? Colors.white : Colors.black),
+                      icon: Icon(Icons.shuffle_rounded, size: 16, color: t.primaryText),
                       label: Text(
                         NoctraLocalization.tr('shuffle'),
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: t.primaryText),
                       ),
                       style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: isDark ? Colors.white24 : Colors.black26),
+                        side: BorderSide(color: t.tertiaryText),
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
@@ -143,11 +144,11 @@ class RecentlyPlayedSheet extends ConsumerWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.history_rounded, size: 48, color: isDark ? Colors.white24 : Colors.black26),
+                        Icon(Icons.history_rounded, size: 48, color: t.tertiaryText),
                         const SizedBox(height: 12),
                         Text(
                           NoctraLocalization.tr('no_recent_tracks'),
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? Colors.white54 : Colors.black54),
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: t.secondaryText),
                         ),
                       ],
                     ),
@@ -185,7 +186,7 @@ class RecentlyPlayedSheet extends ConsumerWidget {
                                     width: 44,
                                     height: 44,
                                     color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFE5E5E5),
-                                    child: Icon(Icons.music_note_outlined, color: isDark ? Colors.white54 : Colors.black54, size: 20),
+                                    child: Icon(Icons.music_note_outlined, color: t.secondaryText, size: 20),
                                   ),
                                 ),
                               ),
@@ -201,7 +202,7 @@ class RecentlyPlayedSheet extends ConsumerWidget {
                                       style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,
-                                        color: isDark ? Colors.white : Colors.black,
+                                        color: t.primaryText,
                                       ),
                                     ),
                                     const SizedBox(height: 2),
@@ -211,18 +212,18 @@ class RecentlyPlayedSheet extends ConsumerWidget {
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: isDark ? Colors.white54 : Colors.black54,
+                                        color: t.secondaryText,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                               if (isCurrent && isPlaying) ...[
-                                LiveAudioWave(isPlaying: isPlaying, color: isDark ? Colors.white : Colors.black, barCount: 3, height: 14),
+                                LiveAudioWave(isPlaying: isPlaying, color: t.primaryText, barCount: 3, height: 14),
                                 const SizedBox(width: 8),
                               ],
                               IconButton(
-                                icon: Icon(Icons.close_rounded, size: 16, color: isDark ? Colors.white38 : Colors.black38),
+                                icon: Icon(Icons.close_rounded, size: 16, color: t.tertiaryText),
                                 tooltip: NoctraLocalization.tr('removeFromHistory'),
                                 onPressed: () {
                                   repo.removeRecentlyPlayed(song.id);

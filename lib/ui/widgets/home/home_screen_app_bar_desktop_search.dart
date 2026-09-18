@@ -15,6 +15,7 @@ class HomeScreenAppBarDesktopSearch extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final tokens = context.noctraTokens;
 
     return Row(
@@ -72,7 +73,7 @@ class HomeScreenAppBarDesktopSearch extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 12,
-                      color: isDark ? Colors.white38 : Colors.black38,
+                      color: t.tertiaryText,
                     ),
                   ),
                 ),
@@ -91,7 +92,7 @@ class HomeScreenAppBarDesktopSearch extends ConsumerWidget {
                       fontSize: 10,
                       fontFamily: 'monospace',
                       fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white60 : Colors.black54,
+                      color: t.secondaryText,
                     ),
                   ),
                 ),

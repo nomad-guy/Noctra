@@ -35,6 +35,7 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     ref.watch(appLanguageProvider);
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
@@ -54,7 +55,7 @@ class HomeScreen extends ConsumerWidget {
             await Future.delayed(const Duration(milliseconds: 650));
             HapticFeedback.lightImpact();
           },
-          color: isDark ? Colors.white : Colors.black,
+          color: t.primaryText,
           backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(

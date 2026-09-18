@@ -1,7 +1,11 @@
 import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
+import 'material_u_theme.dart' show buildMaterialUTheme;
 import 'noctra_theme_tokens.dart';
 
+export 'material_u_theme.dart'
+    show buildMaterialUTheme, MaterialUSchemeHolder;
+export 'noctra_design_tokens.dart';
 export 'noctra_theme_backdrop.dart';
 export 'noctra_theme_tokens.dart';
 
@@ -9,12 +13,24 @@ enum NoirThemeMode {
   noirBlack,
   noirWhite,
   liquidGlass,
+  materialU,
 }
 
 extension NoirThemeModeX on NoirThemeMode {
-  bool get isDark => this != NoirThemeMode.noirWhite;
+  /// Material U follows the OS light/dark setting; the other modes are
+  /// fixed. Read from the platform dispatcher so the getter works without
+  /// a BuildContext.
+  bool get isDark => switch (this) {
+        NoirThemeMode.noirWhite => false,
+        NoirThemeMode.materialU =>
+          WidgetsBinding
+              .instance.platformDispatcher.platformBrightness ==
+              Brightness.dark,
+        _ => true,
+      };
   bool get isLiquidGlass => this == NoirThemeMode.liquidGlass;
   bool get isWhite => this == NoirThemeMode.noirWhite;
+  bool get isMaterialU => this == NoirThemeMode.materialU;
 }
 
 class NoirColors {
@@ -58,6 +74,9 @@ class NoirColors {
 
 class NoirTheme {
   static ThemeData getTheme(NoirThemeMode mode) {
+    if (mode == NoirThemeMode.materialU) {
+      return buildMaterialUTheme();
+    }
     final isWhite = mode == NoirThemeMode.noirWhite;
     final isLiquidGlass = mode == NoirThemeMode.liquidGlass;
 

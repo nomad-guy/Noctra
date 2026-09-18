@@ -8,6 +8,7 @@ import '../../../services/metadata/song_artwork_resolver.dart';
 import '../../../services/migration/importers/url_playlist_importer.dart';
 import '../../../services/migration/noctra_transfer_service.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class UrlImportSheet extends ConsumerStatefulWidget {
   final bool isDark;
@@ -149,6 +150,7 @@ class _UrlImportSheetState extends ConsumerState<UrlImportSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final isDark = widget.isDark;
 
     return Align(
@@ -180,7 +182,7 @@ class _UrlImportSheetState extends ConsumerState<UrlImportSheet> {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 14),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : Colors.black26,
+                    color: t.tertiaryText,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -196,12 +198,12 @@ class _UrlImportSheetState extends ConsumerState<UrlImportSheet> {
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 1.2,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: t.primaryText,
                     ),
                   ),
                   IconButton(
                     icon: Icon(Icons.close_rounded,
-                        color: isDark ? Colors.white60 : Colors.black54),
+                        color: t.secondaryText),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -213,7 +215,7 @@ class _UrlImportSheetState extends ConsumerState<UrlImportSheet> {
                 style: TextStyle(
                   fontSize: 12,
                   height: 1.4,
-                  color: isDark ? Colors.white60 : Colors.black54,
+                  color: t.secondaryText,
                 ),
               ),
               const SizedBox(height: 16),
@@ -229,14 +231,14 @@ class _UrlImportSheetState extends ConsumerState<UrlImportSheet> {
                   minLines: 2,
                   style: TextStyle(
                     fontSize: 13,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: t.primaryText,
                   ),
                   decoration: InputDecoration(
                     hintText:
                         'https://open.spotify.com/playlist/...\nhttps://www.youtube.com/playlist?list=...\nor Song - Artist list',
                     hintStyle: TextStyle(
                       fontSize: 12,
-                      color: isDark ? Colors.white30 : Colors.black38,
+                      color: t.tertiaryText,
                     ),
                     border: InputBorder.none,
                   ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/utils/noctra_logger.dart';
 import '../../../services/platform/diagnostic_log_export_service.dart';
+import '../../../core/theme/noir_theme.dart';
 
 /// Full-screen-ish bottom sheet listing every captured log entry, newest
 /// first, with clear + export actions. Shown from Settings > Diagnostics.
@@ -15,7 +16,7 @@ class DiagnosticsLogViewer extends StatelessWidget {
     required this.onCleared,
   });
 
-  Color _levelColor(String level) {
+  Color _levelColor(String level, NoctraThemeTokens t) {
     switch (level) {
       case 'ERROR':
         return const Color(0xFFFF5252);
@@ -24,15 +25,13 @@ class DiagnosticsLogViewer extends StatelessWidget {
       case 'INFO':
         return const Color(0xFF4FC3F7);
       default:
-        return isDark ? Colors.white38 : Colors.black38;
+        return t.tertiaryText;
     }
   }
 
-  Color get _fg => isDark ? Colors.white : Colors.black;
-  Color get _fg3 => isDark ? Colors.white38 : Colors.black38;
-
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final logs = NoctraLogger.recentLogs.reversed.toList(); // newest first
     return Container(
       height: MediaQuery.of(context).size.height * 0.82,
@@ -61,7 +60,7 @@ class DiagnosticsLogViewer extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: _fg,
+                    color: t.primaryText,
                   ),
                 ),
                 const Spacer(),
@@ -69,7 +68,7 @@ class DiagnosticsLogViewer extends StatelessWidget {
                   tooltip: 'Clear log',
                   icon: Icon(Icons.delete_sweep_rounded,
                       size: 20,
-                      color: isDark ? Colors.white70 : Colors.black54),
+                      color: t.secondaryText),
                   onPressed: () {
                     NoctraLogger.clear();
                     onCleared();
@@ -80,7 +79,7 @@ class DiagnosticsLogViewer extends StatelessWidget {
                   tooltip: 'Export .txt',
                   icon: Icon(Icons.ios_share_rounded,
                       size: 20,
-                      color: isDark ? Colors.white70 : Colors.black54),
+                      color: t.secondaryText),
                   onPressed: () async {
                     final path =
                         await DiagnosticLogExportService.exportLogs();
@@ -100,7 +99,7 @@ class DiagnosticsLogViewer extends StatelessWidget {
                 ? Center(
                     child: Text(
                       'No log entries',
-                      style: TextStyle(fontSize: 12.5, color: _fg3),
+                      style: TextStyle(fontSize: 12.5, color: t.tertiaryText),
                     ),
                   )
                 : ListView.builder(
@@ -127,7 +126,7 @@ class DiagnosticsLogViewer extends StatelessWidget {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: _levelColor(e.level)
+                                      color: _levelColor(e.level, t)
                                           .withValues(alpha: .15),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
@@ -137,7 +136,7 @@ class DiagnosticsLogViewer extends StatelessWidget {
                                         fontSize: 9,
                                         fontWeight: FontWeight.w800,
                                         letterSpacing: .8,
-                                        color: _levelColor(e.level),
+                                        color: _levelColor(e.level, t),
                                       ),
                                     ),
                                   ),
@@ -145,7 +144,7 @@ class DiagnosticsLogViewer extends StatelessWidget {
                                   Text(
                                     e.timestamp.toIso8601String().substring(11, 19),
                                     style: TextStyle(
-                                        fontSize: 10, color: _fg3),
+                                        fontSize: 10, color: t.tertiaryText),
                                   ),
                                 ],
                               ),
@@ -157,7 +156,7 @@ class DiagnosticsLogViewer extends StatelessWidget {
                                 style: TextStyle(
                                     fontSize: 11.5,
                                     fontFamily: 'monospace',
-                                    color: _fg.withValues(alpha: .85)),
+                                    color: t.primaryText.withValues(alpha: .85)),
                               ),
                             ],
                           ),

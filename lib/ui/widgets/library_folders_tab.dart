@@ -10,6 +10,7 @@ import 'library/folder_delete_sheet.dart';
 import 'library/folder_detail_view.dart';
 import 'library/local_scan_card.dart';
 import 'listening_insights_sheet.dart';
+import '../../core/theme/noir_theme.dart';
 
 class LibraryFoldersTab extends ConsumerStatefulWidget {
   final bool isDark;
@@ -88,6 +89,7 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab>
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     super.build(context);
 
     final customFolderNames = widget.repo.customFolders.keys.toList();
@@ -118,17 +120,17 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab>
                                       height: 36,
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
-                                        color: widget.isDark ? Colors.white : Colors.black,
+                                        color: t.primaryText,
                                       ),
                                       child: Icon(Icons.create_new_folder_outlined,
-                                          size: 18, color: widget.isDark ? Colors.black : Colors.white),
+                                          size: 18, color: t.primaryText),
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Text('+ ${context.tr(L10nKeys.createFolder)}',
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: widget.isDark ? Colors.white : Colors.black)),
+                                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: t.primaryText)),
                                     ),
                                   ],
                                 ),
@@ -151,11 +153,11 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab>
                                       color: widget.isDark ? Colors.white12 : Colors.black12,
                                     ),
                                     child: Icon(Icons.analytics_outlined,
-                                        size: 18, color: widget.isDark ? Colors.white : Colors.black),
+                                        size: 18, color: t.primaryText),
                                   ),
                                   const SizedBox(width: 8),
                                   Text('Insights',
-                                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: widget.isDark ? Colors.white : Colors.black)),
+                                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: t.primaryText)),
                                 ],
                               ),
                             ),
@@ -174,7 +176,7 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(context.tr(L10nKeys.createFolder),
-                            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: widget.isDark ? Colors.white : Colors.black)),
+                            style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: t.primaryText)),
                         const SizedBox(height: 10),
                         Row(
                           children: [
@@ -186,7 +188,7 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab>
                                   hintText: context.tr(L10nKeys.folderNameHint),
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                 ),
-                                style: TextStyle(fontSize: 13.5, color: widget.isDark ? Colors.white : Colors.black),
+                                style: TextStyle(fontSize: 13.5, color: t.primaryText),
                                 onSubmitted: (_) => _submitCreateFolder(),
                               ),
                             ),
@@ -201,8 +203,8 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab>
                             ),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: widget.isDark ? Colors.white : Colors.black,
-                                foregroundColor: widget.isDark ? Colors.black : Colors.white,
+                                backgroundColor: t.primaryText,
+                                foregroundColor: t.primaryText,
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
@@ -249,7 +251,7 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab>
                           child: Icon(
                             folderName == 'Favorites' ? Icons.favorite_rounded : Icons.folder_rounded,
                             size: 24,
-                            color: widget.isDark ? Colors.white : Colors.black,
+                            color: t.primaryText,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -258,16 +260,16 @@ class _LibraryFoldersTabState extends ConsumerState<LibraryFoldersTab>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(folderName == 'Favorites' ? context.tr(L10nKeys.favorites) : folderName,
-                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: widget.isDark ? Colors.white : Colors.black)),
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: t.primaryText)),
                               Text(
                                 context.tr(L10nKeys.tracksLongPressDelete, {'count': folderSongs.length.toString()}),
-                                style: TextStyle(fontSize: 11, color: widget.isDark ? Colors.white54 : Colors.black54),
+                                style: TextStyle(fontSize: 11, color: t.secondaryText),
                               ),
                             ],
                           ),
                         ),
                         Icon(Icons.arrow_forward_ios_rounded,
-                            size: 14, color: widget.isDark ? Colors.white38 : Colors.black38),
+                            size: 14, color: t.tertiaryText),
                       ],
                     ),
                   ),

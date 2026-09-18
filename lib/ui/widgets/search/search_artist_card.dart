@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../screens/artist_screen.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class SearchArtistCard extends StatelessWidget {
   final String artistName;
@@ -16,6 +17,7 @@ class SearchArtistCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GlassCard(
@@ -41,7 +43,7 @@ class SearchArtistCard extends StatelessWidget {
               child: artistImageUrl == null
                   ? Icon(
                       Icons.person_rounded,
-                      color: isDark ? Colors.white70 : Colors.black87,
+                      color: t.secondaryText,
                     )
                   : null,
             ),
@@ -58,7 +60,7 @@ class SearchArtistCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : Colors.black,
+                            color: t.primaryText,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -68,7 +70,7 @@ class SearchArtistCard extends StatelessWidget {
                       Icon(
                         Icons.verified_rounded,
                         size: 14,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                        color: t.secondaryText,
                       ),
                     ],
                   ),
@@ -77,7 +79,7 @@ class SearchArtistCard extends StatelessWidget {
                     'Official Artist Profile • Explore discography & creations',
                     style: TextStyle(
                       fontSize: 11,
-                      color: isDark ? Colors.white54 : Colors.black54,
+                      color: t.secondaryText,
                     ),
                   ),
                 ],
@@ -86,7 +88,7 @@ class SearchArtistCard extends StatelessWidget {
             Icon(
               Icons.arrow_forward_ios_rounded,
               size: 14,
-              color: isDark ? Colors.white54 : Colors.black54,
+              color: t.secondaryText,
             ),
           ],
         ),

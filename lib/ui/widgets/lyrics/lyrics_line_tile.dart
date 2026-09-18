@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../services/lyrics/lyrics_service.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class LyricsLineTile extends StatelessWidget {
   final LyricLine line;
@@ -23,6 +24,7 @@ class LyricsLineTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     return GestureDetector(
       key: lineKey,
       behavior: HitTestBehavior.opaque,
@@ -46,7 +48,7 @@ class LyricsLineTile extends StatelessWidget {
             letterSpacing: 0,
             height: 1.4,
             color: isActive
-                ? (isDark ? Colors.white : Colors.black)
+                ? (t.primaryText)
                 : (isDark
                     ? Colors.white.withValues(alpha: isPast ? 0.32 : 0.60)
                     : Colors.black.withValues(alpha: isPast ? 0.26 : 0.50)),

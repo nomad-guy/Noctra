@@ -31,6 +31,7 @@ class _DeveloperPanelSheetState extends ConsumerState<DeveloperPanelSheet> with 
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
     final tasteVector = ref.watch(tasteVectorStateProvider);
@@ -60,7 +61,7 @@ class _DeveloperPanelSheetState extends ConsumerState<DeveloperPanelSheet> with 
               width: 44,
               height: 4.5,
               decoration: BoxDecoration(
-                color: isDark ? Colors.white24 : Colors.black26,
+                color: t.tertiaryText,
                 borderRadius: BorderRadius.circular(3),
               ),
             ),
@@ -98,7 +99,7 @@ class _DeveloperPanelSheetState extends ConsumerState<DeveloperPanelSheet> with 
                   ],
                 ),
                 IconButton(
-                  icon: Icon(Icons.close_rounded, color: isDark ? Colors.white : Colors.black),
+                  icon: Icon(Icons.close_rounded, color: t.primaryText),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -116,11 +117,11 @@ class _DeveloperPanelSheetState extends ConsumerState<DeveloperPanelSheet> with 
                 controller: _tabController,
                 indicatorSize: TabBarIndicatorSize.tab,
                 indicator: BoxDecoration(
-                  color: isDark ? Colors.white : Colors.black,
+                  color: t.primaryText,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                labelColor: isDark ? Colors.black : Colors.white,
-                unselectedLabelColor: isDark ? Colors.white60 : Colors.black54,
+                labelColor: t.primaryText,
+                unselectedLabelColor: t.secondaryText,
                 labelStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
                 tabs: const [
                   Tab(text: 'Developer & Architecture'),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../services/ytdlp/music_service.dart';
 import '../artist_screen.dart';
+import '../../../core/theme/noir_theme.dart';
 
 class ArtistSimilarSection extends StatelessWidget {
   final ArtistDiscography discography;
@@ -14,6 +15,7 @@ class ArtistSimilarSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     if (discography.similarArtists.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -26,7 +28,7 @@ class ArtistSimilarSection extends StatelessWidget {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
-              color: isDark ? Colors.white : Colors.black,
+              color: t.primaryText,
             ),
           ),
         ),
@@ -68,7 +70,7 @@ class ArtistSimilarSection extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white : Colors.black,
+                          color: t.primaryText,
                         ),
                       ),
                     ],

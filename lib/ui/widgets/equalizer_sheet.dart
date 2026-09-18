@@ -30,6 +30,7 @@ class EqualizerSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
     final currentBands = ref.watch(eqBandsProvider);
@@ -65,7 +66,7 @@ class EqualizerSheet extends ConsumerWidget {
                 width: 44,
                 height: 4.5,
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white24 : Colors.black26,
+                  color: t.tertiaryText,
                   borderRadius: BorderRadius.circular(3),
                 ),
               ),
@@ -98,7 +99,7 @@ class EqualizerSheet extends ConsumerWidget {
                   ],
                 ),
                 IconButton(
-                  icon: Icon(Icons.close_rounded, color: isDark ? Colors.white : Colors.black),
+                  icon: Icon(Icons.close_rounded, color: t.primaryText),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -126,12 +127,12 @@ class EqualizerSheet extends ConsumerWidget {
                         }
                       },
                       backgroundColor: isDark ? const Color(0xFF141414) : const Color(0xFFEBEBEB),
-                      selectedColor: isDark ? Colors.white : Colors.black,
+                      selectedColor: t.primaryText,
                       labelStyle: TextStyle(
                         fontSize: 12,
                         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                         color: isSelected
-                            ? (isDark ? Colors.black : Colors.white)
+                            ? (t.primaryText)
                             : (isDark ? NoirColors.blackTextPrimary : NoirColors.whiteTextPrimary),
                       ),
                       shape: RoundedRectangleBorder(
@@ -162,7 +163,7 @@ class EqualizerSheet extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white70 : Colors.black87,
+                          color: t.secondaryText,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -175,9 +176,9 @@ class EqualizerSheet extends ConsumerWidget {
                               trackHeight: 3.5,
                               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                               overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                              activeTrackColor: isDark ? Colors.white : Colors.black,
+                              activeTrackColor: t.primaryText,
                               inactiveTrackColor: isDark ? Colors.white12 : Colors.black12,
-                              thumbColor: isDark ? Colors.white : Colors.black,
+                              thumbColor: t.primaryText,
                             ),
                             child: Slider(
                               value: gain,
@@ -224,15 +225,15 @@ class EqualizerSheet extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(NoctraLocalization.tr('bass_boost'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
-                            Text('+${bassBoost.toInt()}dB', style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.black54)),
+                            Text(NoctraLocalization.tr('bass_boost'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t.primaryText)),
+                            Text('+${bassBoost.toInt()}dB', style: TextStyle(fontSize: 11, color: t.secondaryText)),
                           ],
                         ),
                         Slider(
                           value: bassBoost,
                           min: 0.0,
                           max: 12.0,
-                          activeColor: isDark ? Colors.white : Colors.black,
+                          activeColor: t.primaryText,
                           inactiveColor: isDark ? Colors.white12 : Colors.black12,
                           onChanged: (val) {
                             ref.read(bassBoostProvider.notifier).state = val;
@@ -254,15 +255,15 @@ class EqualizerSheet extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(NoctraLocalization.tr('virtualizer_3d'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
-                            Text('${(virtualizer * 10).toInt()}%', style: TextStyle(fontSize: 11, color: isDark ? Colors.white60 : Colors.black54)),
+                            Text(NoctraLocalization.tr('virtualizer_3d'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t.primaryText)),
+                            Text('${(virtualizer * 10).toInt()}%', style: TextStyle(fontSize: 11, color: t.secondaryText)),
                           ],
                         ),
                         Slider(
                           value: virtualizer,
                           min: 0.0,
                           max: 10.0,
-                          activeColor: isDark ? Colors.white : Colors.black,
+                          activeColor: t.primaryText,
                           inactiveColor: isDark ? Colors.white12 : Colors.black12,
                           onChanged: (val) {
                             ref.read(virtualizerProvider.notifier).state = val;

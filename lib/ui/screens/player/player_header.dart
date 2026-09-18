@@ -126,11 +126,12 @@ class PlayerHeader extends ConsumerWidget {
       );
 
   Widget _playerMoreMenu(BuildContext context, WidgetRef ref, bool isDark) {
+    final t = context.noctraTokens;
     final song = ref.watch(currentSongStreamProvider).value;
     return PopupMenuButton<String>(
       tooltip: context.tr(L10nKeys.morePlayerActions),
       icon: Icon(Icons.more_horiz_rounded,
-          color: isDark ? Colors.white : Colors.black),
+          color: t.primaryText),
       onSelected: (value) {
         switch (value) {
           case 'output':

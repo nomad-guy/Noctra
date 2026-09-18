@@ -46,6 +46,7 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet>
 
   @override
   Widget build(BuildContext context) {
+    final t = context.noctraTokens;
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
     final syncService = ref.watch(p2pSyncServiceProvider);
@@ -73,7 +74,7 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet>
               width: 44,
               height: 4.5,
               decoration: BoxDecoration(
-                color: isDark ? Colors.white24 : Colors.black26,
+                color: t.tertiaryText,
                 borderRadius: BorderRadius.circular(3),
               ),
             ),
@@ -114,7 +115,7 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet>
                   tooltip: context.tr(L10nKeys.close),
                   icon: Icon(
                     Icons.close_rounded,
-                    color: isDark ? Colors.white : Colors.black,
+                    color: t.primaryText,
                   ),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
@@ -144,12 +145,12 @@ class _JamStudioSheetState extends ConsumerState<JamStudioSheet>
                   controller: _tabController,
                   indicatorSize: TabBarIndicatorSize.tab,
                   indicator: BoxDecoration(
-                    color: isDark ? Colors.white : Colors.black,
+                    color: t.primaryText,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  labelColor: isDark ? Colors.black : Colors.white,
+                  labelColor: t.primaryText,
                   unselectedLabelColor:
-                      isDark ? Colors.white60 : Colors.black54,
+                      t.secondaryText,
                   labelStyle: const TextStyle(
                       fontSize: 12, fontWeight: FontWeight.w700),
                   tabs: [

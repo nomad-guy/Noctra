@@ -7,8 +7,8 @@ import '../../../core/utils/localization/localization_keys.dart';
 import '../../../core/utils/localization/localization_scope.dart';
 import '../../../providers/app_providers.dart';
 import '../../screens/settings_sheet.dart';
-import '../glass_shard_icon.dart';
 import '../synccast_sheet.dart';
+import 'theme_cycle_button.dart';
 
 class HomeScreenAppBarActions extends ConsumerWidget {
   final bool isDark;
@@ -76,6 +76,7 @@ class HomeScreenAppBarActions extends ConsumerWidget {
 
   Widget _offlineModeButton(
       BuildContext context, WidgetRef ref, bool isOffline) {
+    final t = context.noctraTokens;
     if (isDesktop && isOffline) {
       return GestureDetector(
         onTap: () {
@@ -132,7 +133,7 @@ class HomeScreenAppBarActions extends ConsumerWidget {
           size: 18,
           color: isOffline
               ? (isDark ? const Color(0xFF00E5FF) : const Color(0xFF007A87))
-              : (isDark ? Colors.white60 : Colors.black54),
+              : (t.secondaryText),
         ),
       ),
       onPressed: () {
@@ -151,6 +152,7 @@ class HomeScreenAppBarActions extends ConsumerWidget {
     bool active = false,
     required VoidCallback onPressed,
   }) {
+    final t = context.noctraTokens;
     return IconButton(
       tooltip: tooltip,
       iconSize: 18,
@@ -180,8 +182,8 @@ class HomeScreenAppBarActions extends ConsumerWidget {
           icon,
           size: 18,
           color: active
-              ? (isDark ? Colors.white : Colors.black)
-              : (isDark ? Colors.white60 : Colors.black54),
+              ? (t.primaryText)
+              : (t.secondaryText),
         ),
       ),
       onPressed: onPressed,
@@ -189,6 +191,7 @@ class HomeScreenAppBarActions extends ConsumerWidget {
   }
 
   Widget _refreshButton(BuildContext context) {
+    final t = context.noctraTokens;
     return IconButton(
       tooltip: context.tr(L10nKeys.refreshFeed),
       iconSize: 18,
@@ -211,8 +214,8 @@ class HomeScreenAppBarActions extends ConsumerWidget {
             Icons.refresh_rounded,
             size: 18,
             color: isRefreshing
-                ? (isDark ? Colors.white : Colors.black)
-                : (isDark ? Colors.white60 : Colors.black54),
+                ? (t.primaryText)
+                : (t.secondaryText),
           ),
         ),
       ),
@@ -221,76 +224,6 @@ class HomeScreenAppBarActions extends ConsumerWidget {
   }
 
   Widget _themeMenuButton(BuildContext context, WidgetRef ref) {
-    final themes = [
-      NoirThemeMode.noirBlack,
-      NoirThemeMode.noirWhite,
-      NoirThemeMode.liquidGlass
-    ];
-    NoirThemeMode nextTheme() {
-      final idx = themes.indexOf(themeMode);
-      return themes[(idx + 1) % themes.length];
-    }
-
-    final themeName = themeMode == NoirThemeMode.liquidGlass
-        ? 'Liquid Glass'
-        : themeMode == NoirThemeMode.noirWhite
-            ? 'Noir White'
-            : 'Noir Black';
-
-    final icon = themeMode == NoirThemeMode.liquidGlass
-        ? GlassShardIcon(
-            size: 16, color: context.noctraTokens.accent, isActive: true)
-        : themeMode == NoirThemeMode.noirWhite
-            ? Icon(Icons.light_mode_outlined,
-                size: 16, color: isDark ? Colors.white70 : Colors.black87)
-            : Icon(Icons.dark_mode_outlined,
-                size: 16, color: isDark ? Colors.white70 : Colors.black87);
-
-    if (isDesktop) {
-      return GestureDetector(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          ref.read(themeModeProvider.notifier).state = nextTheme();
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0x14FFFFFF) : const Color(0x0A000000),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: context.noctraTokens.subtleBorder),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              icon,
-              const SizedBox(width: 7),
-              Text(
-                themeName,
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.1,
-                  color: isDark
-                      ? NoirColors.blackTextPrimary
-                      : NoirColors.whiteTextPrimary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        ref.read(themeModeProvider.notifier).state = nextTheme();
-      },
-      child: Container(
-        padding: const EdgeInsets.all(5),
-        constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-        child: icon,
-      ),
-    );
+    return ThemeCycleButton(themeMode: themeMode, isDesktop: isDesktop);
   }
 }
