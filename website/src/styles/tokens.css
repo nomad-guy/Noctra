@@ -1,6 +1,6 @@
 /* ============================================================
-   NOCTRA — Design Tokens (v2 "modern refresh")
-   Mirrors the Flutter app: Noir Black / Noir White / Liquid Glass
+   NOCTRA — Design Tokens
+   Mirrors the Flutter App: Noir Black / Noir White / Liquid Glass / Material U
    ============================================================ */
 
 :root {
@@ -26,19 +26,15 @@
 
   /* Layout */
   --max-width: 1180px;
-  --nav-height: 64px;
-}
+  --nav-height: 68px;
 
-/* ------------------------------------------------------------
-   1. NOIR BLACK (default)
-   ------------------------------------------------------------ */
-[data-theme='noir-black'] {
+  /* Default theme fallback (Noir Black) */
   --canvas: #060608;
-  --nav-bg: rgba(6, 6, 8, 0.55);
-  --nav-bg-solid: rgba(6, 6, 8, 0.85);
+  --nav-bg: rgba(6, 6, 8, 0.65);
+  --nav-bg-solid: rgba(6, 6, 8, 0.92);
   --brand-mark-bg: linear-gradient(135deg, #1c1c22, #060608);
   --canvas-gradient: radial-gradient(1200px 600px at 70% -10%,
-      rgba(126, 200, 255, 0.07), transparent 60%),
+      rgba(126, 200, 255, 0.08), transparent 60%),
     radial-gradient(900px 500px at 10% 110%, rgba(184, 168, 255, 0.05), transparent 60%),
     linear-gradient(180deg, #060608 0%, #0a0a0d 100%);
   --surface: rgba(18, 18, 22, 0.72);
@@ -50,8 +46,8 @@
   --border-focus: rgba(255, 255, 255, 0.55);
 
   --text-primary: #f5f5f7;
-  --text-secondary: #9a9aa2;
-  --text-tertiary: #5c5c64;
+  --text-secondary: #a8a8b2;
+  --text-tertiary: #7c7c86;
 
   --accent: #7ec8ff;
   --accent-strong: #ffffff;
@@ -67,71 +63,147 @@
   --btn-primary-color: #060608;
   --btn-primary-hover: #e8e8ec;
   --btn-ghost-border: rgba(255, 255, 255, 0.2);
+
+  --bg-dark: var(--canvas);
+  --bg-card: var(--surface);
+  --bg-card-hover: var(--surface-hover);
+  --bg-header: var(--nav-bg-solid);
+  --border-glass: var(--border);
+  --border-glass-hover: var(--border-focus);
+  --text-muted: var(--text-tertiary);
 }
 
 /* ------------------------------------------------------------
-   2. NOIR WHITE
+   1. NOIR BLACK (OLED Black, Titanium, Ice Accent)
    ------------------------------------------------------------ */
+:root[data-theme='noir-black'],
+html[data-theme='noir-black'],
+body[data-theme='noir-black'],
+[data-theme='noir-black'] {
+  color-scheme: dark;
+  --canvas: #060608;
+  --nav-bg: rgba(6, 6, 8, 0.65);
+  --nav-bg-solid: rgba(6, 6, 8, 0.92);
+  --brand-mark-bg: linear-gradient(135deg, #1c1c22, #060608);
+  --canvas-gradient: radial-gradient(1200px 600px at 70% -10%,
+      rgba(126, 200, 255, 0.08), transparent 60%),
+    radial-gradient(900px 500px at 10% 110%, rgba(184, 168, 255, 0.05), transparent 60%),
+    linear-gradient(180deg, #060608 0%, #0a0a0d 100%);
+  --surface: rgba(18, 18, 22, 0.72);
+  --surface-hover: rgba(26, 26, 32, 0.85);
+  --surface-variant: rgba(255, 255, 255, 0.045);
+  --surface-elevated: #14141a;
+  --border: rgba(255, 255, 255, 0.14);
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-focus: rgba(255, 255, 255, 0.55);
+
+  --text-primary: #f5f5f7;
+  --text-secondary: #a8a8b2;
+  --text-tertiary: #7c7c86;
+
+  --accent: #7ec8ff;
+  --accent-strong: #ffffff;
+  --accent-glow: rgba(126, 200, 255, 0.28);
+  --accent-soft: rgba(126, 200, 255, 0.12);
+
+  --card-sheen: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  --glass-blur: blur(18px) saturate(1.3);
+  --shadow-card: 0 16px 40px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--border-subtle);
+  --shadow-active: 0 18px 48px -8px rgba(126, 200, 255, 0.22);
+
+  --btn-primary-bg: #ffffff;
+  --btn-primary-color: #060608;
+  --btn-primary-hover: #e8e8ec;
+  --btn-ghost-border: rgba(255, 255, 255, 0.2);
+
+  --bg-dark: var(--canvas);
+  --bg-card: var(--surface);
+  --bg-card-hover: var(--surface-hover);
+  --bg-header: var(--nav-bg-solid);
+  --border-glass: var(--border);
+  --border-glass-hover: var(--border-focus);
+  --text-muted: var(--text-tertiary);
+}
+
+/* ------------------------------------------------------------
+   2. NOIR WHITE (Crisp Editorial Paper & Deep Ink)
+   ------------------------------------------------------------ */
+:root[data-theme='noir-white'],
+html[data-theme='noir-white'],
+body[data-theme='noir-white'],
 [data-theme='noir-white'] {
-  --canvas: #f5f5f7;
-  --nav-bg: rgba(245, 245, 247, 0.6);
-  --nav-bg-solid: rgba(245, 245, 247, 0.9);
+  color-scheme: light;
+  --canvas: #f4f5f8;
+  --nav-bg: rgba(244, 245, 248, 0.75);
+  --nav-bg-solid: rgba(244, 245, 248, 0.95);
   --brand-mark-bg: linear-gradient(135deg, #2c2c32, #0a0a0c);
   --canvas-gradient: radial-gradient(1200px 600px at 70% -10%,
-      rgba(126, 200, 255, 0.14), transparent 60%),
-    radial-gradient(900px 500px at 10% 110%, rgba(184, 168, 255, 0.1), transparent 60%),
-    linear-gradient(180deg, #fafafc 0%, #f2f2f5 100%);
-  --surface: rgba(255, 255, 255, 0.8);
-  --surface-hover: rgba(255, 255, 255, 0.95);
+      rgba(10, 132, 255, 0.12), transparent 60%),
+    radial-gradient(900px 500px at 10% 110%, rgba(99, 102, 241, 0.08), transparent 60%),
+    linear-gradient(180deg, #fafafc 0%, #f0f2f5 100%);
+  --surface: rgba(255, 255, 255, 0.88);
+  --surface-hover: #ffffff;
   --surface-variant: rgba(0, 0, 0, 0.04);
   --surface-elevated: #ffffff;
   --border: rgba(0, 0, 0, 0.12);
   --border-subtle: rgba(0, 0, 0, 0.06);
-  --border-focus: rgba(0, 0, 0, 0.55);
+  --border-focus: rgba(0, 0, 0, 0.65);
 
   --text-primary: #0a0a0c;
-  --text-secondary: #585862;
-  --text-tertiary: #9a9aa4;
+  --text-secondary: #484852;
+  --text-tertiary: #6e6e78;
 
   --accent: #0a84ff;
   --accent-strong: #0a0a0c;
   --accent-glow: rgba(10, 132, 255, 0.2);
   --accent-soft: rgba(10, 132, 255, 0.1);
 
-  --card-sheen: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.06), transparent);
+  --card-sheen: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.05), transparent);
   --glass-blur: blur(18px) saturate(1.2);
-  --shadow-card: 0 16px 40px -16px rgba(20, 20, 40, 0.14), 0 0 0 1px var(--border-subtle);
+  --shadow-card: 0 16px 40px -16px rgba(20, 20, 40, 0.1), 0 0 0 1px var(--border-subtle);
   --shadow-active: 0 18px 48px -8px rgba(10, 132, 255, 0.18);
 
   --btn-primary-bg: #0a0a0c;
   --btn-primary-color: #ffffff;
   --btn-primary-hover: #26262c;
   --btn-ghost-border: rgba(0, 0, 0, 0.16);
+
+  --bg-dark: var(--canvas);
+  --bg-card: var(--surface);
+  --bg-card-hover: var(--surface-hover);
+  --bg-header: var(--nav-bg-solid);
+  --border-glass: var(--border);
+  --border-glass-hover: var(--border-focus);
+  --text-muted: var(--text-tertiary);
 }
 
 /* ------------------------------------------------------------
-   3. LIQUID GLASS
+   3. LIQUID GLASS (Deep Cobalt Blue Glass & Cyan Shimmer)
    ------------------------------------------------------------ */
+:root[data-theme='liquid-glass'],
+html[data-theme='liquid-glass'],
+body[data-theme='liquid-glass'],
 [data-theme='liquid-glass'] {
-  --canvas: #101c30;
-  --nav-bg: rgba(13, 30, 58, 0.5);
-  --nav-bg-solid: rgba(13, 30, 58, 0.82);
+  color-scheme: dark;
+  --canvas: #060b18;
+  --nav-bg: rgba(6, 11, 24, 0.65);
+  --nav-bg-solid: rgba(6, 11, 24, 0.92);
   --brand-mark-bg: linear-gradient(135deg, rgba(126, 200, 255, 0.35), rgba(128, 112, 255, 0.25));
   --canvas-gradient: radial-gradient(1100px 620px at 75% -10%,
-      rgba(104, 200, 255, 0.2), transparent 55%),
-    radial-gradient(900px 560px at 8% 108%, rgba(128, 112, 255, 0.16), transparent 55%),
-    linear-gradient(150deg, #0d1e3a 0%, #13223c 50%, #171536 100%);
-  --surface: rgba(30, 52, 82, 0.55);
-  --surface-hover: rgba(42, 70, 106, 0.7);
+      rgba(104, 200, 255, 0.24), transparent 55%),
+    radial-gradient(900px 560px at 8% 108%, rgba(128, 112, 255, 0.18), transparent 55%),
+    linear-gradient(150deg, #050a16 0%, #0a1329 50%, #0d1228 100%);
+  --surface: rgba(22, 38, 70, 0.55);
+  --surface-hover: rgba(30, 52, 94, 0.72);
   --surface-variant: rgba(126, 200, 255, 0.08);
-  --surface-elevated: rgba(48, 80, 122, 0.75);
-  --border: rgba(190, 220, 250, 0.28);
-  --border-subtle: rgba(190, 220, 250, 0.14);
+  --surface-elevated: rgba(36, 62, 110, 0.75);
+  --border: rgba(190, 220, 250, 0.24);
+  --border-subtle: rgba(190, 220, 250, 0.12);
   --border-focus: rgba(126, 200, 255, 0.75);
 
   --text-primary: #eef5ff;
   --text-secondary: #a8c4e4;
-  --text-tertiary: #62809f;
+  --text-tertiary: #8eb5df;
 
   --accent: #7ec8ff;
   --accent-strong: #a8dcff;
@@ -147,45 +219,75 @@
   --btn-primary-color: #061426;
   --btn-primary-hover: #a3d8ff;
   --btn-ghost-border: rgba(190, 220, 250, 0.3);
+
+  --bg-dark: var(--canvas);
+  --bg-card: var(--surface);
+  --bg-card-hover: var(--surface-hover);
+  --bg-header: var(--nav-bg-solid);
+  --border-glass: var(--border);
+  --border-glass-hover: var(--border-focus);
+  --text-muted: var(--text-tertiary);
 }
 
 /* ------------------------------------------------------------
-   4. MATERIAL U (dynamic color)
+   4. MATERIAL U (Android Dynamic M3 Colorway)
    ------------------------------------------------------------ */
+:root[data-theme='material-u'],
+html[data-theme='material-u'],
+body[data-theme='material-u'],
 [data-theme='material-u'] {
-  --canvas: #f6f9fe;
+  color-scheme: light;
+  --canvas: #eff3f8;
+  --nav-bg: rgba(239, 243, 248, 0.75);
+  --nav-bg-solid: rgba(239, 243, 248, 0.95);
+  --brand-mark-bg: linear-gradient(135deg, #d5e8ff, #89bdf8);
   --canvas-gradient: radial-gradient(1200px 600px at 70% -10%,
-      rgba(126, 200, 255, 0.22), transparent 60%),
+      rgba(0, 99, 158, 0.16), transparent 60%),
     radial-gradient(900px 500px at 10% 110%, rgba(137, 189, 248, 0.16), transparent 60%),
-    linear-gradient(180deg, #f8fbff 0%, #f0f5fc 100%);
-  --surface: rgba(255, 255, 255, 0.82);
-  --surface-hover: rgba(255, 255, 255, 0.95);
-  --surface-variant: rgba(34, 101, 168, 0.06);
+    linear-gradient(180deg, #f5f8fc 0%, #ebf0f6 100%);
+  --surface: rgba(255, 255, 255, 0.9);
+  --surface-hover: #ffffff;
+  --surface-variant: rgba(0, 99, 158, 0.06);
   --surface-elevated: #ffffff;
-  --border: rgba(20, 60, 100, 0.16);
+  --border: rgba(20, 60, 100, 0.15);
   --border-subtle: rgba(20, 60, 100, 0.08);
-  --border-focus: rgba(10, 90, 160, 0.6);
+  --border-focus: rgba(0, 99, 158, 0.65);
 
   --text-primary: #101c2c;
-  --text-secondary: #4a6076;
-  --text-tertiary: #8aa0b4;
+  --text-secondary: #41484d;
+  --text-tertiary: #71787e;
 
   --accent: #00639e;
   --accent-strong: #004d7a;
-  --accent-glow: rgba(0, 99, 142, 0.22);
-  --accent-soft: rgba(0, 99, 142, 0.1);
+  --accent-glow: rgba(0, 99, 158, 0.22);
+  --accent-soft: rgba(0, 99, 158, 0.1);
 
-  --card-sheen: linear-gradient(90deg, transparent, rgba(0, 99, 142, 0.07), transparent);
+  --card-sheen: linear-gradient(90deg, transparent, rgba(0, 99, 158, 0.07), transparent);
   --glass-blur: blur(18px) saturate(1.2);
-  --shadow-card: 0 16px 40px -16px rgba(16, 44, 72, 0.16), 0 0 0 1px var(--border-subtle);
-  --shadow-active: 0 18px 48px -8px rgba(0, 99, 142, 0.2);
+  --shadow-card: 0 16px 40px -16px rgba(16, 44, 72, 0.14), 0 0 0 1px var(--border-subtle);
+  --shadow-active: 0 18px 48px -8px rgba(0, 99, 158, 0.2);
 
   --btn-primary-bg: #00639e;
   --btn-primary-color: #ffffff;
   --btn-primary-hover: #0b77b8;
   --btn-ghost-border: rgba(20, 60, 100, 0.2);
 
-  --nav-bg: rgba(246, 249, 254, 0.6);
-  --nav-bg-solid: rgba(246, 249, 254, 0.9);
-  --brand-mark-bg: linear-gradient(135deg, #d5e8ff, #89bdf8);
+  --bg-dark: var(--canvas);
+  --bg-card: var(--surface);
+  --bg-card-hover: var(--surface-hover);
+  --bg-header: var(--nav-bg-solid);
+  --border-glass: var(--border);
+  --border-glass-hover: var(--border-focus);
+  --text-muted: var(--text-tertiary);
+}
+
+/* ------------------------------------------------------------
+   Global Surface & Text Binding
+   ------------------------------------------------------------ */
+html,
+body {
+  background-color: var(--canvas) !important;
+  color: var(--text-primary) !important;
+  transition: background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }

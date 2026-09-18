@@ -30,18 +30,28 @@
 }
 
 .brandMark {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 10px;
-  display: grid;
-  place-items: center;
-  background: var(--brand-mark-bg);
-  color: #fff;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 1.05rem;
-  box-shadow: 0 2px 12px var(--accent-glow);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-variant);
+  box-shadow: 0 4px 16px var(--accent-glow);
   flex-shrink: 0;
+  transition: transform var(--transition-normal);
+}
+
+.brandLogoImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.brand:hover .brandMark {
+  transform: scale(1.05);
 }
 
 .brandName {
@@ -128,43 +138,84 @@
   transform: translateY(-1px);
 }
 
-/* Theme switcher — mirrors the app's three themes */
-.themeSwitch {
+/* Theme tap button */
+.themeTapBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 6px;
+  height: 36px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.themeTapBtn:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-focus);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px var(--accent-glow);
+}
+
+.themeTapBtn:active {
+  transform: scale(0.96);
+}
+
+.themeIconWrapper {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  overflow: hidden;
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 3px;
-  border-radius: var(--radius-pill);
+  justify-content: center;
   background: var(--surface-variant);
-  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
 }
 
-.themeBtn {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
+.themeIconImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
-.themeBtn:hover {
-  color: var(--text-primary);
+.themeName {
+  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
-.themeBtn.active {
-  background: var(--surface);
-  color: var(--text-primary);
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+.cycleArrow {
+  opacity: 0.55;
+  transition: transform var(--transition-normal), opacity var(--transition-normal);
+  flex-shrink: 0;
 }
 
-.themeBtn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+.themeTapBtn:hover .cycleArrow {
+  opacity: 0.95;
+  transform: rotate(45deg);
+}
+
+@media (max-width: 680px) {
+  .themeName {
+    display: none;
+  }
+  .themeTapBtn {
+    padding: 5px;
+    gap: 0;
+  }
+  .cycleArrow {
+    display: none;
+  }
 }
 
 /* Mobile */

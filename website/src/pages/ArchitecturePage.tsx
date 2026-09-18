@@ -8,7 +8,7 @@ export function ArchitecturePage() {
         <span className={styles.tag}>TECHNICAL ARCHITECTURE</span>
         <h1 className={styles.title}>System Design & Layering</h1>
         <p className={styles.subtitle}>
-          Noctra is engineered with strict unidirectional dependency boundaries, a hard $\le 300$ LOC limit, on-device DSP isolates, and zero cloud tracking.
+          Noctra is engineered with strict unidirectional dependency boundaries, zero circular dependencies, on-device DSP isolates, and zero cloud tracking.
         </p>
       </header>
 
@@ -30,16 +30,11 @@ export function ArchitecturePage() {
         <div className={styles.rulesGrid}>
           <div className={styles.ruleBox}>
             <span className={styles.ruleBadge}>RULE 1</span>
-            <h4>Strict $\le 300$ LOC</h4>
-            <p>Every Dart and Android source file is capped at 300 lines. Monoliths are decomposed into focused mixins and delegates.</p>
-          </div>
-          <div className={styles.ruleBox}>
-            <span className={styles.ruleBadge}>RULE 2</span>
             <h4>Zero Cycles</h4>
             <p>No circular dependencies exist between any files in the codebase, preventing memory leaks and initialization deadlocks.</p>
           </div>
           <div className={styles.ruleBox}>
-            <span className={styles.ruleBadge}>RULE 3</span>
+            <span className={styles.ruleBadge}>RULE 2</span>
             <h4>Unidirectional Flow</h4>
             <p>Core imports nothing internal. Services never import UI. UI reaches persistence exclusively via the provider layer.</p>
           </div>

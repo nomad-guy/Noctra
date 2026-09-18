@@ -41,14 +41,20 @@
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  display: grid;
-  place-items: center;
-  background: var(--brand-mark-bg, var(--accent));
-  color: var(--btn-primary-color);
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 1.1rem;
-  box-shadow: 0 2px 12px var(--accent-glow);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-variant);
+  box-shadow: 0 4px 16px var(--accent-glow);
+  flex-shrink: 0;
+}
+
+.brandLogoImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .brandName {

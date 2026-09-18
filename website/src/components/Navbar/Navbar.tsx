@@ -11,59 +11,44 @@ const LINKS = [
   { to: '/changelog', label: 'Changelog' },
 ];
 
-type Theme = 'noir-black' | 'noir-white' | 'liquid-glass' | 'material-u';
+export type Theme = 'noir-black' | 'noir-white' | 'liquid-glass' | 'material-u';
 
-const THEME_META: Record<Theme, { label: string; icon: React.ReactElement }> = {
+export interface ThemeMeta {
+  id: Theme;
+  label: string;
+  appIcon: string;
+  nextTheme: Theme;
+  nextLabel: string;
+}
+
+export const THEME_DATA: Record<Theme, ThemeMeta> = {
   'noir-black': {
+    id: 'noir-black',
     label: 'Noir Black',
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path
-          d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
+    appIcon: '/images/logo_noctra_noir_black.png',
+    nextTheme: 'noir-white',
+    nextLabel: 'Noir White',
   },
   'noir-white': {
+    id: 'noir-white',
     label: 'Noir White',
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <circle cx="12" cy="12" r="4.2" stroke="currentColor" strokeWidth="2" />
-        <path
-          d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6M18.8 5.2l-1.6 1.6M6.8 17.2l-1.6 1.6"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
+    appIcon: '/images/logo_noctra_noir_white.png',
+    nextTheme: 'liquid-glass',
+    nextLabel: 'Liquid Glass',
   },
   'liquid-glass': {
+    id: 'liquid-glass',
     label: 'Liquid Glass',
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path
-          d="M12 2.5 21 12l-9 9.5L3 12l9-9.5Z"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinejoin="round"
-        />
-        <path d="M12 6.5 16.8 12 12 17.5 7.2 12 12 6.5Z" fill="currentColor" opacity="0.45" />
-      </svg>
-    ),
+    appIcon: '/images/logo_noctra_liquid_glass.png',
+    nextTheme: 'material-u',
+    nextLabel: 'Material U',
   },
   'material-u': {
+    id: 'material-u',
     label: 'Material U',
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <circle cx="12" cy="12" r="8.2" stroke="currentColor" strokeWidth="2" />
-        <circle cx="12" cy="12" r="3.2" fill="currentColor" opacity="0.5" />
-      </svg>
-    ),
+    appIcon: '/images/logo_noctra_material_u.png',
+    nextTheme: 'noir-black',
+    nextLabel: 'Noir Black',
   },
 };
 
@@ -84,12 +69,23 @@ function readStoredTheme(): Theme {
   return 'noir-black';
 }
 
-function applyTheme(theme: Theme) {
+export function applyTheme(theme: Theme) {
+  document.documentElement.setAttribute('data-theme', theme);
   document.documentElement.dataset.theme = theme;
+  if (document.body) {
+    document.body.setAttribute('data-theme', theme);
+    document.body.dataset.theme = theme;
+  }
   try {
     localStorage.setItem('noctra-theme', theme);
   } catch {
     /* ignore */
+  }
+
+  // Synchronize dynamic browser favicon with active theme app icon
+  const favicon = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+  if (favicon && THEME_DATA[theme]) {
+    favicon.href = THEME_DATA[theme].appIcon;
   }
 }
 
@@ -104,21 +100,31 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
+    applyTheme(theme);
     const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [theme]);
 
-  const pickTheme = (t: Theme) => {
-    setTheme(t);
-    applyTheme(t);
+  const cycleTheme = () => {
+    const next = THEME_DATA[theme].nextTheme;
+    setTheme(next);
+    applyTheme(next);
   };
+
+  const curr = THEME_DATA[theme] || THEME_DATA['noir-black'];
 
   return (
     <header className={`${styles.navbar} ${scrolled ? styles.scrolled : ''}`}>
       <Link to="/" className={styles.brand} aria-label="Noctra home">
-        <span className={styles.brandMark}>N</span>
+        <div className={styles.brandMark}>
+          <img
+            src={curr.appIcon}
+            alt="Noctra App Icon"
+            className={styles.brandLogoImg}
+          />
+        </div>
         <span className={styles.brandName}>Noctra</span>
       </Link>
 
@@ -141,20 +147,35 @@ export default function Navbar() {
       </nav>
 
       <div className={styles.right}>
-        <div className={styles.themeSwitch} role="group" aria-label="Theme">
-          {(Object.keys(THEME_META) as Theme[]).map((t) => (
-            <button
-              key={t}
-              className={`${styles.themeBtn} ${theme === t ? styles.active : ''}`}
-              onClick={() => pickTheme(t)}
-              aria-label={`Switch to ${THEME_META[t].label}`}
-              aria-pressed={theme === t}
-              title={THEME_META[t].label}
-            >
-              {THEME_META[t].icon}
-            </button>
-          ))}
-        </div>
+        {/* Sleek Theme Tap Button */}
+        <button
+          type="button"
+          className={styles.themeTapBtn}
+          onClick={cycleTheme}
+          title={`Active theme: ${curr.label}. Tap to switch to ${curr.nextLabel}`}
+          aria-label={`Active theme: ${curr.label}. Tap to switch to ${curr.nextLabel}`}
+        >
+          <span className={styles.themeIconWrapper}>
+            <img src={curr.appIcon} alt="" className={styles.themeIconImg} />
+          </span>
+          <span className={styles.themeName}>{curr.label}</span>
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            className={styles.cycleArrow}
+            aria-hidden="true"
+          >
+            <path
+              d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
 
         <a
           className={styles.githubBtn}
@@ -203,6 +224,17 @@ export default function Navbar() {
               {l.label}
             </Link>
           ))}
+          <button
+            type="button"
+            className={styles.themeTapBtn}
+            onClick={cycleTheme}
+            style={{ marginTop: 12, width: '100%', justifyContent: 'center' }}
+          >
+            <span className={styles.themeIconWrapper}>
+              <img src={curr.appIcon} alt="" className={styles.themeIconImg} />
+            </span>
+            <span className={styles.themeName}>Theme: {curr.label} (Tap to Switch)</span>
+          </button>
         </nav>
       )}
     </header>

@@ -54,7 +54,9 @@ export function Footer() {
         <div className={styles.topGrid}>
           <div className={styles.brandCol}>
             <Link className={styles.brand} to="/" aria-label="Noctra home">
-              <span className={styles.brandMark}>N</span>
+              <div className={styles.brandMark}>
+                <img src="/images/logo_noctra_liquid_glass.png" alt="Noctra" className={styles.brandLogoImg} />
+              </div>
               <span className={styles.brandName}>Noctra</span>
             </Link>
             <p className={styles.motto}>
