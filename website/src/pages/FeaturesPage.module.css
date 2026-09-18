@@ -1,0 +1,229 @@
+.container {
+  padding: 80px 24px 120px;
+  max-width: 1140px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.header {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto 64px;
+}
+
+.tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(34px, 5vw, 52px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  line-height: 1.12;
+  margin-bottom: 16px;
+}
+
+.subtitle {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.featureList {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  margin-bottom: 80px;
+}
+
+.blockCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 40px;
+  backdrop-filter: var(--glass-blur);
+  transition: all var(--transition-normal);
+  scroll-margin-top: calc(var(--nav-height) + 24px);
+}
+
+.blockCard:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-card);
+}
+
+.blockHeader {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.blockIconWrapper {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.blockMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.blockBadge {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.blockTitle {
+  font-family: var(--font-display);
+  font-size: clamp(22px, 3vw, 28px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.blockSubtitle {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+  max-width: 900px;
+}
+
+.blockBody {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 40px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 28px;
+}
+
+.colHeading {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 16px;
+}
+
+.detailsList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detailItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+
+.bullet {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.specsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.specBox {
+  background: var(--surface-variant);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.specLabel {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 600;
+}
+
+.specValue {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.bottomCta {
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 56px 32px;
+  backdrop-filter: var(--glass-blur);
+}
+
+.bottomCta h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.bottomCta p {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-color);
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-size: 14.5px;
+  font-weight: 700;
+  transition: all var(--transition-normal);
+  box-shadow: 0 4px 16px var(--accent-glow);
+}
+
+.btnPrimary:hover {
+  background: var(--btn-primary-hover);
+  transform: translateY(-2px);
+}
+
+@media (max-width: 860px) {
+  .blockBody {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .blockCard {
+    padding: 24px;
+  }
+}

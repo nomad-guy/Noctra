@@ -179,24 +179,28 @@ function buildReleaseData(tag: string, rawData?: any, isLive = false): ReleaseDa
   };
 }
 
-const FALLBACK_RELEASE = buildReleaseData('v1.0.7', {
-  name: 'Noctra v1.0.7',
-  published_at: '2026-09-09T12:00:00Z',
-  body: `### Android Predictive Back & System Navigation Architecture
-- Fixed touch freeze and animation desynchronization when backing out of artist profiles and playlists with system back gestures.
-- RouteAware lifecycle integration with ahead-of-time canPop evaluation.
-- Native Android 14+ predictive back slide gestures enabled.
+const FALLBACK_RELEASE = buildReleaseData('v1.1.2', {
+  name: 'Noctra v1.1.2',
+  published_at: '2026-09-18T17:00:00Z',
+  body: `### Audio Upscaler & Playback Integration
+- Automatic lossless upscaled playback: Cached 24-bit upscaled WAVs are automatically resolved and prioritized over lossy network streams without requiring manual file picker steps.
+- 24-BIT UPSCALED gold badge: Now playing bar displays live resolution telemetry; tapping navigates directly to the upscaler sheet.
+- Immediate upscale playback: Completion view in the upscale sheet now features a 1-tap "Play Upscaled Track" primary action.
+- Stereo isolation: Independent left/right DSP state machines eliminate channel crosstalk during harmonic reconstruction.
 
-### Seamless 120 FPS UI Transitions & Repaint Boundary Isolation
-- Hardware-accelerated Cupertino page transitions on mobile and FadeUpwards on desktop.
-- Repaint isolation on IndexedStack, MiniPlayerDock, and heavy sliver sections.
-- O(1) set lookup for downloaded track status.
+### Universal Lyrics & Transliteration
+- Persistent transliteration script: User-selected reading scripts (Romanized, Devanagari, Pinyin) remain active across continuous track changes.
+- Expanded Chinese & Japanese vocabulary: Hanzi detection threshold and Pinyin transliteration engine updated with preserved word-level timestamps.
 
-### Player Download Spiral Progress Indicator
-- Reactive circular progress indicator during song downloads in the full player sheet.
+### Visual Contrast & Theme Refinement
+- Elevated secondary and tertiary text contrast across Noir Black, Noir White, Liquid Glass, and Material U themes.
+- Eliminated hardcoded low-opacity whites across carousels, charts, search results, and cast sheets.
 
-### Website Theme Port
-- Synchronized mobile app top-bar theme icons with the website header navigation.`,
+### Engine Architecture & Stability
+- Startup hydration race condition resolved: Persisted playback settings are guaranteed to be loaded before audio handler registration.
+- Multi-output structured reporting: Native Android audio router upgraded with per-route active flags and normal audio routing mode.
+- Unicode track matching guard: Diacritic and accent folding prevents false rejections of international titles.
+- Automated CI release signing enforced in GitHub Actions.`,
 }, false);
 
 export const ReleaseContext = createContext<ReleaseContextValue>({

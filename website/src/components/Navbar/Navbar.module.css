@@ -72,6 +72,12 @@
   background: var(--surface-hover);
 }
 
+.linkActive {
+  color: var(--accent);
+  background: var(--surface-variant);
+  border: 1px solid var(--border-subtle);
+}
+
 .link:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

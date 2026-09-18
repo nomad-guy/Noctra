@@ -1,21 +1,38 @@
 import { useEffect } from 'react';
 import { ReleaseProvider } from './context/ReleaseContext';
-import { ThreeBackdrop } from './components/ThreeBackdrop/ThreeBackdrop';
+import { RouterProvider, useRouter } from './router/Router';
+import { AmbientBackdrop } from './components/AmbientBackdrop/AmbientBackdrop';
 import Navbar from './components/Navbar/Navbar';
-import Hero from './components/Hero/Hero';
-import { Features } from './components/Features/Features';
-import { AppShowcase } from './components/AppShowcase/AppShowcase';
-import { AllDownloads } from './components/AllDownloads/AllDownloads';
-import { InstallGuide } from './components/InstallGuide/InstallGuide';
-import { FAQ } from './components/FAQ/FAQ';
 import { Footer } from './components/Footer/Footer';
-import { ChangelogModal } from './components/ChangelogModal/ChangelogModal';
-import { FloatingPlayer } from './components/FloatingPlayer/FloatingPlayer';
+import { HomePage } from './pages/HomePage';
+import { FeaturesPage } from './pages/FeaturesPage';
+import { DownloadPage } from './pages/DownloadPage';
+import { ArchitecturePage } from './pages/ArchitecturePage';
+import { ChangelogPage } from './pages/ChangelogPage';
 import './styles/base.css';
 
+function PageSwitch() {
+  const { currentPath } = useRouter();
+
+  // Route matching
+  if (currentPath.startsWith('/features')) {
+    return <FeaturesPage />;
+  }
+  if (currentPath.startsWith('/download') || currentPath.startsWith('/install')) {
+    return <DownloadPage />;
+  }
+  if (currentPath.startsWith('/architecture') || currentPath.startsWith('/docs')) {
+    return <ArchitecturePage />;
+  }
+  if (currentPath.startsWith('/changelog')) {
+    return <ChangelogPage />;
+  }
+
+  // Default to HomePage
+  return <HomePage />;
+}
+
 export default function App() {
-  // Theme is owned by the Navbar switcher (writes data-theme + localStorage).
-  // This effect only guarantees a theme exists on first paint.
   useEffect(() => {
     if (!document.documentElement.dataset.theme) {
       document.documentElement.dataset.theme = 'noir-black';
@@ -24,32 +41,23 @@ export default function App() {
 
   return (
     <ReleaseProvider>
-      <div className="noctra-root">
-        {/* 3D Interactive Three.js Backdrop */}
-        <ThreeBackdrop />
+      <RouterProvider>
+        <div className="noctra-root">
+          {/* Lightweight Ambient Backdrop (Zero WebGL / Three.js overhead) */}
+          <AmbientBackdrop />
 
-        {/* Navigation */}
-        <Navbar />
+          {/* Persistent Multi-Page Navigation */}
+          <Navbar />
 
-        {/* Main Page Content */}
-        <main style={{ position: 'relative', zIndex: 1 }}>
-          <Hero />
-          <Features />
-          <AppShowcase />
-          <AllDownloads />
-          <InstallGuide />
-          <FAQ />
-        </main>
+          {/* Active Page View */}
+          <main style={{ position: 'relative', zIndex: 1, minHeight: 'calc(100vh - 200px)' }}>
+            <PageSwitch />
+          </main>
 
-        {/* Footer */}
-        <Footer />
-
-        {/* Dynamic Changelog Modal */}
-        <ChangelogModal />
-
-        {/* Persistent Floating Mini-Player Dock (matches the Flutter app) */}
-        <FloatingPlayer />
-      </div>
+          {/* Persistent Footer */}
+          <Footer />
+        </div>
+      </RouterProvider>
     </ReleaseProvider>
   );
 }

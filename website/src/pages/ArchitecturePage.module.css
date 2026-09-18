@@ -1,0 +1,262 @@
+.container {
+  padding: 80px 24px 120px;
+  max-width: 1040px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.header {
+  text-align: center;
+  max-width: 680px;
+  margin: 0 auto 56px;
+}
+
+.tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 5vw, 48px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  line-height: 1.15;
+  margin-bottom: 14px;
+}
+
+.subtitle {
+  font-size: 16.5px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.cardSection {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 36px 40px;
+  margin-bottom: 32px;
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-card);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.iconAccent {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.cardHeader h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.cardHeader p {
+  font-size: 14.5px;
+  color: var(--text-secondary);
+}
+
+.codeDiagram {
+  background: var(--surface-variant);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 20px 24px;
+  margin-bottom: 28px;
+  overflow-x: auto;
+}
+
+.codeDiagram pre {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--accent);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.rulesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.ruleBox {
+  background: var(--surface-variant);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 20px;
+}
+
+.ruleBadge {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.ruleBox h4 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.ruleBox p {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.flowDiagram {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px 0;
+}
+
+.flowStep {
+  flex: 1;
+  min-width: 160px;
+  background: var(--surface-variant);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  text-align: center;
+}
+
+.stepNum {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.flowStep h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.flowStep p {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.flowArrow {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.tierList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tierItem {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: var(--surface-variant);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  transition: all var(--transition-fast);
+}
+
+.tierItem:hover {
+  border-color: var(--accent);
+}
+
+.tierPill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--btn-primary-color);
+  background: var(--accent);
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+  flex-shrink: 0;
+}
+
+.tierContent h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+
+.tierContent p {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.securityGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.securityBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--surface-variant);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 18px;
+}
+
+.checkIcon {
+  color: #10b981;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.securityBox h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.securityBox p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .cardSection {
+    padding: 24px;
+  }
+  .flowArrow {
+    display: none;
+  }
+}

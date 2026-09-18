@@ -1,0 +1,81 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.gradientOrb1 {
+  position: absolute;
+  top: -15%;
+  left: 15%;
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+  filter: blur(80px);
+  opacity: 0.6;
+  animation: floatOrb 22s ease-in-out infinite alternate;
+}
+
+.gradientOrb2 {
+  position: absolute;
+  top: 45%;
+  right: -10%;
+  width: 800px;
+  height: 800px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-soft) 0%, transparent 70%);
+  filter: blur(100px);
+  opacity: 0.5;
+  animation: floatOrb2 28s ease-in-out infinite alternate;
+}
+
+.gradientOrb3 {
+  position: absolute;
+  bottom: -15%;
+  left: 20%;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+  filter: blur(90px);
+  opacity: 0.4;
+}
+
+.gridOverlay {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(var(--border-subtle) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
+  background-size: 64px 64px;
+  opacity: 0.25;
+  mask-image: radial-gradient(ellipse at 50% 30%, black 20%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 30%, black 20%, transparent 80%);
+}
+
+@keyframes floatOrb {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    transform: translate(80px, 60px) scale(1.1);
+  }
+}
+
+@keyframes floatOrb2 {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    transform: translate(-90px, -70px) scale(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gradientOrb1,
+  .gradientOrb2 {
+    animation: none;
+  }
+}

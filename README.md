@@ -10,12 +10,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/nomad-guy/Noctra/releases/latest"><img src="https://img.shields.io/badge/Release-v1.1.1-000000.svg?style=flat-square" alt="Release v1.1.1" /></a>
+  <a href="https://github.com/nomad-guy/Noctra/releases/latest"><img src="https://img.shields.io/badge/Release-v1.1.2-000000.svg?style=flat-square" alt="Release v1.1.2" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-000000.svg?style=flat-square" alt="License GPL-3.0" /></a>
   <a href="SECURITY.md"><img src="https://img.shields.io/badge/Security-Policy-000000.svg?style=flat-square" alt="Security Policy" /></a>
   <a href="#privacy-architecture"><img src="https://img.shields.io/badge/Telemetry-0%25-000000.svg?style=flat-square" alt="Zero Telemetry" /></a>
   <a href="#streaming--audiophile-playback"><img src="https://img.shields.io/badge/Audio-Hi--Res%20FLAC%2024--bit%2F192kHz-000000.svg?style=flat-square" alt="Hi-Res FLAC" /></a>
-  <a href="#automated-verification"><img src="https://img.shields.io/badge/Tests-900%2B%20Passing-000000.svg?style=flat-square" alt="900+ Tests Passing" /></a>
+  <a href="#automated-verification"><img src="https://img.shields.io/badge/Tests-990%2B%20Passing-000000.svg?style=flat-square" alt="990+ Tests Passing" /></a>
   <a href="#codebase-architecture"><img src="https://img.shields.io/badge/Architecture-%E2%89%A4300%20LOC-000000.svg?style=flat-square" alt="Modular Architecture" /></a>
   <a href="https://flutter.dev"><img src="https://img.shields.io/badge/Framework-Flutter%203.47-000000.svg?style=flat-square" alt="Flutter" /></a>
 </p>
@@ -29,7 +29,7 @@
 <p align="center">
   <a href="#overview">Overview</a> &bull;
   <a href="#screenshots">Screenshots</a> &bull;
-  <a href="#whats-new-in-v108">What's New</a> &bull;
+  <a href="#whats-new-in-v112">What's New</a> &bull;
   <a href="#features">Features</a> &bull;
   <a href="#installation--downloads">Downloads</a> &bull;
   <a href="#architecture">Architecture</a> &bull;
@@ -44,7 +44,7 @@
 
 **Noctra** is an authentication-less, privacy-sovereign audiophile music streaming platform engineered for **Android, Windows, Linux, and iOS**.
 
-Built with Flutter, Dart, Riverpod, and native platform digital signal processing delegates, Noctra streams pure lossless FLAC audio up to **24-bit/192 kHz**, synchronizes bilingual lyrics with Apple Music / Spotify style translation subtitles, executes on-device neural taste recommendations, and packages into native standalone installers (`.exe`, `.deb`, `.apk`, `.ipa`) without user accounts, cloud tracking, or telemetry.
+Built with Flutter, Dart, Riverpod, and native platform digital signal processing delegates, Noctra streams pure lossless FLAC audio up to **24-bit/192 kHz**, reconstructs lossy audio to **24-bit studio WAVs** via on-device DSP upscaling, synchronizes bilingual lyrics with Apple Music-style translation subtitles, executes on-device neural recommendations, and packages into native standalone installers (`.exe`, `.deb`, `.apk`, `.ipa`) without user accounts, cloud tracking, or telemetry.
 
 ---
 
@@ -87,14 +87,15 @@ Built with Flutter, Dart, Riverpod, and native platform digital signal processin
 
 - [Overview](#overview)
 - [Screenshots](#screenshots)
-- [What's New in v1.1.1](#whats-new-in-v111)
+- [What's New in v1.1.2](#whats-new-in-v112)
 - [Features](#features)
   - [Streaming & Audiophile Playback](#streaming--audiophile-playback)
+  - [On-Device 24-Bit Audio Upscaler](#on-device-24-bit-audio-upscaler)
   - [Responsive Cross-Platform Shell](#responsive-cross-platform-shell)
   - [Discovery & Neural Taste Engine](#discovery--neural-taste-engine)
   - [Synced Bilingual Lyrics & Transliteration](#synced-bilingual-lyrics--transliteration)
   - [Playlist Management & Universal Transfer](#playlist-management--universal-transfer)
-  - [Triple Noir Aesthetic & Customization](#triple-noir-aesthetic--customization)
+  - [Quad Signature Aesthetic & Material U](#quad-signature-aesthetic--material-u)
 - [Installation & Downloads](#installation--downloads)
 - [Architecture](#architecture)
 - [Building from Source](#building-from-source)
@@ -103,7 +104,17 @@ Built with Flutter, Dart, Riverpod, and native platform digital signal processin
 
 ---
 
-## What's New in v1.1.1
+## What's New in v1.1.2
+
+- **Automatic Lossless Upscaled Playback**: Cached 24-bit upscaled WAVs are automatically recognized and resolved for bit-perfect local playback over lossy network streams.
+- **`24-BIT UPSCALED` Hi-Res Badge**: Player controls now display a gold badge during upscaled playback; tapping navigates directly to the upscaler engine.
+- **Immediate Upscale Playback**: Completion sheet features a 1-tap "Play Upscaled Track" primary action.
+- **Persistent Transliteration Script**: User-selected scripts in lyrics view (Romanized, Devanagari, Hanzi/Pinyin) persist across track transitions.
+- **Visual Contrast & Legibility Overhaul**: Elevated secondary and tertiary text contrast across Noir Black, Noir White, Liquid Glass, and Material U themes.
+- **8 Core Stability & Engine Fixes**: Resolved startup hydration race conditions, multi-output audio router state reporting, diacritic/accent folding in Unicode track matching, and enforced automated CI release signing.
+
+<details>
+<summary>What's New in v1.1.1</summary>
 
 - **Audio Upscaler**: long-press any song → "Upscale to Lossless" — on-device harmonic reconstruction exports a true lossless 24-bit WAV (background isolate, streamed tracks auto-downloaded first).
 - **Material U theme**: a fourth theme whose palette comes from your OS dynamic colors (Android 12+ wallpaper-derived), with a branded seed fallback elsewhere; follows system light/dark automatically.
@@ -111,11 +122,9 @@ Built with Flutter, Dart, Riverpod, and native platform digital signal processin
 - **Smart streaming policy is real now**: the app detects your network — mobile data/weak signal auto-streams Opus 128k, good Wi-Fi gets 320k.
 - **Home Layout settings**: toggle each of the 7 home sections on/off; hidden sections don't fire their startup requests.
 - **RAM/battery guardrails**: image cache clamped to 400 images / 48 MiB; skeleton shimmer pauses when covered.
-- **Website redesign**: new theme-mirroring design system, live GitHub release integration, platform-aware download CTA.
-- **Quality**: analyzer clean, 988 tests passing, architecture rules hold.
+- **Quality**: analyzer clean, 991 tests passing, architecture rules hold.
 
-<details>
-<summary>What's New in v1.1.0</summary>
+</details>
 
 - **AI recommendations actually learn now**: favoriting, downloading, playlist adds, search picks and repeat-one loops all train the recommender — every one of those signals was previously collected but never fed to the model.
 - **Session context stabilized**: the model's momentum feature no longer scrambles which taste axes moved (sorted-delta noise), so like-for-like listening shifts now produce consistent predictions.
