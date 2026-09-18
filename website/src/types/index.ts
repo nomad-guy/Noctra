@@ -1,4 +1,4 @@
-export type ThemeType = 'liquid-glass' | 'noir-black' | 'noir-white';
+export type ThemeType = 'liquid-glass' | 'noir-black' | 'noir-white' | 'material-u';
 export type PlatformType = 'windows' | 'linux' | 'android' | 'ios';
 
 export interface ThemeConfig {

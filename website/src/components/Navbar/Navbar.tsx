@@ -9,7 +9,7 @@ const LINKS = [
   { href: '#faq', label: 'FAQ' },
 ];
 
-type Theme = 'noir-black' | 'noir-white' | 'liquid-glass';
+type Theme = 'noir-black' | 'noir-white' | 'liquid-glass' | 'material-u';
 
 const THEME_META: Record<Theme, { label: string; icon: React.ReactElement }> = {
   'noir-black': {
@@ -54,12 +54,28 @@ const THEME_META: Record<Theme, { label: string; icon: React.ReactElement }> = {
       </svg>
     ),
   },
+  'material-u': {
+    label: 'Material U',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="8.2" stroke="currentColor" strokeWidth="2" />
+        <circle cx="12" cy="12" r="3.2" fill="currentColor" opacity="0.5" />
+      </svg>
+    ),
+  },
 };
 
 function readStoredTheme(): Theme {
   try {
     const t = localStorage.getItem('noctra-theme');
-    if (t === 'noir-white' || t === 'liquid-glass' || t === 'noir-black') return t;
+    if (
+      t === 'noir-white' ||
+      t === 'liquid-glass' ||
+      t === 'material-u' ||
+      t === 'noir-black'
+    ) {
+      return t;
+    }
   } catch {
     /* ignore */
   }

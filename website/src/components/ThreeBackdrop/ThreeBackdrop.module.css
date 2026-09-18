@@ -63,6 +63,9 @@
 :global([data-theme='noir-black']) .orbCenterRight,
 :global([data-theme='noir-white']) .orbTopLeft,
 :global([data-theme='noir-white']) .orbBottomRight,
-:global([data-theme='noir-white']) .orbCenterRight {
+:global([data-theme='noir-white']) .orbCenterRight,
+:global([data-theme='material-u']) .orbTopLeft,
+:global([data-theme='material-u']) .orbBottomRight,
+:global([data-theme='material-u']) .orbCenterRight {
   opacity: 0;
 }

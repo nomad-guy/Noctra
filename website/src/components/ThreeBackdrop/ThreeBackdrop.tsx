@@ -48,10 +48,26 @@ export function ThreeBackdrop() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     // Cap pixel ratio harder on small/mobile screens: the shader cost of
     // MeshPhysicalMaterial scales with fragment count, and phone DPRs of
-    // 2.5-3+ buy nothing visually on a decorative backdrop.
+    // 2.5-3+ buy nothing visually on a decorative backdrop. The physical
+    // transmission material is the single most expensive pass in the scene;
+    // on weak GPUs we swap it for a cheap standard material instead.
     const isSmallViewport = window.innerWidth < 820;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, isSmallViewport ? 1.5 : 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, isSmallViewport ? 1.25 : 1.75));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+    // Adaptive quality: if we cannot hold ~45fps during the first seconds,
+    // downgrade the transmission material permanently (cheap but still
+    // glass-like) instead of stuttering for the whole session.
+    const cheapGlassMaterial = new THREE.MeshStandardMaterial({
+      color: 0x9edbff,
+      roughness: 0.15,
+      metalness: 0.1,
+      transparent: true,
+      opacity: 0.55,
+    });
+    let frames = 0;
+    let perfClockStart = performance.now();
+    let downgraded = false;
     container.appendChild(renderer.domElement);
 
     // Accessibility: honor reduced motion by rendering static frames only.
@@ -189,6 +205,24 @@ export function ThreeBackdrop() {
           s.material = wireMaterial;
           wireMaterial.color.setHex(0xcccccc);
         });
+      } else if (currentTheme === 'material-u') {
+        // Material U: soft blue dynamic-color palette, flat and calm.
+        light1.color.setHex(0x7ec8ff);
+        light1.intensity = 1.4;
+        light2.color.setHex(0xa5d8ff);
+        light2.intensity = 1.1;
+        light3.color.setHex(0x89bdf8);
+        light3.intensity = 0.9;
+        particles.visible = true;
+        particleMat.color.setHex(0x7ec8ff);
+        particleMat.opacity = 0.3;
+        shards.forEach((s) => {
+          s.material = glassMaterial;
+        });
+        glassMaterial.color.setHex(0xb5dcff);
+        glassMaterial.opacity = 0.5;
+        cheapGlassMaterial.color.setHex(0xb5dcff);
+        cheapGlassMaterial.opacity = 0.45;
       } else {
         // Liquid Glass
         light1.color.setHex(0x68c8ff);
@@ -203,6 +237,10 @@ export function ThreeBackdrop() {
         shards.forEach((s) => {
           s.material = glassMaterial;
         });
+        glassMaterial.color.setHex(0x9edbff);
+        glassMaterial.opacity = 0.65;
+        cheapGlassMaterial.color.setHex(0x9edbff);
+        cheapGlassMaterial.opacity = 0.55;
       }
     };
 
@@ -221,6 +259,24 @@ export function ThreeBackdrop() {
       if (isPaused) return;
       const elapsedTime = clock.getElapsedTime();
       const currentTheme = themeRef.current;
+
+      // Adaptive quality probe (first ~3 seconds): if the GPU cannot keep
+      // up, swap the expensive transmission glass for a cheap lookalike.
+      if (!downgraded) {
+        frames++;
+        const elapsedMs = performance.now() - perfClockStart;
+        if (elapsedMs > 3000) {
+          const fps = (frames / elapsedMs) * 1000;
+          if (fps < 45) {
+            downgraded = true;
+            shards.forEach((s) => {
+              if (s.material === glassMaterial) s.material = cheapGlassMaterial;
+            });
+          }
+          perfClockStart = performance.now();
+          frames = 0;
+        }
+      }
 
       // Smooth mouse interpolation
       currentMouseX += (targetMouseX - currentMouseX) * 0.04;
@@ -280,6 +336,7 @@ export function ThreeBackdrop() {
       shardGeom.dispose();
       icosaGeom.dispose();
       glassMaterial.dispose();
+      cheapGlassMaterial.dispose();
       wireMaterial.dispose();
       particleGeom.dispose();
       particleMat.dispose();
