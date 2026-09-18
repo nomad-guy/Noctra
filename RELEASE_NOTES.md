@@ -31,6 +31,7 @@ backoff, offline search) and adds RAM/battery guardrails.
   without dynamic color a branded seed palette keeps everything coherent.
 - Follows the system light/dark setting automatically. Selectable in Settings,
   the sidebar theme card, the app-bar cycle button, and voice commands.
+- Matching launcher icon + in-app logo tinted with the Material You palette.
 
 ## Slow / Low-Network Mode
 

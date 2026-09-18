@@ -22,6 +22,9 @@
 - Follows the system light/dark mode automatically. Available in Settings,
   the sidebar theme card, the app-bar cycle button, and voice commands
   ("set theme to Material U").
+- **Matching launcher icon + in-app logo**: a dedicated Material U icon set
+  (all Android densities, square + round) tinted with the Material You
+  palette; the default in-app logo follows the Material U theme.
 
 ### Slow / Low-Network Mode
 
