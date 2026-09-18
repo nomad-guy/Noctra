@@ -94,6 +94,11 @@ class ThemeAndIconSection extends ConsumerWidget {
                 child: _iconChip(context, ref, 'Liquid Glass',
                     NoctraAppIcon.liquidGlass),
               ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _iconChip(context, ref, 'Material U',
+                    NoctraAppIcon.materialU),
+              ),
             ],
           ),
         ),

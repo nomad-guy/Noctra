@@ -1,5 +1,75 @@
 # Changelog
 
+## v1.1.1 (2026-09-18)
+
+### Audio Upscaler (New)
+
+- **On-device audio upscaling**: any track can now be enhanced to a true
+  lossless 24-bit WAV — long-press a song and choose "Upscale to Lossless".
+  The DSP pipeline (harmonic reconstruction + dynamic band extension + soft
+  limiting) runs in a background isolate and restores the perceived
+  brightness and air that lossy compression (MP3/AAC) strips out. Streamed
+  tracks are downloaded automatically first; everything runs on-device.
+- Verified by unit tests: valid 24-bit WAV headers, zero-clip output on
+  full-scale signals, measurable harmonic uplift, and input validation.
+
+### Material U Theme (New)
+
+- **Fourth theme**: Material U derives its entire palette from your OS
+  dynamic color (wallpaper-derived on Android 12+), falling back to a
+  branded seed palette where dynamic color is unavailable (older Android,
+  Windows/Linux). Flat, high-contrast Material 3 surfaces — no glass.
+- Follows the system light/dark mode automatically. Available in Settings,
+  the sidebar theme card, the app-bar cycle button, and voice commands
+  ("set theme to Material U").
+
+### Slow / Low-Network Mode
+
+- **Adaptive timeouts**: every provider request now scales its timeout by
+  measured network quality — on 2G/weak 3G, search no longer returns empty
+  because the app quit before the first byte arrived (timeouts stretch up
+  to 3× on poor connections instead of dying at the handshake).
+- **Search early-exit**: the first provider returning enough results closes
+  the race; slower providers only fill gaps in a short grace window.
+- **Retry with backoff**: transient failures (connection resets, dropped
+  requests) retry with exponential backoff + jitter instead of returning
+  nothing on the first hiccup.
+- **Smart streaming policy is real**: the "Smart Wi-Fi / Mobile" setting now
+  actually detects the network — mobile data or a poor connection
+  automatically drops to Opus 128k; good Wi-Fi gets full 320k.
+- **Offline search**: disk-backed result cache means any query you have
+  searched before still returns results in airplane mode (30-day window,
+  fault-isolated records).
+
+### Home Declutter
+
+- **Home Layout settings**: each of the 7 home sections (Recently Played,
+  Trending, Artists, Charts, AI Mixes, Vibe Chips, Made For You) can be
+  toggled off in Settings → Home Layout; hidden sections are not built and
+  their network requests are not fired at startup.
+
+### Performance & Battery
+
+- **Image cache budget**: the global image cache is clamped to 400 images /
+  48 MiB (previously 1000 / 100 MiB) — artwork-heavy sessions no longer
+  balloon native memory on long playback.
+- **Shimmer lifecycle**: skeleton loader animations pause when covered by
+  another layer (e.g. the player sheet) instead of ticking frames for
+  invisible pixels.
+
+### Website
+
+- Full redesign: new design system mirroring the app's themes (Noir Black,
+  Noir White, Liquid Glass), rebuilt Navbar/Hero/Features/Footer, live
+  GitHub release integration, platform-aware download CTA, and a Three.js
+  backdrop that follows the theme switcher.
+
+### Quality
+
+- Analyzer: 0 issues. Test suite: 988 tests passing (16 new: upscaler DSP,
+  Material U theme, network quality, home layout). Architecture boundary
+  rules hold (≤300 LOC per file, platform code stays in its layer).
+
 ## v1.1.0 (2026-09-16)
 
 ### AI Recommendations: Actually Learning Now

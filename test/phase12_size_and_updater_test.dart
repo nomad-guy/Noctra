@@ -98,6 +98,7 @@ void main() {
         'assets/images/logo_noctra_noir_black.png',
         'assets/images/logo_noctra_noir_white.png',
         'assets/images/logo_noctra_liquid_glass.png',
+        'assets/images/logo_noctra_material_u.png',
         'assets/images/liquid_glass_shard.png',
       ];
 

@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/nomad-guy/Noctra/releases/latest"><img src="https://img.shields.io/badge/Release-v1.1.0-000000.svg?style=flat-square" alt="Release v1.1.0" /></a>
+  <a href="https://github.com/nomad-guy/Noctra/releases/latest"><img src="https://img.shields.io/badge/Release-v1.1.1-000000.svg?style=flat-square" alt="Release v1.1.1" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-000000.svg?style=flat-square" alt="License GPL-3.0" /></a>
   <a href="SECURITY.md"><img src="https://img.shields.io/badge/Security-Policy-000000.svg?style=flat-square" alt="Security Policy" /></a>
   <a href="#privacy-architecture"><img src="https://img.shields.io/badge/Telemetry-0%25-000000.svg?style=flat-square" alt="Zero Telemetry" /></a>
@@ -87,7 +87,7 @@ Built with Flutter, Dart, Riverpod, and native platform digital signal processin
 
 - [Overview](#overview)
 - [Screenshots](#screenshots)
-- [What's New in v1.1.0](#whats-new-in-v110)
+- [What's New in v1.1.1](#whats-new-in-v111)
 - [Features](#features)
   - [Streaming & Audiophile Playback](#streaming--audiophile-playback)
   - [Responsive Cross-Platform Shell](#responsive-cross-platform-shell)
@@ -103,7 +103,19 @@ Built with Flutter, Dart, Riverpod, and native platform digital signal processin
 
 ---
 
-## What's New in v1.1.0
+## What's New in v1.1.1
+
+- **Audio Upscaler**: long-press any song → "Upscale to Lossless" — on-device harmonic reconstruction exports a true lossless 24-bit WAV (background isolate, streamed tracks auto-downloaded first).
+- **Material U theme**: a fourth theme whose palette comes from your OS dynamic colors (Android 12+ wallpaper-derived), with a branded seed fallback elsewhere; follows system light/dark automatically.
+- **Slow-network mode**: request timeouts scale with measured network quality, search returns as soon as the first good provider responds, transient failures retry with backoff, and previously-seen searches work offline from a disk cache.
+- **Smart streaming policy is real now**: the app detects your network — mobile data/weak signal auto-streams Opus 128k, good Wi-Fi gets 320k.
+- **Home Layout settings**: toggle each of the 7 home sections on/off; hidden sections don't fire their startup requests.
+- **RAM/battery guardrails**: image cache clamped to 400 images / 48 MiB; skeleton shimmer pauses when covered.
+- **Website redesign**: new theme-mirroring design system, live GitHub release integration, platform-aware download CTA.
+- **Quality**: analyzer clean, 988 tests passing, architecture rules hold.
+
+<details>
+<summary>What's New in v1.1.0</summary>
 
 - **AI recommendations actually learn now**: favoriting, downloading, playlist adds, search picks and repeat-one loops all train the recommender — every one of those signals was previously collected but never fed to the model.
 - **Session context stabilized**: the model's momentum feature no longer scrambles which taste axes moved (sorted-delta noise), so like-for-like listening shifts now produce consistent predictions.
@@ -112,6 +124,7 @@ Built with Flutter, Dart, Riverpod, and native platform digital signal processin
 - **Honest downloads**: expired CDN tokens no longer write error pages to disk as "songs" — failures show a retry icon in the library.
 - **Performance**: cheaper AI Studio rebuilds, incremental manifest weight updates, and image decode downsampling on the last remaining artwork tiles.
 - **Quality**: analyzer clean, 972 tests passing, architecture rules hold.
+</details>
 
 <details>
 <summary>What's New in v1.0.9</summary>
@@ -182,10 +195,11 @@ Built with Flutter, Dart, Riverpod, and native platform digital signal processin
 - **Swipe Gestures**: Swipe right to Play Next (Cyan), swipe left to Add to Queue (Amber) with tactile haptic feedback.
 
 ### Triple Noir Aesthetic & Customization
-- **Curated Noir Design System**:
+- **Curated Design System**:
   - **Noir Black**: Deep obsidian glass with high-contrast typography.
   - **Noir White**: Minimalist editorial day mode with soft parchment grays.
   - **Liquid Glass**: Translucent sapphire blur glassmorphism with dynamic specular borders.
+  - **Material U**: Dynamic-color theme derived from your Android 12+ wallpaper (branded seed fallback elsewhere), following system light/dark.
 - **Dynamic Theme-Aware Launcher Icons**: Automatically updates the Android home screen launcher icon to match your active theme.
 
 ---
@@ -196,12 +210,12 @@ Pre-compiled production binaries for all operating systems are available on the 
 
 | Operating System | Package Name | Target Architecture | Installation Guide |
 |---|---|---|---|
-| **Windows** | `Noctra-1.1.0-Setup-x64.exe` | x86_64 / x64 | Run installer &bull; Installs to `AppData` with Desktop shortcut |
-| **Linux** | `noctra_1.1.0_amd64.deb` | x86_64 / amd64 | Run `sudo dpkg -i noctra_1.1.0_amd64.deb` |
-| **Android** | `Noctra-1.1.0-Universal.apk` | All Devices | Install on any Android 8.0+ device |
-| **Android (Optimized)** | `Noctra-1.1.0-arm64-v8a.apk` | 64-bit Mobile | Smallest file size for modern 64-bit phones |
-| **Android (Play Store)** | `Noctra-1.1.0.aab` | Google Play | Android App Bundle for store distribution |
-| **iOS** | `Noctra-1.1.0.ipa` | ARM64 / iPhone & iPad | Sideload via [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/), or [TrollStore](https://github.com/opa334/TrollStore) |
+| **Windows** | `Noctra-1.1.1-Setup-x64.exe` | x86_64 / x64 | Run installer &bull; Installs to `AppData` with Desktop shortcut |
+| **Linux** | `noctra_1.1.1_amd64.deb` | x86_64 / amd64 | Run `sudo dpkg -i noctra_1.1.1_amd64.deb` |
+| **Android** | `Noctra-1.1.1-Universal.apk` | All Devices | Install on any Android 8.0+ device |
+| **Android (Optimized)** | `Noctra-1.1.1-arm64-v8a.apk` | 64-bit Mobile | Smallest file size for modern 64-bit phones |
+| **Android (Play Store)** | `Noctra-1.1.1.aab` | Google Play | Android App Bundle for store distribution |
+| **iOS** | `Noctra-1.1.1.ipa` | ARM64 / iPhone & iPad | Sideload via [AltStore](https://altstore.io/), [SideStore](https://sidestore.io/), or [TrollStore](https://github.com/opa334/TrollStore) |
 
 > **Verification**: Every release includes `SHA256SUMS.txt` to cryptographically verify binary integrity.
 
@@ -216,7 +230,7 @@ noctra/
 ├── lib/
 │   ├── core/
 │   │   ├── constants/            # Design tokens, storage keys & audio constants
-│   │   ├── theme/                # Triple Noir design tokens (Black, White, Liquid Glass)
+│   │   ├── theme/                # Noctra design tokens (Noir Black, Noir White, Liquid Glass, Material U)
 │   │   └── utils/                # Localization (L10n), sanitizers, formatting
 │   ├── data/
 │   │   ├── models/               # Immutable models (Song, Album, Artist, StreamInfo)

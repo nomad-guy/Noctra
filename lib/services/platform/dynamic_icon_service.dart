@@ -13,6 +13,7 @@ enum NoctraAppIcon {
   noirBlack,
   noirWhite,
   liquidGlass,
+  materialU,
 }
 
 /// Result of an icon change request.
@@ -31,6 +32,7 @@ extension NoctraAppIconX on NoctraAppIcon {
     NoctraAppIcon.noirBlack => 'noir_black',
     NoctraAppIcon.noirWhite => 'noir_white',
     NoctraAppIcon.liquidGlass => 'liquid_glass',
+    NoctraAppIcon.materialU => 'material_u',
   };
 
   String get displayName => switch (this) {
@@ -38,6 +40,7 @@ extension NoctraAppIconX on NoctraAppIcon {
     NoctraAppIcon.noirBlack => 'Noir Black',
     NoctraAppIcon.noirWhite => 'Noir White',
     NoctraAppIcon.liquidGlass => 'Liquid Glass',
+    NoctraAppIcon.materialU => 'Material U',
   };
 
   /// Parse from Android key. Returns null for unknown keys (no silent default).
@@ -46,6 +49,7 @@ extension NoctraAppIconX on NoctraAppIcon {
     'noir_black' => NoctraAppIcon.noirBlack,
     'noir_white' => NoctraAppIcon.noirWhite,
     'liquid_glass' => NoctraAppIcon.liquidGlass,
+    'material_u' => NoctraAppIcon.materialU,
     _ => null,
   };
 }

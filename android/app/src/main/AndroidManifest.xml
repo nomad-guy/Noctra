@@ -132,6 +132,21 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- Material U icon -->
+        <activity-alias
+            android:name=".MainActivity.material_u"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_material_u"
+            android:roundIcon="@mipmap/ic_launcher_round_material_u"
+            android:label="Noctra"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <service android:name="com.ryanheise.audioservice.AudioService"
             android:foregroundServiceType="mediaPlayback"
             android:exported="true">

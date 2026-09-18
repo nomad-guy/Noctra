@@ -29,6 +29,7 @@ class LauncherIconManager(private val context: Context) {
         "noir_black" to "$pkg.MainActivity.noir_black",
         "noir_white" to "$pkg.MainActivity.noir_white",
         "liquid_glass" to "$pkg.MainActivity.liquid_glass",
+        "material_u" to "$pkg.MainActivity.material_u",
     )
 
     private val stateHelper = LauncherIconStateHelper(context, aliases)

@@ -48,6 +48,9 @@ class NoctraAppLogo extends ConsumerWidget {
       case NoctraAppIcon.liquidGlass:
         logoAsset = 'assets/images/logo_noctra_liquid_glass.png';
         break;
+      case NoctraAppIcon.materialU:
+        logoAsset = 'assets/images/logo_noctra_material_u.png';
+        break;
       case NoctraAppIcon.noirBlack:
         logoAsset = 'assets/images/logo_noctra_noir_black.png';
         break;
@@ -60,6 +63,8 @@ class NoctraAppLogo extends ConsumerWidget {
             logoAsset = 'assets/images/logo_noctra_liquid_glass.png';
             break;
           case NoirThemeMode.materialU:
+            logoAsset = 'assets/images/logo_noctra_material_u.png';
+            break;
           case NoirThemeMode.noirBlack:
             logoAsset = 'assets/images/logo_noctra_noir_black.png';
             break;
