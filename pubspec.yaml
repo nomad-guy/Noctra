@@ -30,6 +30,7 @@ dependencies:
   indic_transliteration_dart: ^2.3.84
   just_audio_windows: ^0.2.3
   connectivity_plus: ^7.3.1
+  audio_decoder: ^0.8.1
 
 dev_dependencies:
   flutter_test:

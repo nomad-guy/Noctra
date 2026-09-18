@@ -7,6 +7,7 @@ import '../../data/models/song_model.dart';
 import '../../providers/app_providers.dart';
 import 'add_to_folder_sheet.dart';
 import 'ai_radio_sheet.dart';
+import 'audio_upscale_sheet.dart';
 import 'share_story_card_sheet.dart';
 import 'song_credits_sheet.dart';
 
@@ -26,6 +27,7 @@ class SongContextMenu extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
     final themeMode = ref.watch(themeModeProvider);
     final isDark = themeMode.isDark;
     final audioPlayer = ref.watch(audioPlayerServiceProvider);
@@ -52,7 +54,7 @@ class SongContextMenu extends ConsumerWidget {
             Center(
               child: Container(
                 width: 44, height: 4.5,
-                decoration: BoxDecoration(color: isDark ? Colors.white24 : Colors.black26, borderRadius: BorderRadius.circular(3)),
+                decoration: BoxDecoration(color: t.tertiaryText, borderRadius: BorderRadius.circular(3)),
               ),
             ),
             const SizedBox(height: 14),
@@ -69,7 +71,7 @@ class SongContextMenu extends ConsumerWidget {
                     errorBuilder: (c, e, st) => Container(
                        width: 48, height: 48,
                        color: isDark ? Colors.white12 : Colors.black12,
-                       child: Icon(Icons.music_note_rounded, color: isDark ? Colors.white54 : Colors.black54),
+                       child: Icon(Icons.music_note_rounded, color: t.secondaryText),
                     ),
                   ),
                 ),
@@ -79,15 +81,15 @@ class SongContextMenu extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: isDark ? Colors.white : Colors.black)),
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: t.primaryText)),
                       const SizedBox(height: 2),
                       Text(song.artist, maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.black54)),
+                        style: TextStyle(fontSize: 12, color: t.secondaryText)),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close_rounded, color: isDark ? Colors.white70 : Colors.black87),
+                  icon: Icon(Icons.close_rounded, color: t.secondaryText),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -167,6 +169,16 @@ class SongContextMenu extends ConsumerWidget {
             ),
             _menuTile(
               context, isDark,
+              icon: Icons.graphic_eq_rounded,
+              title: 'Upscale to Lossless',
+              subtitle: 'On-device harmonic reconstruction → 24-bit WAV',
+              onTap: () {
+                Navigator.of(context).pop();
+                AudioUpscaleSheet.show(context, song);
+              },
+            ),
+            _menuTile(
+              context, isDark,
               icon: Icons.info_outline_rounded,
               title: 'Show Credits & Liner Notes',
               subtitle: 'Performers, songwriters, and audio specs',
@@ -190,6 +202,7 @@ class SongContextMenu extends ConsumerWidget {
     required String subtitle,
     required VoidCallback onTap,
   }) {
+    final t = context.noctraTokens;
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
       leading: Container(
@@ -198,10 +211,10 @@ class SongContextMenu extends ConsumerWidget {
           color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(icon, size: 20, color: isDark ? Colors.white70 : Colors.black87),
+        child: Icon(icon, size: 20, color: t.secondaryText),
       ),
-      title: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isDark ? Colors.white : Colors.black)),
-      subtitle: Text(subtitle, style: TextStyle(fontSize: 11, color: isDark ? Colors.white38 : Colors.black38)),
+      title: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: t.primaryText)),
+      subtitle: Text(subtitle, style: TextStyle(fontSize: 11, color: t.tertiaryText)),
       onTap: onTap,
     );
   }
