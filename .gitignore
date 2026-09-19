@@ -70,3 +70,4 @@ opencode.json
 get_preview/
 android/app/noctra-release.keystore
 dist/
+noctra_browser/
